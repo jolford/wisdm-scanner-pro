@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ScanUploader } from '@/components/ScanUploader';
 import { PhysicalScanner } from '@/components/PhysicalScanner';
-import { ScanResult } from '@/components/ScanResult';
+import { ValidationScreen } from '@/components/ValidationScreen';
 import { ProjectSelector } from '@/components/ProjectSelector';
 import { BatchSelector } from '@/components/BatchSelector';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,6 +20,7 @@ const Index = () => {
   const [extractedMetadata, setExtractedMetadata] = useState<Record<string, string>>({});
   const [currentImage, setCurrentImage] = useState('');
   const [currentFileName, setCurrentFileName] = useState('');
+  const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<any>(null);
@@ -35,7 +36,7 @@ const Index = () => {
 
   const saveDocument = async (fileName: string, fileType: string, fileUrl: string, text: string, metadata: any) => {
     try {
-      const { error } = await supabase.from('documents').insert([{
+      const { data, error } = await supabase.from('documents').insert([{
         project_id: selectedProjectId,
         batch_id: selectedBatchId,
         file_name: fileName,
@@ -44,9 +45,14 @@ const Index = () => {
         extracted_text: text,
         extracted_metadata: metadata,
         uploaded_by: user?.id,
-      }]);
+      }]).select().single();
 
       if (error) throw error;
+
+      // Store document ID for validation
+      if (data) {
+        setCurrentDocumentId(data.id);
+      }
 
       // Update batch counts
       if (selectedBatchId && selectedBatch) {
@@ -198,11 +204,27 @@ const Index = () => {
     }
   };
 
+  const handleValidation = async (status: 'validated' | 'rejected', metadata: Record<string, string>) => {
+    // Update batch validated count
+    if (selectedBatchId && selectedBatch && status === 'validated') {
+      await supabase
+        .from('batches')
+        .update({ 
+          validated_documents: (selectedBatch.validated_documents || 0) + 1
+        })
+        .eq('id', selectedBatchId);
+    }
+    
+    // Reset for next scan
+    handleReset();
+  };
+
   const handleReset = () => {
     setExtractedText('');
     setExtractedMetadata({});
     setCurrentImage('');
     setCurrentFileName('');
+    setCurrentDocumentId(null);
     // Don't reset project/batch selection
   };
 
@@ -321,35 +343,16 @@ const Index = () => {
             )}
           </div>
         ) : (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold">Scan Results</h2>
-                <p className="text-sm text-muted-foreground">
-                  File: {currentFileName} • Project: {selectedProject?.name} • Batch: {selectedBatch?.batch_name}
-                </p>
-              </div>
-              <Button onClick={handleReset} variant="outline">
-                New Scan
-              </Button>
-            </div>
-            
-            {Object.keys(extractedMetadata).length > 0 && (
-              <div className="bg-gradient-to-br from-card to-card/80 rounded-lg p-6 shadow-[var(--shadow-elegant)]">
-                <h3 className="text-lg font-semibold mb-4">Extracted Metadata</h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {Object.entries(extractedMetadata).map(([key, value]) => (
-                    <div key={key} className="bg-muted/50 rounded-lg p-3">
-                      <p className="text-xs text-muted-foreground mb-1">{key}</p>
-                      <p className="font-medium">{value}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            <ScanResult text={extractedText} imageUrl={currentImage} />
-          </div>
+          <ValidationScreen
+            documentId={currentDocumentId || undefined}
+            imageUrl={currentImage}
+            fileName={currentFileName}
+            extractedText={extractedText}
+            metadata={extractedMetadata}
+            projectFields={selectedProject?.extraction_fields || []}
+            onValidate={handleValidation}
+            onSkip={handleReset}
+          />
         )}
       </main>
 
