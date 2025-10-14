@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, ArrowLeft, FolderOpen } from 'lucide-react';
+import { Plus, ArrowLeft, FolderOpen, Edit } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 
@@ -118,9 +118,19 @@ const Projects = () => {
                   </div>
                 </div>
 
-                <p className="text-xs text-muted-foreground">
-                  Created {new Date(project.created_at).toLocaleDateString()}
-                </p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs text-muted-foreground">
+                    Created {new Date(project.created_at).toLocaleDateString()}
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(`/admin/projects/${project.id}/edit`)}
+                  >
+                    <Edit className="h-3 w-3 mr-1" />
+                    Edit
+                  </Button>
+                </div>
               </Card>
             ))}
           </div>

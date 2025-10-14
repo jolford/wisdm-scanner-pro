@@ -11,6 +11,7 @@ import BatchDetail from "./pages/BatchDetail";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProjects from "./pages/admin/projects/Index";
 import NewProject from "./pages/admin/projects/New";
+import EditProject from "./pages/admin/projects/Edit";
 import BatchesIndex from "./pages/admin/batches/Index";
 import NewBatch from "./pages/admin/batches/New";
 import AdminBatchDetail from "./pages/admin/batches/Detail";
@@ -33,6 +34,7 @@ const App = () => (
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/projects" element={<AdminProjects />} />
           <Route path="/admin/projects/new" element={<NewProject />} />
+          <Route path="/admin/projects/:id/edit" element={<EditProject />} />
           <Route path="/admin/batches" element={<BatchesIndex />} />
           <Route path="/admin/batches/new" element={<NewBatch />} />
           <Route path="/admin/batches/:id" element={<AdminBatchDetail />} />
