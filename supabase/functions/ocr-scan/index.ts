@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { imageData, isPdf, extractionFields } = await req.json();
+    const { imageData, isPdf, extractionFields, textData } = await req.json();
     
     if (!imageData) {
       throw new Error('No image data provided');
@@ -52,18 +52,25 @@ serve(async (req) => {
           },
           {
             role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: userPrompt
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: imageData
-                }
-              }
-            ]
+            content: textData
+              ? [
+                  {
+                    type: 'text',
+                    text: `${userPrompt}\n\nDocument text:\n${textData}`
+                  }
+                ]
+              : [
+                  {
+                    type: 'text',
+                    text: userPrompt
+                  },
+                  {
+                    type: 'image_url',
+                    image_url: {
+                      url: imageData
+                    }
+                  }
+                ]
           }
         ],
         temperature: 0.1,

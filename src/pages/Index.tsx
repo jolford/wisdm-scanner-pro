@@ -77,36 +77,65 @@ const Index = () => {
     setIsProcessing(true);
     
     try {
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const pdfData = e.target?.result as string;
-        setCurrentImage(pdfData);
-        
+      // Fast path: extract text from PDF using pdfjs for small, text-based PDFs
+      let extractedPdfText = '';
+      try {
+        const pdfjsLib: any = await import('pdfjs-dist');
+        const version = pdfjsLib.version || '5.4.296';
+        if (pdfjsLib.GlobalWorkerOptions) {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`;
+        }
+        const arrayBuffer = await file.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        const pdf = await loadingTask.promise;
+        const pages = Math.min(pdf.numPages, 3);
+        for (let i = 1; i <= pages; i++) {
+          const page = await pdf.getPage(i);
+          const textContent = await page.getTextContent();
+          const pageText = (textContent.items || [])
+            .map((item: any) => (item && item.str) ? item.str : '')
+            .join(' ');
+          extractedPdfText += pageText + '\n';
+        }
+      } catch (e) {
+        console.warn('PDF text extraction fallback:', e);
+      }
+
+      if (extractedPdfText && extractedPdfText.trim().length > 80) {
         const { data, error } = await supabase.functions.invoke('ocr-scan', {
-          body: { 
-            imageData: pdfData,
+          body: {
+            textData: extractedPdfText,
             isPdf: true,
             extractionFields: selectedProject?.extraction_fields || []
           },
         });
 
-        if (error) {
-          console.error('PDF OCR error:', error);
-          throw error;
-        }
+        if (error) throw error;
 
         setExtractedText(data.text);
         setExtractedMetadata(data.metadata || {});
-        
-        // Save document
-        await saveDocument(file.name, 'application/pdf', pdfData, data.text, data.metadata || {});
-        
-        toast({
-          title: 'PDF Processed',
-          description: 'Text has been successfully extracted from your PDF.',
-        });
-      };
-      reader.readAsDataURL(file);
+        await saveDocument(file.name, 'application/pdf', '', data.text, data.metadata || {});
+        toast({ title: 'PDF Processed', description: 'Extracted text and fields from PDF.' });
+      } else {
+        // Fallback: send as Data URL (slower but works for scanned/image PDFs)
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const pdfData = e.target?.result as string;
+          const { data, error } = await supabase.functions.invoke('ocr-scan', {
+            body: { 
+              imageData: pdfData,
+              isPdf: true,
+              extractionFields: selectedProject?.extraction_fields || []
+            },
+          });
+          if (error) throw error;
+          setExtractedText(data.text);
+          setExtractedMetadata(data.metadata || {});
+          await saveDocument(file.name, 'application/pdf', pdfData, data.text, data.metadata || {});
+          toast({ title: 'PDF Processed', description: 'Text extracted from scanned PDF.' });
+        };
+        reader.readAsDataURL(file);
+      }
     } catch (error: any) {
       console.error('Error processing PDF:', error);
       toast({
@@ -114,6 +143,7 @@ const Index = () => {
         description: error.message || 'Failed to process the PDF. Please try again.',
         variant: 'destructive',
       });
+    } finally {
       setIsProcessing(false);
     }
   };
