@@ -19,6 +19,7 @@ import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
 // Configure PDF.js worker using a module worker once at module load
 if ((pdfjsLib as any).GlobalWorkerOptions) {
   (pdfjsLib as any).GlobalWorkerOptions.workerPort = new (PdfWorker as any)();
+  (pdfjsLib as any).GlobalWorkerOptions.workerSrc = undefined; // ensure using workerPort
 }
 
 const Index = () => {
@@ -133,7 +134,10 @@ const Index = () => {
           const loadingTask2 = pdfjsLib.getDocument({ data: arrayBuffer as ArrayBuffer });
           const pdf2 = await loadingTask2.promise;
           const page1 = await pdf2.getPage(1);
-          const viewport = page1.getViewport({ scale: 2 });
+          let viewport = page1.getViewport({ scale: 1.5 });
+          const maxDim = 2000;
+          const scale = Math.min(1.5, maxDim / Math.max(viewport.width, viewport.height));
+          viewport = page1.getViewport({ scale });
           const canvas = document.createElement('canvas');
           const ctx = canvas.getContext('2d');
           canvas.width = Math.ceil(viewport.width);
@@ -154,7 +158,7 @@ const Index = () => {
           setCurrentImage(dataUrl);
           setExtractedText(data.text);
           setExtractedMetadata(data.metadata || {});
-          await saveDocument(file.name, 'application/pdf', '', data.text, data.metadata || {});
+          await saveDocument(file.name, 'application/pdf', dataUrl, data.text, data.metadata || {});
           toast({ title: 'PDF Processed via OCR', description: 'Extracted text from rendered PDF page.' });
         } catch (fallbackErr: any) {
           console.error('PDF image OCR fallback failed:', fallbackErr);
