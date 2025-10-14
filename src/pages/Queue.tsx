@@ -6,7 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScanUploader } from '@/components/ScanUploader';
 import { PhysicalScanner } from '@/components/PhysicalScanner';
-import { ValidationScreen } from '@/components/ValidationScreen';
+import { BatchValidationScreen } from '@/components/BatchValidationScreen';
 import { ProjectSelector } from '@/components/ProjectSelector';
 import { BatchSelector } from '@/components/BatchSelector';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,7 +44,6 @@ const Queue = () => {
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
-  const [validationDoc, setValidationDoc] = useState<any>(null);
   const [validationQueue, setValidationQueue] = useState<any[]>([]);
   const [validatedDocs, setValidatedDocs] = useState<any[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -96,10 +95,7 @@ const Queue = () => {
 
       if (error) throw error;
 
-      if (data) {
-        setValidationDoc(data);
-        await loadQueueDocuments();
-      }
+      await loadQueueDocuments();
 
       if (selectedBatchId && selectedBatch) {
         await supabase
@@ -305,20 +301,6 @@ const Queue = () => {
     } finally {
       setIsProcessing(false);
     }
-  };
-
-  const handleValidation = async (status: 'validated' | 'rejected', metadata: Record<string, string>) => {
-    if (selectedBatchId && selectedBatch && status === 'validated') {
-      await supabase
-        .from('batches')
-        .update({ 
-          validated_documents: (selectedBatch.validated_documents || 0) + 1
-        })
-        .eq('id', selectedBatchId);
-    }
-    
-    setValidationDoc(null);
-    await loadQueueDocuments();
   };
 
   const handleDeleteDoc = async (docId: string) => {
@@ -696,89 +678,48 @@ const Queue = () => {
             </TabsList>
             
             <TabsContent value="scan">
-              {validationDoc ? (
-                <ValidationScreen
-                  documentId={validationDoc.id}
-                  imageUrl={validationDoc.file_url}
-                  fileName={validationDoc.file_name}
-                  extractedText={validationDoc.extracted_text}
-                  metadata={validationDoc.extracted_metadata}
-                  projectFields={selectedProject?.extraction_fields || []}
-                  onValidate={handleValidation}
-                  onSkip={() => setValidationDoc(null)}
-                />
-              ) : (
-                <Tabs defaultValue="upload" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 mb-6">
-                    <TabsTrigger value="upload">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload File
-                    </TabsTrigger>
-                    <TabsTrigger value="scanner">
-                      <ScanLine className="h-4 w-4 mr-2" />
-                      Physical Scanner
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="upload">
-                    <ScanUploader 
-                      onScanComplete={handleScanComplete} 
-                      onPdfUpload={processPdf}
-                      onMultipleFilesUpload={handleMultipleFiles}
-                      isProcessing={isProcessing} 
-                    />
-                  </TabsContent>
-                  
-                  <TabsContent value="scanner">
-                    <PhysicalScanner onScanComplete={handleScanComplete} isProcessing={isProcessing} />
-                  </TabsContent>
-                </Tabs>
-              )}
+              <Tabs defaultValue="upload" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="upload">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload File
+                  </TabsTrigger>
+                  <TabsTrigger value="scanner">
+                    <ScanLine className="h-4 w-4 mr-2" />
+                    Physical Scanner
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="upload">
+                  <ScanUploader 
+                    onScanComplete={handleScanComplete} 
+                    onPdfUpload={processPdf}
+                    onMultipleFilesUpload={handleMultipleFiles}
+                    isProcessing={isProcessing} 
+                  />
+                </TabsContent>
+                
+                <TabsContent value="scanner">
+                  <PhysicalScanner onScanComplete={handleScanComplete} isProcessing={isProcessing} />
+                </TabsContent>
+              </Tabs>
             </TabsContent>
             
             <TabsContent value="validation">
-              <div className="space-y-4">
-                {validationQueue.length === 0 ? (
-                  <Card className="p-12 text-center">
-                    <Eye className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-xl font-semibold mb-2">No Documents Awaiting Validation</h3>
-                    <p className="text-muted-foreground">Scan documents to add them to the validation queue</p>
-                  </Card>
-                ) : (
-                  validationQueue.map((doc) => (
-                    <Card key={doc.id} className="p-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h3 className="text-lg font-semibold mb-2">{doc.file_name}</h3>
-                          <p className="text-sm text-muted-foreground mb-4">
-                            {new Date(doc.created_at).toLocaleString()}
-                          </p>
-                          {doc.extracted_metadata && Object.keys(doc.extracted_metadata).length > 0 && (
-                            <div className="bg-muted/50 rounded-lg p-4">
-                              <div className="grid md:grid-cols-2 gap-2">
-                                {Object.entries(doc.extracted_metadata).map(([key, value]) => (
-                                  <div key={key} className="text-sm">
-                                    <span className="font-medium">{key}:</span>{' '}
-                                    <span className="text-muted-foreground">{value as string}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Button onClick={() => setValidationDoc(doc)}>
-                            Validate
-                          </Button>
-                          <Button variant="destructive" size="icon" onClick={() => handleDeleteDoc(doc.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </Card>
-                  ))
-                )}
-              </div>
+              {validationQueue.length === 0 ? (
+                <Card className="p-12 text-center">
+                  <Eye className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-xl font-semibold mb-2">No Documents Awaiting Validation</h3>
+                  <p className="text-muted-foreground">Scan documents to add them to the validation queue</p>
+                </Card>
+              ) : (
+                <BatchValidationScreen
+                  documents={validationQueue}
+                  projectFields={selectedProject?.extraction_fields || []}
+                  onValidationComplete={loadQueueDocuments}
+                  batchId={selectedBatchId}
+                />
+              )}
             </TabsContent>
             
             <TabsContent value="validated">
