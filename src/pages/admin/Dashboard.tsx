@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, FolderOpen, FileText, Users } from 'lucide-react';
+import { Plus, FolderOpen, FileText, Users, Key } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import wisdmLogo from '@/assets/wisdm-logo.png';
@@ -14,6 +14,7 @@ const AdminDashboard = () => {
     projects: 0,
     documents: 0,
     users: 0,
+    licenses: 0,
   });
 
   useEffect(() => {
@@ -24,16 +25,18 @@ const AdminDashboard = () => {
 
   const loadStats = async () => {
     try {
-      const [projectsRes, documentsRes, profilesRes] = await Promise.all([
+      const [projectsRes, documentsRes, profilesRes, licensesRes] = await Promise.all([
         supabase.from('projects').select('id', { count: 'exact', head: true }),
         supabase.from('documents').select('id', { count: 'exact', head: true }),
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
+        supabase.from('licenses').select('id', { count: 'exact', head: true }),
       ]);
 
       setStats({
         projects: projectsRes.count || 0,
         documents: documentsRes.count || 0,
         users: profilesRes.count || 0,
+        licenses: licensesRes.count || 0,
       });
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -75,7 +78,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-4 gap-6 mb-8">
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-primary/10 rounded-lg">
@@ -111,10 +114,22 @@ const AdminDashboard = () => {
               </div>
             </div>
           </Card>
+
+          <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-green-500/10 rounded-lg">
+                <Key className="h-6 w-6 text-green-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Active Licenses</p>
+                <p className="text-2xl font-bold">{stats.licenses}</p>
+              </div>
+            </div>
+          </Card>
         </div>
 
         {/* Quick Actions */}
-        <div className="max-w-2xl">
+        <div className="grid md:grid-cols-2 gap-6">
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
             <h3 className="text-xl font-semibold mb-4">Projects</h3>
             <p className="text-muted-foreground mb-4">
@@ -129,6 +144,25 @@ const AdminDashboard = () => {
                 New Project
               </Button>
               <Button variant="outline" onClick={() => navigate('/admin/projects')}>
+                View All
+              </Button>
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+            <h3 className="text-xl font-semibold mb-4">Licenses</h3>
+            <p className="text-muted-foreground mb-4">
+              Manage customer licenses and track annual document processing volume
+            </p>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => navigate('/admin/licenses/new')}
+                className="bg-gradient-to-r from-primary to-accent"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New License
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/admin/licenses')}>
                 View All
               </Button>
             </div>

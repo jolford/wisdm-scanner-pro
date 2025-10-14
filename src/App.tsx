@@ -14,6 +14,8 @@ import EditProject from "./pages/admin/projects/Edit";
 import BatchesIndex from "./pages/admin/batches/Index";
 import NewBatch from "./pages/admin/batches/New";
 import AdminBatchDetail from "./pages/admin/batches/Detail";
+import LicensesIndex from "./pages/admin/licenses/Index";
+import NewLicense from "./pages/admin/licenses/New";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -37,6 +39,8 @@ const App = () => (
           <Route path="/admin/batches" element={<BatchesIndex />} />
           <Route path="/admin/batches/new" element={<NewBatch />} />
           <Route path="/admin/batches/:id" element={<AdminBatchDetail />} />
+          <Route path="/admin/licenses" element={<LicensesIndex />} />
+          <Route path="/admin/licenses/new" element={<NewLicense />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

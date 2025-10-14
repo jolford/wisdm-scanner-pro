@@ -13,6 +13,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText, FolderOpen } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
+import { LicenseWarning } from '@/components/LicenseWarning';
+import { useLicense } from '@/hooks/use-license';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +40,7 @@ const Queue = () => {
   const navigate = useNavigate();
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
   const { toast } = useToast();
+  const { license, hasCapacity, consumeDocuments } = useLicense();
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -81,6 +84,16 @@ const Queue = () => {
   };
 
   const saveDocument = async (fileName: string, fileType: string, fileUrl: string, text: string, metadata: any) => {
+    // Check license capacity before saving
+    if (!hasCapacity(1)) {
+      toast({
+        title: 'License Capacity Exceeded',
+        description: 'Your license has insufficient document capacity. Please contact your administrator.',
+        variant: 'destructive',
+      });
+      return null;
+    }
+
     try {
       const { data, error } = await supabase.from('documents').insert([{
         project_id: selectedProjectId,
@@ -95,6 +108,18 @@ const Queue = () => {
 
       if (error) throw error;
 
+      // Consume license document
+      if (data && license) {
+        const consumed = await consumeDocuments(data.id, 1);
+        if (!consumed) {
+          toast({
+            title: 'Warning',
+            description: 'Document saved but license was not updated',
+            variant: 'destructive',
+          });
+        }
+      }
+
       await loadQueueDocuments();
 
       if (selectedBatchId && selectedBatch) {
@@ -106,8 +131,11 @@ const Queue = () => {
           })
           .eq('id', selectedBatchId);
       }
+
+      return data;
     } catch (error) {
       console.error('Error saving document:', error);
+      return null;
     }
   };
 
@@ -633,6 +661,8 @@ const Queue = () => {
       </header>
 
       <main className="container mx-auto px-4 py-8">
+        <LicenseWarning />
+        
         <div className="space-y-6 mb-6">
           <ProjectSelector
             selectedProjectId={selectedProjectId}

@@ -11,6 +11,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { Sparkles, Upload, ScanLine, LogOut, FileText, Settings, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { LicenseWarning } from '@/components/LicenseWarning';
+import { useLicense } from '@/hooks/use-license';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
@@ -25,6 +27,7 @@ if ((pdfjsLib as any).GlobalWorkerOptions) {
 const Index = () => {
   const navigate = useNavigate();
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
+  const { license, hasCapacity, consumeDocuments } = useLicense();
   const [extractedText, setExtractedText] = useState('');
   const [extractedMetadata, setExtractedMetadata] = useState<Record<string, string>>({});
   const [currentImage, setCurrentImage] = useState('');
@@ -44,6 +47,16 @@ const Index = () => {
   }, [authLoading, user, navigate]);
 
   const saveDocument = async (fileName: string, fileType: string, fileUrl: string, text: string, metadata: any) => {
+    // Check license capacity before saving
+    if (!hasCapacity(1)) {
+      toast({
+        title: 'License Capacity Exceeded',
+        description: 'Your license has insufficient document capacity. Please contact your administrator.',
+        variant: 'destructive',
+      });
+      return null;
+    }
+
     try {
       const { data, error } = await supabase.from('documents').insert([{
         project_id: selectedProjectId,
@@ -57,6 +70,18 @@ const Index = () => {
       }]).select().single();
 
       if (error) throw error;
+
+      // Consume license document
+      if (data && license) {
+        const consumed = await consumeDocuments(data.id, 1);
+        if (!consumed) {
+          toast({
+            title: 'Warning',
+            description: 'Document saved but license was not updated',
+            variant: 'destructive',
+          });
+        }
+      }
 
       // Store document ID for validation
       if (data) {
@@ -73,8 +98,11 @@ const Index = () => {
           })
           .eq('id', selectedBatchId);
       }
+
+      return data;
     } catch (error) {
       console.error('Error saving document:', error);
+      return null;
     }
   };
 
@@ -359,8 +387,9 @@ const Index = () => {
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="container mx-auto px-4 py-12">
+        <LicenseWarning />
+        
         {!extractedText ? (
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-8">
