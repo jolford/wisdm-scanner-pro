@@ -30,7 +30,7 @@ import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
 // Configure PDF.js worker using a dedicated module worker (avoids CDN)
 if ((pdfjsLib as any).GlobalWorkerOptions) {
   (pdfjsLib as any).GlobalWorkerOptions.workerPort = new (PdfWorker as any)();
-  (pdfjsLib as any).GlobalWorkerOptions.workerSrc = undefined;
+  
 }
 
 const Queue = () => {

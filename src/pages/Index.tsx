@@ -19,7 +19,7 @@ import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
 // Configure PDF.js worker using a module worker once at module load
 if ((pdfjsLib as any).GlobalWorkerOptions) {
   (pdfjsLib as any).GlobalWorkerOptions.workerPort = new (PdfWorker as any)();
-  (pdfjsLib as any).GlobalWorkerOptions.workerSrc = undefined; // ensure using workerPort
+  
 }
 
 const Index = () => {
