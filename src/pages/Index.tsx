@@ -173,6 +173,7 @@ const Index = () => {
     setExtractedMetadata({});
     setCurrentImage('');
     setCurrentFileName('');
+    // Don't reset project/batch selection
   };
 
   if (authLoading) {

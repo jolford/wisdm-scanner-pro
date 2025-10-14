@@ -6,8 +6,19 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, FileText, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { ArrowLeft, FileText, CheckCircle2, XCircle, AlertCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 const BatchDetail = () => {
   const { id } = useParams();
@@ -60,6 +71,40 @@ const BatchDetail = () => {
       toast({
         title: 'Status Updated',
         description: 'Batch status has been updated successfully',
+      });
+    },
+  });
+
+  const deleteBatchMutation = useMutation({
+    mutationFn: async () => {
+      // First delete all documents in the batch
+      const { error: docsError } = await supabase
+        .from('documents')
+        .delete()
+        .eq('batch_id', id);
+
+      if (docsError) throw docsError;
+
+      // Then delete the batch
+      const { error: batchError } = await supabase
+        .from('batches')
+        .delete()
+        .eq('id', id);
+
+      if (batchError) throw batchError;
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Batch Deleted',
+        description: 'Batch and all its documents have been deleted',
+      });
+      navigate('/admin/batches');
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Delete Failed',
+        description: error.message,
+        variant: 'destructive',
       });
     },
   });
@@ -146,6 +191,31 @@ const BatchDetail = () => {
                 <SelectItem value="error">Error</SelectItem>
               </SelectContent>
             </Select>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="icon">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete Batch?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete this batch and all {documents?.length || 0} documents in it. This action cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => deleteBatchMutation.mutate()}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Delete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
 
