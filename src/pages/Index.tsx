@@ -92,10 +92,11 @@ const Index = () => {
     
     try {
       // Fast path: extract text from PDF using pdfjs for small, text-based PDFs
+      let arrayBuffer: ArrayBuffer | null = null;
       let extractedPdfText = '';
       try {
-        const arrayBuffer = await file.arrayBuffer();
-        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        arrayBuffer = await file.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer as ArrayBuffer });
         const pdf = await loadingTask.promise;
         const pages = Math.min(pdf.numPages, 3);
         for (let i = 1; i <= pages; i++) {
@@ -126,13 +127,45 @@ const Index = () => {
         await saveDocument(file.name, 'application/pdf', '', data.text, data.metadata || {});
         toast({ title: 'PDF Processed', description: 'Extracted text and fields from PDF.' });
       } else {
-        toast({
-          title: 'PDF Processing Failed',
-          description: 'Could not extract text from PDF. The file may be image-only; try another PDF or upload as an image.',
-          variant: 'destructive',
-        });
-        setIsProcessing(false);
-        return;
+        // Fallback: render first PDF page to image and run OCR
+        try {
+          if (!arrayBuffer) arrayBuffer = await file.arrayBuffer();
+          const loadingTask2 = pdfjsLib.getDocument({ data: arrayBuffer as ArrayBuffer });
+          const pdf2 = await loadingTask2.promise;
+          const page1 = await pdf2.getPage(1);
+          const viewport = page1.getViewport({ scale: 2 });
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          canvas.width = Math.ceil(viewport.width);
+          canvas.height = Math.ceil(viewport.height);
+          if (!ctx) throw new Error('Canvas context not available');
+          await page1.render({ canvasContext: ctx as any, viewport }).promise;
+          const dataUrl = canvas.toDataURL('image/png');
+
+          const { data, error } = await supabase.functions.invoke('ocr-scan', {
+            body: {
+              imageData: dataUrl,
+              isPdf: false,
+              extractionFields: selectedProject?.extraction_fields || []
+            },
+          });
+          if (error) throw error;
+
+          setCurrentImage(dataUrl);
+          setExtractedText(data.text);
+          setExtractedMetadata(data.metadata || {});
+          await saveDocument(file.name, 'application/pdf', '', data.text, data.metadata || {});
+          toast({ title: 'PDF Processed via OCR', description: 'Extracted text from rendered PDF page.' });
+        } catch (fallbackErr: any) {
+          console.error('PDF image OCR fallback failed:', fallbackErr);
+          toast({
+            title: 'PDF Processing Failed',
+            description: 'Could not extract text from PDF. Please try a different file.',
+            variant: 'destructive',
+          });
+          setIsProcessing(false);
+          return;
+        }
       }
     } catch (error: any) {
       console.error('Error processing PDF:', error);
