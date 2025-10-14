@@ -85,6 +85,36 @@ export type Database = {
           },
         ]
       }
+      customers: {
+        Row: {
+          company_name: string
+          contact_email: string
+          contact_name: string | null
+          created_at: string | null
+          id: string
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          company_name: string
+          contact_email: string
+          contact_name?: string | null
+          created_at?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          company_name?: string
+          contact_email?: string
+          contact_name?: string | null
+          created_at?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       document_classes: {
         Row: {
           barcode_config: Json | null
@@ -229,6 +259,98 @@ export type Database = {
           },
         ]
       }
+      license_usage: {
+        Row: {
+          document_id: string | null
+          documents_used: number
+          id: string
+          license_id: string
+          used_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          document_id?: string | null
+          documents_used?: number
+          id?: string
+          license_id: string
+          used_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          document_id?: string | null
+          documents_used?: number
+          id?: string
+          license_id?: string
+          used_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "license_usage_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "license_usage_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      licenses: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          end_date: string
+          id: string
+          license_key: string
+          notes: string | null
+          remaining_documents: number
+          start_date: string
+          status: Database["public"]["Enums"]["license_status"]
+          total_documents: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          end_date: string
+          id?: string
+          license_key: string
+          notes?: string | null
+          remaining_documents: number
+          start_date?: string
+          status?: Database["public"]["Enums"]["license_status"]
+          total_documents: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          end_date?: string
+          id?: string
+          license_key?: string
+          notes?: string | null
+          remaining_documents?: number
+          start_date?: string
+          status?: Database["public"]["Enums"]["license_status"]
+          total_documents?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "licenses_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string | null
@@ -321,6 +443,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_license_capacity: {
+        Args: { _documents_needed?: number; _license_id: string }
+        Returns: boolean
+      }
+      consume_license_documents: {
+        Args: {
+          _document_id: string
+          _documents_count?: number
+          _license_id: string
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      generate_license_key: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -347,6 +486,7 @@ export type Database = {
         | "id_card"
         | "check"
         | "other"
+      license_status: "active" | "expired" | "suspended" | "exhausted"
       validation_status: "pending" | "validated" | "rejected" | "needs_review"
     }
     CompositeTypes: {
@@ -494,6 +634,7 @@ export const Constants = {
         "check",
         "other",
       ],
+      license_status: ["active", "expired", "suspended", "exhausted"],
       validation_status: ["pending", "validated", "rejected", "needs_review"],
     },
   },
