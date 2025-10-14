@@ -26,51 +26,14 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // For PDFs, provide guidance
-    if (isPdf) {
-      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            {
-              role: 'user',
-              content: 'This is a PDF document. Please inform the user that PDF text extraction requires converting the PDF to images first. For now, please try to extract any visible text from the PDF preview if possible, otherwise suggest they convert the PDF to images (JPG/PNG) for text extraction.'
-            }
-          ],
-          temperature: 0.1,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('AI Gateway error:', response.status, errorText);
-        throw new Error('PDF processing is not yet fully supported. Please convert your PDF to images (JPG/PNG) and try again.');
-      }
-
-      const data = await response.json();
-      const message = data.choices[0].message.content;
-
-      return new Response(
-        JSON.stringify({ 
-          text: `PDF Support Note:\n\n${message}\n\nFor best results, please:\n1. Convert your PDF pages to JPG or PNG images\n2. Upload the images one at a time\n3. Or use a physical scanner with the Physical Scanner tab\n\nThis will ensure the highest quality text extraction.`,
-          metadata: {}
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
     // Build extraction prompt based on provided fields
-    let extractionPrompt = 'Please extract all text from this image using OCR/ICR. Preserve the original formatting and structure as much as possible.';
+    let extractionPrompt = 'Please extract all text from this document using OCR/ICR. Preserve the original formatting and structure as much as possible.';
     
     if (extractionFields && extractionFields.length > 0) {
       const fieldsList = extractionFields.map((f: any) => `- ${f.name}: ${f.description || 'Extract this field'}`).join('\n');
-      extractionPrompt = `Extract ALL text from this document AND identify the following specific fields:\n\n${fieldsList}\n\nProvide both the full text extraction and the identified field values in a structured format.`;
+      extractionPrompt = `Extract ALL text from this ${isPdf ? 'PDF' : 'image'} document AND identify the following specific fields:\n\n${fieldsList}\n\nProvide both the full text extraction and the identified field values.`;
     }
+
 
     // Process images with vision model
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
