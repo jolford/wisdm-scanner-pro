@@ -122,9 +122,12 @@ const Queue = () => {
       let extractedPdfText = '';
       try {
         const pdfjsLib: any = await import('pdfjs-dist');
-        const version = pdfjsLib.version || '5.4.296';
+        // Use the worker from node_modules instead of CDN
         if (pdfjsLib.GlobalWorkerOptions) {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`;
+          pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+            'pdfjs-dist/build/pdf.worker.min.mjs',
+            import.meta.url
+          ).toString();
         }
         const arrayBuffer = await file.arrayBuffer();
         const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
