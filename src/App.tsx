@@ -11,6 +11,7 @@ import AdminProjects from "./pages/admin/projects/Index";
 import NewProject from "./pages/admin/projects/New";
 import BatchesIndex from "./pages/admin/batches/Index";
 import NewBatch from "./pages/admin/batches/New";
+import BatchDetail from "./pages/admin/batches/Detail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
           <Route path="/admin/projects/new" element={<NewProject />} />
           <Route path="/admin/batches" element={<BatchesIndex />} />
           <Route path="/admin/batches/new" element={<NewBatch />} />
+          <Route path="/admin/batches/:id" element={<BatchDetail />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
