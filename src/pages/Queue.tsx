@@ -797,40 +797,52 @@ const Queue = () => {
                   <div>
                     <h4 className="font-semibold mb-3">Export Metadata</h4>
                     <div className="grid grid-cols-2 gap-3">
-                      <Button onClick={() => exportBatch('csv')} disabled={validatedDocs.length === 0} variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
-                        CSV Format
-                      </Button>
-                      <Button onClick={() => exportBatch('json')} disabled={validatedDocs.length === 0} variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
-                        JSON Format
-                      </Button>
-                      <Button onClick={() => exportBatch('xml')} disabled={validatedDocs.length === 0} variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
-                        XML Format
-                      </Button>
-                      <Button onClick={() => exportBatch('txt')} disabled={validatedDocs.length === 0} variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
-                        TXT Format
-                      </Button>
+                      {selectedProject?.export_types?.includes('csv') && (
+                        <Button onClick={() => exportBatch('csv')} disabled={validatedDocs.length === 0} variant="outline">
+                          <Download className="h-4 w-4 mr-2" />
+                          CSV Format
+                        </Button>
+                      )}
+                      {selectedProject?.export_types?.includes('json') && (
+                        <Button onClick={() => exportBatch('json')} disabled={validatedDocs.length === 0} variant="outline">
+                          <Download className="h-4 w-4 mr-2" />
+                          JSON Format
+                        </Button>
+                      )}
+                      {selectedProject?.export_types?.includes('xml') && (
+                        <Button onClick={() => exportBatch('xml')} disabled={validatedDocs.length === 0} variant="outline">
+                          <Download className="h-4 w-4 mr-2" />
+                          XML Format
+                        </Button>
+                      )}
+                      {selectedProject?.export_types?.includes('txt') && (
+                        <Button onClick={() => exportBatch('txt')} disabled={validatedDocs.length === 0} variant="outline">
+                          <Download className="h-4 w-4 mr-2" />
+                          TXT Format
+                        </Button>
+                      )}
                     </div>
                   </div>
 
-                  <div>
-                    <h4 className="font-semibold mb-3">Export Images</h4>
-                    <Button onClick={exportImages} disabled={validatedDocs.length === 0} variant="outline" className="w-full">
-                      <Download className="h-4 w-4 mr-2" />
-                      Download All Images
-                    </Button>
-                  </div>
+                  {selectedProject?.export_types?.includes('images') && (
+                    <div>
+                      <h4 className="font-semibold mb-3">Export Images</h4>
+                      <Button onClick={exportImages} disabled={validatedDocs.length === 0} variant="outline" className="w-full">
+                        <Download className="h-4 w-4 mr-2" />
+                        Download All Images
+                      </Button>
+                    </div>
+                  )}
 
-                  <div>
-                    <h4 className="font-semibold mb-3">Generate PDF Report</h4>
-                    <Button onClick={generatePDF} disabled={validatedDocs.length === 0} variant="outline" className="w-full">
-                      <FileText className="h-4 w-4 mr-2" />
-                      Generate PDF with Metadata
-                    </Button>
-                  </div>
+                  {selectedProject?.export_types?.includes('pdf') && (
+                    <div>
+                      <h4 className="font-semibold mb-3">Generate PDF Report</h4>
+                      <Button onClick={generatePDF} disabled={validatedDocs.length === 0} variant="outline" className="w-full">
+                        <FileText className="h-4 w-4 mr-2" />
+                        Generate PDF with Metadata
+                      </Button>
+                    </div>
+                  )}
 
                   <div className="pt-4 border-t">
                     <Button 

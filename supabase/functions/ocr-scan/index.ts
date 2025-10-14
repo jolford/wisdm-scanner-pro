@@ -27,14 +27,14 @@ serve(async (req) => {
       throw new Error('PDF text extraction required. Please ensure text is extracted before sending.');
     }
 
-    // Build optimized single-call prompt
-    let systemPrompt = 'You are an OCR system. Extract all text from documents.';
-    let userPrompt = 'Extract all text from this document.';
+    // Build optimized single-call prompt with handwriting support
+    let systemPrompt = 'You are an advanced OCR and ICR (Intelligent Character Recognition) system. Extract all text from documents including printed text, handwritten text, and cursive writing. Be very careful to accurately recognize handwritten characters.';
+    let userPrompt = 'Extract all text from this document, including any handwritten text. Pay special attention to handwritten characters and cursive writing.';
     
     if (extractionFields && extractionFields.length > 0) {
       const fieldNames = extractionFields.map((f: any) => f.name);
-      systemPrompt = `You are an OCR system. Extract text and return JSON: {"fullText": "complete extracted text", "fields": {${fieldNames.map((n: string) => `"${n}": "value"`).join(', ')}}}. Extract actual values from the document for each field.`;
-      userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'} and identify: ${fieldNames.join(', ')}. Return as JSON.`;
+      systemPrompt = `You are an advanced OCR and ICR system that can read both printed and handwritten text. Extract text and return JSON: {"fullText": "complete extracted text", "fields": {${fieldNames.map((n: string) => `"${n}": "value"`).join(', ')}}}. Extract actual values from the document for each field, including handwritten values.`;
+      userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'} including handwritten text and identify: ${fieldNames.join(', ')}. Return as JSON.`;
     }
 
     // Single AI call for everything

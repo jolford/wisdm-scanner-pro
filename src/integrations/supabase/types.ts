@@ -258,30 +258,36 @@ export type Database = {
           created_at: string | null
           created_by: string
           description: string | null
+          export_types: string[] | null
           extraction_fields: Json
           id: string
           is_active: boolean | null
           name: string
+          queues: Json | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string | null
           created_by: string
           description?: string | null
+          export_types?: string[] | null
           extraction_fields?: Json
           id?: string
           is_active?: boolean | null
           name: string
+          queues?: Json | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string | null
           created_by?: string
           description?: string | null
+          export_types?: string[] | null
           extraction_fields?: Json
           id?: string
           is_active?: boolean | null
           name?: string
+          queues?: Json | null
           updated_at?: string | null
         }
         Relationships: []

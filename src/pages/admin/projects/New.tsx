@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -14,6 +15,11 @@ import wisdmLogo from '@/assets/wisdm-logo.png';
 interface ExtractionField {
   name: string;
   description: string;
+}
+
+interface Queue {
+  name: string;
+  enabled: boolean;
 }
 
 const NewProject = () => {
@@ -26,6 +32,22 @@ const NewProject = () => {
   const [projectDescription, setProjectDescription] = useState('');
   const [fields, setFields] = useState<ExtractionField[]>([
     { name: '', description: '' }
+  ]);
+  
+  const [exportTypes, setExportTypes] = useState({
+    csv: true,
+    json: true,
+    xml: true,
+    txt: true,
+    pdf: true,
+    images: true,
+  });
+
+  const [queues, setQueues] = useState<Queue[]>([
+    { name: 'Scan', enabled: true },
+    { name: 'Validation', enabled: true },
+    { name: 'Validated', enabled: true },
+    { name: 'Export', enabled: true },
   ]);
 
   const addField = () => {
@@ -66,10 +88,16 @@ const NewProject = () => {
 
     setSaving(true);
     try {
+      const selectedExportTypes = Object.entries(exportTypes)
+        .filter(([_, enabled]) => enabled)
+        .map(([type]) => type);
+
       const { error } = await supabase.from('projects').insert([{
         name: projectName,
         description: projectDescription,
         extraction_fields: validFields as any,
+        export_types: selectedExportTypes,
+        queues: queues as any,
         created_by: user?.id,
       }]);
 
@@ -203,6 +231,56 @@ const NewProject = () => {
               <p className="text-sm text-muted-foreground mt-2">
                 Define the specific data fields you want to extract from documents in this project.
                 For example: Invoice Number, Date, Amount, Vendor Name, etc.
+              </p>
+            </div>
+
+            <div>
+              <Label className="mb-4 block">Export Types</Label>
+              <div className="grid grid-cols-3 gap-4">
+                {Object.entries(exportTypes).map(([type, enabled]) => (
+                  <div key={type} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`export-${type}`}
+                      checked={enabled}
+                      onCheckedChange={(checked) => 
+                        setExportTypes(prev => ({ ...prev, [type]: checked === true }))
+                      }
+                    />
+                    <Label htmlFor={`export-${type}`} className="text-sm font-normal cursor-pointer">
+                      {type.toUpperCase()}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Select which export formats will be available for this project.
+              </p>
+            </div>
+
+            <div>
+              <Label className="mb-4 block">Processing Queues</Label>
+              <div className="space-y-3">
+                {queues.map((queue, index) => (
+                  <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <Checkbox
+                        id={`queue-${index}`}
+                        checked={queue.enabled}
+                        onCheckedChange={(checked) => {
+                          const updated = [...queues];
+                          updated[index].enabled = checked === true;
+                          setQueues(updated);
+                        }}
+                      />
+                      <Label htmlFor={`queue-${index}`} className="text-sm font-medium cursor-pointer">
+                        {queue.name} Queue
+                      </Label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Configure which processing queues are active for this project's workflow.
               </p>
             </div>
 
