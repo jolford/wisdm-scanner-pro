@@ -13,6 +13,14 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 
+import * as pdfjsLib from 'pdfjs-dist';
+import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
+
+// Configure PDF.js worker using a module worker once at module load
+if ((pdfjsLib as any).GlobalWorkerOptions) {
+  (pdfjsLib as any).GlobalWorkerOptions.workerPort = new (PdfWorker as any)();
+}
+
 const Index = () => {
   const navigate = useNavigate();
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
@@ -86,11 +94,6 @@ const Index = () => {
       // Fast path: extract text from PDF using pdfjs for small, text-based PDFs
       let extractedPdfText = '';
       try {
-        const pdfjsLib: any = await import('pdfjs-dist');
-        const version = pdfjsLib.version || '5.4.296';
-        if (pdfjsLib.GlobalWorkerOptions) {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${version}/pdf.worker.min.js`;
-        }
         const arrayBuffer = await file.arrayBuffer();
         const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
         const pdf = await loadingTask.promise;
@@ -123,24 +126,13 @@ const Index = () => {
         await saveDocument(file.name, 'application/pdf', '', data.text, data.metadata || {});
         toast({ title: 'PDF Processed', description: 'Extracted text and fields from PDF.' });
       } else {
-        // Fallback: send as Data URL (slower but works for scanned/image PDFs)
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          const pdfData = e.target?.result as string;
-          const { data, error } = await supabase.functions.invoke('ocr-scan', {
-            body: { 
-              imageData: pdfData,
-              isPdf: true,
-              extractionFields: selectedProject?.extraction_fields || []
-            },
-          });
-          if (error) throw error;
-          setExtractedText(data.text);
-          setExtractedMetadata(data.metadata || {});
-          await saveDocument(file.name, 'application/pdf', pdfData, data.text, data.metadata || {});
-          toast({ title: 'PDF Processed', description: 'Text extracted from scanned PDF.' });
-        };
-        reader.readAsDataURL(file);
+        toast({
+          title: 'PDF Processing Failed',
+          description: 'Could not extract text from PDF. The file may be image-only; try another PDF or upload as an image.',
+          variant: 'destructive',
+        });
+        setIsProcessing(false);
+        return;
       }
     } catch (error: any) {
       console.error('Error processing PDF:', error);

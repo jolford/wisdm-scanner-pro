@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import * as pdfjsLib from 'pdfjs-dist';
-import PdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker';
+import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
 
 // Configure PDF.js worker using a dedicated module worker (avoids CDN)
 if ((pdfjsLib as any).GlobalWorkerOptions) {
@@ -145,7 +145,7 @@ const Queue = () => {
         console.warn('PDF text extraction failed:', e);
       }
 
-      if (!extractedPdfText || extractedPdfText.trim().length < 50) {
+      if (!extractedPdfText || extractedPdfText.trim().length < 10) {
         toast({
           title: 'PDF Processing Failed',
           description: 'Could not extract text from PDF. Please try a different file.',
