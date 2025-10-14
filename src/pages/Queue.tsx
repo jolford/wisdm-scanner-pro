@@ -11,7 +11,7 @@ import { ProjectSelector } from '@/components/ProjectSelector';
 import { BatchSelector } from '@/components/BatchSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye } from 'lucide-react';
+import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import {
   AlertDialog,
@@ -23,6 +23,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import jsPDF from 'jspdf';
 
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
@@ -305,7 +306,7 @@ const Queue = () => {
     }
   };
 
-  const exportBatchToCSV = async () => {
+  const exportBatch = async (format: 'csv' | 'json' | 'xml' | 'txt') => {
     if (!validatedDocs.length) {
       toast({
         title: 'No Documents',
@@ -322,37 +323,241 @@ const Queue = () => {
       }
     });
 
-    const headers = ['File Name', 'Date', ...Array.from(metadataKeys)];
-    const rows = validatedDocs.map(doc => {
-      const row: string[] = [
-        doc.file_name,
-        new Date(doc.created_at).toLocaleDateString(),
-      ];
-      
-      metadataKeys.forEach(key => {
-        row.push(doc.extracted_metadata?.[key] || '');
-      });
-      
-      return row;
-    });
+    let content = '';
+    let mimeType = '';
+    let extension = '';
 
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
-    ].join('\n');
+    switch (format) {
+      case 'csv':
+        const headers = ['File Name', 'Date', ...Array.from(metadataKeys)];
+        const rows = validatedDocs.map(doc => {
+          const row: string[] = [
+            doc.file_name,
+            new Date(doc.created_at).toLocaleDateString(),
+          ];
+          metadataKeys.forEach(key => {
+            row.push(doc.extracted_metadata?.[key] || '');
+          });
+          return row;
+        });
+        content = [
+          headers.join(','),
+          ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+        ].join('\n');
+        mimeType = 'text/csv';
+        extension = 'csv';
+        break;
 
-    const blob = new Blob([csvContent], { type: 'text/csv' });
+      case 'json':
+        const jsonData = validatedDocs.map(doc => ({
+          fileName: doc.file_name,
+          date: new Date(doc.created_at).toISOString(),
+          metadata: doc.extracted_metadata,
+          extractedText: doc.extracted_text,
+        }));
+        content = JSON.stringify(jsonData, null, 2);
+        mimeType = 'application/json';
+        extension = 'json';
+        break;
+
+      case 'xml':
+        content = '<?xml version="1.0" encoding="UTF-8"?>\n<batch>\n';
+        content += `  <name>${selectedBatch?.batch_name || 'export'}</name>\n`;
+        content += `  <exportDate>${new Date().toISOString()}</exportDate>\n`;
+        content += '  <documents>\n';
+        validatedDocs.forEach(doc => {
+          content += '    <document>\n';
+          content += `      <fileName>${doc.file_name}</fileName>\n`;
+          content += `      <date>${new Date(doc.created_at).toISOString()}</date>\n`;
+          content += '      <metadata>\n';
+          Object.entries(doc.extracted_metadata || {}).forEach(([key, value]) => {
+            content += `        <${key}>${value}</${key}>\n`;
+          });
+          content += '      </metadata>\n';
+          content += '    </document>\n';
+        });
+        content += '  </documents>\n';
+        content += '</batch>';
+        mimeType = 'application/xml';
+        extension = 'xml';
+        break;
+
+      case 'txt':
+        content = `Batch Export: ${selectedBatch?.batch_name || 'export'}\n`;
+        content += `Export Date: ${new Date().toLocaleDateString()}\n`;
+        content += `Total Documents: ${validatedDocs.length}\n\n`;
+        content += '='.repeat(80) + '\n\n';
+        validatedDocs.forEach((doc, index) => {
+          content += `Document ${index + 1}: ${doc.file_name}\n`;
+          content += `Date: ${new Date(doc.created_at).toLocaleDateString()}\n`;
+          content += 'Metadata:\n';
+          Object.entries(doc.extracted_metadata || {}).forEach(([key, value]) => {
+            content += `  ${key}: ${value}\n`;
+          });
+          content += '\n' + '-'.repeat(80) + '\n\n';
+        });
+        mimeType = 'text/plain';
+        extension = 'txt';
+        break;
+    }
+
+    const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `batch-${selectedBatch?.batch_name || 'export'}-${Date.now()}.csv`;
+    a.download = `batch-${selectedBatch?.batch_name || 'export'}-${Date.now()}.${extension}`;
     a.click();
     URL.revokeObjectURL(url);
 
     toast({
       title: 'Export Successful',
-      description: 'Batch exported to CSV',
+      description: `Batch exported as ${format.toUpperCase()}`,
     });
+  };
+
+  const exportImages = async () => {
+    if (!validatedDocs.length) {
+      toast({
+        title: 'No Documents',
+        description: 'No validated documents to export',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const docsWithImages = validatedDocs.filter(doc => doc.file_url);
+    
+    if (!docsWithImages.length) {
+      toast({
+        title: 'No Images',
+        description: 'No images available for export',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    for (const doc of docsWithImages) {
+      try {
+        const response = await fetch(doc.file_url);
+        const blob = await response.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = doc.file_name;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error(`Failed to download ${doc.file_name}:`, error);
+      }
+    }
+
+    toast({
+      title: 'Images Downloaded',
+      description: `Downloaded ${docsWithImages.length} images`,
+    });
+  };
+
+  const markBatchComplete = async () => {
+    if (!selectedBatchId) return;
+
+    try {
+      const { error } = await supabase
+        .from('batches')
+        .update({ 
+          status: 'complete',
+          completed_at: new Date().toISOString()
+        })
+        .eq('id', selectedBatchId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Batch Completed',
+        description: 'Batch marked as complete',
+      });
+
+      setSelectedBatch({ ...selectedBatch, status: 'complete' });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const generatePDF = async () => {
+    if (!validatedDocs.length) {
+      toast({
+        title: 'No Documents',
+        description: 'No validated documents to generate PDF',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      const doc = new jsPDF();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      let yPosition = 20;
+
+      // Title
+      doc.setFontSize(20);
+      doc.text(`Batch: ${selectedBatch?.batch_name || 'Export'}`, 20, yPosition);
+      yPosition += 10;
+
+      doc.setFontSize(12);
+      doc.text(`Export Date: ${new Date().toLocaleDateString()}`, 20, yPosition);
+      yPosition += 10;
+      doc.text(`Total Documents: ${validatedDocs.length}`, 20, yPosition);
+      yPosition += 20;
+
+      // Documents
+      validatedDocs.forEach((document, index) => {
+        if (yPosition > pageHeight - 40) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        doc.setFontSize(14);
+        doc.text(`Document ${index + 1}: ${document.file_name}`, 20, yPosition);
+        yPosition += 8;
+
+        doc.setFontSize(10);
+        doc.text(`Date: ${new Date(document.created_at).toLocaleDateString()}`, 20, yPosition);
+        yPosition += 6;
+
+        if (document.extracted_metadata) {
+          doc.text('Metadata:', 20, yPosition);
+          yPosition += 6;
+
+          Object.entries(document.extracted_metadata).forEach(([key, value]) => {
+            if (yPosition > pageHeight - 20) {
+              doc.addPage();
+              yPosition = 20;
+            }
+            doc.text(`  ${key}: ${value}`, 25, yPosition);
+            yPosition += 6;
+          });
+        }
+
+        yPosition += 10;
+      });
+
+      doc.save(`batch-${selectedBatch?.batch_name || 'export'}-${Date.now()}.pdf`);
+
+      toast({
+        title: 'PDF Generated',
+        description: 'Batch exported as PDF successfully',
+      });
+    } catch (error: any) {
+      console.error('PDF generation error:', error);
+      toast({
+        title: 'PDF Generation Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
   };
 
   if (authLoading) {
@@ -588,11 +793,56 @@ const Queue = () => {
                   </div>
                 </div>
 
-                <div className="flex gap-4 justify-center">
-                  <Button onClick={exportBatchToCSV} size="lg" disabled={validatedDocs.length === 0}>
-                    <Download className="h-5 w-5 mr-2" />
-                    Export to CSV
-                  </Button>
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="font-semibold mb-3">Export Metadata</h4>
+                    <div className="grid grid-cols-2 gap-3">
+                      <Button onClick={() => exportBatch('csv')} disabled={validatedDocs.length === 0} variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        CSV Format
+                      </Button>
+                      <Button onClick={() => exportBatch('json')} disabled={validatedDocs.length === 0} variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        JSON Format
+                      </Button>
+                      <Button onClick={() => exportBatch('xml')} disabled={validatedDocs.length === 0} variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        XML Format
+                      </Button>
+                      <Button onClick={() => exportBatch('txt')} disabled={validatedDocs.length === 0} variant="outline">
+                        <Download className="h-4 w-4 mr-2" />
+                        TXT Format
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-3">Export Images</h4>
+                    <Button onClick={exportImages} disabled={validatedDocs.length === 0} variant="outline" className="w-full">
+                      <Download className="h-4 w-4 mr-2" />
+                      Download All Images
+                    </Button>
+                  </div>
+
+                  <div>
+                    <h4 className="font-semibold mb-3">Generate PDF Report</h4>
+                    <Button onClick={generatePDF} disabled={validatedDocs.length === 0} variant="outline" className="w-full">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Generate PDF with Metadata
+                    </Button>
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <Button 
+                      onClick={markBatchComplete} 
+                      disabled={validatedDocs.length === 0 || selectedBatch?.status === 'complete'}
+                      className="w-full"
+                      size="lg"
+                    >
+                      <CheckCircle className="h-5 w-5 mr-2" />
+                      {selectedBatch?.status === 'complete' ? 'Batch Completed' : 'Mark Batch as Complete'}
+                    </Button>
+                  </div>
                 </div>
               </Card>
             </TabsContent>
