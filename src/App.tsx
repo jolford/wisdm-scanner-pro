@@ -18,7 +18,9 @@ import LicensesIndex from "./pages/admin/licenses/Index";
 import NewLicense from "./pages/admin/licenses/New";
 import CustomersIndex from "./pages/admin/customers/Index";
 import NewCustomer from "./pages/admin/customers/New";
+import EditCustomer from "./pages/admin/customers/Edit";
 import UsersIndex from "./pages/admin/users/Index";
+import DocumentsAdmin from "./pages/admin/Documents";
 import Analytics from "./pages/admin/Analytics";
 import NotFound from "./pages/NotFound";
 
@@ -47,7 +49,9 @@ const App = () => (
           <Route path="/admin/licenses/new" element={<NewLicense />} />
           <Route path="/admin/customers" element={<CustomersIndex />} />
           <Route path="/admin/customers/new" element={<NewCustomer />} />
+          <Route path="/admin/customers/:id/edit" element={<EditCustomer />} />
           <Route path="/admin/users" element={<UsersIndex />} />
+          <Route path="/admin/documents" element={<DocumentsAdmin />} />
           <Route path="/admin/analytics" element={<Analytics />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />

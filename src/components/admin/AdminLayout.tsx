@@ -10,6 +10,7 @@ import {
   BarChart3,
   LogOut,
   Menu,
+  FileText,
 } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,6 +37,7 @@ interface AdminLayoutProps {
 const menuItems = [
   { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
   { title: 'Projects', url: '/admin/projects', icon: FolderOpen },
+  { title: 'Documents', url: '/admin/documents', icon: FileText },
   { title: 'Customers', url: '/admin/customers', icon: Building2 },
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Licenses', url: '/admin/licenses', icon: Key },
