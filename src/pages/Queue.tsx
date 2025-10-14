@@ -11,7 +11,7 @@ import { ProjectSelector } from '@/components/ProjectSelector';
 import { BatchSelector } from '@/components/BatchSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText } from 'lucide-react';
+import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText, FolderOpen } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import {
   AlertDialog,
@@ -587,6 +587,10 @@ const Queue = () => {
                   Admin
                 </Button>
               )}
+              <Button variant="outline" onClick={() => navigate('/batches')}>
+                <FolderOpen className="h-4 w-4 mr-2" />
+                Batches
+              </Button>
               <Button variant="outline" onClick={signOut}>
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out

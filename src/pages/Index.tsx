@@ -292,9 +292,9 @@ const Index = () => {
                   </Button>
                 </>
               )}
-              <Button variant="outline" onClick={() => navigate('/documents')}>
-                <FileText className="h-4 w-4 mr-2" />
-                Documents
+              <Button variant="outline" onClick={() => navigate('/batches')}>
+                <FolderOpen className="h-4 w-4 mr-2" />
+                Batches
               </Button>
               <Button variant="outline" onClick={signOut}>
                 <LogOut className="h-4 w-4 mr-2" />
