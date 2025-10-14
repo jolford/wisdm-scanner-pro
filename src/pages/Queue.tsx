@@ -11,7 +11,7 @@ import { ProjectSelector } from '@/components/ProjectSelector';
 import { BatchSelector } from '@/components/BatchSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Settings, Upload, ScanLine, CheckCircle, FileText, Download, Trash2, Eye } from 'lucide-react';
+import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import {
   AlertDialog,
@@ -29,18 +29,12 @@ const Queue = () => {
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
   const { toast } = useToast();
   
-  // Scan state
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
-  
-  // Validation state
   const [validationDoc, setValidationDoc] = useState<any>(null);
-  
-  // Queue documents
-  const [ocrQueue, setOcrQueue] = useState<any[]>([]);
   const [validationQueue, setValidationQueue] = useState<any[]>([]);
   const [validatedDocs, setValidatedDocs] = useState<any[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -70,7 +64,6 @@ const Queue = () => {
 
       if (error) throw error;
 
-      setOcrQueue([]);
       setValidationQueue(data?.filter(d => d.validation_status === 'pending') || []);
       setValidatedDocs(data?.filter(d => d.validation_status === 'validated') || []);
     } catch (error) {
@@ -314,7 +307,6 @@ const Queue = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 relative overflow-hidden">
-      {/* Mesh gradient background */}
       <div className="absolute inset-0 bg-[var(--gradient-mesh)] pointer-events-none" />
       
       <header className="border-b border-border/50 backdrop-blur-xl sticky top-0 z-10 bg-background/80 shadow-[var(--shadow-soft)] relative">
@@ -526,9 +518,12 @@ const Queue = () => {
               </TabsContent>
               
               <TabsContent value="export">
-                <Card className="p-8">
+                <Card className="p-8 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm shadow-[var(--shadow-elegant)] border-border/50">
                   <div className="text-center mb-6">
-                    <Download className="h-16 w-16 mx-auto mb-4 text-primary" />
+                    <div className="relative inline-block mb-4">
+                      <div className="absolute inset-0 bg-gradient-to-br from-primary to-accent rounded-full blur-xl opacity-20" />
+                      <Download className="h-16 w-16 text-primary relative" />
+                    </div>
                     <h3 className="text-2xl font-semibold mb-2">Export Batch</h3>
                     <p className="text-muted-foreground">
                       Export all validated documents from this batch
@@ -553,7 +548,7 @@ const Queue = () => {
                   </div>
 
                   <div className="flex gap-4 justify-center">
-                    <Button onClick={exportBatchToCSV} size="lg" disabled={validatedDocs.length === 0}>
+                    <Button onClick={exportBatchToCSV} size="lg" disabled={validatedDocs.length === 0} className="bg-gradient-to-r from-primary to-accent hover:opacity-90">
                       <Download className="h-5 w-5 mr-2" />
                       Export to CSV
                     </Button>
