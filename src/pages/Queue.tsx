@@ -149,8 +149,9 @@ const Queue = () => {
 
       if (!extractedPdfText || extractedPdfText.trim().length < 10) {
         try {
-          if (!arrayBuffer) arrayBuffer = await file.arrayBuffer();
-          const loadingTask2 = pdfjsLib.getDocument({ data: arrayBuffer as ArrayBuffer });
+          // Always re-read file to avoid using a detached ArrayBuffer
+          const freshBuffer = await file.arrayBuffer();
+          const loadingTask2 = pdfjsLib.getDocument({ data: freshBuffer as ArrayBuffer });
           const pdf2 = await loadingTask2.promise;
           const page1 = await pdf2.getPage(1);
           let viewport = page1.getViewport({ scale: 1.5 });
