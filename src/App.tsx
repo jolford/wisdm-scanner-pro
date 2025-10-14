@@ -9,6 +9,8 @@ import Documents from "./pages/Documents";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProjects from "./pages/admin/projects/Index";
 import NewProject from "./pages/admin/projects/New";
+import BatchesIndex from "./pages/admin/batches/Index";
+import NewBatch from "./pages/admin/batches/New";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +28,8 @@ const App = () => (
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/projects" element={<AdminProjects />} />
           <Route path="/admin/projects/new" element={<NewProject />} />
+          <Route path="/admin/batches" element={<BatchesIndex />} />
+          <Route path="/admin/batches/new" element={<NewBatch />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

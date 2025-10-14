@@ -4,10 +4,11 @@ import { ScanUploader } from '@/components/ScanUploader';
 import { PhysicalScanner } from '@/components/PhysicalScanner';
 import { ScanResult } from '@/components/ScanResult';
 import { ProjectSelector } from '@/components/ProjectSelector';
+import { BatchSelector } from '@/components/BatchSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
-import { Sparkles, Upload, ScanLine, LogOut, FileText, Settings } from 'lucide-react';
+import { Sparkles, Upload, ScanLine, LogOut, FileText, Settings, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import wisdmLogo from '@/assets/wisdm-logo.png';
@@ -22,6 +23,8 @@ const Index = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
+  const [selectedBatch, setSelectedBatch] = useState<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -34,6 +37,7 @@ const Index = () => {
     try {
       const { error } = await supabase.from('documents').insert([{
         project_id: selectedProjectId,
+        batch_id: selectedBatchId,
         file_name: fileName,
         file_type: fileType,
         file_url: fileUrl,
@@ -43,16 +47,27 @@ const Index = () => {
       }]);
 
       if (error) throw error;
+
+      // Update batch counts
+      if (selectedBatchId && selectedBatch) {
+        await supabase
+          .from('batches')
+          .update({ 
+            total_documents: (selectedBatch.total_documents || 0) + 1,
+            processed_documents: (selectedBatch.processed_documents || 0) + 1
+          })
+          .eq('id', selectedBatchId);
+      }
     } catch (error) {
       console.error('Error saving document:', error);
     }
   };
 
   const processPdf = async (file: File) => {
-    if (!selectedProjectId) {
+    if (!selectedProjectId || !selectedBatchId) {
       toast({
-        title: 'Select Project',
-        description: 'Please select a project before uploading',
+        title: 'Select Project and Batch',
+        description: 'Please select both a project and batch before uploading',
         variant: 'destructive',
       });
       return;
@@ -104,10 +119,10 @@ const Index = () => {
   };
 
   const handleScanComplete = async (text: string, imageUrl: string, fileName = 'scan.jpg') => {
-    if (!selectedProjectId) {
+    if (!selectedProjectId || !selectedBatchId) {
       toast({
-        title: 'Select Project',
-        description: 'Please select a project before scanning',
+        title: 'Select Project and Batch',
+        description: 'Please select both a project and batch before scanning',
         variant: 'destructive',
       });
       return;
@@ -183,10 +198,16 @@ const Index = () => {
             </div>
             <div className="flex items-center gap-2">
               {isAdmin && (
-                <Button variant="outline" onClick={() => navigate('/admin')}>
-                  <Settings className="h-4 w-4 mr-2" />
-                  Admin
-                </Button>
+                <>
+                  <Button variant="outline" onClick={() => navigate('/admin/batches')}>
+                    <FolderOpen className="h-4 w-4 mr-2" />
+                    Batches
+                  </Button>
+                  <Button variant="outline" onClick={() => navigate('/admin')}>
+                    <Settings className="h-4 w-4 mr-2" />
+                    Admin
+                  </Button>
+                </>
               )}
               <Button variant="outline" onClick={() => navigate('/documents')}>
                 <FileText className="h-4 w-4 mr-2" />
@@ -218,17 +239,30 @@ const Index = () => {
               </p>
             </div>
 
-            <div className="mb-6">
+            <div className="space-y-6 mb-6">
               <ProjectSelector
                 selectedProjectId={selectedProjectId}
                 onProjectSelect={(id, project) => {
                   setSelectedProjectId(id);
                   setSelectedProject(project);
+                  setSelectedBatchId(null);
+                  setSelectedBatch(null);
                 }}
               />
+              
+              {selectedProjectId && (
+                <BatchSelector
+                  selectedBatchId={selectedBatchId}
+                  onBatchSelect={(id, batch) => {
+                    setSelectedBatchId(id);
+                    setSelectedBatch(batch);
+                  }}
+                  projectId={selectedProjectId}
+                />
+              )}
             </div>
 
-            {selectedProjectId && (
+            {selectedProjectId && selectedBatchId && (
               <Tabs defaultValue="upload" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6">
                   <TabsTrigger value="upload" className="flex items-center gap-2">
@@ -261,7 +295,7 @@ const Index = () => {
               <div>
                 <h2 className="text-2xl font-bold">Scan Results</h2>
                 <p className="text-sm text-muted-foreground">
-                  File: {currentFileName} • Project: {selectedProject?.name}
+                  File: {currentFileName} • Project: {selectedProject?.name} • Batch: {selectedBatch?.batch_name}
                 </p>
               </div>
               <Button onClick={handleReset} variant="outline">

@@ -14,41 +14,212 @@ export type Database = {
   }
   public: {
     Tables: {
+      batches: {
+        Row: {
+          assigned_to: string | null
+          batch_name: string
+          completed_at: string | null
+          created_at: string | null
+          created_by: string
+          error_count: number | null
+          exported_at: string | null
+          id: string
+          metadata: Json | null
+          notes: string | null
+          priority: number | null
+          processed_documents: number | null
+          project_id: string
+          started_at: string | null
+          status: Database["public"]["Enums"]["batch_status"] | null
+          total_documents: number | null
+          updated_at: string | null
+          validated_documents: number | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          batch_name: string
+          completed_at?: string | null
+          created_at?: string | null
+          created_by: string
+          error_count?: number | null
+          exported_at?: string | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          priority?: number | null
+          processed_documents?: number | null
+          project_id: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["batch_status"] | null
+          total_documents?: number | null
+          updated_at?: string | null
+          validated_documents?: number | null
+        }
+        Update: {
+          assigned_to?: string | null
+          batch_name?: string
+          completed_at?: string | null
+          created_at?: string | null
+          created_by?: string
+          error_count?: number | null
+          exported_at?: string | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          priority?: number | null
+          processed_documents?: number | null
+          project_id?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["batch_status"] | null
+          total_documents?: number | null
+          updated_at?: string | null
+          validated_documents?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batches_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_classes: {
+        Row: {
+          barcode_config: Json | null
+          class_type: Database["public"]["Enums"]["document_class_type"]
+          created_at: string | null
+          created_by: string
+          description: string | null
+          extraction_zones: Json | null
+          id: string
+          is_active: boolean | null
+          name: string
+          project_id: string
+          updated_at: string | null
+          validation_rules: Json | null
+        }
+        Insert: {
+          barcode_config?: Json | null
+          class_type?: Database["public"]["Enums"]["document_class_type"]
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          extraction_zones?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          project_id: string
+          updated_at?: string | null
+          validation_rules?: Json | null
+        }
+        Update: {
+          barcode_config?: Json | null
+          class_type?: Database["public"]["Enums"]["document_class_type"]
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          extraction_zones?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          project_id?: string
+          updated_at?: string | null
+          validation_rules?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_classes_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
+          batch_id: string | null
+          confidence_score: number | null
           created_at: string | null
+          document_class_id: string | null
           extracted_metadata: Json | null
           extracted_text: string | null
           file_name: string
           file_type: string
           file_url: string | null
           id: string
+          needs_review: boolean | null
+          page_number: number | null
           project_id: string
           uploaded_by: string
+          validated_at: string | null
+          validated_by: string | null
+          validation_notes: string | null
+          validation_status:
+            | Database["public"]["Enums"]["validation_status"]
+            | null
         }
         Insert: {
+          batch_id?: string | null
+          confidence_score?: number | null
           created_at?: string | null
+          document_class_id?: string | null
           extracted_metadata?: Json | null
           extracted_text?: string | null
           file_name: string
           file_type: string
           file_url?: string | null
           id?: string
+          needs_review?: boolean | null
+          page_number?: number | null
           project_id: string
           uploaded_by: string
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
+          validation_status?:
+            | Database["public"]["Enums"]["validation_status"]
+            | null
         }
         Update: {
+          batch_id?: string | null
+          confidence_score?: number | null
           created_at?: string | null
+          document_class_id?: string | null
           extracted_metadata?: Json | null
           extracted_text?: string | null
           file_name?: string
           file_type?: string
           file_url?: string | null
           id?: string
+          needs_review?: boolean | null
+          page_number?: number | null
           project_id?: string
           uploaded_by?: string
+          validated_at?: string | null
+          validated_by?: string | null
+          validation_notes?: string | null
+          validation_status?:
+            | Database["public"]["Enums"]["validation_status"]
+            | null
         }
         Relationships: [
+          {
+            foreignKeyName: "documents_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "documents_document_class_id_fkey"
+            columns: ["document_class_id"]
+            isOneToOne: false
+            referencedRelation: "document_classes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "documents_project_id_fkey"
             columns: ["project_id"]
@@ -151,6 +322,23 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      batch_status:
+        | "new"
+        | "scanning"
+        | "indexing"
+        | "validation"
+        | "complete"
+        | "exported"
+        | "error"
+      document_class_type:
+        | "invoice"
+        | "receipt"
+        | "form"
+        | "contract"
+        | "id_card"
+        | "check"
+        | "other"
+      validation_status: "pending" | "validated" | "rejected" | "needs_review"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -279,6 +467,25 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      batch_status: [
+        "new",
+        "scanning",
+        "indexing",
+        "validation",
+        "complete",
+        "exported",
+        "error",
+      ],
+      document_class_type: [
+        "invoice",
+        "receipt",
+        "form",
+        "contract",
+        "id_card",
+        "check",
+        "other",
+      ],
+      validation_status: ["pending", "validated", "rejected", "needs_review"],
     },
   },
 } as const
