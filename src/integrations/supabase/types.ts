@@ -417,6 +417,35 @@ export type Database = {
         }
         Relationships: []
       }
+      user_customers: {
+        Row: {
+          created_at: string | null
+          customer_id: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_customers_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -448,17 +477,27 @@ export type Database = {
         Returns: boolean
       }
       consume_license_documents: {
-        Args: {
-          _document_id: string
-          _documents_count?: number
-          _license_id: string
-          _user_id: string
-        }
+        Args:
+          | {
+              _document_id: string
+              _documents_count?: number
+              _license_id: string
+            }
+          | {
+              _document_id: string
+              _documents_count?: number
+              _license_id: string
+              _user_id: string
+            }
         Returns: boolean
       }
       generate_license_key: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      has_customer: {
+        Args: { _customer_id: string; _user_id: string }
+        Returns: boolean
       }
       has_role: {
         Args: {
