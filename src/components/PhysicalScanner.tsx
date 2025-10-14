@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { AlertCircle, ExternalLink } from 'lucide-react';
 
 interface PhysicalScannerProps {
-  onScanComplete: (text: string, imageData: string) => void;
+  onScanComplete: (text: string, imageData: string, fileName: string) => void;
   isProcessing: boolean;
 }
 

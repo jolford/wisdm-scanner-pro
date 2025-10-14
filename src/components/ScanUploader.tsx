@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 interface ScanUploaderProps {
-  onScanComplete: (text: string, imageUrl: string) => void;
+  onScanComplete: (text: string, imageUrl: string, fileName: string) => void;
   onPdfUpload: (file: File) => void;
   isProcessing: boolean;
 }
@@ -34,7 +34,7 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, isProcessing }: Scan
     const reader = new FileReader();
     reader.onload = async (e) => {
       const imageData = e.target?.result as string;
-      onScanComplete('', imageData);
+      onScanComplete('', imageData, file.name);
     };
     reader.readAsDataURL(file);
   };

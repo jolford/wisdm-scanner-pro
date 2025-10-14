@@ -12,24 +12,22 @@ serve(async (req) => {
   }
 
   try {
-    const { imageData, isPdf } = await req.json();
+    const { imageData, isPdf, extractionFields } = await req.json();
     
     if (!imageData) {
       throw new Error('No image data provided');
     }
 
     console.log('Processing OCR request...', isPdf ? 'PDF' : 'Image');
+    console.log('Extraction fields:', extractionFields);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // For PDFs, we need to extract text differently
-    // For now, inform user that PDF text extraction requires additional setup
+    // For PDFs, provide guidance
     if (isPdf) {
-      // Try to use the AI to extract text from PDF preview/first page
-      // Note: This is a workaround - proper PDF parsing would need pdf.js or similar
       const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -59,10 +57,19 @@ serve(async (req) => {
 
       return new Response(
         JSON.stringify({ 
-          text: `PDF Support Note:\n\n${message}\n\nFor best results, please:\n1. Convert your PDF pages to JPG or PNG images\n2. Upload the images one at a time\n3. Or use a physical scanner with the Physical Scanner tab\n\nThis will ensure the highest quality text extraction.` 
+          text: `PDF Support Note:\n\n${message}\n\nFor best results, please:\n1. Convert your PDF pages to JPG or PNG images\n2. Upload the images one at a time\n3. Or use a physical scanner with the Physical Scanner tab\n\nThis will ensure the highest quality text extraction.`,
+          metadata: {}
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Build extraction prompt based on provided fields
+    let extractionPrompt = 'Please extract all text from this image using OCR/ICR. Preserve the original formatting and structure as much as possible.';
+    
+    if (extractionFields && extractionFields.length > 0) {
+      const fieldsList = extractionFields.map((f: any) => `- ${f.name}: ${f.description || 'Extract this field'}`).join('\n');
+      extractionPrompt = `Extract ALL text from this document AND identify the following specific fields:\n\n${fieldsList}\n\nProvide both the full text extraction and the identified field values in a structured format.`;
     }
 
     // Process images with vision model
@@ -77,14 +84,14 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are an advanced OCR and ICR system. Extract ALL text from the provided image with high accuracy. Include formatting, structure, and layout information. Preserve headings, paragraphs, lists, tables, and any special formatting. If handwriting is present, apply intelligent character recognition to transcribe it accurately.'
+            content: 'You are an advanced OCR and ICR system with metadata extraction capabilities. Extract ALL text from documents and identify specific data fields when requested. Return results in a clear, structured format.'
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: 'Please extract all text from this image using OCR/ICR. Preserve the original formatting and structure as much as possible.'
+                text: extractionPrompt
               },
               {
                 type: 'image_url',
@@ -123,10 +130,58 @@ serve(async (req) => {
     const data = await response.json();
     const extractedText = data.choices[0].message.content;
 
+    // Parse metadata from the response if extraction fields were provided
+    const metadata: Record<string, string> = {};
+    
+    if (extractionFields && extractionFields.length > 0) {
+      // Use AI to structure the extracted data into metadata
+      const metadataResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            {
+              role: 'system',
+              content: 'You extract specific field values from text. Return ONLY valid JSON with the requested field names as keys and their extracted values. If a field is not found, use an empty string.'
+            },
+            {
+              role: 'user',
+              content: `From this extracted text, identify these fields and return as JSON:\n\nFields needed:\n${extractionFields.map((f: any) => f.name).join(', ')}\n\nExtracted text:\n${extractedText}\n\nReturn format: {"field1": "value1", "field2": "value2"}`
+            }
+          ],
+          temperature: 0.1,
+        }),
+      });
+
+      if (metadataResponse.ok) {
+        const metadataData = await metadataResponse.json();
+        const metadataText = metadataData.choices[0].message.content;
+        
+        try {
+          // Try to parse JSON from the response
+          const jsonMatch = metadataText.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsedMetadata = JSON.parse(jsonMatch[0]);
+            Object.assign(metadata, parsedMetadata);
+          }
+        } catch (e) {
+          console.error('Failed to parse metadata JSON:', e);
+        }
+      }
+    }
+
     console.log('OCR processing completed successfully');
+    console.log('Extracted metadata:', metadata);
 
     return new Response(
-      JSON.stringify({ text: extractedText }),
+      JSON.stringify({ 
+        text: extractedText,
+        metadata: metadata
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

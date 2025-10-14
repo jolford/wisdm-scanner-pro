@@ -1,36 +1,77 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ScanUploader } from '@/components/ScanUploader';
 import { PhysicalScanner } from '@/components/PhysicalScanner';
 import { ScanResult } from '@/components/ScanResult';
+import { ProjectSelector } from '@/components/ProjectSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Sparkles, Upload, ScanLine } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
+import { Sparkles, Upload, ScanLine, LogOut, FileText, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 
-
 const Index = () => {
+  const navigate = useNavigate();
+  const { user, isAdmin, loading: authLoading, signOut } = useAuth();
   const [extractedText, setExtractedText] = useState('');
+  const [extractedMetadata, setExtractedMetadata] = useState<Record<string, string>>({});
   const [currentImage, setCurrentImage] = useState('');
+  const [currentFileName, setCurrentFileName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
   const { toast } = useToast();
 
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    }
+  }, [authLoading, user, navigate]);
+
+  const saveDocument = async (fileName: string, fileType: string, fileUrl: string, text: string, metadata: any) => {
+    try {
+      const { error } = await supabase.from('documents').insert([{
+        project_id: selectedProjectId,
+        file_name: fileName,
+        file_type: fileType,
+        file_url: fileUrl,
+        extracted_text: text,
+        extracted_metadata: metadata,
+        uploaded_by: user?.id,
+      }]);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error saving document:', error);
+    }
+  };
+
   const processPdf = async (file: File) => {
+    if (!selectedProjectId) {
+      toast({
+        title: 'Select Project',
+        description: 'Please select a project before uploading',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setCurrentFileName(file.name);
     setIsProcessing(true);
     
     try {
-      // Create a data URL for the PDF to display
       const reader = new FileReader();
       reader.onload = async (e) => {
         const pdfData = e.target?.result as string;
         setCurrentImage(pdfData);
         
-        // Call edge function to extract text from PDF
         const { data, error } = await supabase.functions.invoke('ocr-scan', {
           body: { 
             imageData: pdfData,
-            isPdf: true 
+            isPdf: true,
+            extractionFields: selectedProject?.extraction_fields || []
           },
         });
 
@@ -40,6 +81,11 @@ const Index = () => {
         }
 
         setExtractedText(data.text);
+        setExtractedMetadata(data.metadata || {});
+        
+        // Save document
+        await saveDocument(file.name, 'application/pdf', pdfData, data.text, data.metadata || {});
+        
         toast({
           title: 'PDF Processed',
           description: 'Text has been successfully extracted from your PDF.',
@@ -57,15 +103,26 @@ const Index = () => {
     }
   };
 
-  const handleScanComplete = async (text: string, imageUrl: string) => {
+  const handleScanComplete = async (text: string, imageUrl: string, fileName = 'scan.jpg') => {
+    if (!selectedProjectId) {
+      toast({
+        title: 'Select Project',
+        description: 'Please select a project before scanning',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setCurrentImage(imageUrl);
+    setCurrentFileName(fileName);
     setIsProcessing(true);
 
     try {
       const { data, error } = await supabase.functions.invoke('ocr-scan', {
         body: { 
           imageData: imageUrl,
-          isPdf: false 
+          isPdf: false,
+          extractionFields: selectedProject?.extraction_fields || []
         },
       });
 
@@ -75,9 +132,14 @@ const Index = () => {
       }
 
       setExtractedText(data.text);
+      setExtractedMetadata(data.metadata || {});
+      
+      // Save document
+      await saveDocument(fileName, 'image', imageUrl, data.text, data.metadata || {});
+
       toast({
         title: 'Scan Complete',
-        description: 'Text has been successfully extracted from your image.',
+        description: 'Text and metadata extracted successfully.',
       });
     } catch (error: any) {
       console.error('Error processing scan:', error);
@@ -93,8 +155,18 @@ const Index = () => {
 
   const handleReset = () => {
     setExtractedText('');
+    setExtractedMetadata({});
     setCurrentImage('');
+    setCurrentFileName('');
   };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5">
@@ -103,21 +175,31 @@ const Index = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img 
-                src={wisdmLogo} 
-                alt="WISDM Logo" 
-                className="h-10 w-auto"
-              />
+              <img src={wisdmLogo} alt="WISDM Logo" className="h-10 w-auto" />
               <div className="border-l border-border/50 pl-3">
-                <h1 className="text-xl font-bold text-foreground">
-                  Scanner Pro
-                </h1>
+                <h1 className="text-xl font-bold">Scanner Pro</h1>
                 <p className="text-xs text-muted-foreground">Advanced OCR & ICR Technology</p>
               </div>
             </div>
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Sparkles className="h-4 w-4 text-accent" />
-              <span>Powered by AI</span>
+            <div className="flex items-center gap-2">
+              {isAdmin && (
+                <Button variant="outline" onClick={() => navigate('/admin')}>
+                  <Settings className="h-4 w-4 mr-2" />
+                  Admin
+                </Button>
+              )}
+              <Button variant="outline" onClick={() => navigate('/documents')}>
+                <FileText className="h-4 w-4 mr-2" />
+                Documents
+              </Button>
+              <Button variant="outline" onClick={signOut}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Sparkles className="h-4 w-4 text-accent" />
+                <span>Powered by AI</span>
+              </div>
             </div>
           </div>
         </div>
@@ -132,43 +214,75 @@ const Index = () => {
                 Scan Documents with AI Precision
               </h2>
               <p className="text-lg text-muted-foreground">
-                Upload images, PDFs, or scan directly from your physical scanner with TWAIN/ISIS support
+                Select a project, then upload images, PDFs, or scan from your physical scanner
               </p>
             </div>
-            
-            <Tabs defaultValue="upload" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 mb-6">
-                <TabsTrigger value="upload" className="flex items-center gap-2">
-                  <Upload className="h-4 w-4" />
-                  Upload File
-                </TabsTrigger>
-                <TabsTrigger value="scanner" className="flex items-center gap-2">
-                  <ScanLine className="h-4 w-4" />
-                  Physical Scanner
-                </TabsTrigger>
-              </TabsList>
-              
-              <TabsContent value="upload">
-                <ScanUploader 
-                  onScanComplete={handleScanComplete} 
-                  onPdfUpload={processPdf}
-                  isProcessing={isProcessing} 
-                />
-              </TabsContent>
-              
-              <TabsContent value="scanner">
-                <PhysicalScanner onScanComplete={handleScanComplete} isProcessing={isProcessing} />
-              </TabsContent>
-            </Tabs>
+
+            <div className="mb-6">
+              <ProjectSelector
+                selectedProjectId={selectedProjectId}
+                onProjectSelect={(id, project) => {
+                  setSelectedProjectId(id);
+                  setSelectedProject(project);
+                }}
+              />
+            </div>
+
+            {selectedProjectId && (
+              <Tabs defaultValue="upload" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-6">
+                  <TabsTrigger value="upload" className="flex items-center gap-2">
+                    <Upload className="h-4 w-4" />
+                    Upload File
+                  </TabsTrigger>
+                  <TabsTrigger value="scanner" className="flex items-center gap-2">
+                    <ScanLine className="h-4 w-4" />
+                    Physical Scanner
+                  </TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="upload">
+                  <ScanUploader 
+                    onScanComplete={handleScanComplete} 
+                    onPdfUpload={processPdf}
+                    isProcessing={isProcessing} 
+                  />
+                </TabsContent>
+                
+                <TabsContent value="scanner">
+                  <PhysicalScanner onScanComplete={handleScanComplete} isProcessing={isProcessing} />
+                </TabsContent>
+              </Tabs>
+            )}
           </div>
         ) : (
           <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Scan Results</h2>
+              <div>
+                <h2 className="text-2xl font-bold">Scan Results</h2>
+                <p className="text-sm text-muted-foreground">
+                  File: {currentFileName} • Project: {selectedProject?.name}
+                </p>
+              </div>
               <Button onClick={handleReset} variant="outline">
                 New Scan
               </Button>
             </div>
+            
+            {Object.keys(extractedMetadata).length > 0 && (
+              <div className="bg-gradient-to-br from-card to-card/80 rounded-lg p-6 shadow-[var(--shadow-elegant)]">
+                <h3 className="text-lg font-semibold mb-4">Extracted Metadata</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {Object.entries(extractedMetadata).map(([key, value]) => (
+                    <div key={key} className="bg-muted/50 rounded-lg p-3">
+                      <p className="text-xs text-muted-foreground mb-1">{key}</p>
+                      <p className="font-medium">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             <ScanResult text={extractedText} imageUrl={currentImage} />
           </div>
         )}
