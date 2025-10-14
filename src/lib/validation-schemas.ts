@@ -1,0 +1,110 @@
+import { z } from 'zod';
+
+/**
+ * Validation schemas for all forms in the application
+ * Using zod for type-safe runtime validation
+ */
+
+// Project schemas
+export const projectSchema = z.object({
+  name: z.string()
+    .trim()
+    .min(1, 'Project name is required')
+    .max(100, 'Project name must be less than 100 characters')
+    .regex(/^[a-zA-Z0-9\s\-_]+$/, 'Project name can only contain letters, numbers, spaces, hyphens, and underscores'),
+  description: z.string()
+    .trim()
+    .max(500, 'Description must be less than 500 characters')
+    .optional(),
+  extractionFields: z.array(
+    z.object({
+      name: z.string()
+        .trim()
+        .min(1, 'Field name is required')
+        .max(50, 'Field name must be less than 50 characters'),
+      description: z.string()
+        .trim()
+        .max(200, 'Field description must be less than 200 characters')
+        .optional(),
+    })
+  ).min(1, 'At least one extraction field is required'),
+  exportConfig: z.record(
+    z.object({
+      enabled: z.boolean(),
+      destination: z.string()
+        .trim()
+        .max(255, 'Destination path must be less than 255 characters')
+        .regex(/^[a-zA-Z0-9\/_\-\.]+$/, 'Invalid destination path format'),
+    })
+  ),
+});
+
+// Batch schemas
+export const batchSchema = z.object({
+  batchName: z.string()
+    .trim()
+    .min(1, 'Batch name is required')
+    .max(100, 'Batch name must be less than 100 characters'),
+  projectId: z.string()
+    .uuid('Invalid project selection'),
+  priority: z.number()
+    .int()
+    .min(0)
+    .max(2),
+  notes: z.string()
+    .trim()
+    .max(1000, 'Notes must be less than 1000 characters')
+    .optional(),
+});
+
+// License schemas
+export const licenseSchema = z.object({
+  companyName: z.string()
+    .trim()
+    .min(1, 'Company name is required')
+    .max(100, 'Company name must be less than 100 characters'),
+  contactName: z.string()
+    .trim()
+    .max(100, 'Contact name must be less than 100 characters')
+    .optional(),
+  contactEmail: z.string()
+    .trim()
+    .email('Invalid email address')
+    .max(255, 'Email must be less than 255 characters'),
+  phone: z.string()
+    .trim()
+    .max(20, 'Phone number must be less than 20 characters')
+    .regex(/^[0-9\s\-\+\(\)]+$/, 'Invalid phone number format')
+    .optional()
+    .or(z.literal('')),
+  totalDocuments: z.number()
+    .int('Total documents must be a whole number')
+    .min(1, 'Total documents must be at least 1')
+    .max(10000000, 'Total documents must be less than 10 million'),
+  durationMonths: z.number()
+    .int('Duration must be a whole number')
+    .min(1, 'Duration must be at least 1 month')
+    .max(36, 'Duration must be less than 36 months'),
+  notes: z.string()
+    .trim()
+    .max(1000, 'Notes must be less than 1000 characters')
+    .optional(),
+});
+
+// Document validation schemas
+export const documentMetadataSchema = z.record(
+  z.string()
+    .trim()
+    .max(500, 'Field value must be less than 500 characters')
+);
+
+export const validationNotesSchema = z.string()
+  .trim()
+  .max(1000, 'Validation notes must be less than 1000 characters')
+  .optional();
+
+// Export type definitions
+export type ProjectFormData = z.infer<typeof projectSchema>;
+export type BatchFormData = z.infer<typeof batchSchema>;
+export type LicenseFormData = z.infer<typeof licenseSchema>;
+export type DocumentMetadata = z.infer<typeof documentMetadataSchema>;

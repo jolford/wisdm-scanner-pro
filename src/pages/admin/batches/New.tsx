@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ArrowLeft, Save } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { batchSchema } from '@/lib/validation-schemas';
+import { safeErrorMessage } from '@/lib/error-handler';
 
 const NewBatch = () => {
   const navigate = useNavigate();
@@ -38,10 +40,20 @@ const NewBatch = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedProjectId || !batchName.trim()) {
+    
+    // Validate form data with zod
+    try {
+      batchSchema.parse({
+        batchName,
+        projectId: selectedProjectId,
+        priority: parseInt(priority),
+        notes,
+      });
+    } catch (error: any) {
+      const firstError = error.errors?.[0];
       toast({
-        title: 'Missing Information',
-        description: 'Please fill in all required fields',
+        title: 'Validation Error',
+        description: firstError?.message || 'Please check your input',
         variant: 'destructive',
       });
       return;
@@ -68,7 +80,7 @@ const NewBatch = () => {
     } catch (error: any) {
       toast({
         title: 'Creation Failed',
-        description: error.message,
+        description: safeErrorMessage(error),
         variant: 'destructive',
       });
     } finally {

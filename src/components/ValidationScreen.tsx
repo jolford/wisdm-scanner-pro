@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { documentMetadataSchema } from '@/lib/validation-schemas';
+import { safeErrorMessage } from '@/lib/error-handler';
 
 interface ValidationScreenProps {
   documentId?: string;
@@ -43,6 +45,19 @@ export const ValidationScreen = ({
   };
 
   const handleValidate = async (status: 'validated' | 'rejected') => {
+    // Validate metadata with zod
+    try {
+      documentMetadataSchema.parse(editedMetadata);
+    } catch (error: any) {
+      const firstError = error.errors?.[0];
+      toast({
+        title: 'Validation Error',
+        description: firstError?.message || 'Please check your input',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsSaving(true);
     setValidationStatus(status);
 
@@ -69,7 +84,7 @@ export const ValidationScreen = ({
     } catch (error: any) {
       toast({
         title: 'Validation Failed',
-        description: error.message,
+        description: safeErrorMessage(error),
         variant: 'destructive',
       });
     } finally {
@@ -137,6 +152,7 @@ export const ValidationScreen = ({
                 value={editedMetadata[field.name] || ''}
                 onChange={(e) => handleFieldChange(field.name, e.target.value)}
                 placeholder={`Enter ${field.name}`}
+                maxLength={500}
                 className="mt-1"
               />
             </div>

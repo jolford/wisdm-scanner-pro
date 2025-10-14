@@ -11,6 +11,7 @@ import { ArrowLeft, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { safeErrorMessage, logError } from '@/lib/error-handler';
+import { licenseSchema } from '@/lib/validation-schemas';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 
 const NewLicense = () => {
@@ -31,10 +32,22 @@ const NewLicense = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!companyName.trim() || !contactEmail.trim() || !totalDocuments) {
+    // Validate form data with zod
+    try {
+      licenseSchema.parse({
+        companyName,
+        contactName,
+        contactEmail,
+        phone,
+        totalDocuments: parseInt(totalDocuments),
+        durationMonths: parseInt(durationMonths),
+        notes,
+      });
+    } catch (error: any) {
+      const firstError = error.errors?.[0];
       toast({
         title: 'Validation Error',
-        description: 'Company name, contact email, and document volume are required',
+        description: firstError?.message || 'Please check your input',
         variant: 'destructive',
       });
       return;

@@ -10,6 +10,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { projectSchema } from '@/lib/validation-schemas';
+import { safeErrorMessage } from '@/lib/error-handler';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 
 interface ExtractionField {
@@ -144,20 +146,21 @@ const EditProject = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!projectName.trim()) {
-      toast({
-        title: 'Validation Error',
-        description: 'Project name is required',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+    // Validate form data with zod
     const validFields = fields.filter(f => f.name.trim());
-    if (validFields.length === 0) {
+    
+    try {
+      projectSchema.parse({
+        name: projectName,
+        description: projectDescription,
+        extractionFields: validFields,
+        exportConfig,
+      });
+    } catch (error: any) {
+      const firstError = error.errors?.[0];
       toast({
         title: 'Validation Error',
-        description: 'At least one extraction field is required',
+        description: firstError?.message || 'Please check your input',
         variant: 'destructive',
       });
       return;
@@ -197,10 +200,9 @@ const EditProject = () => {
       
       navigate('/admin/projects');
     } catch (error) {
-      console.error('Error updating project:', error);
       toast({
         title: 'Error',
-        description: 'Failed to update project',
+        description: safeErrorMessage(error),
         variant: 'destructive',
       });
     } finally {
