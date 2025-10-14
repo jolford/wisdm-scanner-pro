@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, FileText, CheckCircle2, XCircle, AlertCircle, Trash2 } from 'lucide-react';
+import { ArrowLeft, FileText, CheckCircle2, XCircle, AlertCircle, Trash2, Download, FileSpreadsheet, FileJson, FileType } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,7 +34,7 @@ const BatchDetail = () => {
         .from('batches')
         .select(`
           *,
-          projects (name, extraction_fields)
+          projects (name, extraction_fields, metadata, export_types)
         `)
         .eq('id', id)
         .single();
@@ -162,6 +163,175 @@ const BatchDetail = () => {
     }
   };
 
+  // Export functions
+  const getExportConfig = () => {
+    const metadata = batch?.projects?.metadata as any;
+    return metadata?.exportConfig || {};
+  };
+
+  const getEnabledExportTypes = () => {
+    const exportConfig = getExportConfig();
+    const enabledTypes: string[] = [];
+    
+    Object.entries(exportConfig).forEach(([type, config]: [string, any]) => {
+      if (config?.enabled) {
+        enabledTypes.push(type);
+      }
+    });
+    
+    return enabledTypes.length > 0 ? enabledTypes : batch?.projects?.export_types || [];
+  };
+
+  const getExportDestination = (type: string) => {
+    const exportConfig = getExportConfig();
+    return exportConfig[type]?.destination || '/exports/';
+  };
+
+  const exportToCSV = () => {
+    if (!documents || documents.length === 0) {
+      toast({ title: 'No documents to export', variant: 'destructive' });
+      return;
+    }
+
+    const headers = ['File Name', 'Status', 'Page', 'Confidence', 'Type', ...Object.keys(documents[0].extracted_metadata || {})];
+    const rows = documents.map(doc => [
+      doc.file_name,
+      doc.validation_status,
+      doc.page_number,
+      doc.confidence_score || '',
+      doc.file_type,
+      ...Object.values(doc.extracted_metadata || {})
+    ]);
+
+    const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${batch?.batch_name || 'batch'}-export.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    toast({ 
+      title: 'Exported successfully', 
+      description: `CSV file downloaded (configured destination: ${getExportDestination('csv')})` 
+    });
+  };
+
+  const exportToJSON = () => {
+    if (!documents || documents.length === 0) {
+      toast({ title: 'No documents to export', variant: 'destructive' });
+      return;
+    }
+
+    const exportData = {
+      batch: {
+        id: batch?.id,
+        name: batch?.batch_name,
+        status: batch?.status,
+        created_at: batch?.created_at,
+        total_documents: batch?.total_documents,
+        validated_documents: batch?.validated_documents,
+      },
+      documents: documents.map(doc => ({
+        file_name: doc.file_name,
+        validation_status: doc.validation_status,
+        page_number: doc.page_number,
+        confidence_score: doc.confidence_score,
+        file_type: doc.file_type,
+        extracted_metadata: doc.extracted_metadata,
+        extracted_text: doc.extracted_text,
+      }))
+    };
+
+    const json = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${batch?.batch_name || 'batch'}-export.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    toast({ 
+      title: 'Exported successfully', 
+      description: `JSON file downloaded (configured destination: ${getExportDestination('json')})` 
+    });
+  };
+
+  const exportToTXT = () => {
+    if (!documents || documents.length === 0) {
+      toast({ title: 'No documents to export', variant: 'destructive' });
+      return;
+    }
+
+    const text = documents.map(doc => {
+      const metadata = Object.entries(doc.extracted_metadata || {})
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n');
+      return `File: ${doc.file_name}\nStatus: ${doc.validation_status}\nPage: ${doc.page_number}\n${metadata}\n\nExtracted Text:\n${doc.extracted_text || 'N/A'}\n\n${'='.repeat(80)}\n`;
+    }).join('\n');
+
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${batch?.batch_name || 'batch'}-export.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    toast({ 
+      title: 'Exported successfully', 
+      description: `Text file downloaded (configured destination: ${getExportDestination('txt')})` 
+    });
+  };
+
+  const exportToXML = () => {
+    if (!documents || documents.length === 0) {
+      toast({ title: 'No documents to export', variant: 'destructive' });
+      return;
+    }
+
+    const xmlDocs = documents.map(doc => {
+      const metadata = Object.entries(doc.extracted_metadata || {})
+        .map(([key, value]) => `    <${key}>${value}</${key}>`)
+        .join('\n');
+      return `  <document>
+    <file_name>${doc.file_name}</file_name>
+    <validation_status>${doc.validation_status}</validation_status>
+    <page_number>${doc.page_number}</page_number>
+    <confidence_score>${doc.confidence_score || ''}</confidence_score>
+    <file_type>${doc.file_type}</file_type>
+    <metadata>
+${metadata}
+    </metadata>
+    <extracted_text>${doc.extracted_text || ''}</extracted_text>
+  </document>`;
+    }).join('\n');
+
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<batch>
+  <name>${batch?.batch_name}</name>
+  <status>${batch?.status}</status>
+  <documents>
+${xmlDocs}
+  </documents>
+</batch>`;
+
+    const blob = new Blob([xml], { type: 'application/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${batch?.batch_name || 'batch'}-export.xml`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    toast({ 
+      title: 'Exported successfully', 
+      description: `XML file downloaded (configured destination: ${getExportDestination('xml')})` 
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -201,6 +371,41 @@ const BatchDetail = () => {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" disabled={!documents || documents.length === 0}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {getEnabledExportTypes().includes('csv') && (
+                  <DropdownMenuItem onClick={exportToCSV}>
+                    <FileSpreadsheet className="h-4 w-4 mr-2" />
+                    Export as CSV
+                  </DropdownMenuItem>
+                )}
+                {getEnabledExportTypes().includes('json') && (
+                  <DropdownMenuItem onClick={exportToJSON}>
+                    <FileJson className="h-4 w-4 mr-2" />
+                    Export as JSON
+                  </DropdownMenuItem>
+                )}
+                {getEnabledExportTypes().includes('xml') && (
+                  <DropdownMenuItem onClick={exportToXML}>
+                    <FileJson className="h-4 w-4 mr-2" />
+                    Export as XML
+                  </DropdownMenuItem>
+                )}
+                {getEnabledExportTypes().includes('txt') && (
+                  <DropdownMenuItem onClick={exportToTXT}>
+                    <FileType className="h-4 w-4 mr-2" />
+                    Export as TXT
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Select
               value={batch.status}
               onValueChange={(value) => updateStatusMutation.mutate(value)}
