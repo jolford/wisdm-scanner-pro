@@ -14,10 +14,11 @@ export const ScanUploader = ({ onScanComplete, isProcessing }: ScanUploaderProps
   const { toast } = useToast();
 
   const handleFile = async (file: File) => {
-    if (!file.type.startsWith('image/')) {
+    // Accept both images and PDFs
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
       toast({
         title: 'Invalid File',
-        description: 'Please upload an image file.',
+        description: 'Please upload an image or PDF file.',
         variant: 'destructive',
       });
       return;
@@ -73,7 +74,7 @@ export const ScanUploader = ({ onScanComplete, isProcessing }: ScanUploaderProps
       <input
         ref={fileInputRef}
         type="file"
-        accept="image/*"
+        accept="image/*,application/pdf"
         onChange={handleFileChange}
         className="hidden"
       />
@@ -98,7 +99,7 @@ export const ScanUploader = ({ onScanComplete, isProcessing }: ScanUploaderProps
             Drag and drop or click to select an image
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Supports JPG, PNG, WEBP
+            Supports JPG, PNG, WEBP, PDF
           </p>
         </div>
 

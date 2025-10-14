@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { ScanUploader } from '@/components/ScanUploader';
+import { PhysicalScanner } from '@/components/PhysicalScanner';
 import { ScanResult } from '@/components/ScanResult';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Upload, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 
 const Index = () => {
@@ -79,16 +81,36 @@ const Index = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-12">
         {!extractedText ? (
-          <div className="max-w-2xl mx-auto">
+          <div className="max-w-4xl mx-auto">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold mb-3">
                 Scan Documents with AI Precision
               </h2>
               <p className="text-lg text-muted-foreground">
-                Upload any image or document to extract text with advanced OCR and handwriting recognition
+                Upload images, PDFs, or scan directly from your physical scanner with TWAIN/ISIS support
               </p>
             </div>
-            <ScanUploader onScanComplete={handleScanComplete} isProcessing={isProcessing} />
+            
+            <Tabs defaultValue="upload" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
+                <TabsTrigger value="upload" className="flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  Upload File
+                </TabsTrigger>
+                <TabsTrigger value="scanner" className="flex items-center gap-2">
+                  <ScanLine className="h-4 w-4" />
+                  Physical Scanner
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="upload">
+                <ScanUploader onScanComplete={handleScanComplete} isProcessing={isProcessing} />
+              </TabsContent>
+              
+              <TabsContent value="scanner">
+                <PhysicalScanner onScanComplete={handleScanComplete} isProcessing={isProcessing} />
+              </TabsContent>
+            </Tabs>
           </div>
         ) : (
           <div className="space-y-6">
