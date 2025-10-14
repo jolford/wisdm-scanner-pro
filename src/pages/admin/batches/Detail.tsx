@@ -115,6 +115,7 @@ const BatchDetail = () => {
       scanning: 'bg-purple-500',
       indexing: 'bg-yellow-500',
       validation: 'bg-orange-500',
+      validated: 'bg-teal-500',
       complete: 'bg-green-500',
       exported: 'bg-gray-500',
       error: 'bg-red-500',

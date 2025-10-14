@@ -114,7 +114,7 @@ const Batches = () => {
   const progressBatch = async (e: React.MouseEvent, batchId: string, currentStatus: string) => {
     e.stopPropagation();
     
-    const statusFlow = ['new', 'scanning', 'indexing', 'validation', 'complete', 'exported'];
+    const statusFlow = ['new', 'scanning', 'indexing', 'validation', 'validated', 'exported'];
     const currentIndex = statusFlow.indexOf(currentStatus);
     
     if (currentIndex === -1 || currentIndex === statusFlow.length - 1) {
@@ -157,6 +157,7 @@ const Batches = () => {
       scanning: 'bg-purple-500',
       indexing: 'bg-yellow-500',
       validation: 'bg-orange-500',
+      validated: 'bg-teal-500',
       complete: 'bg-green-500',
       exported: 'bg-gray-500',
       error: 'bg-red-500',
