@@ -65,6 +65,32 @@ const BatchDetail = () => {
         .eq('id', id);
 
       if (error) throw error;
+
+      // Trigger automatic export when moving to 'exported' status
+      if (newStatus === 'exported') {
+        toast({
+          title: 'Exporting...',
+          description: 'Automatically exporting batch to configured destinations',
+        });
+
+        const { data, error: exportError } = await supabase.functions.invoke('auto-export-batch', {
+          body: { batchId: id }
+        });
+
+        if (exportError) {
+          console.error('Auto-export error:', exportError);
+          toast({
+            title: 'Export Warning',
+            description: 'Batch status updated but auto-export failed. You can manually export from batch details.',
+            variant: 'destructive',
+          });
+        } else if (data?.success) {
+          toast({
+            title: 'Batch Exported',
+            description: `Successfully exported to ${data.exports?.length || 0} format(s)`,
+          });
+        }
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['batch', id] });
@@ -286,6 +312,46 @@ const BatchDetail = () => {
             </div>
           )}
         </Card>
+
+        {/* Export Information */}
+        {batch.exported_at && (
+          <Card className="p-6 mt-6">
+            <h3 className="font-semibold mb-4 flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              Export Information
+            </h3>
+            <div className="space-y-2">
+              <p className="text-sm">
+                <span className="font-medium">Exported At:</span>{' '}
+                <span className="text-muted-foreground">
+                  {new Date(batch.exported_at).toLocaleString()}
+                </span>
+              </p>
+              {batch.metadata && typeof batch.metadata === 'object' && 'exports' in batch.metadata && Array.isArray(batch.metadata.exports) && batch.metadata.exports.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm font-medium mb-2">Exported Files:</p>
+                  <div className="space-y-2">
+                    {batch.metadata.exports.map((exp: any, idx: number) => (
+                      <div key={idx} className="bg-muted/50 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium text-sm">{exp.fileName}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Type: {exp.type.toUpperCase()} • Destination: {exp.destination}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="bg-green-500/10 text-green-700">
+                            Exported
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
 
         {batch.notes && (
           <Card className="p-6 mt-6">

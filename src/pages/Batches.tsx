@@ -135,10 +135,36 @@ const Batches = () => {
 
       if (error) throw error;
 
-      toast({
-        title: 'Success',
-        description: `Batch moved to ${nextStatus}`,
-      });
+      // Trigger automatic export when moving to 'exported' status
+      if (nextStatus === 'exported') {
+        toast({
+          title: 'Exporting...',
+          description: 'Automatically exporting batch to configured destinations',
+        });
+
+        const { data, error: exportError } = await supabase.functions.invoke('auto-export-batch', {
+          body: { batchId }
+        });
+
+        if (exportError) {
+          console.error('Auto-export error:', exportError);
+          toast({
+            title: 'Export Warning',
+            description: 'Batch status updated but auto-export failed. You can manually export from batch details.',
+            variant: 'destructive',
+          });
+        } else if (data?.success) {
+          toast({
+            title: 'Batch Exported',
+            description: `Successfully exported to ${data.exports?.length || 0} format(s)`,
+          });
+        }
+      } else {
+        toast({
+          title: 'Success',
+          description: `Batch moved to ${nextStatus}`,
+        });
+      }
       
       loadBatches();
     } catch (error) {
