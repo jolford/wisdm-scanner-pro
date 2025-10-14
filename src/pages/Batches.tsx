@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, FolderOpen, Search, Calendar, User, FileText } from 'lucide-react';
+import { ArrowLeft, FolderOpen, Search, Calendar, User, FileText, Trash2, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import wisdmLogo from '@/assets/wisdm-logo.png';
@@ -82,6 +82,72 @@ const Batches = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteBatch = async (e: React.MouseEvent, batchId: string) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this batch? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase.from('batches').delete().eq('id', batchId);
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'Batch deleted successfully',
+      });
+      
+      loadBatches();
+    } catch (error) {
+      console.error('Error deleting batch:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete batch',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const progressBatch = async (e: React.MouseEvent, batchId: string, currentStatus: string) => {
+    e.stopPropagation();
+    
+    const statusFlow = ['new', 'scanning', 'indexing', 'validation', 'complete', 'exported'];
+    const currentIndex = statusFlow.indexOf(currentStatus);
+    
+    if (currentIndex === -1 || currentIndex === statusFlow.length - 1) {
+      toast({
+        title: 'Info',
+        description: 'Batch is already at final status',
+      });
+      return;
+    }
+
+    const nextStatus = statusFlow[currentIndex + 1];
+
+    try {
+      const { error } = await supabase
+        .from('batches')
+        .update({ status: nextStatus as any })
+        .eq('id', batchId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `Batch moved to ${nextStatus}`,
+      });
+      
+      loadBatches();
+    } catch (error) {
+      console.error('Error updating batch:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update batch status',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -177,6 +243,24 @@ const Batches = () => {
                     <Badge className={getStatusColor(batch.status)}>
                       {batch.status}
                     </Badge>
+                  </div>
+                  <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                    <Button
+                      size="icon"
+                      variant="outline"
+                      onClick={(e) => progressBatch(e, batch.id, batch.status)}
+                      title="Progress to next status"
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      onClick={(e) => deleteBatch(e, batch.id)}
+                      title="Delete batch"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
 

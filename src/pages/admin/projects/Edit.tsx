@@ -22,6 +22,11 @@ interface Queue {
   enabled: boolean;
 }
 
+interface ExportConfig {
+  enabled: boolean;
+  destination: string;
+}
+
 const EditProject = () => {
   const { id } = useParams();
   const { loading: authLoading, user } = useRequireAuth(true);
@@ -36,13 +41,13 @@ const EditProject = () => {
     { name: '', description: '' }
   ]);
   
-  const [exportTypes, setExportTypes] = useState({
-    csv: true,
-    json: true,
-    xml: true,
-    txt: true,
-    pdf: true,
-    images: true,
+  const [exportConfig, setExportConfig] = useState<Record<string, ExportConfig>>({
+    csv: { enabled: true, destination: '/exports/data/' },
+    json: { enabled: true, destination: '/exports/data/' },
+    xml: { enabled: true, destination: '/exports/data/' },
+    txt: { enabled: true, destination: '/exports/data/' },
+    pdf: { enabled: true, destination: '/exports/documents/' },
+    images: { enabled: true, destination: '/exports/images/' },
   });
 
   const [queues, setQueues] = useState<Queue[]>([
@@ -79,17 +84,30 @@ const EditProject = () => {
           setFields([{ name: '', description: '' }]);
         }
         
-        // Set export types
-        if (data.export_types && Array.isArray(data.export_types)) {
+        // Set export configuration from metadata if available
+        const projectData = data as any;
+        if (projectData.metadata?.export_config) {
+          setExportConfig(projectData.metadata.export_config);
+        } else if (data.export_types && Array.isArray(data.export_types)) {
+          // Fallback for old projects without export_config
           const types = data.export_types as string[];
-          setExportTypes({
-            csv: types.includes('csv'),
-            json: types.includes('json'),
-            xml: types.includes('xml'),
-            txt: types.includes('txt'),
-            pdf: types.includes('pdf'),
-            images: types.includes('images'),
+          const defaultDestinations: Record<string, string> = {
+            csv: '/exports/data/',
+            json: '/exports/data/',
+            xml: '/exports/data/',
+            txt: '/exports/data/',
+            pdf: '/exports/documents/',
+            images: '/exports/images/',
+          };
+          
+          const config: Record<string, ExportConfig> = {};
+          Object.keys(defaultDestinations).forEach(type => {
+            config[type] = {
+              enabled: types.includes(type),
+              destination: defaultDestinations[type],
+            };
           });
+          setExportConfig(config);
         }
 
         // Set queues with proper type checking
@@ -147,8 +165,8 @@ const EditProject = () => {
 
     setSaving(true);
     try {
-      const selectedExportTypes = Object.entries(exportTypes)
-        .filter(([_, enabled]) => enabled)
+      const selectedExportTypes = Object.entries(exportConfig)
+        .filter(([_, config]) => config.enabled)
         .map(([type]) => type);
 
       const { error } = await supabase
@@ -159,8 +177,16 @@ const EditProject = () => {
           extraction_fields: validFields as any,
           export_types: selectedExportTypes,
           queues: queues as any,
-        })
+        } as any)
         .eq('id', id);
+      
+      // Update metadata separately if needed
+      if (!error) {
+        await supabase
+          .from('projects')
+          .update({ metadata: { export_config: exportConfig } } as any)
+          .eq('id', id);
+      }
 
       if (error) throw error;
 
@@ -296,25 +322,49 @@ const EditProject = () => {
             </div>
 
             <div>
-              <Label className="mb-4 block">Export Types</Label>
-              <div className="grid grid-cols-3 gap-4">
-                {Object.entries(exportTypes).map(([type, enabled]) => (
-                  <div key={type} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`export-${type}`}
-                      checked={enabled}
-                      onCheckedChange={(checked) => 
-                        setExportTypes(prev => ({ ...prev, [type]: checked === true }))
-                      }
-                    />
-                    <Label htmlFor={`export-${type}`} className="text-sm font-normal cursor-pointer">
-                      {type.toUpperCase()}
-                    </Label>
-                  </div>
+              <Label className="mb-4 block">Export Configuration</Label>
+              <div className="space-y-4">
+                {Object.entries(exportConfig).map(([type, config]) => (
+                  <Card key={type} className="p-4 bg-muted/50">
+                    <div className="flex items-start gap-4">
+                      <div className="flex items-center space-x-2 pt-2">
+                        <Checkbox
+                          id={`export-${type}`}
+                          checked={config.enabled}
+                          onCheckedChange={(checked) => 
+                            setExportConfig(prev => ({ 
+                              ...prev, 
+                              [type]: { ...prev[type], enabled: checked === true }
+                            }))
+                          }
+                        />
+                        <Label htmlFor={`export-${type}`} className="text-sm font-medium cursor-pointer min-w-[60px]">
+                          {type.toUpperCase()}
+                        </Label>
+                      </div>
+                      <div className="flex-1">
+                        <Label htmlFor={`dest-${type}`} className="text-xs mb-1">
+                          Export Destination
+                        </Label>
+                        <Input
+                          id={`dest-${type}`}
+                          value={config.destination}
+                          onChange={(e) => 
+                            setExportConfig(prev => ({ 
+                              ...prev, 
+                              [type]: { ...prev[type], destination: e.target.value }
+                            }))
+                          }
+                          placeholder="/exports/path/"
+                          disabled={!config.enabled}
+                        />
+                      </div>
+                    </div>
+                  </Card>
                 ))}
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Select which export formats will be available for this project.
+                Configure export formats and their destinations. Destinations can be file paths or URLs.
               </p>
             </div>
 
