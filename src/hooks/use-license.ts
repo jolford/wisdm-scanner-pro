@@ -6,25 +6,25 @@ export const useLicense = () => {
   const { user } = useAuth();
 
   const { data: license, isLoading, refetch } = useQuery({
-    queryKey: ['user-license', user?.email],
-    enabled: !!user?.email,
+    queryKey: ['user-license', user?.id],
+    enabled: !!user?.id,
     queryFn: async () => {
-      if (!user?.email) return null;
+      if (!user?.id) return null;
 
-      // Get customer by email
-      const { data: customer, error: customerError } = await supabase
-        .from('customers')
-        .select('id')
-        .eq('contact_email', user.email)
+      // Get customer via user_customers junction table (prevents enumeration)
+      const { data: userCustomer, error: customerError } = await supabase
+        .from('user_customers')
+        .select('customer_id')
+        .eq('user_id', user.id)
         .maybeSingle();
 
-      if (customerError || !customer) return null;
+      if (customerError || !userCustomer) return null;
 
       // Get active license for this customer
       const { data: licenses, error: licenseError } = await supabase
         .from('licenses')
         .select('*')
-        .eq('customer_id', customer.id)
+        .eq('customer_id', userCustomer.customer_id)
         .eq('status', 'active')
         .order('end_date', { ascending: false })
         .limit(1);
@@ -46,13 +46,13 @@ export const useLicense = () => {
   };
 
   const consumeDocuments = async (documentId: string, count: number = 1): Promise<boolean> => {
-    if (!license || !user) return false;
+    if (!license) return false;
 
     try {
+      // Don't pass user_id - function uses auth.uid() internally for security
       const { data, error } = await supabase.rpc('consume_license_documents', {
         _license_id: license.id,
         _document_id: documentId,
-        _user_id: user.id,
         _documents_count: count,
       });
 
@@ -62,8 +62,8 @@ export const useLicense = () => {
       await refetch();
 
       return data === true;
-    } catch (error) {
-      console.error('Error consuming license:', error);
+    } catch {
+      // Don't expose error details
       return false;
     }
   };

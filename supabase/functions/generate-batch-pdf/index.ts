@@ -11,6 +11,15 @@ serve(async (req) => {
   }
 
   try {
+    // Verify authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { documents, batchName } = await req.json();
     console.log(`Generating PDF for batch: ${batchName} with ${documents.length} documents`);
 
@@ -42,10 +51,13 @@ serve(async (req) => {
       }
     );
   } catch (error: any) {
+    // Log detailed error server-side only
     console.error('Error generating PDF:', error);
+    
+    // Return safe generic message to client
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Unknown error',
+        error: 'Failed to generate PDF. Please try again.',
         success: false 
       }),
       { 

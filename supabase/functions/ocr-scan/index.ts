@@ -12,6 +12,15 @@ serve(async (req) => {
   }
 
   try {
+    // Verify authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { imageData, isPdf, extractionFields, textData } = await req.json();
     
     console.log('Processing OCR request...', isPdf ? 'PDF' : 'Image');
@@ -19,7 +28,8 @@ serve(async (req) => {
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY is not configured');
+      console.error('LOVABLE_API_KEY not configured');
+      throw new Error('Service configuration error');
     }
 
     // For PDFs, we require textData to be provided (extracted client-side)
@@ -91,12 +101,12 @@ serve(async (req) => {
       
       if (response.status === 402) {
         return new Response(
-          JSON.stringify({ error: 'AI credits depleted. Please add more credits to continue.' }),
+          JSON.stringify({ error: 'Service unavailable. Please contact support.' }),
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
-      throw new Error(`AI Gateway error: ${errorText}`);
+      throw new Error('Service error');
     }
 
     const data = await response.json();
@@ -130,10 +140,12 @@ serve(async (req) => {
     );
 
   } catch (error) {
+    // Log detailed error server-side only
     console.error('Error in OCR function:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+    
+    // Return safe generic message to client
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'Failed to process document. Please try again.' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

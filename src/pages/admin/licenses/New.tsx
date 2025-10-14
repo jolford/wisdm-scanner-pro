@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { safeErrorMessage, logError } from '@/lib/error-handler';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 
 const NewLicense = () => {
@@ -113,10 +114,10 @@ const NewLicense = () => {
 
       navigate('/admin/licenses');
     } catch (error: any) {
-      console.error('Error creating license:', error);
+      logError('License creation', error);
       toast({
         title: 'Error',
-        description: error.message || 'Failed to create license',
+        description: safeErrorMessage(error),
         variant: 'destructive',
       });
     } finally {
