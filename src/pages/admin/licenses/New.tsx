@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '@/hooks/use-require-auth';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -15,6 +16,7 @@ const NewLicense = () => {
   const { loading } = useRequireAuth(true);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [saving, setSaving] = useState(false);
 
   const [companyName, setCompanyName] = useState('');
@@ -100,6 +102,9 @@ const NewLicense = () => {
         }]);
 
       if (licenseError) throw licenseError;
+
+      // Invalidate licenses query to force refresh
+      queryClient.invalidateQueries({ queryKey: ['licenses'] });
 
       toast({
         title: 'License Created',

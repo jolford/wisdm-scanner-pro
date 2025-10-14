@@ -12,9 +12,10 @@ const LicensesIndex = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const { data: licenses, isLoading, refetch } = useQuery({
+  const { data: licenses, isLoading, error: queryError, refetch } = useQuery({
     queryKey: ['licenses'],
     queryFn: async () => {
+      console.log('Fetching licenses...');
       const { data, error } = await supabase
         .from('licenses')
         .select(`
@@ -27,10 +28,32 @@ const LicensesIndex = () => {
         `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('License query error:', error);
+        throw error;
+      }
+      console.log('Licenses fetched:', data);
       return data;
     },
   });
+
+  // Show error if query fails
+  if (queryError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="p-8 max-w-md">
+          <AlertCircle className="h-12 w-12 mx-auto mb-4 text-destructive" />
+          <h3 className="text-xl font-semibold mb-2 text-center">Error Loading Licenses</h3>
+          <p className="text-muted-foreground text-center mb-4">
+            {queryError instanceof Error ? queryError.message : 'Failed to load licenses'}
+          </p>
+          <Button onClick={() => refetch()} className="w-full">
+            Try Again
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   const getStatusIcon = (status: string) => {
     switch (status) {
