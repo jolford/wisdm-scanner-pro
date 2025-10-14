@@ -4,7 +4,17 @@ import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Download, FileText, Search } from 'lucide-react';
+import { ArrowLeft, Download, FileText, Search, Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import wisdmLogo from '@/assets/wisdm-logo.png';
@@ -28,6 +38,8 @@ const Documents = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [docToDelete, setDocToDelete] = useState<string | null>(null);
 
   useEffect(() => {
     if (!authLoading) {
@@ -157,6 +169,41 @@ const Documents = () => {
     });
   };
 
+  const handleDeleteDoc = async (docId: string) => {
+    setDocToDelete(docId);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!docToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('documents')
+        .delete()
+        .eq('id', docToDelete);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Document Deleted',
+        description: 'Document removed successfully',
+      });
+
+      await loadDocuments();
+    } catch (error) {
+      console.error('Error deleting document:', error);
+      toast({
+        title: 'Delete Failed',
+        description: 'Failed to delete document',
+        variant: 'destructive',
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setDocToDelete(null);
+    }
+  };
+
   const filteredDocuments = documents.filter(doc =>
     doc.file_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     doc.projects?.name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -232,15 +279,20 @@ const Documents = () => {
             {filteredDocuments.map((doc) => (
               <Card key={doc.id} className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
                 <div className="flex items-start justify-between mb-4">
-                  <div>
+                  <div className="flex-1">
                     <h3 className="text-lg font-semibold">{doc.file_name}</h3>
                     <p className="text-sm text-muted-foreground">
                       Project: {doc.projects?.name || 'N/A'} • {new Date(doc.created_at).toLocaleDateString()}
                     </p>
                   </div>
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
-                    {doc.file_type}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs bg-primary/10 text-primary px-2 py-1 rounded">
+                      {doc.file_type}
+                    </span>
+                    <Button variant="destructive" size="icon" onClick={() => handleDeleteDoc(doc.id)}>
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 {doc.extracted_metadata && Object.keys(doc.extracted_metadata).length > 0 && (
@@ -270,6 +322,21 @@ const Documents = () => {
           </div>
         )}
       </main>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Document?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the document.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
