@@ -63,7 +63,7 @@ const Index = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                  AI Scanner Pro
+                  WISDM Scanner Pro
                 </h1>
                 <p className="text-sm text-muted-foreground">Advanced OCR & ICR Technology</p>
               </div>
