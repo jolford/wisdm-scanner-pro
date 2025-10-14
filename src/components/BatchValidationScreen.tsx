@@ -177,10 +177,24 @@ export const BatchValidationScreen = ({
               <Collapsible open={isExpanded} onOpenChange={() => toggleExpanded(doc.id)}>
                 <div className="p-4 flex items-center justify-between bg-muted/30">
                   <div className="flex items-center gap-3 flex-1">
-                    <ImageIcon className="h-5 w-5 text-primary" />
+                    {/* Thumbnail */}
+                    {doc.file_url && (
+                      <div className="flex-shrink-0">
+                        <img 
+                          src={doc.file_url} 
+                          alt={doc.file_name}
+                          className="w-16 h-20 object-cover rounded border border-border"
+                        />
+                      </div>
+                    )}
+                    {!doc.file_url && (
+                      <div className="w-16 h-20 flex items-center justify-center bg-muted rounded border border-border">
+                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    )}
                     <div className="flex-1">
                       <h3 className="font-semibold">{doc.file_name}</h3>
-                      <div className="flex gap-2 mt-1">
+                      <div className="flex flex-wrap gap-2 mt-1">
                         {projectFields.map((field) => (
                           <Badge key={field.name} variant="outline" className="text-xs">
                             {field.name}: {metadata[field.name] || 'N/A'}
