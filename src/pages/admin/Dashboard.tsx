@@ -2,10 +2,10 @@ import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, FolderOpen, FileText, Users, Key } from 'lucide-react';
+import { Plus, FolderOpen, FileText, Users, Key, Building2, BarChart3 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import wisdmLogo from '@/assets/wisdm-logo.png';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 
 const AdminDashboard = () => {
   const { loading, isAdmin } = useRequireAuth(true);
@@ -15,6 +15,7 @@ const AdminDashboard = () => {
     documents: 0,
     users: 0,
     licenses: 0,
+    customers: 0,
   });
 
   useEffect(() => {
@@ -25,11 +26,12 @@ const AdminDashboard = () => {
 
   const loadStats = async () => {
     try {
-      const [projectsRes, documentsRes, profilesRes, licensesRes] = await Promise.all([
+      const [projectsRes, documentsRes, profilesRes, licensesRes, customersRes] = await Promise.all([
         supabase.from('projects').select('id', { count: 'exact', head: true }),
         supabase.from('documents').select('id', { count: 'exact', head: true }),
         supabase.from('profiles').select('id', { count: 'exact', head: true }),
         supabase.from('licenses').select('id', { count: 'exact', head: true }),
+        supabase.from('customers').select('id', { count: 'exact', head: true }),
       ]);
 
       setStats({
@@ -37,6 +39,7 @@ const AdminDashboard = () => {
         documents: documentsRes.count || 0,
         users: profilesRes.count || 0,
         licenses: licensesRes.count || 0,
+        customers: customersRes.count || 0,
       });
     } catch (error) {
       console.error('Error loading stats:', error);
@@ -52,40 +55,17 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5">
-      {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-10 bg-background/80">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src={wisdmLogo} alt="WISDM Logo" className="h-10 w-auto" />
-              <div className="border-l border-border/50 pl-3">
-                <h1 className="text-xl font-bold">Admin Dashboard</h1>
-              </div>
-            </div>
-            <Button onClick={() => navigate('/')}>Back to Scanner</Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-12">
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold mb-2">Welcome, Administrator</h2>
-          <p className="text-muted-foreground">
-            Manage projects, view documents, and configure extraction settings
-          </p>
-        </div>
-
+    <AdminLayout title="Admin Dashboard" description="Manage projects, users, and system configuration">
+      <div className="space-y-8">
         {/* Stats Cards */}
-        <div className="grid md:grid-cols-4 gap-6 mb-8">
+        <div className="grid md:grid-cols-5 gap-6">
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-primary/10 rounded-lg">
                 <FolderOpen className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Projects</p>
+                <p className="text-sm text-muted-foreground">Projects</p>
                 <p className="text-2xl font-bold">{stats.projects}</p>
               </div>
             </div>
@@ -97,8 +77,20 @@ const AdminDashboard = () => {
                 <FileText className="h-6 w-6 text-accent" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Documents</p>
+                <p className="text-sm text-muted-foreground">Documents</p>
                 <p className="text-2xl font-bold">{stats.documents}</p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-secondary/10 rounded-lg">
+                <Building2 className="h-6 w-6 text-secondary-foreground" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Customers</p>
+                <p className="text-2xl font-bold">{stats.customers}</p>
               </div>
             </div>
           </Card>
@@ -109,7 +101,7 @@ const AdminDashboard = () => {
                 <Users className="h-6 w-6 text-secondary-foreground" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Total Users</p>
+                <p className="text-sm text-muted-foreground">Users</p>
                 <p className="text-2xl font-bold">{stats.users}</p>
               </div>
             </div>
@@ -121,7 +113,7 @@ const AdminDashboard = () => {
                 <Key className="h-6 w-6 text-green-600" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Active Licenses</p>
+                <p className="text-sm text-muted-foreground">Licenses</p>
                 <p className="text-2xl font-bold">{stats.licenses}</p>
               </div>
             </div>
@@ -129,11 +121,11 @@ const AdminDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 gap-6">
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
             <h3 className="text-xl font-semibold mb-4">Projects</h3>
             <p className="text-muted-foreground mb-4">
-              Create and manage document processing projects with custom extraction fields
+              Create and manage document processing projects
             </p>
             <div className="flex gap-3">
               <Button
@@ -150,42 +142,23 @@ const AdminDashboard = () => {
           </Card>
 
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-            <h3 className="text-xl font-semibold mb-4">Licenses</h3>
+            <h3 className="text-xl font-semibold mb-4">Analytics</h3>
             <p className="text-muted-foreground mb-4">
-              Manage customer licenses and track annual document processing volume
+              Track performance metrics and system usage
             </p>
             <div className="flex gap-3">
               <Button
-                onClick={() => navigate('/admin/licenses/new')}
-                className="bg-gradient-to-r from-primary to-accent"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New License
-              </Button>
-              <Button variant="outline" onClick={() => navigate('/admin/licenses')}>
-                View All
-              </Button>
-            </div>
-          </Card>
-
-          <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-            <h3 className="text-xl font-semibold mb-4">Users</h3>
-            <p className="text-muted-foreground mb-4">
-              Assign users to customers to give them access to licenses
-            </p>
-            <div className="flex gap-3">
-              <Button
-                onClick={() => navigate('/admin/users')}
+                onClick={() => navigate('/admin/analytics')}
                 variant="outline"
               >
-                <Users className="h-4 w-4 mr-2" />
-                Manage Users
+                <BarChart3 className="h-4 w-4 mr-2" />
+                View Reports
               </Button>
             </div>
           </Card>
         </div>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 };
 
