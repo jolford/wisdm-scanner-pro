@@ -216,6 +216,56 @@ const Queue = () => {
     }
   };
 
+  const handleMultipleFiles = async (files: File[]) => {
+    if (!selectedProjectId || !selectedBatchId) {
+      toast({
+        title: 'Select Project and Batch',
+        description: 'Please select both a project and batch before uploading',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    toast({
+      title: 'Processing Multiple Files',
+      description: `Processing ${files.length} files...`,
+    });
+
+    setIsProcessing(true);
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        if (file.type === 'application/pdf') {
+          await processPdf(file);
+        } else if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          await new Promise((resolve, reject) => {
+            reader.onload = async (e) => {
+              try {
+                const imageData = e.target?.result as string;
+                await handleScanComplete('', imageData, file.name);
+                resolve(null);
+              } catch (error) {
+                reject(error);
+              }
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+        }
+      } catch (error) {
+        console.error(`Error processing file ${file.name}:`, error);
+      }
+    }
+    
+    setIsProcessing(false);
+    toast({
+      title: 'Batch Complete',
+      description: `Successfully processed ${files.length} files`,
+    });
+  };
+
   const handleScanComplete = async (text: string, imageUrl: string, fileName = 'scan.jpg') => {
     if (!selectedProjectId || !selectedBatchId) {
       toast({
@@ -674,6 +724,7 @@ const Queue = () => {
                     <ScanUploader 
                       onScanComplete={handleScanComplete} 
                       onPdfUpload={processPdf}
+                      onMultipleFilesUpload={handleMultipleFiles}
                       isProcessing={isProcessing} 
                     />
                   </TabsContent>

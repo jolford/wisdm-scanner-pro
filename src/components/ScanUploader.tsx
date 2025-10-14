@@ -6,10 +6,11 @@ import { useToast } from '@/hooks/use-toast';
 interface ScanUploaderProps {
   onScanComplete: (text: string, imageUrl: string, fileName: string) => void;
   onPdfUpload: (file: File) => void;
+  onMultipleFilesUpload: (files: File[]) => void;
   isProcessing: boolean;
 }
 
-export const ScanUploader = ({ onScanComplete, onPdfUpload, isProcessing }: ScanUploaderProps) => {
+export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUpload, isProcessing }: ScanUploaderProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -43,8 +44,14 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, isProcessing }: Scan
     e.preventDefault();
     setIsDragging(false);
     
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      if (files.length === 1) {
+        handleFile(files[0]);
+      } else {
+        onMultipleFilesUpload(files);
+      }
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -61,8 +68,12 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, isProcessing }: Scan
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleFile(file);
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    if (files.length === 1) {
+      handleFile(files[0]);
+    } else if (files.length > 1) {
+      onMultipleFilesUpload(files);
+    }
   };
 
   return (
@@ -84,6 +95,7 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, isProcessing }: Scan
         accept="image/*,application/pdf"
         onChange={handleFileChange}
         className="hidden"
+        multiple
       />
       
       <div className="flex flex-col items-center gap-4">
@@ -106,10 +118,10 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, isProcessing }: Scan
             {isProcessing ? 'Processing Document...' : 'Upload Document or Image'}
           </h3>
           <p className="text-sm text-muted-foreground">
-            Drag and drop or click to select a file
+            Drag and drop or click to select files
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Supports JPG, PNG, WEBP, PDF
+            Supports JPG, PNG, WEBP, PDF • Multiple files supported
           </p>
         </div>
 

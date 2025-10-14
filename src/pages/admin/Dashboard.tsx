@@ -114,7 +114,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="max-w-2xl">
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
             <h3 className="text-xl font-semibold mb-4">Projects</h3>
             <p className="text-muted-foreground mb-4">
@@ -132,16 +132,6 @@ const AdminDashboard = () => {
                 View All
               </Button>
             </div>
-          </Card>
-
-          <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-            <h3 className="text-xl font-semibold mb-4">Documents</h3>
-            <p className="text-muted-foreground mb-4">
-              View all uploaded documents and their extracted metadata across all projects
-            </p>
-            <Button variant="outline" onClick={() => navigate('/documents')}>
-              View Documents
-            </Button>
           </Card>
         </div>
       </main>
