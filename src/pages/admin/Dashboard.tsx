@@ -129,7 +129,7 @@ const AdminDashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-3 gap-6">
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
             <h3 className="text-xl font-semibold mb-4">Projects</h3>
             <p className="text-muted-foreground mb-4">
@@ -164,6 +164,22 @@ const AdminDashboard = () => {
               </Button>
               <Button variant="outline" onClick={() => navigate('/admin/licenses')}>
                 View All
+              </Button>
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+            <h3 className="text-xl font-semibold mb-4">Users</h3>
+            <p className="text-muted-foreground mb-4">
+              Assign users to customers to give them access to licenses
+            </p>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => navigate('/admin/users')}
+                variant="outline"
+              >
+                <Users className="h-4 w-4 mr-2" />
+                Manage Users
               </Button>
             </div>
           </Card>
