@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-import * as pdfjsLib from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
 
 // Configure PDF.js worker using a dedicated module worker (avoids CDN)

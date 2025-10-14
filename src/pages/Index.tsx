@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 
-import * as pdfjsLib from 'pdfjs-dist';
+import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
 
 // Configure PDF.js worker using a module worker once at module load
@@ -110,7 +110,7 @@ const Index = () => {
         console.warn('PDF text extraction fallback:', e);
       }
 
-      if (extractedPdfText && extractedPdfText.trim().length > 80) {
+      if (extractedPdfText && extractedPdfText.trim().length > 10) {
         const { data, error } = await supabase.functions.invoke('ocr-scan', {
           body: {
             textData: extractedPdfText,
