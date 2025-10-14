@@ -262,6 +262,7 @@ export type Database = {
           extraction_fields: Json
           id: string
           is_active: boolean | null
+          metadata: Json | null
           name: string
           queues: Json | null
           updated_at: string | null
@@ -274,6 +275,7 @@ export type Database = {
           extraction_fields?: Json
           id?: string
           is_active?: boolean | null
+          metadata?: Json | null
           name: string
           queues?: Json | null
           updated_at?: string | null
@@ -286,6 +288,7 @@ export type Database = {
           extraction_fields?: Json
           id?: string
           is_active?: boolean | null
+          metadata?: Json | null
           name?: string
           queues?: Json | null
           updated_at?: string | null
