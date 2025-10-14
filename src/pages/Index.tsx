@@ -9,11 +9,53 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 
+
 const Index = () => {
   const [extractedText, setExtractedText] = useState('');
   const [currentImage, setCurrentImage] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
+
+  const processPdf = async (file: File) => {
+    setIsProcessing(true);
+    
+    try {
+      // Create a data URL for the PDF to display
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const pdfData = e.target?.result as string;
+        setCurrentImage(pdfData);
+        
+        // Call edge function to extract text from PDF
+        const { data, error } = await supabase.functions.invoke('ocr-scan', {
+          body: { 
+            imageData: pdfData,
+            isPdf: true 
+          },
+        });
+
+        if (error) {
+          console.error('PDF OCR error:', error);
+          throw error;
+        }
+
+        setExtractedText(data.text);
+        toast({
+          title: 'PDF Processed',
+          description: 'Text has been successfully extracted from your PDF.',
+        });
+      };
+      reader.readAsDataURL(file);
+    } catch (error: any) {
+      console.error('Error processing PDF:', error);
+      toast({
+        title: 'PDF Processing Failed',
+        description: error.message || 'Failed to process the PDF. Please try again.',
+        variant: 'destructive',
+      });
+      setIsProcessing(false);
+    }
+  };
 
   const handleScanComplete = async (text: string, imageUrl: string) => {
     setCurrentImage(imageUrl);
@@ -21,7 +63,10 @@ const Index = () => {
 
     try {
       const { data, error } = await supabase.functions.invoke('ocr-scan', {
-        body: { imageData: imageUrl },
+        body: { 
+          imageData: imageUrl,
+          isPdf: false 
+        },
       });
 
       if (error) {
@@ -104,7 +149,11 @@ const Index = () => {
               </TabsList>
               
               <TabsContent value="upload">
-                <ScanUploader onScanComplete={handleScanComplete} isProcessing={isProcessing} />
+                <ScanUploader 
+                  onScanComplete={handleScanComplete} 
+                  onPdfUpload={processPdf}
+                  isProcessing={isProcessing} 
+                />
               </TabsContent>
               
               <TabsContent value="scanner">

@@ -1,21 +1,28 @@
 import { useState, useRef } from 'react';
-import { Upload, Scan } from 'lucide-react';
+import { Upload, Scan, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 interface ScanUploaderProps {
   onScanComplete: (text: string, imageUrl: string) => void;
+  onPdfUpload: (file: File) => void;
   isProcessing: boolean;
 }
 
-export const ScanUploader = ({ onScanComplete, isProcessing }: ScanUploaderProps) => {
+export const ScanUploader = ({ onScanComplete, onPdfUpload, isProcessing }: ScanUploaderProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const handleFile = async (file: File) => {
-    // Accept both images and PDFs
-    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+    // Handle PDFs separately
+    if (file.type === 'application/pdf') {
+      onPdfUpload(file);
+      return;
+    }
+
+    // Handle images
+    if (!file.type.startsWith('image/')) {
       toast({
         title: 'Invalid File',
         description: 'Please upload an image or PDF file.',
@@ -86,17 +93,20 @@ export const ScanUploader = ({ onScanComplete, isProcessing }: ScanUploaderProps
             {isProcessing ? (
               <Scan className="h-8 w-8 text-primary-foreground animate-pulse" />
             ) : (
-              <Upload className="h-8 w-8 text-primary-foreground" />
+              <div className="flex items-center justify-center">
+                <Upload className="h-6 w-6 text-primary-foreground mr-1" />
+                <FileText className="h-5 w-5 text-primary-foreground" />
+              </div>
             )}
           </div>
         </div>
         
         <div>
           <h3 className="text-lg font-semibold mb-2">
-            {isProcessing ? 'Processing Image...' : 'Upload Document or Image'}
+            {isProcessing ? 'Processing Document...' : 'Upload Document or Image'}
           </h3>
           <p className="text-sm text-muted-foreground">
-            Drag and drop or click to select an image
+            Drag and drop or click to select a file
           </p>
           <p className="text-xs text-muted-foreground mt-1">
             Supports JPG, PNG, WEBP, PDF
