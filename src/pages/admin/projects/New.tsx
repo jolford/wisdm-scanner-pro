@@ -104,7 +104,7 @@ const NewProject = () => {
         export_types: selectedExportTypes,
         queues: queues as any,
         created_by: user?.id,
-        metadata: { export_config: exportConfig },
+        metadata: { export_config: exportConfig } as any,
       }]);
 
       if (error) throw error;
