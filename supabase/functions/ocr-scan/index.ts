@@ -14,16 +14,17 @@ serve(async (req) => {
   try {
     const { imageData, isPdf, extractionFields, textData } = await req.json();
     
-    if (!imageData) {
-      throw new Error('No image data provided');
-    }
-
     console.log('Processing OCR request...', isPdf ? 'PDF' : 'Image');
     console.log('Extraction fields:', extractionFields);
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
+    }
+
+    // For PDFs, we require textData to be provided (extracted client-side)
+    if (isPdf && !textData) {
+      throw new Error('PDF text extraction required. Please ensure text is extracted before sending.');
     }
 
     // Build optimized single-call prompt
