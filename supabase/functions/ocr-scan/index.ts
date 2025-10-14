@@ -26,16 +26,17 @@ serve(async (req) => {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    // Build extraction prompt based on provided fields
-    let extractionPrompt = 'Please extract all text from this document using OCR/ICR. Preserve the original formatting and structure as much as possible.';
+    // Build optimized single-call prompt
+    let systemPrompt = 'You are an OCR system. Extract all text from documents.';
+    let userPrompt = 'Extract all text from this document.';
     
     if (extractionFields && extractionFields.length > 0) {
-      const fieldsList = extractionFields.map((f: any) => `- ${f.name}: ${f.description || 'Extract this field'}`).join('\n');
-      extractionPrompt = `Extract ALL text from this ${isPdf ? 'PDF' : 'image'} document AND identify the following specific fields:\n\n${fieldsList}\n\nProvide both the full text extraction and the identified field values.`;
+      const fieldNames = extractionFields.map((f: any) => f.name);
+      systemPrompt = `You are an OCR system. Extract text and return JSON: {"fullText": "complete extracted text", "fields": {${fieldNames.map((n: string) => `"${n}": "value"`).join(', ')}}}. Extract actual values from the document for each field.`;
+      userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'} and identify: ${fieldNames.join(', ')}. Return as JSON.`;
     }
 
-
-    // Process images with vision model
+    // Single AI call for everything
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -47,14 +48,14 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: 'You are an advanced OCR and ICR system with metadata extraction capabilities. Extract ALL text from documents and identify specific data fields when requested. Return results in a clear, structured format.'
+            content: systemPrompt
           },
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: extractionPrompt
+                text: userPrompt
               },
               {
                 type: 'image_url',
@@ -91,54 +92,26 @@ serve(async (req) => {
     }
 
     const data = await response.json();
-    const extractedText = data.choices[0].message.content;
+    const responseText = data.choices[0].message.content;
 
-    // Parse metadata from the response if extraction fields were provided
-    const metadata: Record<string, string> = {};
+    // Parse response
+    let extractedText = responseText;
+    let metadata: Record<string, string> = {};
     
     if (extractionFields && extractionFields.length > 0) {
-      // Use AI to structure the extracted data into metadata
-      const metadataResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [
-            {
-              role: 'system',
-              content: 'You extract specific field values from text. Return ONLY valid JSON with the requested field names as keys and their extracted values. If a field is not found, use an empty string.'
-            },
-            {
-              role: 'user',
-              content: `From this extracted text, identify these fields and return as JSON:\n\nFields needed:\n${extractionFields.map((f: any) => f.name).join(', ')}\n\nExtracted text:\n${extractedText}\n\nReturn format: {"field1": "value1", "field2": "value2"}`
-            }
-          ],
-          temperature: 0.1,
-        }),
-      });
-
-      if (metadataResponse.ok) {
-        const metadataData = await metadataResponse.json();
-        const metadataText = metadataData.choices[0].message.content;
-        
-        try {
-          // Try to parse JSON from the response
-          const jsonMatch = metadataText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            const parsedMetadata = JSON.parse(jsonMatch[0]);
-            Object.assign(metadata, parsedMetadata);
-          }
-        } catch (e) {
-          console.error('Failed to parse metadata JSON:', e);
+      try {
+        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          extractedText = parsed.fullText || responseText;
+          metadata = parsed.fields || {};
         }
+      } catch (e) {
+        console.error('JSON parse failed, using raw text:', e);
       }
     }
 
-    console.log('OCR processing completed successfully');
-    console.log('Extracted metadata:', metadata);
+    console.log('OCR completed - Metadata:', metadata);
 
     return new Response(
       JSON.stringify({ 
