@@ -5,11 +5,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, FileText, CheckCircle2, XCircle, AlertCircle, Calendar, User, FolderOpen } from 'lucide-react';
+import { ArrowLeft, FileText, CheckCircle2, XCircle, AlertCircle, Calendar, User, FolderOpen, Download, FileJson, FileSpreadsheet, FileType } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const BatchDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { toast } = useToast();
+  const [exporting, setExporting] = useState(false);
 
   const { data: batch, isLoading } = useQuery({
     queryKey: ['batch-detail', id],
@@ -80,6 +84,96 @@ const BatchDetail = () => {
     }
   };
 
+  const exportToCSV = () => {
+    if (!documents || documents.length === 0) {
+      toast({ title: 'No documents to export', variant: 'destructive' });
+      return;
+    }
+
+    const headers = ['File Name', 'Status', 'Page', 'Confidence', 'Type', ...Object.keys(documents[0].extracted_metadata || {})];
+    const rows = documents.map(doc => [
+      doc.file_name,
+      doc.validation_status,
+      doc.page_number,
+      doc.confidence_score || '',
+      doc.file_type,
+      ...Object.values(doc.extracted_metadata || {})
+    ]);
+
+    const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${batch?.batch_name || 'batch'}-export.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    toast({ title: 'Exported successfully', description: 'CSV file downloaded' });
+  };
+
+  const exportToJSON = () => {
+    if (!documents || documents.length === 0) {
+      toast({ title: 'No documents to export', variant: 'destructive' });
+      return;
+    }
+
+    const exportData = {
+      batch: {
+        id: batch?.id,
+        name: batch?.batch_name,
+        status: batch?.status,
+        created_at: batch?.created_at,
+        total_documents: batch?.total_documents,
+        validated_documents: batch?.validated_documents,
+      },
+      documents: documents.map(doc => ({
+        file_name: doc.file_name,
+        validation_status: doc.validation_status,
+        page_number: doc.page_number,
+        confidence_score: doc.confidence_score,
+        file_type: doc.file_type,
+        extracted_metadata: doc.extracted_metadata,
+        extracted_text: doc.extracted_text,
+      }))
+    };
+
+    const json = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${batch?.batch_name || 'batch'}-export.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    toast({ title: 'Exported successfully', description: 'JSON file downloaded' });
+  };
+
+  const exportToTXT = () => {
+    if (!documents || documents.length === 0) {
+      toast({ title: 'No documents to export', variant: 'destructive' });
+      return;
+    }
+
+    const text = documents.map(doc => {
+      const metadata = Object.entries(doc.extracted_metadata || {})
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n');
+      return `File: ${doc.file_name}\nStatus: ${doc.validation_status}\nPage: ${doc.page_number}\n${metadata}\n\nExtracted Text:\n${doc.extracted_text || 'N/A'}\n\n${'='.repeat(80)}\n`;
+    }).join('\n');
+
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${batch?.batch_name || 'batch'}-export.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    toast({ title: 'Exported successfully', description: 'Text file downloaded' });
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -115,6 +209,28 @@ const BatchDetail = () => {
                 {batch.status}
               </Badge>
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" disabled={!documents || documents.length === 0}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Export Batch
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={exportToCSV}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Export as CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToJSON}>
+                  <FileJson className="h-4 w-4 mr-2" />
+                  Export as JSON
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={exportToTXT}>
+                  <FileType className="h-4 w-4 mr-2" />
+                  Export as TXT
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div className="flex gap-4 text-sm text-muted-foreground">
               <span className="flex items-center gap-1">
                 <FileText className="h-4 w-4" />
