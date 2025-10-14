@@ -25,11 +25,11 @@ import {
 } from "@/components/ui/alert-dialog";
 
 import * as pdfjsLib from 'pdfjs-dist';
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import PdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?worker';
 
-// Configure PDF.js worker for Vite (module worker)
+// Configure PDF.js worker using a dedicated module worker (avoids CDN)
 if ((pdfjsLib as any).GlobalWorkerOptions) {
-  (pdfjsLib as any).GlobalWorkerOptions.workerSrc = pdfWorker;
+  (pdfjsLib as any).GlobalWorkerOptions.workerPort = new (PdfWorker as any)();
 }
 
 const Queue = () => {
