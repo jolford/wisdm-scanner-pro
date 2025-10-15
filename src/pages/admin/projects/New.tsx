@@ -16,6 +16,7 @@ import { safeErrorMessage } from '@/lib/error-handler';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { ECMExportConfig } from '@/components/admin/ECMExportConfig';
 import { DocumentSeparationConfig, SeparationConfig } from '@/components/admin/DocumentSeparationConfig';
+import { FolderPicker } from '@/components/admin/FolderPicker';
 
 interface ExtractionField {
   name: string;
@@ -309,16 +310,14 @@ const NewProject = () => {
                               <Label htmlFor={`dest-${type}`} className="text-xs mb-1">
                                 Export Destination
                               </Label>
-                              <Input
-                                id={`dest-${type}`}
+                              <FolderPicker
                                 value={config.destination}
-                                onChange={(e) => 
+                                onChange={(path) => 
                                   setExportConfig(prev => ({ 
                                     ...prev, 
-                                    [type]: { ...prev[type], destination: e.target.value }
+                                    [type]: { ...prev[type], destination: path }
                                   }))
                                 }
-                                placeholder="/exports/path/"
                                 disabled={!config.enabled}
                               />
                             </div>
