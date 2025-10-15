@@ -527,12 +527,7 @@ const Queue = () => {
       toast({ title: 'Exporting to Filebound', description: `Project: ${fb.project}` });
       const { data, error } = await supabase.functions.invoke('export-to-filebound', {
         body: {
-          batchId: selectedBatchId,
-          fileboundUrl: fb.url,
-          username: fb.username,
-          password: fb.password,
-          project: fb.project,
-          fieldMappings: fb.fieldMappings || {}
+          batchId: selectedBatchId
         },
       });
       if (error) throw error;
@@ -565,12 +560,7 @@ const Queue = () => {
       toast({ title: 'Exporting to Docmgt', description: `Project: ${dm.project}` });
       const { data, error } = await supabase.functions.invoke('export-to-docmgt', {
         body: {
-          batchId: selectedBatchId,
-          docmgtUrl: dm.url,
-          username: dm.username,
-          password: dm.password,
-          project: dm.project,
-          fieldMappings: dm.fieldMappings || {}
+          batchId: selectedBatchId
         },
       });
       if (error) throw error;
