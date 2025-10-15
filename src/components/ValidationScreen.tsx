@@ -14,6 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ImageRegionSelector } from './ImageRegionSelector';
 import { RedactionTool } from './RedactionTool';
 import { useAuth } from '@/hooks/use-auth';
+import { useSignedUrl } from '@/hooks/use-signed-url';
 
 interface ValidationScreenProps {
   documentId?: string;

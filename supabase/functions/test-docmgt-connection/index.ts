@@ -18,6 +18,8 @@ serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+    
+    // Verify user authentication (test connection doesn't need database access but validates auth)
 
     // Authorization check is sufficient for test endpoints
     // No database access needed, just testing external API connection

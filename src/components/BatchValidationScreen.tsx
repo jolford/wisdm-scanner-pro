@@ -8,6 +8,7 @@ import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon } fro
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ImageRegionSelector } from './ImageRegionSelector';
+import { useSignedUrl } from '@/hooks/use-signed-url';
 import {
   Collapsible,
   CollapsibleContent,
@@ -253,11 +254,11 @@ export const BatchValidationScreen = ({
 
                 <CollapsibleContent>
                   <div className="p-4 space-y-4 border-t">
-                    <div className="grid grid-cols-2 gap-4">
+                     <div className="grid grid-cols-2 gap-4">
                       {/* Image with region selector */}
                       <div>
-                        <ImageRegionSelector
-                          imageUrl={doc.file_url}
+                        <ImageRegionSelectorWithSignedUrl
+                          fileUrl={doc.file_url}
                           onRegionSelected={(newMetadata) => handleRegionUpdate(doc.id, newMetadata)}
                           extractionFields={projectFields}
                         />
@@ -305,5 +306,30 @@ export const BatchValidationScreen = ({
         )}
       </div>
     </div>
+  );
+};
+
+// Helper component to handle signed URL for ImageRegionSelector
+const ImageRegionSelectorWithSignedUrl = ({ 
+  fileUrl, 
+  onRegionSelected, 
+  extractionFields 
+}: { 
+  fileUrl: string;
+  onRegionSelected: (metadata: Record<string, string>) => void;
+  extractionFields: any[];
+}) => {
+  const { signedUrl, loading } = useSignedUrl(fileUrl);
+
+  if (loading || !signedUrl) {
+    return <div className="py-8 text-center text-muted-foreground">Loading image...</div>;
+  }
+
+  return (
+    <ImageRegionSelector
+      imageUrl={signedUrl}
+      onRegionSelected={onRegionSelected}
+      extractionFields={extractionFields}
+    />
   );
 };

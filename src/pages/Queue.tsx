@@ -18,6 +18,7 @@ import { useLicense } from '@/hooks/use-license';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { getSignedUrl } from '@/hooks/use-signed-url';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -609,7 +610,9 @@ const Queue = () => {
 
     for (const doc of docsWithImages) {
       try {
-        const response = await fetch(doc.file_url);
+        // Get signed URL for secure access
+        const signedUrl = await getSignedUrl(doc.file_url);
+        const response = await fetch(signedUrl);
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
