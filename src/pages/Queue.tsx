@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -41,6 +41,7 @@ if ((pdfjsLib as any).GlobalWorkerOptions) {
 
 const Queue = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
   const { toast } = useToast();
   const { license, hasCapacity, consumeDocuments } = useLicense();
@@ -55,7 +56,16 @@ const Queue = () => {
   const [validatedDocs, setValidatedDocs] = useState<any[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [docToDelete, setDocToDelete] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState('scan');
+  
+  // Initialize active tab from URL parameter or default to 'scan'
+  const initialTab = searchParams.get('tab') || 'scan';
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  // Update URL when tab changes
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    setSearchParams({ tab });
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -236,7 +246,7 @@ const Queue = () => {
 
       // Refresh validation queue and switch to validation tab
       await loadQueueDocuments();
-      setTimeout(() => setActiveTab('validation'), 0);
+      setTimeout(() => handleTabChange('validation'), 0);
     } catch (error: any) {
       console.error('Error processing PDF:', error);
       toast({
@@ -300,7 +310,7 @@ const Queue = () => {
 
     // After processing all files, go to Validation tab
     await loadQueueDocuments();
-    setTimeout(() => setActiveTab('validation'), 0);
+    setTimeout(() => handleTabChange('validation'), 0);
   };
 
   const handleScanComplete = async (text: string, imageUrl: string, fileName = 'scan.jpg') => {
@@ -336,7 +346,7 @@ const Queue = () => {
       // Refresh validation queue and switch to validation tab
       await loadQueueDocuments();
       // Defer tab switch to avoid race conditions with Radix Tabs rendering
-      setTimeout(() => setActiveTab('validation'), 0);
+      setTimeout(() => handleTabChange('validation'), 0);
     } catch (error: any) {
       console.error('Error processing scan:', error);
       toast({
@@ -786,7 +796,7 @@ const Queue = () => {
         </div>
 
         {selectedProjectId && selectedBatchId && (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
             <TabsList className="grid w-full grid-cols-4 mb-6 h-12 bg-muted/50 p-1 backdrop-blur-sm">
               <TabsTrigger value="scan" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
                 <Upload className="h-4 w-4" />
@@ -897,7 +907,7 @@ const Queue = () => {
                   projectFields={selectedProject?.extraction_fields || []}
                   onValidationComplete={loadQueueDocuments}
                   batchId={selectedBatchId}
-                  onSwitchToExport={() => setActiveTab('export')}
+                  onSwitchToExport={() => handleTabChange('export')}
                 />
               )}
             </TabsContent>
