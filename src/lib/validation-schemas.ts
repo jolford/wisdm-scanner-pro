@@ -34,7 +34,41 @@ export const projectSchema = z.object({
       destination: z.string()
         .trim()
         .max(255, 'Destination path must be less than 255 characters')
-        .regex(/^[a-zA-Z0-9\/_\-\.]+$/, 'Invalid destination path format'),
+        .optional(),
+      url: z.string()
+        .trim()
+        .max(255, 'URL must be less than 255 characters')
+        .optional(),
+      username: z.string()
+        .trim()
+        .max(100, 'Username must be less than 100 characters')
+        .optional(),
+      password: z.string()
+        .max(255, 'Password must be less than 255 characters')
+        .optional(),
+      project: z.string()
+        .trim()
+        .max(100, 'Project name must be less than 100 characters')
+        .optional(),
+      fieldMappings: z.record(z.string()).optional(),
+    })
+    .refine((data) => {
+      // If enabled, validate based on whether it's an ECM or file export
+      if (!data.enabled) return true;
+      
+      // If has URL, it's an ECM export - validate ECM fields
+      if (data.url) {
+        return data.username && data.password && data.project;
+      }
+      
+      // Otherwise it's a file export - validate destination
+      if (data.destination) {
+        return /^[a-zA-Z0-9\/_\-\.]+$/.test(data.destination);
+      }
+      
+      return true;
+    }, {
+      message: 'Please complete all required fields for the export type'
     })
   ),
 });
