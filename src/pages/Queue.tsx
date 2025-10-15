@@ -51,6 +51,7 @@ const Queue = () => {
   const [validatedDocs, setValidatedDocs] = useState<any[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [docToDelete, setDocToDelete] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('scan');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -320,8 +321,9 @@ const Queue = () => {
         description: 'Text and metadata extracted successfully.',
       });
 
-      // Refresh validation queue after successful scan
-      loadQueueDocuments();
+      // Refresh validation queue and switch to validation tab
+      await loadQueueDocuments();
+      setActiveTab('validation');
     } catch (error: any) {
       console.error('Error processing scan:', error);
       toast({
@@ -690,7 +692,7 @@ const Queue = () => {
         </div>
 
         {selectedProjectId && selectedBatchId && (
-          <Tabs defaultValue="scan" className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-4 mb-6">
               <TabsTrigger value="scan" className="flex items-center gap-2">
                 <Upload className="h-4 w-4" />
