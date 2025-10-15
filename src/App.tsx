@@ -25,14 +25,16 @@ import Analytics from "./pages/admin/Analytics";
 import ErrorLogs from "./pages/admin/ErrorLogs";
 import NotFound from "./pages/NotFound";
 import { Footer } from "./components/Footer";
+import { ThemeProvider } from "./components/ThemeProvider";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <div className="flex flex-col min-h-screen">
-      <Toaster />
-      <Sonner />
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <div className="flex flex-col min-h-screen">
+        <Toaster />
+        <Sonner />
       <BrowserRouter>
         <div className="flex-1">
         <Routes>
@@ -63,7 +65,8 @@ const App = () => (
         </div>
         <Footer />
       </BrowserRouter>
-    </div>
+      </div>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 

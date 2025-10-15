@@ -16,6 +16,7 @@ import {
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   Sidebar,
   SidebarContent,
@@ -124,16 +125,19 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
         <div className="flex-1 flex flex-col min-h-screen">
           <header className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-10 bg-background/80">
             <div className="container mx-auto px-4 py-4">
-              <div className="flex items-center gap-4">
-                <SidebarTrigger>
-                  <Menu className="h-5 w-5" />
-                </SidebarTrigger>
-                <div>
-                  <h1 className="text-xl font-bold">{title}</h1>
-                  {description && (
-                    <p className="text-sm text-muted-foreground">{description}</p>
-                  )}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <SidebarTrigger>
+                    <Menu className="h-5 w-5" />
+                  </SidebarTrigger>
+                  <div>
+                    <h1 className="text-xl font-bold">{title}</h1>
+                    {description && (
+                      <p className="text-sm text-muted-foreground">{description}</p>
+                    )}
+                  </div>
                 </div>
+                <ThemeToggle />
               </div>
             </div>
           </header>
