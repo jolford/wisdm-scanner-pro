@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, FolderOpen, Search, Calendar, User, FileText, Trash2, ArrowRight, Download } from 'lucide-react';
+import { ArrowLeft, FolderOpen, Search, Calendar, User, FileText, Trash2, ArrowRight, Download, HelpCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import wisdmLogo from '@/assets/wisdm-logo.png';
@@ -220,6 +220,10 @@ const Batches = () => {
               </div>
             </div>
             <div className="flex gap-2">
+              <Button variant="outline" onClick={() => navigate('/help')}>
+                <HelpCircle className="h-4 w-4 mr-2" />
+                Help
+              </Button>
               <Button variant="default" onClick={() => navigate('/?tab=export')}>
                 <Download className="h-4 w-4 mr-2" />
                 Export Queue

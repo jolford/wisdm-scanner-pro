@@ -23,6 +23,7 @@ import UsersIndex from "./pages/admin/users/Index";
 import DocumentsAdmin from "./pages/admin/Documents";
 import Analytics from "./pages/admin/Analytics";
 import ErrorLogs from "./pages/admin/ErrorLogs";
+import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
@@ -59,6 +60,7 @@ const App = () => (
           <Route path="/admin/documents" element={<DocumentsAdmin />} />
           <Route path="/admin/analytics" element={<Analytics />} />
           <Route path="/admin/error-logs" element={<ErrorLogs />} />
+          <Route path="/help" element={<Help />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

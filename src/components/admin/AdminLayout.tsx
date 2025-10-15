@@ -12,6 +12,7 @@ import {
   Menu,
   FileText,
   AlertCircle,
+  HelpCircle,
 } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { supabase } from '@/integrations/supabase/client';
@@ -106,6 +107,14 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
               <Button
                 variant="outline"
                 className="w-full justify-start"
+                onClick={() => navigate('/help')}
+              >
+                <HelpCircle className="h-4 w-4 mr-2" />
+                Help Center
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start mt-2"
                 onClick={() => navigate('/')}
               >
                 Back to Scanner

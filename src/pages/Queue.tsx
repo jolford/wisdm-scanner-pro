@@ -11,7 +11,7 @@ import { ProjectSelector } from '@/components/ProjectSelector';
 import { BatchSelector } from '@/components/BatchSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText, FolderOpen, Cloud, Database } from 'lucide-react';
+import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText, FolderOpen, Cloud, Database, HelpCircle } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { LicenseWarning } from '@/components/LicenseWarning';
 import { useLicense } from '@/hooks/use-license';
@@ -752,6 +752,10 @@ const Queue = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={() => navigate('/help')} className="gap-2">
+                <HelpCircle className="h-4 w-4" />
+                Help
+              </Button>
               {isAdmin && (
                 <Button variant="outline" onClick={() => navigate('/admin')} className="gap-2">
                   <Settings className="h-4 w-4" />
