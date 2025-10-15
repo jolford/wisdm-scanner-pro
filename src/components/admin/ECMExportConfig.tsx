@@ -173,6 +173,17 @@ export function ECMExportConfig({
 
   const handleFieldMapping = (wisdmField: string, ecmField: string) => {
     const currentMappings = config.fieldMappings || {};
+    
+    // If user selected "none", remove the mapping
+    if (ecmField === '__none__') {
+      const { [wisdmField]: removed, ...rest } = currentMappings;
+      onConfigChange({
+        ...config,
+        fieldMappings: rest,
+      });
+      return;
+    }
+    
     onConfigChange({
       ...config,
       fieldMappings: {
@@ -292,7 +303,7 @@ export function ECMExportConfig({
                 </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <Select
-                  value={config.fieldMappings?.[field.name] || ''}
+                  value={config.fieldMappings?.[field.name] || '__none__'}
                   onValueChange={(value) => handleFieldMapping(field.name, value)}
                   disabled={disabled || loadingFields}
                 >
@@ -300,7 +311,7 @@ export function ECMExportConfig({
                     <SelectValue placeholder="Select field..." />
                   </SelectTrigger>
                   <SelectContent className="z-50 bg-popover">
-                    <SelectItem value="">-- No mapping --</SelectItem>
+                    <SelectItem value="__none__">-- No mapping --</SelectItem>
                     {ecmFields.map((ecmField) => (
                       <SelectItem key={ecmField.name} value={ecmField.name}>
                         {ecmField.name}
