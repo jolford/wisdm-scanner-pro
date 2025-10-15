@@ -56,6 +56,7 @@ const Queue = () => {
   const [validatedDocs, setValidatedDocs] = useState<any[]>([]);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [docToDelete, setDocToDelete] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
   
   // Initialize active tab from URL parameter or default to 'scan'
   const initialTab = searchParams.get('tab') || 'scan';
@@ -521,6 +522,8 @@ const Queue = () => {
       return;
     }
     try {
+      setIsExporting(true);
+      toast({ title: 'Exporting to Filebound', description: `Project: ${fb.project}` });
       const { data, error } = await supabase.functions.invoke('export-to-filebound', {
         body: {
           batchId: selectedBatchId,
@@ -533,13 +536,15 @@ const Queue = () => {
       });
       if (error) throw error;
       if (data?.success) {
-        toast({ title: 'Exported to Filebound', description: `Project: ${fb.project}` });
+        toast({ title: 'Exported to Filebound', description: `Exported ${validatedDocs.length} documents` });
       } else {
         throw new Error(data?.error || 'Export failed');
       }
     } catch (err: any) {
       console.error('Filebound export error:', err);
       toast({ title: 'Export failed', description: err.message || 'Failed to export to Filebound', variant: 'destructive' });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -555,6 +560,8 @@ const Queue = () => {
       return;
     }
     try {
+      setIsExporting(true);
+      toast({ title: 'Exporting to Docmgt', description: `Project: ${dm.project}` });
       const { data, error } = await supabase.functions.invoke('export-to-docmgt', {
         body: {
           batchId: selectedBatchId,
@@ -567,13 +574,15 @@ const Queue = () => {
       });
       if (error) throw error;
       if (data?.success) {
-        toast({ title: 'Exported to Docmgt', description: `Project: ${dm.project}` });
+        toast({ title: 'Exported to Docmgt', description: `Exported ${validatedDocs.length} documents` });
       } else {
         throw new Error(data?.error || 'Export failed');
       }
     } catch (err: any) {
       console.error('Docmgt export error:', err);
       toast({ title: 'Export failed', description: err.message || 'Failed to export to Docmgt', variant: 'destructive' });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -1010,7 +1019,7 @@ const Queue = () => {
                       {selectedProject?.export_types?.includes('csv') && (
                         <Button 
                           onClick={() => exportBatch('csv')} 
-                          disabled={validatedDocs.length === 0} 
+                          disabled={validatedDocs.length === 0 || isExporting} 
                           variant="outline"
                           className="h-20 flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
                         >
@@ -1021,7 +1030,7 @@ const Queue = () => {
                       {selectedProject?.export_types?.includes('json') && (
                         <Button 
                           onClick={() => exportBatch('json')} 
-                          disabled={validatedDocs.length === 0} 
+                          disabled={validatedDocs.length === 0 || isExporting} 
                           variant="outline"
                           className="h-20 flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
                         >
@@ -1032,7 +1041,7 @@ const Queue = () => {
                       {selectedProject?.export_types?.includes('xml') && (
                         <Button 
                           onClick={() => exportBatch('xml')} 
-                          disabled={validatedDocs.length === 0} 
+                          disabled={validatedDocs.length === 0 || isExporting} 
                           variant="outline"
                           className="h-20 flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
                         >
@@ -1043,7 +1052,7 @@ const Queue = () => {
                       {selectedProject?.export_types?.includes('txt') && (
                         <Button 
                           onClick={() => exportBatch('txt')} 
-                          disabled={validatedDocs.length === 0} 
+                          disabled={validatedDocs.length === 0 || isExporting} 
                           variant="outline"
                           className="h-20 flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
                         >
@@ -1089,13 +1098,13 @@ const Queue = () => {
                       <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">External ECM Exports</h4>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {getExportConfig().filebound?.enabled && (
-                          <Button onClick={exportToFilebound} disabled={validatedDocs.length === 0} variant="outline" className="h-16 gap-2 hover:border-primary/50 hover:bg-primary/5">
+                          <Button onClick={exportToFilebound} disabled={validatedDocs.length === 0 || isExporting} variant="outline" className="h-16 gap-2 hover:border-primary/50 hover:bg-primary/5">
                             <Cloud className="h-5 w-5" />
                             <span className="font-medium">Export to Filebound</span>
                           </Button>
                         )}
                         {getExportConfig().docmgt?.enabled && (
-                          <Button onClick={exportToDocmgt} disabled={validatedDocs.length === 0} variant="outline" className="h-16 gap-2 hover:border-primary/50 hover:bg-primary/5">
+                          <Button onClick={exportToDocmgt} disabled={validatedDocs.length === 0 || isExporting} variant="outline" className="h-16 gap-2 hover:border-primary/50 hover:bg-primary/5">
                             <Database className="h-5 w-5" />
                             <span className="font-medium">Export to Docmgt</span>
                           </Button>
