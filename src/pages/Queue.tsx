@@ -171,7 +171,7 @@ const Queue = () => {
     
     try {
       // Get separation config from project
-      const separationConfig: SeparationConfig = (selectedProject as any)?.metadata?.separation_config || { method: 'none' };
+      const separationConfig: SeparationConfig = (selectedProject as any)?.metadata?.separation_config || { method: 'page_count', pagesPerDocument: 1 } as SeparationConfig;
       
       // Load PDF for analysis
       const arrayBuffer = await file.arrayBuffer();
@@ -179,11 +179,14 @@ const Queue = () => {
       const pdfDoc = await loadingTask.promise;
       
       // Analyze document boundaries based on separation config
-      const boundaries = await analyzePdfSeparation(pdfDoc, separationConfig);
+      const effectiveConfig: SeparationConfig = (separationConfig.method === 'none' && pdfDoc.numPages > 1)
+        ? ({ method: 'page_count', pagesPerDocument: 1 } as SeparationConfig)
+        : separationConfig;
+      const boundaries = await analyzePdfSeparation(pdfDoc, effectiveConfig);
       
       toast({
         title: 'Processing PDF',
-        description: `Found ${boundaries.length} document(s) using ${separationConfig.method} separation`,
+        description: `Found ${boundaries.length} document(s) using ${effectiveConfig.method} separation`,
       });
       
       // Process each separated document
