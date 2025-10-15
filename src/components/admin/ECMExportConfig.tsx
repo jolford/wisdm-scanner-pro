@@ -48,8 +48,10 @@ export function ECMExportConfig({
   const [testing, setTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [availableProjects, setAvailableProjects] = useState<ECMProject[]>([]);
+  const [allProjectFields, setAllProjectFields] = useState<Record<string, ECMField[]>>({});
   const [ecmFields, setEcmFields] = useState<ECMField[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState<string>(config.project || '');
+  const [loadingFields, setLoadingFields] = useState(false);
 
   const testConnection = async () => {
     if (!config.url || !config.username || !config.password) {
@@ -75,15 +77,15 @@ export function ECMExportConfig({
 
       if (data.success) {
         setConnectionStatus('success');
-        setAvailableProjects(data.projects.map((p: any) => ({
+        const projects = data.projects.map((p: any) => ({
           id: p.ProjectId?.toString() || p.id?.toString(),
           name: p.Name || p.name,
           description: p.Description || p.description
-        })));
+        }));
+        setAvailableProjects(projects);
         
-        // Store field info for all fetched projects
+        // Store all project fields for later use
         if (data.projectFields) {
-          // Convert all field arrays
           const formattedFields: Record<string, ECMField[]> = {};
           Object.entries(data.projectFields).forEach(([projId, fields]) => {
             formattedFields[projId] = (fields as any[]).map((f: any) => ({
@@ -92,7 +94,7 @@ export function ECMExportConfig({
               required: f.Required || f.required || false
             }));
           });
-          setEcmFields(formattedFields[Object.keys(formattedFields)[0]] || []);
+          setAllProjectFields(formattedFields);
         }
         
         toast.success(`Successfully connected to ${type.toUpperCase()}`);
@@ -118,23 +120,54 @@ export function ECMExportConfig({
       project: selectedProject?.name || projectId,
     });
 
-    // Fetch fields for this project
+    // Check if we already have fields for this project
+    if (allProjectFields[projectId]) {
+      setEcmFields(allProjectFields[projectId]);
+      return;
+    }
+
+    // Otherwise, fetch fields for this specific project
+    setLoadingFields(true);
     try {
       const functionName = type === 'filebound' ? 'test-filebound-connection' : 'test-docmgt-connection';
       
-      const { data } = await supabase.functions.invoke(functionName, {
-        body: {
-          url: config.url,
-          username: config.username,
-          password: config.password,
+      // Make a request to fetch just this project's fields
+      const url = config.url?.replace(/\/$/, '');
+      const fieldsUrl = type === 'filebound' 
+        ? `${url}/api/projects/${projectId}/fields`
+        : `${url}/api/v1/projects/${projectId}/fields`;
+      
+      // We'll need to call the edge function with a special parameter or create a new endpoint
+      // For now, let's use the connection test with the project ID
+      const response = await fetch(fieldsUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${btoa(`${config.username}:${config.password}`)}`,
+          'Accept': 'application/json',
         },
       });
 
-      if (data.success && data.projectFields && data.projectFields[projectId]) {
-        setEcmFields(data.projectFields[projectId]);
+      if (response.ok) {
+        const fieldsData = await response.json();
+        const formattedFields = (Array.isArray(fieldsData) ? fieldsData : []).map((f: any) => ({
+          name: f.FieldName || f.name || f.Name,
+          type: f.FieldType || f.type || f.Type || 'text',
+          required: f.Required || f.required || false
+        }));
+        
+        setEcmFields(formattedFields);
+        setAllProjectFields(prev => ({
+          ...prev,
+          [projectId]: formattedFields
+        }));
+      } else {
+        toast.error('Failed to fetch project fields');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching project fields:', error);
+      toast.error('Failed to fetch project fields');
+    } finally {
+      setLoadingFields(false);
     }
   };
 
@@ -241,28 +274,37 @@ export function ECMExportConfig({
 
       {selectedProjectId && ecmFields.length > 0 && (
         <Card className="p-4 bg-muted/30">
-          <Label className="text-sm font-medium mb-3 block">Field Mapping</Label>
+          <div className="flex items-center justify-between mb-3">
+            <Label className="text-sm font-medium">Field Mapping</Label>
+            {loadingFields && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          </div>
           <p className="text-xs text-muted-foreground mb-3">
-            Map your WISDM extraction fields to {type.toUpperCase()} project fields
+            Map your WISDM extraction fields to {type.toUpperCase()} index fields
           </p>
           <div className="space-y-2">
             {extractionFields.filter(f => f.name.trim()).map((field) => (
-              <div key={field.name} className="flex items-center gap-2">
-                <div className="flex-1 text-sm font-medium">{field.name}</div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              <div key={field.name} className="flex items-center gap-2 p-2 bg-background rounded-md border border-border/50">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{field.name}</div>
+                  {field.description && (
+                    <div className="text-xs text-muted-foreground truncate">{field.description}</div>
+                  )}
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 <Select
                   value={config.fieldMappings?.[field.name] || ''}
                   onValueChange={(value) => handleFieldMapping(field.name, value)}
-                  disabled={disabled}
+                  disabled={disabled || loadingFields}
                 >
                   <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Select ECM field..." />
+                    <SelectValue placeholder="Select field..." />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-50 bg-popover">
+                    <SelectItem value="">-- No mapping --</SelectItem>
                     {ecmFields.map((ecmField) => (
                       <SelectItem key={ecmField.name} value={ecmField.name}>
                         {ecmField.name}
-                        {ecmField.required && ' *'}
+                        {ecmField.required && <span className="text-destructive ml-1">*</span>}
                       </SelectItem>
                     ))}
                   </SelectContent>
