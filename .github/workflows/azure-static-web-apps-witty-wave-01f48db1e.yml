@@ -20,6 +20,12 @@ jobs:
           submodules: true
           lfs: false
           persist-credentials: false
+          fetch-depth: 0
+      - name: Fix git config extraheader (Actions runners)
+        run: |
+          git config --global --unset-all http.https://github.com/.extraheader || true
+          git config --system --unset-all http.https://github.com/.extraheader || true
+          git config --unset-all http.https://github.com/.extraheader || true
       - name: Build And Deploy
         id: builddeploy
         uses: Azure/static-web-apps-deploy@v1
