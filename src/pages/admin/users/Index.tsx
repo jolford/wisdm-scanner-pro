@@ -44,6 +44,7 @@ interface User {
     can_validate: boolean;
     can_export: boolean;
   };
+  roles: string[];
 }
 
 interface Customer {
@@ -83,7 +84,7 @@ const UsersIndex = () => {
 
       if (error) throw error;
 
-      // Load customer assignments and permissions for each user
+      // Load customer assignments, permissions, and roles for each user
       const usersWithCustomers = await Promise.all(
         (profiles || []).map(async (profile) => {
           const { data: userCustomers } = await supabase
@@ -100,6 +101,11 @@ const UsersIndex = () => {
             .eq('user_id', profile.id)
             .single();
 
+          const { data: userRoles } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', profile.id);
+
           return {
             ...profile,
             customers: (userCustomers || []).map((uc: any) => ({
@@ -111,6 +117,7 @@ const UsersIndex = () => {
               can_validate: true,
               can_export: true,
             },
+            roles: (userRoles || []).map((r: any) => r.role),
           };
         })
       );
@@ -218,6 +225,37 @@ const UsersIndex = () => {
     }
   };
 
+  const handleToggleAdminRole = async (userId: string, isCurrentlyAdmin: boolean) => {
+    try {
+      if (isCurrentlyAdmin) {
+        // Remove admin role
+        const { error } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId)
+          .eq('role', 'admin');
+
+        if (error) throw error;
+        toast.success('Admin role removed');
+      } else {
+        // Add admin role
+        const { error } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: userId,
+            role: 'admin',
+          });
+
+        if (error) throw error;
+        toast.success('Admin role granted');
+      }
+
+      loadUsers();
+    } catch (error: any) {
+      toast.error('Failed to update role: ' + error.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -263,6 +301,7 @@ const UsersIndex = () => {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
                 <TableHead>Permissions</TableHead>
                 <TableHead>Assigned Customers</TableHead>
                 <TableHead>Joined</TableHead>
@@ -276,6 +315,17 @@ const UsersIndex = () => {
                     {user.full_name || 'N/A'}
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <Switch
+                        checked={user.roles.includes('admin')}
+                        onCheckedChange={() => handleToggleAdminRole(user.id, user.roles.includes('admin'))}
+                      />
+                      <span className="text-sm">
+                        {user.roles.includes('admin') ? 'Admin' : 'User'}
+                      </span>
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="flex gap-1 text-xs">
                       {user.permissions?.can_scan && (
