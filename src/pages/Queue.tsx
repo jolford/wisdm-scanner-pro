@@ -823,6 +823,7 @@ const Queue = () => {
                   projectFields={selectedProject?.extraction_fields || []}
                   onValidationComplete={loadQueueDocuments}
                   batchId={selectedBatchId}
+                  onSwitchToExport={() => setActiveTab('export')}
                 />
               )}
             </TabsContent>

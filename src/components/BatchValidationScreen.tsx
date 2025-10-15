@@ -28,6 +28,7 @@ interface BatchValidationScreenProps {
   projectFields: Array<{ name: string; description: string }>;
   onValidationComplete: () => void;
   batchId: string;
+  onSwitchToExport?: () => void;
 }
 
 export const BatchValidationScreen = ({
@@ -35,6 +36,7 @@ export const BatchValidationScreen = ({
   projectFields,
   onValidationComplete,
   batchId,
+  onSwitchToExport,
 }: BatchValidationScreenProps) => {
   const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
   const [editedMetadata, setEditedMetadata] = useState<Record<string, Record<string, string>>>({});
@@ -126,6 +128,11 @@ export const BatchValidationScreen = ({
       });
 
       onValidationComplete();
+      
+      // If all documents are validated/rejected, switch to export
+      if (status === 'validated' && onSwitchToExport && documents.length === 1) {
+        setTimeout(() => onSwitchToExport?.(), 100);
+      }
     } catch (error: any) {
       toast({
         title: 'Validation Failed',
@@ -144,6 +151,10 @@ export const BatchValidationScreen = ({
   const handleValidateAll = async () => {
     for (const doc of documents) {
       await handleValidate(doc, 'validated');
+    }
+    // After all documents validated, switch to export
+    if (onSwitchToExport) {
+      setTimeout(() => onSwitchToExport(), 100);
     }
   };
 

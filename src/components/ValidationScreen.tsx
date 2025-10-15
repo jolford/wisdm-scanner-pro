@@ -24,6 +24,7 @@ interface ValidationScreenProps {
   projectFields: Array<{ name: string; description: string }>;
   onValidate: (status: 'validated' | 'rejected', metadata: Record<string, string>) => void;
   onSkip: () => void;
+  onSwitchToExport?: () => void;
 }
 
 export const ValidationScreen = ({
@@ -35,6 +36,7 @@ export const ValidationScreen = ({
   projectFields,
   onValidate,
   onSkip,
+  onSwitchToExport,
 }: ValidationScreenProps) => {
   const [editedMetadata, setEditedMetadata] = useState(metadata);
   const [validationStatus, setValidationStatus] = useState<'pending' | 'validated' | 'rejected'>('pending');
@@ -216,6 +218,11 @@ export const ValidationScreen = ({
       });
 
       onValidate(status, editedMetadata);
+      
+      // Switch to export tab if validated and callback provided
+      if (status === 'validated' && onSwitchToExport) {
+        setTimeout(() => onSwitchToExport(), 100);
+      }
     } catch (error: any) {
       toast({
         title: 'Validation Failed',
