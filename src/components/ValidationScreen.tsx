@@ -5,12 +5,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Lightbulb } from 'lucide-react';
+import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Lightbulb, Crop } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { documentMetadataSchema } from '@/lib/validation-schemas';
 import { safeErrorMessage } from '@/lib/error-handler';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ImageRegionSelector } from './ImageRegionSelector';
 
 interface ValidationScreenProps {
   documentId?: string;
@@ -41,6 +42,7 @@ export const ValidationScreen = ({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [suggestions, setSuggestions] = useState<Record<string, string[]>>({});
   const [selectedText, setSelectedText] = useState('');
+  const [showRegionSelector, setShowRegionSelector] = useState(false);
   const { toast } = useToast();
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
   const imageContainerRef = useRef<HTMLDivElement>(null);
@@ -154,6 +156,13 @@ export const ValidationScreen = ({
     });
   };
 
+  const handleRegionSelected = (newMetadata: Record<string, string>) => {
+    // Merge new metadata with existing
+    const mergedMetadata = { ...editedMetadata, ...newMetadata };
+    setEditedMetadata(mergedMetadata);
+    setShowRegionSelector(false);
+  };
+
   const handleValidate = async (status: 'validated' | 'rejected') => {
     // Validate metadata with zod
     try {
@@ -253,7 +262,20 @@ export const ValidationScreen = ({
                   <RotateCw className="h-4 w-4" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Rotate 90°</TooltipContent>
+              <TooltipContent>Rotate</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant={showRegionSelector ? "default" : "outline"}
+                  onClick={() => setShowRegionSelector(!showRegionSelector)}
+                >
+                  <Crop className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{showRegionSelector ? 'Cancel Selection' : 'Select Region to Re-OCR'}</TooltipContent>
             </Tooltip>
             
             <Button
@@ -289,6 +311,17 @@ export const ValidationScreen = ({
               </div>
             )}
           </div>
+          
+          {/* Region Selector */}
+          {showRegionSelector && (
+            <div className="mt-4">
+              <ImageRegionSelector
+                imageUrl={imageUrl}
+                onRegionSelected={handleRegionSelected}
+                extractionFields={projectFields}
+              />
+            </div>
+          )}
         </Card>
 
       {/* Middle: Extracted Text with Selection */}

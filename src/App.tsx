@@ -23,15 +23,17 @@ import UsersIndex from "./pages/admin/users/Index";
 import DocumentsAdmin from "./pages/admin/Documents";
 import Analytics from "./pages/admin/Analytics";
 import NotFound from "./pages/NotFound";
+import { Footer } from "./components/Footer";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <>
+    <div className="flex flex-col min-h-screen">
       <Toaster />
       <Sonner />
       <BrowserRouter>
+        <div className="flex-1">
         <Routes>
           <Route path="/" element={<Queue />} />
           <Route path="/old" element={<Index />} />
@@ -56,8 +58,10 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
+        </div>
+        <Footer />
       </BrowserRouter>
-    </>
+    </div>
   </QueryClientProvider>
 );
 
