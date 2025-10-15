@@ -319,6 +319,9 @@ const Queue = () => {
         title: 'Scan Complete',
         description: 'Text and metadata extracted successfully.',
       });
+
+      // Refresh validation queue after successful scan
+      loadQueueDocuments();
     } catch (error: any) {
       console.error('Error processing scan:', error);
       toast({

@@ -300,6 +300,9 @@ const Index = () => {
         title: 'Scan Complete',
         description: 'Text and metadata extracted successfully.',
       });
+
+      // Auto-navigate to validation queue after successful scan
+      navigate('/queue');
     } catch (error: any) {
       console.error('Error processing scan:', error);
       toast({

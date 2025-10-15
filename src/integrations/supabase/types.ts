@@ -21,6 +21,7 @@ export type Database = {
           completed_at: string | null
           created_at: string | null
           created_by: string
+          customer_id: string | null
           error_count: number | null
           exported_at: string | null
           id: string
@@ -41,6 +42,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           created_by: string
+          customer_id?: string | null
           error_count?: number | null
           exported_at?: string | null
           id?: string
@@ -61,6 +63,7 @@ export type Database = {
           completed_at?: string | null
           created_at?: string | null
           created_by?: string
+          customer_id?: string | null
           error_count?: number | null
           exported_at?: string | null
           id?: string
@@ -76,6 +79,13 @@ export type Database = {
           validated_documents?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "batches_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "batches_project_id_fkey"
             columns: ["project_id"]
@@ -379,6 +389,7 @@ export type Database = {
         Row: {
           created_at: string | null
           created_by: string
+          customer_id: string | null
           description: string | null
           export_types: string[] | null
           extraction_fields: Json
@@ -392,6 +403,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           created_by: string
+          customer_id?: string | null
           description?: string | null
           export_types?: string[] | null
           extraction_fields?: Json
@@ -405,6 +417,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           created_by?: string
+          customer_id?: string | null
           description?: string | null
           export_types?: string[] | null
           extraction_fields?: Json
@@ -415,7 +428,15 @@ export type Database = {
           queues?: Json | null
           updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "projects_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_customers: {
         Row: {
