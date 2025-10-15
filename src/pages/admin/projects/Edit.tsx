@@ -13,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { projectSchema } from '@/lib/validation-schemas';
 import { safeErrorMessage } from '@/lib/error-handler';
 import wisdmLogo from '@/assets/wisdm-logo.png';
+import { ECMExportConfig } from '@/components/admin/ECMExportConfig';
 
 interface ExtractionField {
   name: string;
@@ -31,6 +32,7 @@ interface ExportConfig {
   username?: string;
   password?: string;
   project?: string;
+  fieldMappings?: Record<string, string>;
 }
 
 const EditProject = () => {
@@ -357,76 +359,19 @@ const EditProject = () => {
                         </div>
                         
                         {isECM ? (
-                          <div className="grid grid-cols-2 gap-3 pl-6">
-                            <div>
-                              <Label htmlFor={`url-${type}`} className="text-xs mb-1">
-                                ECM URL *
-                              </Label>
-                              <Input
-                                id={`url-${type}`}
-                                value={config.url || ''}
-                                onChange={(e) => 
-                                  setExportConfig(prev => ({ 
-                                    ...prev, 
-                                    [type]: { ...prev[type], url: e.target.value }
-                                  }))
-                                }
-                                placeholder="https://ecm.example.com"
-                                disabled={!config.enabled}
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor={`project-${type}`} className="text-xs mb-1">
-                                Project Name *
-                              </Label>
-                              <Input
-                                id={`project-${type}`}
-                                value={config.project || ''}
-                                onChange={(e) => 
-                                  setExportConfig(prev => ({ 
-                                    ...prev, 
-                                    [type]: { ...prev[type], project: e.target.value }
-                                  }))
-                                }
-                                placeholder="Project name"
-                                disabled={!config.enabled}
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor={`username-${type}`} className="text-xs mb-1">
-                                Username *
-                              </Label>
-                              <Input
-                                id={`username-${type}`}
-                                value={config.username || ''}
-                                onChange={(e) => 
-                                  setExportConfig(prev => ({ 
-                                    ...prev, 
-                                    [type]: { ...prev[type], username: e.target.value }
-                                  }))
-                                }
-                                placeholder="ECM username"
-                                disabled={!config.enabled}
-                              />
-                            </div>
-                            <div>
-                              <Label htmlFor={`password-${type}`} className="text-xs mb-1">
-                                Password *
-                              </Label>
-                              <Input
-                                id={`password-${type}`}
-                                type="password"
-                                value={config.password || ''}
-                                onChange={(e) => 
-                                  setExportConfig(prev => ({ 
-                                    ...prev, 
-                                    [type]: { ...prev[type], password: e.target.value }
-                                  }))
-                                }
-                                placeholder="ECM password"
-                                disabled={!config.enabled}
-                              />
-                            </div>
+                          <div className="pl-6">
+                            <ECMExportConfig
+                              type={type as 'filebound' | 'docmgt'}
+                              config={config}
+                              extractionFields={fields}
+                              onConfigChange={(newConfig) => 
+                                setExportConfig(prev => ({ 
+                                  ...prev, 
+                                  [type]: newConfig 
+                                }))
+                              }
+                              disabled={!config.enabled}
+                            />
                           </div>
                         ) : (
                           <div className="pl-6">
@@ -453,7 +398,7 @@ const EditProject = () => {
                 })}
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Configure export formats and their destinations. For ECM systems (Filebound/Docmgt), provide connection credentials.
+                Configure export formats and their destinations. For ECM systems (Filebound/Docmgt), test connection to fetch available projects and map fields.
               </p>
             </div>
 
