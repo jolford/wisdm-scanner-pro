@@ -75,14 +75,24 @@ export function ECMExportConfig({
 
       if (data.success) {
         setConnectionStatus('success');
-        setAvailableProjects(data.projects || []);
+        setAvailableProjects(data.projects.map((p: any) => ({
+          id: p.ProjectId?.toString() || p.id?.toString(),
+          name: p.Name || p.name,
+          description: p.Description || p.description
+        })));
         
-        // If we got field info, store it
+        // Store field info for all fetched projects
         if (data.projectFields) {
-          const firstProjectId = Object.keys(data.projectFields)[0];
-          if (firstProjectId) {
-            setEcmFields(data.projectFields[firstProjectId] || []);
-          }
+          // Convert all field arrays
+          const formattedFields: Record<string, ECMField[]> = {};
+          Object.entries(data.projectFields).forEach(([projId, fields]) => {
+            formattedFields[projId] = (fields as any[]).map((f: any) => ({
+              name: f.FieldName || f.name || f.Name,
+              type: f.FieldType || f.type || f.Type || 'text',
+              required: f.Required || f.required || false
+            }));
+          });
+          setEcmFields(formattedFields[Object.keys(formattedFields)[0]] || []);
         }
         
         toast.success(`Successfully connected to ${type.toUpperCase()}`);

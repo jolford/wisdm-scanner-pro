@@ -34,7 +34,8 @@ serve(async (req) => {
     const authString = btoa(`${username}:${password}`);
     
     // Attempt to authenticate and fetch projects list
-    const fileboundResponse = await fetch(`${url}/api/projects`, {
+    const projectsUrl = `${url.replace(/\/$/, '')}/api/projects`;
+    const fileboundResponse = await fetch(projectsUrl, {
       method: 'GET',
       headers: {
         'Authorization': `Basic ${authString}`,
@@ -54,24 +55,34 @@ serve(async (req) => {
       );
     }
 
-    const projectsData = await fileboundResponse.json();
+    const projectsArray = await fileboundResponse.json();
+    console.log('Projects retrieved:', projectsArray);
     
-    // Fetch field definitions for each project (or just first one for testing)
-    let projectFields: Record<string, any> = {};
+    // Fetch field definitions for each project
+    const projectFields: Record<string, any> = {};
     
-    if (projectsData.projects && projectsData.projects.length > 0) {
-      const firstProject = projectsData.projects[0];
-      const fieldsResponse = await fetch(`${url}/api/projects/${firstProject.id}/fields`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Basic ${authString}`,
-          'Accept': 'application/json',
-        },
-      });
+    if (projectsArray && Array.isArray(projectsArray) && projectsArray.length > 0) {
+      // Fetch fields for first few projects (limit to 5 to avoid timeout)
+      const projectsToFetch = projectsArray.slice(0, 5);
       
-      if (fieldsResponse.ok) {
-        const fieldsData = await fieldsResponse.json();
-        projectFields[firstProject.id] = fieldsData.fields || [];
+      for (const project of projectsToFetch) {
+        try {
+          const fieldsUrl = `${url.replace(/\/$/, '')}/api/projects/${project.ProjectId}/fields`;
+          const fieldsResponse = await fetch(fieldsUrl, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Basic ${authString}`,
+              'Accept': 'application/json',
+            },
+          });
+          
+          if (fieldsResponse.ok) {
+            const fieldsArray = await fieldsResponse.json();
+            projectFields[project.ProjectId] = fieldsArray || [];
+          }
+        } catch (error) {
+          console.error(`Error fetching fields for project ${project.ProjectId}:`, error);
+        }
       }
     }
 
@@ -79,7 +90,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         message: 'Connection successful',
-        projects: projectsData.projects || [],
+        projects: projectsArray || [],
         projectFields: projectFields,
       }),
       { 
