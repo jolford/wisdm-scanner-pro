@@ -22,6 +22,7 @@ import EditCustomer from "./pages/admin/customers/Edit";
 import UsersIndex from "./pages/admin/users/Index";
 import DocumentsAdmin from "./pages/admin/Documents";
 import Analytics from "./pages/admin/Analytics";
+import ErrorLogs from "./pages/admin/ErrorLogs";
 import NotFound from "./pages/NotFound";
 import { Footer } from "./components/Footer";
 
@@ -55,6 +56,7 @@ const App = () => (
           <Route path="/admin/users" element={<UsersIndex />} />
           <Route path="/admin/documents" element={<DocumentsAdmin />} />
           <Route path="/admin/analytics" element={<Analytics />} />
+          <Route path="/admin/error-logs" element={<ErrorLogs />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

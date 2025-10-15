@@ -11,6 +11,7 @@ import {
   LogOut,
   Menu,
   FileText,
+  AlertCircle,
 } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { supabase } from '@/integrations/supabase/client';
@@ -42,6 +43,7 @@ const menuItems = [
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Licenses', url: '/admin/licenses', icon: Key },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
+  { title: 'Error Logs', url: '/admin/error-logs', icon: AlertCircle },
 ];
 
 export function AdminLayout({ children, title, description }: AdminLayoutProps) {

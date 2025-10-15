@@ -3,7 +3,16 @@
  * Maps internal errors to safe user-facing messages
  */
 
+import { logError as logErrorToDb } from './error-logger';
+
 export const safeErrorMessage = (error: unknown): string => {
+  // Log error to database for admin review
+  if (error instanceof Error) {
+    logErrorToDb(error, 'ErrorHandler');
+  } else if (typeof error === 'string') {
+    logErrorToDb(new Error(error), 'ErrorHandler');
+  }
+
   // Never expose internal error details to users
   // Log detailed errors server-side only
   
@@ -41,5 +50,8 @@ export const logError = (context: string, error: unknown): void => {
   if (import.meta.env.DEV) {
     console.error(`[${context}]`, error);
   }
-  // In production, send to monitoring service (e.g., Sentry)
+  // Also log to database for admin tracking
+  if (error instanceof Error) {
+    logErrorToDb(error, context);
+  }
 };
