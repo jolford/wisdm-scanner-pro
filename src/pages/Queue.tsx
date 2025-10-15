@@ -15,6 +15,7 @@ import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye,
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { LicenseWarning } from '@/components/LicenseWarning';
 import { useLicense } from '@/hooks/use-license';
+import { usePermissions } from '@/hooks/use-permissions';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -43,6 +44,7 @@ const Queue = () => {
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
   const { toast } = useToast();
   const { license, hasCapacity, consumeDocuments } = useLicense();
+  const { permissions, loading: permissionsLoading } = usePermissions();
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
@@ -737,6 +739,13 @@ const Queue = () => {
             </TabsList>
             
             <TabsContent value="scan" className="animate-fade-in">
+              {!permissions.can_scan ? (
+                <Card className="p-12 text-center border-destructive/50 bg-destructive/5">
+                  <Upload className="h-16 w-16 mx-auto mb-4 text-destructive" />
+                  <h3 className="text-xl font-semibold mb-2">Scan Access Restricted</h3>
+                  <p className="text-muted-foreground">You don't have permission to scan documents. Contact your administrator.</p>
+                </Card>
+              ) : (
               <Tabs defaultValue="upload" className="w-full">
                 <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/30">
                   <TabsTrigger value="upload" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
@@ -792,10 +801,17 @@ const Queue = () => {
                   <PhysicalScanner onScanComplete={handleScanComplete} isProcessing={isProcessing} />
                 </TabsContent>
               </Tabs>
+              )}
             </TabsContent>
             
             <TabsContent value="validation">
-              {validationQueue.length === 0 ? (
+              {!permissions.can_validate ? (
+                <Card className="p-12 text-center border-destructive/50 bg-destructive/5">
+                  <Eye className="h-16 w-16 mx-auto mb-4 text-destructive" />
+                  <h3 className="text-xl font-semibold mb-2">Validation Access Restricted</h3>
+                  <p className="text-muted-foreground">You don't have permission to validate documents. Contact your administrator.</p>
+                </Card>
+              ) : validationQueue.length === 0 ? (
                 <Card className="p-12 text-center">
                   <Eye className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
                   <h3 className="text-xl font-semibold mb-2">No Documents Awaiting Validation</h3>
@@ -869,6 +885,13 @@ const Queue = () => {
             </TabsContent>
             
             <TabsContent value="export">
+              {!permissions.can_export ? (
+                <Card className="p-12 text-center border-destructive/50 bg-destructive/5">
+                  <Download className="h-16 w-16 mx-auto mb-4 text-destructive" />
+                  <h3 className="text-xl font-semibold mb-2">Export Access Restricted</h3>
+                  <p className="text-muted-foreground">You don't have permission to export documents. Contact your administrator.</p>
+                </Card>
+              ) : (
               <Card className="p-8">
                 <div className="text-center mb-6">
                   <Download className="h-16 w-16 mx-auto mb-4 text-primary" />
@@ -989,6 +1012,7 @@ const Queue = () => {
                   </div>
                 </div>
               </Card>
+              )}
             </TabsContent>
           </Tabs>
         )}

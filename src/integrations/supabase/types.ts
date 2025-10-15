@@ -509,6 +509,36 @@ export type Database = {
           },
         ]
       }
+      user_permissions: {
+        Row: {
+          can_export: boolean | null
+          can_scan: boolean | null
+          can_validate: boolean | null
+          created_at: string | null
+          id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          can_export?: boolean | null
+          can_scan?: boolean | null
+          can_validate?: boolean | null
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          can_export?: boolean | null
+          can_scan?: boolean | null
+          can_validate?: boolean | null
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null
@@ -560,6 +590,10 @@ export type Database = {
       }
       has_customer: {
         Args: { _customer_id: string; _user_id: string }
+        Returns: boolean
+      }
+      has_permission: {
+        Args: { _permission: string; _user_id: string }
         Returns: boolean
       }
       has_role: {

@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, UserPlus } from 'lucide-react';
+import { ArrowLeft, UserPlus, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -30,6 +30,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 interface User {
   id: string;
@@ -37,6 +39,11 @@ interface User {
   full_name: string;
   created_at: string;
   customers: Array<{ id: string; company_name: string }>;
+  permissions?: {
+    can_scan: boolean;
+    can_validate: boolean;
+    can_export: boolean;
+  };
 }
 
 interface Customer {
@@ -52,6 +59,8 @@ const UsersIndex = () => {
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<string>('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isPermissionsDialogOpen, setIsPermissionsDialogOpen] = useState(false);
+  const [editingPermissions, setEditingPermissions] = useState<User['permissions']>(null);
 
   useEffect(() => {
     if (!loading && isAdmin) {
@@ -74,7 +83,7 @@ const UsersIndex = () => {
 
       if (error) throw error;
 
-      // Load customer assignments for each user
+      // Load customer assignments and permissions for each user
       const usersWithCustomers = await Promise.all(
         (profiles || []).map(async (profile) => {
           const { data: userCustomers } = await supabase
@@ -85,12 +94,23 @@ const UsersIndex = () => {
             `)
             .eq('user_id', profile.id);
 
+          const { data: permissions } = await supabase
+            .from('user_permissions')
+            .select('*')
+            .eq('user_id', profile.id)
+            .single();
+
           return {
             ...profile,
             customers: (userCustomers || []).map((uc: any) => ({
               id: uc.customers.id,
               company_name: uc.customers.company_name,
             })),
+            permissions: permissions || {
+              can_scan: true,
+              can_validate: true,
+              can_export: true,
+            },
           };
         })
       );
@@ -165,6 +185,39 @@ const UsersIndex = () => {
     }
   };
 
+  const handleOpenPermissions = (user: User) => {
+    setSelectedUser(user.id);
+    setEditingPermissions(user.permissions || {
+      can_scan: true,
+      can_validate: true,
+      can_export: true,
+    });
+    setIsPermissionsDialogOpen(true);
+  };
+
+  const handleSavePermissions = async () => {
+    if (!selectedUser || !editingPermissions) return;
+
+    try {
+      const { error } = await supabase
+        .from('user_permissions')
+        .upsert({
+          user_id: selectedUser,
+          ...editingPermissions,
+        });
+
+      if (error) throw error;
+
+      toast.success('Permissions updated successfully');
+      setIsPermissionsDialogOpen(false);
+      setSelectedUser(null);
+      setEditingPermissions(null);
+      loadUsers();
+    } catch (error: any) {
+      toast.error('Failed to update permissions: ' + error.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -210,6 +263,7 @@ const UsersIndex = () => {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Permissions</TableHead>
                 <TableHead>Assigned Customers</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead>Actions</TableHead>
@@ -222,6 +276,19 @@ const UsersIndex = () => {
                     {user.full_name || 'N/A'}
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    <div className="flex gap-1 text-xs">
+                      {user.permissions?.can_scan && (
+                        <span className="px-2 py-1 bg-blue-500/10 text-blue-600 rounded">Scan</span>
+                      )}
+                      {user.permissions?.can_validate && (
+                        <span className="px-2 py-1 bg-green-500/10 text-green-600 rounded">Validate</span>
+                      )}
+                      {user.permissions?.can_export && (
+                        <span className="px-2 py-1 bg-purple-500/10 text-purple-600 rounded">Export</span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <div className="flex flex-wrap gap-2">
                       {user.customers.length > 0 ? (
@@ -248,6 +315,14 @@ const UsersIndex = () => {
                     {new Date(user.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleOpenPermissions(user)}
+                      >
+                        <Settings className="h-4 w-4" />
+                      </Button>
                     <Dialog
                       open={isDialogOpen && selectedUser === user.id}
                       onOpenChange={(open) => {
@@ -301,6 +376,7 @@ const UsersIndex = () => {
                         </div>
                       </DialogContent>
                     </Dialog>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -313,6 +389,71 @@ const UsersIndex = () => {
             </div>
           )}
         </Card>
+
+        {/* Permissions Dialog */}
+        <Dialog open={isPermissionsDialogOpen} onOpenChange={setIsPermissionsDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Manage Permissions</DialogTitle>
+              <DialogDescription>
+                Configure what this user can do in the system
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="can_scan" className="flex flex-col gap-1">
+                  <span className="font-medium">Can Scan</span>
+                  <span className="text-xs text-muted-foreground">
+                    Upload and process documents
+                  </span>
+                </Label>
+                <Switch
+                  id="can_scan"
+                  checked={editingPermissions?.can_scan || false}
+                  onCheckedChange={(checked) =>
+                    setEditingPermissions({ ...editingPermissions!, can_scan: checked })
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="can_validate" className="flex flex-col gap-1">
+                  <span className="font-medium">Can Validate</span>
+                  <span className="text-xs text-muted-foreground">
+                    Review and approve scanned documents
+                  </span>
+                </Label>
+                <Switch
+                  id="can_validate"
+                  checked={editingPermissions?.can_validate || false}
+                  onCheckedChange={(checked) =>
+                    setEditingPermissions({ ...editingPermissions!, can_validate: checked })
+                  }
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="can_export" className="flex flex-col gap-1">
+                  <span className="font-medium">Can Export</span>
+                  <span className="text-xs text-muted-foreground">
+                    Export validated documents
+                  </span>
+                </Label>
+                <Switch
+                  id="can_export"
+                  checked={editingPermissions?.can_export || false}
+                  onCheckedChange={(checked) =>
+                    setEditingPermissions({ ...editingPermissions!, can_export: checked })
+                  }
+                />
+              </div>
+              <Button
+                onClick={handleSavePermissions}
+                className="w-full bg-gradient-to-r from-primary to-accent"
+              >
+                Save Permissions
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
