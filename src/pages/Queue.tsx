@@ -15,6 +15,8 @@ import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye,
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { LicenseWarning } from '@/components/LicenseWarning';
 import { useLicense } from '@/hooks/use-license';
+import { Progress } from '@/components/ui/progress';
+import { Badge } from '@/components/ui/badge';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -727,6 +729,36 @@ const Queue = () => {
                 </TabsList>
                 
                 <TabsContent value="upload">
+                  {license && (
+                    <Card className="mb-6 border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
+                      <div className="p-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-primary border-primary/30">
+                              License Active
+                            </Badge>
+                            <span className="text-sm font-medium">Document Capacity</span>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-bold text-primary">
+                              {license.remaining_documents.toLocaleString()}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              of {license.total_documents.toLocaleString()} remaining
+                            </div>
+                          </div>
+                        </div>
+                        <Progress 
+                          value={(license.remaining_documents / license.total_documents) * 100} 
+                          className="h-2"
+                        />
+                        <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                          <span>Expires: {new Date(license.end_date).toLocaleDateString()}</span>
+                          <span>{Math.round((license.remaining_documents / license.total_documents) * 100)}% available</span>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
                   <ScanUploader 
                     onScanComplete={handleScanComplete} 
                     onPdfUpload={processPdf}
