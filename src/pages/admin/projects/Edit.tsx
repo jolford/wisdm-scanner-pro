@@ -71,7 +71,7 @@ const EditProject = () => {
   ]);
 
   const [separationConfig, setSeparationConfig] = useState<SeparationConfig>({
-    method: 'none',
+    method: 'page_count',
     barcodePatterns: ['SEPARATOR', 'DIVIDER'],
     blankPageThreshold: 95,
     pagesPerDocument: 1,
