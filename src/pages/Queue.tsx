@@ -11,7 +11,7 @@ import { ProjectSelector } from '@/components/ProjectSelector';
 import { BatchSelector } from '@/components/BatchSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText, FolderOpen } from 'lucide-react';
+import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText, FolderOpen, Cloud, Database } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { LicenseWarning } from '@/components/LicenseWarning';
 import { useLicense } from '@/hooks/use-license';
@@ -491,6 +491,80 @@ const Queue = () => {
       title: 'Export Successful',
       description: `Batch exported as ${format.toUpperCase()}`,
     });
+  };
+
+  // ECM export helpers
+  const getExportConfig = () => {
+    const metadata = selectedProject?.metadata as any;
+    return metadata?.exportConfig || {};
+  };
+
+  const exportToFilebound = async () => {
+    const exportConfig = getExportConfig();
+    const fb = exportConfig.filebound;
+    if (!fb?.enabled || !fb.url) {
+      toast({ title: 'Filebound not configured', description: 'Configure Filebound export in project settings.', variant: 'destructive' });
+      return;
+    }
+    if (!validatedDocs.length) {
+      toast({ title: 'No Documents', description: 'No validated documents to export', variant: 'destructive' });
+      return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke('export-to-filebound', {
+        body: {
+          batchId: selectedBatchId,
+          fileboundUrl: fb.url,
+          username: fb.username,
+          password: fb.password,
+          project: fb.project,
+          fieldMappings: fb.fieldMappings || {}
+        },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast({ title: 'Exported to Filebound', description: `Project: ${fb.project}` });
+      } else {
+        throw new Error(data?.error || 'Export failed');
+      }
+    } catch (err: any) {
+      console.error('Filebound export error:', err);
+      toast({ title: 'Export failed', description: err.message || 'Failed to export to Filebound', variant: 'destructive' });
+    }
+  };
+
+  const exportToDocmgt = async () => {
+    const exportConfig = getExportConfig();
+    const dm = exportConfig.docmgt;
+    if (!dm?.enabled || !dm.url) {
+      toast({ title: 'Docmgt not configured', description: 'Configure Docmgt export in project settings.', variant: 'destructive' });
+      return;
+    }
+    if (!validatedDocs.length) {
+      toast({ title: 'No Documents', description: 'No validated documents to export', variant: 'destructive' });
+      return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke('export-to-docmgt', {
+        body: {
+          batchId: selectedBatchId,
+          docmgtUrl: dm.url,
+          username: dm.username,
+          password: dm.password,
+          project: dm.project,
+          fieldMappings: dm.fieldMappings || {}
+        },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast({ title: 'Exported to Docmgt', description: `Project: ${dm.project}` });
+      } else {
+        throw new Error(data?.error || 'Export failed');
+      }
+    } catch (err: any) {
+      console.error('Docmgt export error:', err);
+      toast({ title: 'Export failed', description: err.message || 'Failed to export to Docmgt', variant: 'destructive' });
+    }
   };
 
   const exportImages = async () => {
@@ -997,6 +1071,26 @@ const Queue = () => {
                         <FileText className="h-5 w-5" />
                         <span className="font-medium">Generate PDF with Metadata</span>
                       </Button>
+                    </div>
+                  )}
+
+                  {(getExportConfig().filebound?.enabled || getExportConfig().docmgt?.enabled) && (
+                    <div className="pt-4 border-t">
+                      <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">External ECM Exports</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {getExportConfig().filebound?.enabled && (
+                          <Button onClick={exportToFilebound} disabled={validatedDocs.length === 0} variant="outline" className="h-16 gap-2 hover:border-primary/50 hover:bg-primary/5">
+                            <Cloud className="h-5 w-5" />
+                            <span className="font-medium">Export to Filebound</span>
+                          </Button>
+                        )}
+                        {getExportConfig().docmgt?.enabled && (
+                          <Button onClick={exportToDocmgt} disabled={validatedDocs.length === 0} variant="outline" className="h-16 gap-2 hover:border-primary/50 hover:bg-primary/5">
+                            <Database className="h-5 w-5" />
+                            <span className="font-medium">Export to Docmgt</span>
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   )}
 
