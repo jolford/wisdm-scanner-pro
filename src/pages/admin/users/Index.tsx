@@ -99,7 +99,7 @@ const UsersIndex = () => {
             .from('user_permissions')
             .select('*')
             .eq('user_id', profile.id)
-            .single();
+            .maybeSingle();
 
           const { data: userRoles } = await supabase
             .from('user_roles')
