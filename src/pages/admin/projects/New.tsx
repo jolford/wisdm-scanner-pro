@@ -48,6 +48,8 @@ const NewProject = () => {
     txt: { enabled: true, destination: '/exports/data/' },
     pdf: { enabled: true, destination: '/exports/documents/' },
     images: { enabled: true, destination: '/exports/images/' },
+    filebound: { enabled: false, destination: '' },
+    docmgt: { enabled: false, destination: '' },
   });
 
   const [queues, setQueues] = useState<Queue[]>([

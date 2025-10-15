@@ -50,6 +50,8 @@ const EditProject = () => {
     txt: { enabled: true, destination: '/exports/data/' },
     pdf: { enabled: true, destination: '/exports/documents/' },
     images: { enabled: true, destination: '/exports/images/' },
+    filebound: { enabled: false, destination: '' },
+    docmgt: { enabled: false, destination: '' },
   });
 
   const [queues, setQueues] = useState<Queue[]>([
@@ -100,6 +102,8 @@ const EditProject = () => {
             txt: '/exports/data/',
             pdf: '/exports/documents/',
             images: '/exports/images/',
+            filebound: '',
+            docmgt: '',
           };
           
           const config: Record<string, ExportConfig> = {};
