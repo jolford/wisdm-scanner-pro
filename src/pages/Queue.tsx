@@ -637,30 +637,37 @@ const Queue = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b bg-white sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src={wisdmLogo} alt="WISDM Logo" className="h-10 w-auto" />
-              <div className="border-l border-border pl-3">
-                <h1 className="text-xl font-bold text-primary">Document Processing Queue</h1>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/10">
+      <header className="border-b bg-card/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              <img 
+                src={wisdmLogo} 
+                alt="WISDM Logo" 
+                className="h-10 w-auto transition-transform duration-300 hover:scale-105" 
+              />
+              <div className="h-8 w-px bg-border" />
+              <div>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+                  Document Processing
+                </h1>
                 <p className="text-xs text-muted-foreground">Scan → Extract → Validate → Export</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {isAdmin && (
-                <Button variant="outline" onClick={() => navigate('/admin')}>
-                  <Settings className="h-4 w-4 mr-2" />
+                <Button variant="outline" onClick={() => navigate('/admin')} className="gap-2">
+                  <Settings className="h-4 w-4" />
                   Admin
                 </Button>
               )}
-              <Button variant="outline" onClick={() => navigate('/batches')}>
-                <FolderOpen className="h-4 w-4 mr-2" />
+              <Button variant="outline" onClick={() => navigate('/batches')} className="gap-2">
+                <FolderOpen className="h-4 w-4" />
                 Batches
               </Button>
-              <Button variant="outline" onClick={signOut}>
-                <LogOut className="h-4 w-4 mr-2" />
+              <Button variant="outline" onClick={signOut} className="gap-2">
+                <LogOut className="h-4 w-4" />
                 Sign Out
               </Button>
             </div>
@@ -696,34 +703,40 @@ const Queue = () => {
 
         {selectedProjectId && selectedBatchId && (
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-6">
-              <TabsTrigger value="scan" className="flex items-center gap-2">
+            <TabsList className="grid w-full grid-cols-4 mb-6 h-12 bg-muted/50 p-1 backdrop-blur-sm">
+              <TabsTrigger value="scan" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
                 <Upload className="h-4 w-4" />
-                Scan
+                <span className="font-medium">Scan</span>
               </TabsTrigger>
-              <TabsTrigger value="validation" className="flex items-center gap-2">
+              <TabsTrigger value="validation" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
                 <Eye className="h-4 w-4" />
-                Validation ({validationQueue.length})
+                <span className="font-medium">Validation</span>
+                <Badge variant="secondary" className="ml-1 bg-primary/10 text-primary border-0">
+                  {validationQueue.length}
+                </Badge>
               </TabsTrigger>
-              <TabsTrigger value="validated" className="flex items-center gap-2">
+              <TabsTrigger value="validated" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
                 <CheckCircle className="h-4 w-4" />
-                Validated ({validatedDocs.length})
+                <span className="font-medium">Validated</span>
+                <Badge variant="secondary" className="ml-1 bg-success/10 text-success border-0">
+                  {validatedDocs.length}
+                </Badge>
               </TabsTrigger>
-              <TabsTrigger value="export" className="flex items-center gap-2">
+              <TabsTrigger value="export" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
                 <Download className="h-4 w-4" />
-                Export
+                <span className="font-medium">Export</span>
               </TabsTrigger>
             </TabsList>
             
-            <TabsContent value="scan">
+            <TabsContent value="scan" className="animate-fade-in">
               <Tabs defaultValue="upload" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6">
-                  <TabsTrigger value="upload">
-                    <Upload className="h-4 w-4 mr-2" />
+                <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/30">
+                  <TabsTrigger value="upload" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                    <Upload className="h-4 w-4" />
                     Upload File
                   </TabsTrigger>
-                  <TabsTrigger value="scanner">
-                    <ScanLine className="h-4 w-4 mr-2" />
+                  <TabsTrigger value="scanner" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                    <ScanLine className="h-4 w-4" />
                     Physical Scanner
                   </TabsTrigger>
                 </TabsList>
@@ -790,29 +803,41 @@ const Queue = () => {
               )}
             </TabsContent>
             
-            <TabsContent value="validated">
+            <TabsContent value="validated" className="animate-fade-in">
               <div className="space-y-4">
                 {validatedDocs.length === 0 ? (
-                  <Card className="p-12 text-center">
-                    <CheckCircle className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-xl font-semibold mb-2">No Validated Documents</h3>
-                    <p className="text-muted-foreground">Validate documents to see them here</p>
+                  <Card className="p-12 text-center border-dashed border-2 bg-gradient-to-br from-success/5 to-accent/10">
+                    <div className="animate-scale-in">
+                      <CheckCircle className="h-16 w-16 mx-auto mb-4 text-success/40" />
+                      <h3 className="text-xl font-semibold mb-2">No Validated Documents</h3>
+                      <p className="text-muted-foreground">Validate documents to see them here</p>
+                    </div>
                   </Card>
                 ) : (
                   validatedDocs.map((doc) => (
-                    <Card key={doc.id} className="p-6">
+                    <Card 
+                      key={doc.id} 
+                      className="p-6 hover:shadow-lg transition-all duration-300 hover:scale-[1.01] border-l-4 border-l-success bg-gradient-to-r from-success/5 to-transparent"
+                    >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h3 className="text-lg font-semibold mb-2">{doc.file_name}</h3>
+                          <div className="flex items-center gap-2 mb-2">
+                            <FileText className="h-5 w-5 text-success" />
+                            <h3 className="text-lg font-semibold">{doc.file_name}</h3>
+                            <Badge variant="outline" className="bg-success/10 text-success border-success/30">
+                              Validated
+                            </Badge>
+                          </div>
                           <p className="text-sm text-muted-foreground mb-4">
                             {new Date(doc.created_at).toLocaleString()}
                           </p>
                           {doc.extracted_metadata && Object.keys(doc.extracted_metadata).length > 0 && (
-                            <div className="bg-muted/50 rounded-lg p-4">
-                              <div className="grid md:grid-cols-2 gap-2">
+                            <div className="bg-muted/30 rounded-lg p-4 backdrop-blur-sm">
+                              <p className="text-xs font-semibold text-muted-foreground mb-3">Extracted Metadata</p>
+                              <div className="grid md:grid-cols-2 gap-3">
                                 {Object.entries(doc.extracted_metadata).map(([key, value]) => (
                                   <div key={key} className="text-sm">
-                                    <span className="font-medium">{key}:</span>{' '}
+                                    <span className="font-medium text-foreground">{key}:</span>{' '}
                                     <span className="text-muted-foreground">{value as string}</span>
                                   </div>
                                 ))}
@@ -820,7 +845,12 @@ const Queue = () => {
                             </div>
                           )}
                         </div>
-                        <Button variant="destructive" size="icon" onClick={() => handleDeleteDoc(doc.id)}>
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          onClick={() => handleDeleteDoc(doc.id)}
+                          className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                        >
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
@@ -862,60 +892,90 @@ const Queue = () => {
                     <h4 className="font-semibold mb-3">Export Metadata</h4>
                     <div className="grid grid-cols-2 gap-3">
                       {selectedProject?.export_types?.includes('csv') && (
-                        <Button onClick={() => exportBatch('csv')} disabled={validatedDocs.length === 0} variant="outline">
-                          <Download className="h-4 w-4 mr-2" />
-                          CSV Format
+                        <Button 
+                          onClick={() => exportBatch('csv')} 
+                          disabled={validatedDocs.length === 0} 
+                          variant="outline"
+                          className="h-20 flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
+                        >
+                          <Download className="h-5 w-5" />
+                          <span className="font-medium">CSV Format</span>
                         </Button>
                       )}
                       {selectedProject?.export_types?.includes('json') && (
-                        <Button onClick={() => exportBatch('json')} disabled={validatedDocs.length === 0} variant="outline">
-                          <Download className="h-4 w-4 mr-2" />
-                          JSON Format
+                        <Button 
+                          onClick={() => exportBatch('json')} 
+                          disabled={validatedDocs.length === 0} 
+                          variant="outline"
+                          className="h-20 flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
+                        >
+                          <Download className="h-5 w-5" />
+                          <span className="font-medium">JSON Format</span>
                         </Button>
                       )}
                       {selectedProject?.export_types?.includes('xml') && (
-                        <Button onClick={() => exportBatch('xml')} disabled={validatedDocs.length === 0} variant="outline">
-                          <Download className="h-4 w-4 mr-2" />
-                          XML Format
+                        <Button 
+                          onClick={() => exportBatch('xml')} 
+                          disabled={validatedDocs.length === 0} 
+                          variant="outline"
+                          className="h-20 flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
+                        >
+                          <Download className="h-5 w-5" />
+                          <span className="font-medium">XML Format</span>
                         </Button>
                       )}
                       {selectedProject?.export_types?.includes('txt') && (
-                        <Button onClick={() => exportBatch('txt')} disabled={validatedDocs.length === 0} variant="outline">
-                          <Download className="h-4 w-4 mr-2" />
-                          TXT Format
+                        <Button 
+                          onClick={() => exportBatch('txt')} 
+                          disabled={validatedDocs.length === 0} 
+                          variant="outline"
+                          className="h-20 flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
+                        >
+                          <Download className="h-5 w-5" />
+                          <span className="font-medium">TXT Format</span>
                         </Button>
                       )}
                     </div>
                   </div>
 
                   {selectedProject?.export_types?.includes('images') && (
-                    <div>
-                      <h4 className="font-semibold mb-3">Export Images</h4>
-                      <Button onClick={exportImages} disabled={validatedDocs.length === 0} variant="outline" className="w-full">
-                        <Download className="h-4 w-4 mr-2" />
-                        Download All Images
+                    <div className="pt-4 border-t">
+                      <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Image Export</h4>
+                      <Button 
+                        onClick={exportImages} 
+                        disabled={validatedDocs.length === 0} 
+                        variant="outline" 
+                        className="w-full h-16 gap-2 hover:border-primary/50 hover:bg-primary/5"
+                      >
+                        <Download className="h-5 w-5" />
+                        <span className="font-medium">Download All Images</span>
                       </Button>
                     </div>
                   )}
 
                   {selectedProject?.export_types?.includes('pdf') && (
-                    <div>
-                      <h4 className="font-semibold mb-3">Generate PDF Report</h4>
-                      <Button onClick={generatePDF} disabled={validatedDocs.length === 0} variant="outline" className="w-full">
-                        <FileText className="h-4 w-4 mr-2" />
-                        Generate PDF with Metadata
+                    <div className="pt-4 border-t">
+                      <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">PDF Report</h4>
+                      <Button 
+                        onClick={generatePDF} 
+                        disabled={validatedDocs.length === 0} 
+                        variant="outline" 
+                        className="w-full h-16 gap-2 hover:border-primary/50 hover:bg-primary/5"
+                      >
+                        <FileText className="h-5 w-5" />
+                        <span className="font-medium">Generate PDF with Metadata</span>
                       </Button>
                     </div>
                   )}
 
-                  <div className="pt-4 border-t">
+                  <div className="pt-6 border-t">
                     <Button 
                       onClick={markBatchComplete} 
                       disabled={validatedDocs.length === 0 || selectedBatch?.status === 'complete'}
-                      className="w-full"
+                      className="w-full h-14 text-base gap-2 bg-gradient-to-r from-success to-success/80 hover:from-success/90 hover:to-success/70"
                       size="lg"
                     >
-                      <CheckCircle className="h-5 w-5 mr-2" />
+                      <CheckCircle className="h-5 w-5" />
                       {selectedBatch?.status === 'complete' ? 'Batch Completed' : 'Mark Batch as Complete'}
                     </Button>
                   </div>
