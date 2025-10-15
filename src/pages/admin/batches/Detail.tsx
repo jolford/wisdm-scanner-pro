@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, FileText, CheckCircle2, XCircle, AlertCircle, Trash2, Download, FileSpreadsheet, FileJson, FileType } from 'lucide-react';
+import { ArrowLeft, FileText, CheckCircle2, XCircle, AlertCircle, Trash2, Download, FileSpreadsheet, FileJson, FileType, Cloud, Database } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
@@ -332,6 +332,98 @@ ${xmlDocs}
     });
   };
 
+  const exportToFilebound = async () => {
+    const exportConfig = getExportConfig();
+    const fileboundConfig = exportConfig?.filebound;
+    
+    if (!fileboundConfig?.enabled || !fileboundConfig.url) {
+      toast({ 
+        title: 'Filebound not configured', 
+        description: 'Please configure Filebound export in project settings first',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('export-to-filebound', {
+        body: {
+          batchId: id,
+          fileboundUrl: fileboundConfig.url,
+          username: fileboundConfig.username,
+          password: fileboundConfig.password,
+          project: fileboundConfig.project,
+          fieldMappings: fileboundConfig.fieldMappings || {}
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({ 
+          title: 'Export successful', 
+          description: `Exported to Filebound project: ${fileboundConfig.project}` 
+        });
+        queryClient.invalidateQueries({ queryKey: ['batch', id] });
+      } else {
+        throw new Error(data.error || 'Export failed');
+      }
+    } catch (error: any) {
+      console.error('Filebound export error:', error);
+      toast({ 
+        title: 'Export failed', 
+        description: error.message || 'Failed to export to Filebound',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const exportToDocmgt = async () => {
+    const exportConfig = getExportConfig();
+    const docmgtConfig = exportConfig?.docmgt;
+    
+    if (!docmgtConfig?.enabled || !docmgtConfig.url) {
+      toast({ 
+        title: 'Docmgt not configured', 
+        description: 'Please configure Docmgt export in project settings first',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke('export-to-docmgt', {
+        body: {
+          batchId: id,
+          docmgtUrl: docmgtConfig.url,
+          username: docmgtConfig.username,
+          password: docmgtConfig.password,
+          project: docmgtConfig.project,
+          fieldMappings: docmgtConfig.fieldMappings || {}
+        },
+      });
+
+      if (error) throw error;
+
+      if (data.success) {
+        toast({ 
+          title: 'Export successful', 
+          description: `Exported to Docmgt project: ${docmgtConfig.project}` 
+        });
+        queryClient.invalidateQueries({ queryKey: ['batch', id] });
+      } else {
+        throw new Error(data.error || 'Export failed');
+      }
+    } catch (error: any) {
+      console.error('Docmgt export error:', error);
+      toast({ 
+        title: 'Export failed', 
+        description: error.message || 'Failed to export to Docmgt',
+        variant: 'destructive'
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -401,6 +493,18 @@ ${xmlDocs}
                   <DropdownMenuItem onClick={exportToTXT}>
                     <FileType className="h-4 w-4 mr-2" />
                     Export as TXT
+                  </DropdownMenuItem>
+                )}
+                {getEnabledExportTypes().includes('filebound') && (
+                  <DropdownMenuItem onClick={exportToFilebound}>
+                    <Cloud className="h-4 w-4 mr-2" />
+                    Export to Filebound
+                  </DropdownMenuItem>
+                )}
+                {getEnabledExportTypes().includes('docmgt') && (
+                  <DropdownMenuItem onClick={exportToDocmgt}>
+                    <Database className="h-4 w-4 mr-2" />
+                    Export to Docmgt
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>
