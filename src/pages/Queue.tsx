@@ -231,6 +231,10 @@ const Queue = () => {
       
       await saveDocument(file.name, 'application/pdf', '', data.text, data.metadata || {});
       toast({ title: 'PDF Processed', description: 'Text extracted from PDF.' });
+
+      // Refresh validation queue and switch to validation tab
+      await loadQueueDocuments();
+      setTimeout(() => setActiveTab('validation'), 0);
     } catch (error: any) {
       console.error('Error processing PDF:', error);
       toast({
@@ -291,6 +295,10 @@ const Queue = () => {
       title: 'Batch Complete',
       description: `Successfully processed ${files.length} files`,
     });
+
+    // After processing all files, go to Validation tab
+    await loadQueueDocuments();
+    setTimeout(() => setActiveTab('validation'), 0);
   };
 
   const handleScanComplete = async (text: string, imageUrl: string, fileName = 'scan.jpg') => {
