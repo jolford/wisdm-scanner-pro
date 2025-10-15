@@ -173,11 +173,20 @@ const BatchDetail = () => {
     const exportConfig = getExportConfig();
     const enabledTypes: string[] = [];
     
+    // Check standard export types
     Object.entries(exportConfig).forEach(([type, config]: [string, any]) => {
       if (config?.enabled) {
         enabledTypes.push(type);
       }
     });
+    
+    // Check ECM systems
+    if (exportConfig.filebound?.enabled) {
+      enabledTypes.push('filebound');
+    }
+    if (exportConfig.docmgt?.enabled) {
+      enabledTypes.push('docmgt');
+    }
     
     return enabledTypes.length > 0 ? enabledTypes : batch?.projects?.export_types || [];
   };
