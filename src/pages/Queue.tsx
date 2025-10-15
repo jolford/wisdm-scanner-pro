@@ -323,7 +323,8 @@ const Queue = () => {
 
       // Refresh validation queue and switch to validation tab
       await loadQueueDocuments();
-      setActiveTab('validation');
+      // Defer tab switch to avoid race conditions with Radix Tabs rendering
+      setTimeout(() => setActiveTab('validation'), 0);
     } catch (error: any) {
       console.error('Error processing scan:', error);
       toast({
