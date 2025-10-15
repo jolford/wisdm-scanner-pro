@@ -19,6 +19,9 @@ serve(async (req) => {
       );
     }
 
+    // Authorization check is sufficient for test endpoints
+    // No database access needed, just testing external API connection
+    
     const { url, username, password } = await req.json();
 
     if (!url || !username || !password) {
