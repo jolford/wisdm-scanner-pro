@@ -318,11 +318,11 @@ const UsersIndex = () => {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <Switch
-                        checked={user.roles.includes('admin')}
-                        onCheckedChange={() => handleToggleAdminRole(user.id, user.roles.includes('admin'))}
+                        checked={user.roles?.includes('admin') || false}
+                        onCheckedChange={() => handleToggleAdminRole(user.id, user.roles?.includes('admin') || false)}
                       />
                       <span className="text-sm">
-                        {user.roles.includes('admin') ? 'Admin' : 'User'}
+                        {user.roles?.includes('admin') ? 'Admin' : 'User'}
                       </span>
                     </div>
                   </TableCell>
