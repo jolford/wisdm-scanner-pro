@@ -5,15 +5,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, FileText, CheckCircle2, XCircle, AlertCircle, Calendar, User, FolderOpen, Download, FileJson, FileSpreadsheet, FileType } from 'lucide-react';
+import { ArrowLeft, FileText, CheckCircle2, XCircle, AlertCircle, Calendar, User, FolderOpen, Download, FileJson, FileSpreadsheet, FileType, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { ValidationScreen } from '@/components/ValidationScreen';
 
 const BatchDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const [exporting, setExporting] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<any>(null);
 
   const { data: batch, isLoading } = useQuery({
     queryKey: ['batch-detail', id],
@@ -371,7 +373,31 @@ ${xmlDocs}
             Documents ({documents?.length || 0})
           </h2>
           
-          {documents && documents.length > 0 ? (
+          {selectedDocument ? (
+            <div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setSelectedDocument(null)}
+                className="mb-4"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Back to Documents
+              </Button>
+              <ValidationScreen
+                documentId={selectedDocument.id}
+                imageUrl={selectedDocument.file_url}
+                fileName={selectedDocument.file_name}
+                extractedText={selectedDocument.extracted_text || ''}
+                metadata={selectedDocument.extracted_metadata || {}}
+                projectFields={(batch.projects?.extraction_fields as Array<{ name: string; description: string }>) || []}
+                onValidate={async () => {
+                  setSelectedDocument(null);
+                }}
+                onSkip={() => setSelectedDocument(null)}
+              />
+            </div>
+          ) : documents && documents.length > 0 ? (
             <div className="space-y-3">
               {documents.map((doc) => (
                 <div
@@ -405,6 +431,14 @@ ${xmlDocs}
                     <Badge variant={doc.needs_review ? 'destructive' : 'secondary'}>
                       {doc.validation_status}
                     </Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setSelectedDocument(doc)}
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Validate
+                    </Button>
                   </div>
                 </div>
               ))}

@@ -60,11 +60,11 @@ const AdminDashboard = () => {
         {/* Stats Cards */}
         <div className="grid md:grid-cols-5 gap-6">
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary/10 rounded-lg">
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-primary/10 rounded-lg flex-shrink-0">
                 <FolderOpen className="h-6 w-6 text-primary" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">Projects</p>
                 <p className="text-2xl font-bold">{stats.projects}</p>
               </div>
@@ -72,11 +72,11 @@ const AdminDashboard = () => {
           </Card>
 
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-accent/10 rounded-lg">
-                <FileText className="h-6 w-6 text-accent-foreground" />
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-accent/10 rounded-lg flex-shrink-0">
+                <FileText className="h-6 w-6 text-primary" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">Documents</p>
                 <p className="text-2xl font-bold">{stats.documents}</p>
               </div>
@@ -84,11 +84,11 @@ const AdminDashboard = () => {
           </Card>
 
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-secondary/10 rounded-lg">
-                <Building2 className="h-6 w-6 text-secondary-foreground" />
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-secondary/10 rounded-lg flex-shrink-0">
+                <Building2 className="h-6 w-6 text-primary" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">Customers</p>
                 <p className="text-2xl font-bold">{stats.customers}</p>
               </div>
@@ -96,11 +96,11 @@ const AdminDashboard = () => {
           </Card>
 
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-secondary/10 rounded-lg">
-                <Users className="h-6 w-6 text-secondary-foreground" />
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-secondary/10 rounded-lg flex-shrink-0">
+                <Users className="h-6 w-6 text-primary" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">Users</p>
                 <p className="text-2xl font-bold">{stats.users}</p>
               </div>
@@ -108,11 +108,11 @@ const AdminDashboard = () => {
           </Card>
 
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-500/10 rounded-lg">
-                <Key className="h-6 w-6 text-green-600" />
+            <div className="flex items-start gap-4">
+              <div className="p-3 bg-accent/10 rounded-lg flex-shrink-0">
+                <Key className="h-6 w-6 text-primary" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="text-sm text-muted-foreground">Licenses</p>
                 <p className="text-2xl font-bold">{stats.licenses}</p>
               </div>
