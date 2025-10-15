@@ -27,6 +27,10 @@ interface Queue {
 interface ExportConfig {
   enabled: boolean;
   destination: string;
+  url?: string;
+  username?: string;
+  password?: string;
+  project?: string;
 }
 
 const EditProject = () => {
@@ -50,8 +54,8 @@ const EditProject = () => {
     txt: { enabled: true, destination: '/exports/data/' },
     pdf: { enabled: true, destination: '/exports/documents/' },
     images: { enabled: true, destination: '/exports/images/' },
-    filebound: { enabled: false, destination: '' },
-    docmgt: { enabled: false, destination: '' },
+    filebound: { enabled: false, destination: '', url: '', username: '', password: '', project: '' },
+    docmgt: { enabled: false, destination: '', url: '', username: '', password: '', project: '' },
   });
 
   const [queues, setQueues] = useState<Queue[]>([
@@ -330,47 +334,126 @@ const EditProject = () => {
             <div>
               <Label className="mb-4 block">Export Configuration</Label>
               <div className="space-y-4">
-                {Object.entries(exportConfig).map(([type, config]) => (
-                  <Card key={type} className="p-4 bg-muted/50">
-                    <div className="flex items-start gap-4">
-                      <div className="flex items-center space-x-2 pt-2">
-                        <Checkbox
-                          id={`export-${type}`}
-                          checked={config.enabled}
-                          onCheckedChange={(checked) => 
-                            setExportConfig(prev => ({ 
-                              ...prev, 
-                              [type]: { ...prev[type], enabled: checked === true }
-                            }))
-                          }
-                        />
-                        <Label htmlFor={`export-${type}`} className="text-sm font-medium cursor-pointer min-w-[60px]">
-                          {type.toUpperCase()}
-                        </Label>
+                {Object.entries(exportConfig).map(([type, config]) => {
+                  const isECM = type === 'filebound' || type === 'docmgt';
+                  
+                  return (
+                    <Card key={type} className="p-4 bg-muted/50">
+                      <div className="space-y-3">
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`export-${type}`}
+                            checked={config.enabled}
+                            onCheckedChange={(checked) => 
+                              setExportConfig(prev => ({ 
+                                ...prev, 
+                                [type]: { ...prev[type], enabled: checked === true }
+                              }))
+                            }
+                          />
+                          <Label htmlFor={`export-${type}`} className="text-sm font-medium cursor-pointer">
+                            {type.toUpperCase()}
+                          </Label>
+                        </div>
+                        
+                        {isECM ? (
+                          <div className="grid grid-cols-2 gap-3 pl-6">
+                            <div>
+                              <Label htmlFor={`url-${type}`} className="text-xs mb-1">
+                                ECM URL *
+                              </Label>
+                              <Input
+                                id={`url-${type}`}
+                                value={config.url || ''}
+                                onChange={(e) => 
+                                  setExportConfig(prev => ({ 
+                                    ...prev, 
+                                    [type]: { ...prev[type], url: e.target.value }
+                                  }))
+                                }
+                                placeholder="https://ecm.example.com"
+                                disabled={!config.enabled}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`project-${type}`} className="text-xs mb-1">
+                                Project Name *
+                              </Label>
+                              <Input
+                                id={`project-${type}`}
+                                value={config.project || ''}
+                                onChange={(e) => 
+                                  setExportConfig(prev => ({ 
+                                    ...prev, 
+                                    [type]: { ...prev[type], project: e.target.value }
+                                  }))
+                                }
+                                placeholder="Project name"
+                                disabled={!config.enabled}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`username-${type}`} className="text-xs mb-1">
+                                Username *
+                              </Label>
+                              <Input
+                                id={`username-${type}`}
+                                value={config.username || ''}
+                                onChange={(e) => 
+                                  setExportConfig(prev => ({ 
+                                    ...prev, 
+                                    [type]: { ...prev[type], username: e.target.value }
+                                  }))
+                                }
+                                placeholder="ECM username"
+                                disabled={!config.enabled}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`password-${type}`} className="text-xs mb-1">
+                                Password *
+                              </Label>
+                              <Input
+                                id={`password-${type}`}
+                                type="password"
+                                value={config.password || ''}
+                                onChange={(e) => 
+                                  setExportConfig(prev => ({ 
+                                    ...prev, 
+                                    [type]: { ...prev[type], password: e.target.value }
+                                  }))
+                                }
+                                placeholder="ECM password"
+                                disabled={!config.enabled}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="pl-6">
+                            <Label htmlFor={`dest-${type}`} className="text-xs mb-1">
+                              Export Destination
+                            </Label>
+                            <Input
+                              id={`dest-${type}`}
+                              value={config.destination}
+                              onChange={(e) => 
+                                setExportConfig(prev => ({ 
+                                  ...prev, 
+                                  [type]: { ...prev[type], destination: e.target.value }
+                                }))
+                              }
+                              placeholder="/exports/path/"
+                              disabled={!config.enabled}
+                            />
+                          </div>
+                        )}
                       </div>
-                      <div className="flex-1">
-                        <Label htmlFor={`dest-${type}`} className="text-xs mb-1">
-                          Export Destination
-                        </Label>
-                        <Input
-                          id={`dest-${type}`}
-                          value={config.destination}
-                          onChange={(e) => 
-                            setExportConfig(prev => ({ 
-                              ...prev, 
-                              [type]: { ...prev[type], destination: e.target.value }
-                            }))
-                          }
-                          placeholder="/exports/path/"
-                          disabled={!config.enabled}
-                        />
-                      </div>
-                    </div>
-                  </Card>
-                ))}
+                    </Card>
+                  );
+                })}
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Configure export formats and their destinations. Destinations can be file paths or URLs.
+                Configure export formats and their destinations. For ECM systems (Filebound/Docmgt), provide connection credentials.
               </p>
             </div>
 

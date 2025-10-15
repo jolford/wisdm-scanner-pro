@@ -24,11 +24,11 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { batchId, docmgtUrl, docmgtApiKey } = await req.json();
+    const { batchId, docmgtUrl, username, password, project } = await req.json();
 
-    if (!docmgtUrl || !docmgtApiKey) {
+    if (!docmgtUrl || !username || !password || !project) {
       return new Response(
-        JSON.stringify({ error: 'Docmgt URL and API key are required' }),
+        JSON.stringify({ error: 'Docmgt URL, username, password, and project are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -83,17 +83,21 @@ serve(async (req) => {
       validatedAt: doc.validated_at,
     }));
 
+    // Create Basic Auth header
+    const authString = btoa(`${username}:${password}`);
+    
     // Send to Docmgt API
     const docmgtResponse = await fetch(`${docmgtUrl}/api/v1/documents/batch`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-API-Key': docmgtApiKey,
+        'Authorization': `Basic ${authString}`,
       },
       body: JSON.stringify({
+        project: project,
         batch: {
           name: batch.batch_name,
-          project: batch.projects?.name,
+          projectName: batch.projects?.name,
           totalDocuments: batch.total_documents,
           validatedDocuments: batch.validated_documents,
           status: batch.status,

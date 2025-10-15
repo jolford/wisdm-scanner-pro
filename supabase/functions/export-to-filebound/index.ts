@@ -24,11 +24,11 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { batchId, fileboundUrl, fileboundApiKey } = await req.json();
+    const { batchId, fileboundUrl, username, password, project } = await req.json();
 
-    if (!fileboundUrl || !fileboundApiKey) {
+    if (!fileboundUrl || !username || !password || !project) {
       return new Response(
-        JSON.stringify({ error: 'Filebound URL and API key are required' }),
+        JSON.stringify({ error: 'Filebound URL, username, password, and project are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -81,14 +81,18 @@ serve(async (req) => {
       confidenceScore: doc.confidence_score,
     }));
 
+    // Create Basic Auth header
+    const authString = btoa(`${username}:${password}`);
+    
     // Send to Filebound API
     const fileboundResponse = await fetch(`${fileboundUrl}/api/documents/import`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${fileboundApiKey}`,
+        'Authorization': `Basic ${authString}`,
       },
       body: JSON.stringify({
+        project: project,
         batchName: batch.batch_name,
         projectName: batch.projects?.name,
         documents: fileboundDocuments,
