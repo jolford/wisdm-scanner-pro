@@ -19,6 +19,7 @@ import { usePermissions } from '@/hooks/use-permissions';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { getSignedUrl } from '@/hooks/use-signed-url';
+import { analyzePdfSeparation, getDocumentName, SeparationConfig } from '@/lib/pdf-separator';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -169,82 +170,92 @@ const Queue = () => {
     setIsProcessing(true);
     
     try {
-      // Extract text from PDF using pdfjs
-       let arrayBuffer: ArrayBuffer | null = null;
-       let extractedPdfText = '';
-      try {
-        arrayBuffer = await file.arrayBuffer();
-        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-        const pdf = await loadingTask.promise;
-        const pages = Math.min(pdf.numPages, 5);
-        for (let i = 1; i <= pages; i++) {
-          const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          const pageText = (textContent.items || [])
-            .map((item: any) => (item && item.str) ? item.str : '')
-            .join(' ');
-          extractedPdfText += pageText + '\n';
-        }
-      } catch (e) {
-        console.warn('PDF text extraction failed:', e);
-      }
-
-      if (!extractedPdfText || extractedPdfText.trim().length < 10) {
-        try {
-          // Always re-read file to avoid using a detached ArrayBuffer
-          const freshBuffer = await file.arrayBuffer();
-          const loadingTask2 = pdfjsLib.getDocument({ data: freshBuffer as ArrayBuffer });
-          const pdf2 = await loadingTask2.promise;
-          const page1 = await pdf2.getPage(1);
-          let viewport = page1.getViewport({ scale: 1.5 });
-          const maxDim = 2000;
-          const scale = Math.min(1.5, maxDim / Math.max(viewport.width, viewport.height));
-          viewport = page1.getViewport({ scale });
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          canvas.width = Math.ceil(viewport.width);
-          canvas.height = Math.ceil(viewport.height);
-          if (!ctx) throw new Error('Canvas context not available');
-          await page1.render({ canvasContext: ctx as any, viewport }).promise;
-          const dataUrl = canvas.toDataURL('image/png');
-
-          const { data, error } = await supabase.functions.invoke('ocr-scan', {
-            body: { 
-              imageData: dataUrl,
-              isPdf: false,
-              extractionFields: selectedProject?.extraction_fields || []
-            },
-          });
-          if (error) throw error;
-
-          await saveDocument(file.name, 'application/pdf', dataUrl, data.text, data.metadata || {});
-          toast({ title: 'PDF Processed via OCR', description: 'Extracted text from rendered PDF page.' });
-          setIsProcessing(false);
-          return;
-        } catch (fallbackErr: any) {
-          console.error('PDF image OCR fallback failed:', fallbackErr);
-          toast({
-            title: 'PDF Processing Failed',
-            description: 'Could not extract text from PDF. Please try a different file.',
-            variant: 'destructive',
-          });
-          setIsProcessing(false);
-          return;
-        }
-      }
-
-      const { data, error } = await supabase.functions.invoke('ocr-scan', {
-        body: { 
-          textData: extractedPdfText,
-          isPdf: true,
-          extractionFields: selectedProject?.extraction_fields || []
-        },
+      // Get separation config from project
+      const separationConfig: SeparationConfig = (selectedProject as any)?.metadata?.separation_config || { method: 'none' };
+      
+      // Load PDF for analysis
+      const arrayBuffer = await file.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+      const pdfDoc = await loadingTask.promise;
+      
+      // Analyze document boundaries based on separation config
+      const boundaries = await analyzePdfSeparation(pdfDoc, separationConfig);
+      
+      toast({
+        title: 'Processing PDF',
+        description: `Found ${boundaries.length} document(s) using ${separationConfig.method} separation`,
       });
       
-      if (error) throw error;
+      // Process each separated document
+      for (let i = 0; i < boundaries.length; i++) {
+        const boundary = boundaries[i];
+        const docName = getDocumentName(file.name, i, boundaries.length);
+        
+        // Extract text from pages in this boundary
+        let extractedPdfText = '';
+        for (let pageNum = boundary.startPage; pageNum <= boundary.endPage; pageNum++) {
+          try {
+            const page = await pdfDoc.getPage(pageNum);
+            const textContent = await page.getTextContent();
+            const pageText = (textContent.items || [])
+              .map((item: any) => (item && item.str) ? item.str : '')
+              .join(' ');
+            extractedPdfText += pageText + '\n';
+          } catch (e) {
+            console.warn(`Failed to extract text from page ${pageNum}:`, e);
+          }
+        }
+        
+        // If no text extracted, try OCR on first page of document
+        if (!extractedPdfText || extractedPdfText.trim().length < 10) {
+          try {
+            const page = await pdfDoc.getPage(boundary.startPage);
+            let viewport = page.getViewport({ scale: 1.5 });
+            const maxDim = 2000;
+            const scale = Math.min(1.5, maxDim / Math.max(viewport.width, viewport.height));
+            viewport = page.getViewport({ scale });
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = Math.ceil(viewport.width);
+            canvas.height = Math.ceil(viewport.height);
+            if (!ctx) throw new Error('Canvas context not available');
+            await page.render({ canvasContext: ctx as any, viewport }).promise;
+            const dataUrl = canvas.toDataURL('image/png');
+
+            const { data, error } = await supabase.functions.invoke('ocr-scan', {
+              body: { 
+                imageData: dataUrl,
+                isPdf: false,
+                extractionFields: selectedProject?.extraction_fields || []
+              },
+            });
+            if (error) throw error;
+
+            await saveDocument(docName, 'application/pdf', dataUrl, data.text, data.metadata || {});
+            continue;
+          } catch (fallbackErr: any) {
+            console.error('PDF OCR fallback failed:', fallbackErr);
+          }
+        }
+
+        // Process extracted text
+        const { data, error } = await supabase.functions.invoke('ocr-scan', {
+          body: { 
+            textData: extractedPdfText,
+            isPdf: true,
+            extractionFields: selectedProject?.extraction_fields || []
+          },
+        });
+        
+        if (error) throw error;
+        
+        await saveDocument(docName, 'application/pdf', '', data.text, data.metadata || {});
+      }
       
-      await saveDocument(file.name, 'application/pdf', '', data.text, data.metadata || {});
-      toast({ title: 'PDF Processed', description: 'Text extracted from PDF.' });
+      toast({ 
+        title: 'PDF Processed', 
+        description: `Successfully separated into ${boundaries.length} document(s).` 
+      });
 
       // Refresh validation queue and switch to validation tab
       await loadQueueDocuments();

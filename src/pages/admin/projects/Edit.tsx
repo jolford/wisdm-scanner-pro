@@ -15,6 +15,7 @@ import { projectSchema } from '@/lib/validation-schemas';
 import { safeErrorMessage } from '@/lib/error-handler';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { ECMExportConfig } from '@/components/admin/ECMExportConfig';
+import { DocumentSeparationConfig, SeparationConfig } from '@/components/admin/DocumentSeparationConfig';
 
 interface ExtractionField {
   name: string;
@@ -68,6 +69,13 @@ const EditProject = () => {
     { name: 'Validated', enabled: true },
     { name: 'Export', enabled: true },
   ]);
+
+  const [separationConfig, setSeparationConfig] = useState<SeparationConfig>({
+    method: 'none',
+    barcodePatterns: ['SEPARATOR', 'DIVIDER'],
+    blankPageThreshold: 95,
+    pagesPerDocument: 1,
+  });
 
   useEffect(() => {
     if (!authLoading && id) {
@@ -127,6 +135,11 @@ const EditProject = () => {
         // Set queues with proper type checking
         if (data.queues && Array.isArray(data.queues)) {
           setQueues(data.queues as unknown as Queue[]);
+        }
+
+        // Set separation config from metadata
+        if (projectData.metadata?.separation_config) {
+          setSeparationConfig(projectData.metadata.separation_config);
         }
       }
     } catch (error) {
@@ -199,7 +212,12 @@ const EditProject = () => {
       if (!error) {
         await supabase
           .from('projects')
-          .update({ metadata: { export_config: exportConfig } } as any)
+          .update({ 
+            metadata: { 
+              export_config: exportConfig,
+              separation_config: separationConfig 
+            } 
+          } as any)
           .eq('id', id);
       }
 
@@ -394,7 +412,20 @@ const EditProject = () => {
                                 disabled={!config.enabled}
                               />
                             </div>
-                            <div>
+            <div>
+              <Label className="mb-4 block">Document Separation</Label>
+              <Card className="p-4 bg-muted/50">
+                <DocumentSeparationConfig
+                  config={separationConfig}
+                  onConfigChange={setSeparationConfig}
+                />
+              </Card>
+              <p className="text-sm text-muted-foreground mt-2">
+                Configure how multi-page PDFs are automatically split into individual documents during scanning.
+              </p>
+            </div>
+
+            <div>
                               <Label htmlFor={`convert-${type}`} className="text-xs mb-1">
                                 Convert Format on Export
                               </Label>
