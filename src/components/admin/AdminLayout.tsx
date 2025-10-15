@@ -138,13 +138,6 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
 
           <main className="flex-1 container mx-auto px-4 py-8">{children}</main>
           
-          <footer className="border-t border-border/50 py-4 bg-background/50">
-            <div className="container mx-auto px-4 text-center">
-              <p className="text-sm text-muted-foreground">
-                Copyright 2025 Western Integrated Systems
-              </p>
-            </div>
-          </footer>
         </div>
       </div>
     </SidebarProvider>
