@@ -193,6 +193,8 @@ export type Database = {
           needs_review: boolean | null
           page_number: number | null
           project_id: string
+          redacted_file_url: string | null
+          redaction_metadata: Json | null
           uploaded_by: string
           validated_at: string | null
           validated_by: string | null
@@ -215,6 +217,8 @@ export type Database = {
           needs_review?: boolean | null
           page_number?: number | null
           project_id: string
+          redacted_file_url?: string | null
+          redaction_metadata?: Json | null
           uploaded_by: string
           validated_at?: string | null
           validated_by?: string | null
@@ -237,6 +241,8 @@ export type Database = {
           needs_review?: boolean | null
           page_number?: number | null
           project_id?: string
+          redacted_file_url?: string | null
+          redaction_metadata?: Json | null
           uploaded_by?: string
           validated_at?: string | null
           validated_by?: string | null

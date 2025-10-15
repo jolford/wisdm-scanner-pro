@@ -5,13 +5,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Lightbulb, Crop } from 'lucide-react';
+import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Lightbulb, Crop, Eraser } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { documentMetadataSchema } from '@/lib/validation-schemas';
 import { safeErrorMessage } from '@/lib/error-handler';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ImageRegionSelector } from './ImageRegionSelector';
+import { RedactionTool } from './RedactionTool';
+import { useAuth } from '@/hooks/use-auth';
 
 interface ValidationScreenProps {
   documentId?: string;
@@ -43,7 +45,10 @@ export const ValidationScreen = ({
   const [suggestions, setSuggestions] = useState<Record<string, string[]>>({});
   const [selectedText, setSelectedText] = useState('');
   const [showRegionSelector, setShowRegionSelector] = useState(false);
+  const [showRedactionTool, setShowRedactionTool] = useState(false);
+  const [currentImageUrl, setCurrentImageUrl] = useState(imageUrl);
   const { toast } = useToast();
+  const { isAdmin } = useAuth();
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
   const imageContainerRef = useRef<HTMLDivElement>(null);
 
@@ -163,6 +168,17 @@ export const ValidationScreen = ({
     setShowRegionSelector(false);
   };
 
+  const handleRedactionSaved = (redactedUrl: string, isPermanent: boolean) => {
+    setCurrentImageUrl(redactedUrl);
+    setShowRedactionTool(false);
+    toast({
+      title: 'Redaction Complete',
+      description: isPermanent 
+        ? 'Document permanently redacted' 
+        : 'Redacted version saved'
+    });
+  };
+
   const handleValidate = async (status: 'validated' | 'rejected') => {
     // Validate metadata with zod
     try {
@@ -277,6 +293,21 @@ export const ValidationScreen = ({
               </TooltipTrigger>
               <TooltipContent>{showRegionSelector ? 'Cancel Selection' : 'Select Region to Re-OCR'}</TooltipContent>
             </Tooltip>
+
+            {isAdmin && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant={showRedactionTool ? "default" : "outline"}
+                    onClick={() => setShowRedactionTool(!showRedactionTool)}
+                  >
+                    <Eraser className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>{showRedactionTool ? 'Cancel Redaction' : 'Redact Document'}</TooltipContent>
+              </Tooltip>
+            )}
             
             <Button
               size="sm"
@@ -295,9 +326,9 @@ export const ValidationScreen = ({
             ref={imageContainerRef}
             className="flex-1 overflow-auto bg-muted/30 rounded-lg p-4"
           >
-            {imageUrl ? (
+            {currentImageUrl ? (
               <img
-                src={imageUrl}
+                src={currentImageUrl}
                 alt="Scanned document"
                 className="w-full h-auto object-contain transition-transform cursor-move"
                 style={{
@@ -316,9 +347,21 @@ export const ValidationScreen = ({
           {showRegionSelector && (
             <div className="mt-4">
               <ImageRegionSelector
-                imageUrl={imageUrl}
+                imageUrl={currentImageUrl}
                 onRegionSelected={handleRegionSelected}
                 extractionFields={projectFields}
+              />
+            </div>
+          )}
+
+          {/* Redaction Tool */}
+          {showRedactionTool && documentId && (
+            <div className="mt-4">
+              <RedactionTool
+                imageUrl={currentImageUrl}
+                documentId={documentId}
+                onRedactionSaved={handleRedactionSaved}
+                onCancel={() => setShowRedactionTool(false)}
               />
             </div>
           )}
