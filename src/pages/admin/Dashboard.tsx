@@ -61,7 +61,7 @@ const AdminDashboard = () => {
         <div className="grid md:grid-cols-5 gap-6">
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-primary/10 rounded-lg flex-shrink-0">
+              <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
                 <FolderOpen className="h-6 w-6 text-primary" />
               </div>
               <div className="min-w-0">
@@ -73,7 +73,7 @@ const AdminDashboard = () => {
 
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-accent/10 rounded-lg flex-shrink-0">
+              <div className="h-12 w-12 bg-accent/10 rounded-lg flex items-center justify-center flex-shrink-0">
                 <FileText className="h-6 w-6 text-primary" />
               </div>
               <div className="min-w-0">
@@ -85,7 +85,7 @@ const AdminDashboard = () => {
 
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-secondary/10 rounded-lg flex-shrink-0">
+              <div className="h-12 w-12 bg-secondary/10 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Building2 className="h-6 w-6 text-primary" />
               </div>
               <div className="min-w-0">
@@ -97,7 +97,7 @@ const AdminDashboard = () => {
 
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-secondary/10 rounded-lg flex-shrink-0">
+              <div className="h-12 w-12 bg-secondary/10 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Users className="h-6 w-6 text-primary" />
               </div>
               <div className="min-w-0">
@@ -109,7 +109,7 @@ const AdminDashboard = () => {
 
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-accent/10 rounded-lg flex-shrink-0">
+              <div className="h-12 w-12 bg-accent/10 rounded-lg flex items-center justify-center flex-shrink-0">
                 <Key className="h-6 w-6 text-primary" />
               </div>
               <div className="min-w-0">
