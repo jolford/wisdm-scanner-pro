@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -28,6 +29,7 @@ interface Queue {
 interface ExportConfig {
   enabled: boolean;
   destination: string;
+  convertFormat?: 'none' | 'pdf' | 'jpg' | 'tiff';
   url?: string;
   username?: string;
   password?: string;
@@ -50,14 +52,14 @@ const EditProject = () => {
   ]);
   
   const [exportConfig, setExportConfig] = useState<Record<string, ExportConfig>>({
-    csv: { enabled: true, destination: '/exports/data/' },
-    json: { enabled: true, destination: '/exports/data/' },
-    xml: { enabled: true, destination: '/exports/data/' },
-    txt: { enabled: true, destination: '/exports/data/' },
-    pdf: { enabled: true, destination: '/exports/documents/' },
-    images: { enabled: true, destination: '/exports/images/' },
-    filebound: { enabled: false, destination: '', url: '', username: '', password: '', project: '' },
-    docmgt: { enabled: false, destination: '', url: '', username: '', password: '', project: '' },
+    csv: { enabled: true, destination: '/exports/data/', convertFormat: 'none' },
+    json: { enabled: true, destination: '/exports/data/', convertFormat: 'none' },
+    xml: { enabled: true, destination: '/exports/data/', convertFormat: 'none' },
+    txt: { enabled: true, destination: '/exports/data/', convertFormat: 'none' },
+    pdf: { enabled: true, destination: '/exports/documents/', convertFormat: 'none' },
+    images: { enabled: true, destination: '/exports/images/', convertFormat: 'none' },
+    filebound: { enabled: false, destination: '', url: '', username: '', password: '', project: '', convertFormat: 'none' },
+    docmgt: { enabled: false, destination: '', url: '', username: '', password: '', project: '', convertFormat: 'none' },
   });
 
   const [queues, setQueues] = useState<Queue[]>([
@@ -374,22 +376,52 @@ const EditProject = () => {
                             />
                           </div>
                         ) : (
-                          <div className="pl-6">
-                            <Label htmlFor={`dest-${type}`} className="text-xs mb-1">
-                              Export Destination
-                            </Label>
-                            <Input
-                              id={`dest-${type}`}
-                              value={config.destination}
-                              onChange={(e) => 
-                                setExportConfig(prev => ({ 
-                                  ...prev, 
-                                  [type]: { ...prev[type], destination: e.target.value }
-                                }))
-                              }
-                              placeholder="/exports/path/"
-                              disabled={!config.enabled}
-                            />
+                          <div className="pl-6 space-y-3">
+                            <div>
+                              <Label htmlFor={`dest-${type}`} className="text-xs mb-1">
+                                Export Destination
+                              </Label>
+                              <Input
+                                id={`dest-${type}`}
+                                value={config.destination}
+                                onChange={(e) => 
+                                  setExportConfig(prev => ({ 
+                                    ...prev, 
+                                    [type]: { ...prev[type], destination: e.target.value }
+                                  }))
+                                }
+                                placeholder="/exports/path/"
+                                disabled={!config.enabled}
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor={`convert-${type}`} className="text-xs mb-1">
+                                Convert Format on Export
+                              </Label>
+                              <Select
+                                value={config.convertFormat || 'none'}
+                                onValueChange={(value) => 
+                                  setExportConfig(prev => ({ 
+                                    ...prev, 
+                                    [type]: { ...prev[type], convertFormat: value as 'none' | 'pdf' | 'jpg' | 'tiff' }
+                                  }))
+                                }
+                                disabled={!config.enabled}
+                              >
+                                <SelectTrigger id={`convert-${type}`}>
+                                  <SelectValue placeholder="Select format" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-popover z-50">
+                                  <SelectItem value="none">No Conversion</SelectItem>
+                                  <SelectItem value="pdf">Convert to PDF</SelectItem>
+                                  <SelectItem value="jpg">Convert to JPG</SelectItem>
+                                  <SelectItem value="tiff">Convert to TIFF</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Automatically convert documents to selected format during export
+                              </p>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -398,7 +430,7 @@ const EditProject = () => {
                 })}
               </div>
               <p className="text-sm text-muted-foreground mt-2">
-                Configure export formats and their destinations. For ECM systems (Filebound/Docmgt), test connection to fetch available projects and map fields.
+                Configure export formats, destinations, and automatic format conversion. For ECM systems (Filebound/Docmgt), test connection to fetch available projects and map fields. Documents can be automatically converted to PDF, JPG, or TIFF format during export.
               </p>
             </div>
 
