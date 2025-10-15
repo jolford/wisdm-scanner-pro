@@ -74,7 +74,7 @@ const AdminDashboard = () => {
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-accent/10 rounded-lg">
-                <FileText className="h-6 w-6 text-accent" />
+                <FileText className="h-6 w-6 text-accent-foreground" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Documents</p>
