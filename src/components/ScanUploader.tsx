@@ -32,6 +32,36 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
       return;
     }
 
+    // Convert TIF/TIFF to JPEG for compatibility with AI models
+    if (file.type === 'image/tiff' || file.name.toLowerCase().endsWith('.tif') || file.name.toLowerCase().endsWith('.tiff')) {
+      const img = new Image();
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0);
+          
+          canvas.toBlob((blob) => {
+            if (blob) {
+              const convertedReader = new FileReader();
+              convertedReader.onload = (e) => {
+                const imageData = e.target?.result as string;
+                onScanComplete('', imageData, file.name.replace(/\.tiff?$/i, '.jpg'));
+              };
+              convertedReader.readAsDataURL(blob);
+            }
+          }, 'image/jpeg', 0.95);
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = async (e) => {
       const imageData = e.target?.result as string;
@@ -121,7 +151,7 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
             Drag and drop or click to select files
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Supports JPG, PNG, WEBP, PDF • Multiple files supported
+            Supports JPG, PNG, WEBP, TIF, PDF • Multiple files supported
           </p>
         </div>
 
