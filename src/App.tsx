@@ -27,49 +27,52 @@ import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light">{/* Force light mode only */}
-      <div className="flex flex-col min-h-screen">
-        <Toaster />
-        <Sonner />
-      <BrowserRouter>
-        <div className="flex-1">
-        <Routes>
-          <Route path="/" element={<Queue />} />
-          <Route path="/old" element={<Index />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/batches" element={<Batches />} />
-          <Route path="/batches/:id" element={<BatchDetail />} />
-          <Route path="/admin" element={<AdminDashboard />} />
-          <Route path="/admin/projects" element={<AdminProjects />} />
-          <Route path="/admin/projects/new" element={<NewProject />} />
-          <Route path="/admin/projects/:id/edit" element={<EditProject />} />
-          <Route path="/admin/batches" element={<BatchesIndex />} />
-          <Route path="/admin/batches/new" element={<NewBatch />} />
-          <Route path="/admin/batches/:id" element={<AdminBatchDetail />} />
-          <Route path="/admin/licenses" element={<LicensesIndex />} />
-          <Route path="/admin/licenses/new" element={<NewLicense />} />
-          <Route path="/admin/customers" element={<CustomersIndex />} />
-          <Route path="/admin/customers/new" element={<NewCustomer />} />
-          <Route path="/admin/customers/:id/edit" element={<EditCustomer />} />
-          <Route path="/admin/users" element={<UsersIndex />} />
-          <Route path="/admin/documents" element={<DocumentsAdmin />} />
-          <Route path="/admin/analytics" element={<Analytics />} />
-          <Route path="/admin/error-logs" element={<ErrorLogs />} />
-          <Route path="/help" element={<Help />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light">{/* Force light mode only */}
+        <div className="flex flex-col min-h-screen">
+          <Toaster />
+          <Sonner />
+        <BrowserRouter>
+          <div className="flex-1">
+          <Routes>
+            <Route path="/" element={<Queue />} />
+            <Route path="/old" element={<Index />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/batches" element={<Batches />} />
+            <Route path="/batches/:id" element={<BatchDetail />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/projects" element={<AdminProjects />} />
+            <Route path="/admin/projects/new" element={<NewProject />} />
+            <Route path="/admin/projects/:id/edit" element={<EditProject />} />
+            <Route path="/admin/batches" element={<BatchesIndex />} />
+            <Route path="/admin/batches/new" element={<NewBatch />} />
+            <Route path="/admin/batches/:id" element={<AdminBatchDetail />} />
+            <Route path="/admin/licenses" element={<LicensesIndex />} />
+            <Route path="/admin/licenses/new" element={<NewLicense />} />
+            <Route path="/admin/customers" element={<CustomersIndex />} />
+            <Route path="/admin/customers/new" element={<NewCustomer />} />
+            <Route path="/admin/customers/:id/edit" element={<EditCustomer />} />
+            <Route path="/admin/users" element={<UsersIndex />} />
+            <Route path="/admin/documents" element={<DocumentsAdmin />} />
+            <Route path="/admin/analytics" element={<Analytics />} />
+            <Route path="/admin/error-logs" element={<ErrorLogs />} />
+            <Route path="/help" element={<Help />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          </div>
+          <Footer />
+        </BrowserRouter>
         </div>
-        <Footer />
-      </BrowserRouter>
-      </div>
-    </ThemeProvider>
-  </QueryClientProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;
