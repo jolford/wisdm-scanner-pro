@@ -2,11 +2,22 @@ import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, UserPlus, Settings } from 'lucide-react';
+import { ArrowLeft, UserPlus, Settings, Pencil, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import wisdmLogo from '@/assets/wisdm-logo.png';
+import { Input } from '@/components/ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Table,
   TableBody,
@@ -62,6 +73,9 @@ const UsersIndex = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPermissionsDialogOpen, setIsPermissionsDialogOpen] = useState(false);
   const [editingPermissions, setEditingPermissions] = useState<User['permissions']>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<{ id: string; full_name: string; email: string } | null>(null);
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && isAdmin) {
@@ -287,6 +301,58 @@ const UsersIndex = () => {
     }
   };
 
+  const handleOpenEdit = (user: User) => {
+    setEditingUser({
+      id: user.id,
+      full_name: user.full_name || '',
+      email: user.email || '',
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingUser) return;
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          full_name: editingUser.full_name,
+          email: editingUser.email,
+        })
+        .eq('id', editingUser.id);
+
+      if (error) throw error;
+
+      toast.success('User updated successfully');
+      setIsEditDialogOpen(false);
+      setEditingUser(null);
+      loadUsers();
+    } catch (error: any) {
+      toast.error('Failed to update user: ' + error.message);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteUserId) return;
+
+    try {
+      // Delete user's profile (cascade will handle related records)
+      const { error } = await supabase
+        .from('profiles')
+        .delete()
+        .eq('id', deleteUserId);
+
+      if (error) throw error;
+
+      toast.success('User deleted successfully');
+      setDeleteUserId(null);
+      loadUsers();
+    } catch (error: any) {
+      toast.error('Failed to delete user: ' + error.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -416,9 +482,27 @@ const UsersIndex = () => {
                       <Button
                         size="sm"
                         variant="ghost"
+                        onClick={() => handleOpenEdit(user)}
+                        title="Edit User"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
                         onClick={() => handleOpenPermissions(user)}
+                        title="Manage Permissions"
                       >
                         <Settings className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="text-destructive hover:text-destructive"
+                        onClick={() => setDeleteUserId(user.id)}
+                        title="Delete User"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     <Dialog
                       open={isDialogOpen && selectedUser === user.id}
@@ -487,6 +571,49 @@ const UsersIndex = () => {
           )}
         </Card>
 
+        {/* Edit User Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit User</DialogTitle>
+              <DialogDescription>
+                Update user profile information
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="full_name">Full Name</Label>
+                <Input
+                  id="full_name"
+                  value={editingUser?.full_name || ''}
+                  onChange={(e) =>
+                    setEditingUser({ ...editingUser!, full_name: e.target.value })
+                  }
+                  placeholder="Enter full name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={editingUser?.email || ''}
+                  onChange={(e) =>
+                    setEditingUser({ ...editingUser!, email: e.target.value })
+                  }
+                  placeholder="Enter email"
+                />
+              </div>
+              <Button
+                onClick={handleSaveEdit}
+                className="w-full bg-gradient-to-r from-primary to-accent"
+              >
+                Save Changes
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
         {/* Permissions Dialog */}
         <Dialog open={isPermissionsDialogOpen} onOpenChange={setIsPermissionsDialogOpen}>
           <DialogContent>
@@ -551,6 +678,27 @@ const UsersIndex = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={!!deleteUserId} onOpenChange={() => setDeleteUserId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete this user and all associated data. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteUser}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete User
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );
