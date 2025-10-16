@@ -24,37 +24,27 @@ export const useSignedUrl = (publicUrl: string | null | undefined, expiresIn: nu
         setLoading(true);
         setError(null);
 
-        // If this is already a public storage URL, no need to sign
-        // Example: https://.../storage/v1/object/public/documents/path/to/file.ext
-        const isPublic = /\/storage\/v1\/object\/public\//.test(publicUrl);
-        if (isPublic) {
-          setSignedUrl(publicUrl);
-          setLoading(false);
-          return;
-        }
-
-        // Extract the storage path from the public URL
-        // Accepts both public and non-public object URLs
+        // Try to extract the storage path from any storage URL
+        // Works for both public and signed object URLs
         const pathMatch = publicUrl.match(/\/documents\/(.+)$/);
         
         if (!pathMatch) {
-          // If it's not a valid storage URL, return the original URL
+          // If it's not a storage URL, just use it directly
           setSignedUrl(publicUrl);
           setLoading(false);
           return;
         }
 
-        const filePath = pathMatch[1];
+        const filePath = decodeURIComponent(pathMatch[1]);
 
-        // Generate signed URL for private buckets
+        // Always generate a signed URL (works for public and private buckets)
         const { data, error: urlError } = await supabase.storage
           .from('documents')
           .createSignedUrl(filePath, expiresIn);
 
-        if (urlError) {
-          console.error('Error creating signed URL:', urlError);
-          setError(urlError);
-          setSignedUrl(null);
+        if (urlError || !data?.signedUrl) {
+          console.warn('Falling back to original URL due to signing error', urlError);
+          setSignedUrl(publicUrl);
         } else {
           setSignedUrl(data.signedUrl);
         }

@@ -15,6 +15,14 @@ import { ImageRegionSelector } from './ImageRegionSelector';
 import { RedactionTool } from './RedactionTool';
 import { useAuth } from '@/hooks/use-auth';
 import { useSignedUrl } from '@/hooks/use-signed-url';
+import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
+import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
+
+// Configure PDF.js worker once
+if ((pdfjsLib as any).GlobalWorkerOptions) {
+  (pdfjsLib as any).GlobalWorkerOptions.workerPort = new (PdfWorker as any)();
+}
+
 
 interface ValidationScreenProps {
   documentId?: string;
@@ -56,6 +64,34 @@ export const ValidationScreen = ({
 const imageContainerRef = useRef<HTMLDivElement>(null);
 const { signedUrl: displayUrl } = useSignedUrl(currentImageUrl);
 const isPdf = fileName?.toLowerCase().endsWith('.pdf');
+const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+useEffect(() => {
+  const run = async () => {
+    if (!displayUrl) { setPreviewUrl(null); return; }
+    if (!isPdf) { setPreviewUrl(displayUrl); return; }
+    try {
+      const loadingTask = pdfjsLib.getDocument({ url: displayUrl });
+      const pdf = await loadingTask.promise;
+      const page = await pdf.getPage(1);
+      let viewport = page.getViewport({ scale: 1.2 });
+      const maxDim = 1800;
+      const scale = Math.min(1.2, maxDim / Math.max(viewport.width, viewport.height));
+      viewport = page.getViewport({ scale });
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+      canvas.width = Math.round(viewport.width);
+      canvas.height = Math.round(viewport.height);
+      await page.render({ canvasContext: ctx, viewport }).promise;
+      setPreviewUrl(canvas.toDataURL('image/png'));
+    } catch (e) {
+      console.error('PDF preview render failed', e);
+      setPreviewUrl(null);
+    }
+  };
+  run();
+}, [displayUrl, isPdf]);
   // Generate suggestions from extracted text
   useEffect(() => {
     if (extractedText && projectFields.length > 0) {
@@ -337,7 +373,7 @@ const isPdf = fileName?.toLowerCase().endsWith('.pdf');
           >
             {currentImageUrl ? (
               <img
-                src={displayUrl || currentImageUrl}
+                src={previewUrl || displayUrl || currentImageUrl}
                 alt="Scanned document"
                 className="w-full h-auto object-contain transition-transform cursor-move"
                 style={{
@@ -356,7 +392,7 @@ const isPdf = fileName?.toLowerCase().endsWith('.pdf');
           {showRegionSelector && (
             <div className="mt-4">
               <ImageRegionSelector
-                imageUrl={displayUrl || currentImageUrl}
+                imageUrl={previewUrl || displayUrl || currentImageUrl}
                 onRegionSelected={handleRegionSelected}
                 extractionFields={projectFields}
               />

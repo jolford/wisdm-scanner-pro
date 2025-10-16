@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,14 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
+import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
+
+// Configure PDF.js worker once
+if ((pdfjsLib as any).GlobalWorkerOptions) {
+  (pdfjsLib as any).GlobalWorkerOptions.workerPort = new (PdfWorker as any)();
+}
+
 
 interface Document {
   id: string;
@@ -308,7 +316,7 @@ export const BatchValidationScreen = ({
   );
 };
 
-// Thumbnail component that uses a signed URL when needed
+// Thumbnail component that uses a signed URL and renders PDF first page when needed
 const ThumbnailWithSignedUrl = ({
   url,
   alt,
@@ -319,9 +327,51 @@ const ThumbnailWithSignedUrl = ({
   className?: string;
 }) => {
   const { signedUrl } = useSignedUrl(url);
+  const [thumb, setThumb] = useState<string | null>(null);
+  const isPdf = /\.pdf($|\?)/i.test(url);
+
+  useEffect(() => {
+    const makeThumb = async () => {
+      try {
+        const src = signedUrl || url;
+        if (!isPdf) {
+          setThumb(src);
+          return;
+        }
+        // Render first page of PDF to a small canvas
+        const loadingTask = pdfjsLib.getDocument({ url: src });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 0.5 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) return;
+        const targetWidth = 64;
+        const scale = targetWidth / viewport.width;
+        const scaledVp = page.getViewport({ scale });
+        canvas.width = Math.round(scaledVp.width);
+        canvas.height = Math.round(scaledVp.height);
+        await page.render({ canvasContext: context, viewport: scaledVp }).promise;
+        setThumb(canvas.toDataURL('image/png'));
+      } catch (e) {
+        console.warn('PDF thumbnail failed, falling back to icon', e);
+        setThumb(null);
+      }
+    };
+    makeThumb();
+  }, [signedUrl, url, isPdf]);
+
+  if (!thumb && isPdf) {
+    return (
+      <div className="w-16 h-20 flex items-center justify-center bg-muted rounded border border-border">
+        <ImageIcon className="h-6 w-6 text-muted-foreground" />
+      </div>
+    );
+  }
+
   return (
     <img
-      src={signedUrl || url}
+      src={thumb || signedUrl || url}
       alt={alt}
       className={className}
       onError={(e) => {
@@ -342,14 +392,44 @@ const ImageRegionSelectorWithSignedUrl = ({
   extractionFields: any[];
 }) => {
   const { signedUrl, loading } = useSignedUrl(fileUrl);
+  const [preview, setPreview] = useState<string | null>(null);
+  const isPdf = /\.pdf($|\?)/i.test(fileUrl);
+
+  useEffect(() => {
+    const run = async () => {
+      if (!signedUrl) return;
+      if (!isPdf) { setPreview(signedUrl); return; }
+      try {
+        const loadingTask = pdfjsLib.getDocument({ url: signedUrl });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 1.2 });
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        canvas.width = Math.round(viewport.width);
+        canvas.height = Math.round(viewport.height);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        setPreview(canvas.toDataURL('image/png'));
+      } catch (e) {
+        console.error('Failed to render PDF for region selector', e);
+        setPreview(null);
+      }
+    };
+    run();
+  }, [signedUrl, isPdf]);
 
   if (loading || !signedUrl) {
     return <div className="py-8 text-center text-muted-foreground">Loading image...</div>;
   }
 
+  if (!preview) {
+    return <div className="py-8 text-center text-muted-foreground">Preview unavailable</div>;
+  }
+
   return (
     <ImageRegionSelector
-      imageUrl={signedUrl}
+      imageUrl={preview}
       onRegionSelected={onRegionSelected}
       extractionFields={extractionFields}
     />
