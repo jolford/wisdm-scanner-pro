@@ -169,6 +169,35 @@ async function processOcrDocument(job: Job, supabase: any) {
     const data = await response.json();
     const extractedText = data.choices?.[0]?.message?.content || '';
 
+    // Track cost
+    const usage = data.usage;
+    const model = 'google/gemini-2.5-flash';
+    let estimatedCost = 0;
+    
+    if (usage) {
+      // Calculate cost using database function
+      const { data: costData } = await supabase.rpc('calculate_ai_cost', {
+        _model: model,
+        _input_tokens: usage.prompt_tokens || 0,
+        _output_tokens: usage.completion_tokens || 0,
+        _is_image: true
+      });
+      estimatedCost = costData || 0.002; // Fallback estimate
+    } else {
+      estimatedCost = 0.002; // Default estimate per document
+    }
+
+    // Update tenant usage
+    if (job.customer_id) {
+      await supabase.rpc('update_tenant_usage', {
+        _customer_id: job.customer_id,
+        _job_type: 'ocr_document',
+        _cost_usd: estimatedCost,
+        _documents_count: 1,
+        _failed: false
+      });
+    }
+
     // Parse metadata if extraction fields were provided
     let extractedMetadata = {};
     if (hasFields && extractedText) {

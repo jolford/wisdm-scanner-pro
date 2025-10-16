@@ -95,6 +95,69 @@ export type Database = {
           },
         ]
       }
+      cost_alerts: {
+        Row: {
+          acknowledged: boolean | null
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_type: string
+          budget_limit_usd: number | null
+          created_at: string | null
+          current_spend_usd: number | null
+          customer_id: string
+          id: string
+          message: string
+          severity: string
+          tenant_usage_id: string | null
+          usage_percentage: number | null
+        }
+        Insert: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type: string
+          budget_limit_usd?: number | null
+          created_at?: string | null
+          current_spend_usd?: number | null
+          customer_id: string
+          id?: string
+          message: string
+          severity: string
+          tenant_usage_id?: string | null
+          usage_percentage?: number | null
+        }
+        Update: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type?: string
+          budget_limit_usd?: number | null
+          created_at?: string | null
+          current_spend_usd?: number | null
+          customer_id?: string
+          id?: string
+          message?: string
+          severity?: string
+          tenant_usage_id?: string | null
+          usage_percentage?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cost_alerts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cost_alerts_tenant_usage_id_fkey"
+            columns: ["tenant_usage_id"]
+            isOneToOne: false
+            referencedRelation: "tenant_usage"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           company_name: string
@@ -642,6 +705,65 @@ export type Database = {
           },
         ]
       }
+      tenant_usage: {
+        Row: {
+          ai_cost_usd: number | null
+          budget_alert_sent: boolean | null
+          budget_alert_threshold: number | null
+          budget_limit_usd: number | null
+          created_at: string | null
+          customer_id: string
+          documents_failed: number | null
+          documents_processed: number | null
+          id: string
+          period_end: string
+          period_start: string
+          storage_cost_usd: number | null
+          total_cost_usd: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          ai_cost_usd?: number | null
+          budget_alert_sent?: boolean | null
+          budget_alert_threshold?: number | null
+          budget_limit_usd?: number | null
+          created_at?: string | null
+          customer_id: string
+          documents_failed?: number | null
+          documents_processed?: number | null
+          id?: string
+          period_end: string
+          period_start: string
+          storage_cost_usd?: number | null
+          total_cost_usd?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          ai_cost_usd?: number | null
+          budget_alert_sent?: boolean | null
+          budget_alert_threshold?: number | null
+          budget_limit_usd?: number | null
+          created_at?: string | null
+          customer_id?: string
+          documents_failed?: number | null
+          documents_processed?: number | null
+          id?: string
+          period_end?: string
+          period_start?: string
+          storage_cost_usd?: number | null
+          total_cost_usd?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_usage_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_customers: {
         Row: {
           created_at: string | null
@@ -727,6 +849,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_ai_cost: {
+        Args: {
+          _input_tokens: number
+          _is_image?: boolean
+          _model: string
+          _output_tokens: number
+        }
+        Returns: number
+      }
       check_license_capacity: {
         Args: { _documents_needed?: number; _license_id: string }
         Returns: boolean
@@ -772,6 +903,16 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      update_tenant_usage: {
+        Args: {
+          _cost_usd: number
+          _customer_id: string
+          _documents_count?: number
+          _failed?: boolean
+          _job_type: string
+        }
+        Returns: undefined
       }
     }
     Enums: {
