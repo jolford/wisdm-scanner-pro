@@ -203,6 +203,7 @@ export const BatchValidationScreen = ({
                         <ThumbnailWithSignedUrl 
                           url={doc.file_url}
                           alt={doc.file_name}
+                          fileType={(doc as any).file_type}
                           className="w-16 h-20 object-cover rounded border border-border"
                         />
                       </div>
@@ -321,26 +322,28 @@ const ThumbnailWithSignedUrl = ({
   url,
   alt,
   className,
+  fileType,
 }: {
   url: string;
   alt: string;
   className?: string;
+  fileType?: string;
 }) => {
   const { signedUrl } = useSignedUrl(url);
   const [thumb, setThumb] = useState<string | null>(null);
-  const looksPdfByName = /\.pdf($|\?)/i.test((signedUrl || url) || '') || /\.pdf$/i.test(alt);
+  const isPdf = Boolean(fileType?.toLowerCase().includes('pdf')) || /\.pdf($|\?)/i.test((signedUrl || url) || '') || /\.pdf$/i.test(alt);
 
   useEffect(() => {
     const makeThumb = async () => {
       const src = signedUrl || url;
       try {
-        // Quick path: if name/URL doesn't look like a PDF, use the URL directly
-        if (!looksPdfByName) {
+        // Quick path: if not a PDF, use the URL directly
+        if (!isPdf) {
           setThumb(src);
           return;
         }
         // Try to render first page of PDF into a small canvas
-        const resp = await fetch(src);
+        const resp = await fetch(src, { cache: 'no-store' });
         const buffer = await resp.arrayBuffer();
         const loadingTask = pdfjsLib.getDocument({ data: buffer });
         const pdf = await loadingTask.promise;
@@ -374,9 +377,8 @@ const ThumbnailWithSignedUrl = ({
           await page.render({ canvasContext: context, viewport: scaledVp }).promise;
           setThumb(canvas.toDataURL('image/png'));
         } catch (e2) {
-          console.warn('Thumbnail URL render failed, falling back', e2);
           // If it's a PDF, prefer showing the icon placeholder
-          if (looksPdfByName) {
+          if (isPdf) {
             setThumb(null);
           } else {
             setThumb(src);
@@ -385,7 +387,7 @@ const ThumbnailWithSignedUrl = ({
       }
     };
     makeThumb();
-  }, [signedUrl, url, alt, looksPdfByName]);
+  }, [signedUrl, url, alt, fileType]);
 
   if (!thumb) {
     return (
