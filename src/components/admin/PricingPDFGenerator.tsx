@@ -25,7 +25,7 @@ export function PricingPDFGenerator() {
     pdf.setFontSize(9);
     pdf.setTextColor(59, 130, 246);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('⚡ POWERED BY AI', pageWidth / 2, 15 + logoHeight + 3, { align: 'center' });
+    pdf.text('POWERED BY AI', pageWidth / 2, 15 + logoHeight + 3, { align: 'center' });
     
     // Title
     pdf.setFont('helvetica', 'normal');
