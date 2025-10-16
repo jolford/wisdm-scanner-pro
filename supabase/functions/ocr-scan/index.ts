@@ -105,6 +105,13 @@ serve(async (req) => {
           { status: 402, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      if (response.status === 400) {
+        return new Response(
+          JSON.stringify({ error: 'Image format not supported. Please use JPG, PNG, or WEBP format.' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
       
       throw new Error('Service error');
     }

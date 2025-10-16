@@ -374,7 +374,11 @@ const Queue = () => {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        // Try to extract error message from the edge function response
+        const errorMessage = data?.error || error.message || 'Failed to process the image';
+        throw new Error(errorMessage);
+      }
 
       await saveDocument(fileName, 'image', imageUrl, data.text, data.metadata || {});
 
