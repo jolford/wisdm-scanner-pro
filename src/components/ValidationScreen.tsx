@@ -277,7 +277,7 @@ useEffect(() => {
 
   return (
     <TooltipProvider>
-      <div className="grid grid-cols-3 gap-6 h-[calc(100vh-12rem)]">
+      <div className="grid grid-cols-[2fr_1fr_2fr] gap-6 h-[calc(100vh-12rem)]">
         {/* Left: Document Image with Controls */}
         <Card className="p-6 flex flex-col">
           <div className="flex items-center justify-between mb-4">
