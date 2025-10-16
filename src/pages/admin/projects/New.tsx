@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, ArrowLeft } from 'lucide-react';
+import { Plus, Trash2, ArrowLeft, ArrowUp, ArrowDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { projectSchema } from '@/lib/validation-schemas';
@@ -48,6 +48,7 @@ const NewProject = () => {
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
   const [enableCheckScanning, setEnableCheckScanning] = useState(false);
+  const [documentNamingPattern, setDocumentNamingPattern] = useState('');
   const [fields, setFields] = useState<ExtractionField[]>([
     { name: '', description: '' }
   ]);
@@ -91,6 +92,20 @@ const NewProject = () => {
     setFields(updated);
   };
 
+  const moveFieldUp = (index: number) => {
+    if (index === 0) return;
+    const updated = [...fields];
+    [updated[index - 1], updated[index]] = [updated[index], updated[index - 1]];
+    setFields(updated);
+  };
+
+  const moveFieldDown = (index: number) => {
+    if (index === fields.length - 1) return;
+    const updated = [...fields];
+    [updated[index], updated[index + 1]] = [updated[index + 1], updated[index]];
+    setFields(updated);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -131,7 +146,8 @@ const NewProject = () => {
         created_by: user?.id,
         metadata: { 
           export_config: exportConfig,
-          separation_config: separationConfig 
+          separation_config: separationConfig,
+          document_naming_pattern: documentNamingPattern 
         } as any,
       }]);
 
@@ -248,6 +264,28 @@ const NewProject = () => {
                 {fields.map((field, index) => (
                   <Card key={index} className="p-4 bg-muted/50">
                     <div className="flex gap-3">
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => moveFieldUp(index)}
+                          disabled={index === 0}
+                          className="h-8 w-8"
+                        >
+                          <ArrowUp className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          onClick={() => moveFieldDown(index)}
+                          disabled={index === fields.length - 1}
+                          className="h-8 w-8"
+                        >
+                          <ArrowDown className="h-4 w-4" />
+                        </Button>
+                      </div>
                       <div className="flex-1 space-y-3">
                         <div>
                           <Label htmlFor={`field-name-${index}`} className="text-xs">
@@ -288,9 +326,28 @@ const NewProject = () => {
                 ))}
               </div>
 
+              <Button type="button" size="sm" onClick={addField} variant="outline" className="w-full mt-4">
+                <Plus className="h-4 w-4 mr-1" />
+                Add Field
+              </Button>
+
               <p className="text-sm text-muted-foreground mt-2">
                 Define the specific data fields you want to extract from documents in this project.
                 For example: Invoice Number, Date, Amount, Vendor Name, etc.
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="naming-pattern">Document Naming Pattern</Label>
+              <Input
+                id="naming-pattern"
+                value={documentNamingPattern}
+                onChange={(e) => setDocumentNamingPattern(e.target.value)}
+                placeholder="e.g., Invoice-{Invoice Number} or {Date}-{Vendor Name}"
+              />
+              <p className="text-sm text-muted-foreground mt-2">
+                Automatically rename documents using extracted metadata. Use {'{'}FieldName{'}'} placeholders.
+                Example: "Invoice-{'{'}Invoice Number{'}'}" will rename to "Invoice-12345.pdf"
               </p>
             </div>
 

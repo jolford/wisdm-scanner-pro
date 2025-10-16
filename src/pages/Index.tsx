@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LicenseWarning } from '@/components/LicenseWarning';
 import { useLicense } from '@/hooks/use-license';
 import wisdmLogo from '@/assets/wisdm-logo.png';
+import { applyDocumentNamingPattern } from '@/lib/document-naming';
 
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
@@ -58,10 +59,14 @@ const Index = () => {
     }
 
     try {
+      // Apply document naming pattern if configured
+      const namingPattern = (selectedProject as any)?.metadata?.document_naming_pattern;
+      const finalFileName = applyDocumentNamingPattern(namingPattern, metadata, fileName);
+
       const { data, error } = await supabase.from('documents').insert([{
         project_id: selectedProjectId,
         batch_id: selectedBatchId,
-        file_name: fileName,
+        file_name: finalFileName,
         file_type: fileType,
         file_url: fileUrl,
         extracted_text: text,

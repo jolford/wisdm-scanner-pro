@@ -20,6 +20,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { getSignedUrl } from '@/hooks/use-signed-url';
 import { analyzePdfSeparation, getDocumentName, SeparationConfig } from '@/lib/pdf-separator';
+import { applyDocumentNamingPattern } from '@/lib/document-naming';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -114,10 +115,14 @@ const Queue = () => {
     }
 
     try {
+      // Apply document naming pattern if configured
+      const namingPattern = (selectedProject as any)?.metadata?.document_naming_pattern;
+      const finalFileName = applyDocumentNamingPattern(namingPattern, metadata, fileName);
+
       const { data, error } = await supabase.from('documents').insert([{
         project_id: selectedProjectId,
         batch_id: selectedBatchId,
-        file_name: fileName,
+        file_name: finalFileName,
         file_type: fileType,
         file_url: fileUrl,
         extracted_text: text,
