@@ -6,6 +6,7 @@ import { Plus, FolderOpen, FileText, Users, Key, Building2, BarChart3 } from 'lu
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
+import { PricingPDFGenerator } from '@/components/admin/PricingPDFGenerator';
 
 const AdminDashboard = () => {
   const { loading, isAdmin } = useRequireAuth(true);
@@ -156,6 +157,11 @@ const AdminDashboard = () => {
               </Button>
             </div>
           </Card>
+        </div>
+
+        {/* Sales Tools */}
+        <div className="grid md:grid-cols-1 gap-6">
+          <PricingPDFGenerator />
         </div>
       </div>
     </AdminLayout>
