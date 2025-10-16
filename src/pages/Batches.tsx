@@ -5,10 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, FolderOpen, Search, Calendar, User, FileText, Trash2, ArrowRight, Download, HelpCircle } from 'lucide-react';
+import { ArrowLeft, FolderOpen, Search, Calendar, User, FileText, Trash2, ArrowRight, Download, HelpCircle, LayoutGrid, List } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import wisdmLogo from '@/assets/wisdm-logo.png';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 interface Batch {
   id: string;
@@ -35,6 +36,7 @@ const Batches = () => {
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   useEffect(() => {
     if (!authLoading) {
@@ -239,8 +241,8 @@ const Batches = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-12">
-        <div className="mb-6">
-          <div className="relative max-w-md">
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search batches, projects, or users..."
@@ -249,6 +251,14 @@ const Batches = () => {
               className="pl-10"
             />
           </div>
+          <ToggleGroup type="single" value={viewMode} onValueChange={(value) => value && setViewMode(value as 'grid' | 'list')}>
+            <ToggleGroupItem value="grid" aria-label="Grid view">
+              <LayoutGrid className="h-4 w-4" />
+            </ToggleGroupItem>
+            <ToggleGroupItem value="list" aria-label="List view">
+              <List className="h-4 w-4" />
+            </ToggleGroupItem>
+          </ToggleGroup>
         </div>
 
         {filteredBatches.length === 0 ? (
@@ -263,7 +273,7 @@ const Batches = () => {
                 : 'Try a different search term'}
             </p>
           </Card>
-        ) : (
+        ) : viewMode === 'grid' ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredBatches.map((batch) => (
               <Card 
@@ -324,6 +334,67 @@ const Batches = () => {
                     <span className="text-primary font-medium">
                       {batch.validated_documents} validated
                     </span>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {filteredBatches.map((batch) => (
+              <Card 
+                key={batch.id} 
+                className="p-4 bg-gradient-to-r from-card to-card/80 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+                onClick={() => navigate(`/batches/${batch.id}`)}
+              >
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4 flex-1">
+                    <FolderOpen className="h-5 w-5 text-primary shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold truncate">{batch.batch_name}</h3>
+                      <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
+                        <span className="flex items-center gap-1">
+                          <FileText className="h-3 w-3" />
+                          {batch.projects?.name || 'N/A'}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          {new Date(batch.created_at).toLocaleDateString()}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <User className="h-3 w-3" />
+                          {batch.profiles?.full_name || batch.profiles?.email || 'Unknown'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center gap-4 shrink-0">
+                    <div className="text-sm text-right">
+                      <div className="text-muted-foreground">{batch.total_documents} docs</div>
+                      <div className="text-primary font-medium">{batch.validated_documents} validated</div>
+                    </div>
+                    <Badge className={getStatusColor(batch.status)}>
+                      {batch.status}
+                    </Badge>
+                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        size="icon"
+                        variant="outline"
+                        onClick={(e) => progressBatch(e, batch.id, batch.status)}
+                        title="Progress to next status"
+                      >
+                        <ArrowRight className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="destructive"
+                        onClick={(e) => deleteBatch(e, batch.id)}
+                        title="Delete batch"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </Card>
