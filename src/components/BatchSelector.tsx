@@ -6,9 +6,10 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { FolderOpen, Plus } from 'lucide-react';
+import { FolderOpen, Plus, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
+import { Badge } from '@/components/ui/badge';
 
 interface BatchSelectorProps {
   selectedBatchId: string | null;
@@ -21,6 +22,7 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
   const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [batchName, setBatchName] = useState('');
+  const [priority, setPriority] = useState(5);
   const [isCreating, setIsCreating] = useState(false);
 
   const { data: batches, isLoading, refetch } = useQuery({
@@ -60,7 +62,7 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
           batch_name: batchName,
           project_id: projectId,
           created_by: user?.id,
-          priority: 0,
+          priority: priority,
         }])
         .select()
         .single();
@@ -73,6 +75,7 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
       });
 
       setBatchName('');
+      setPriority(5);
       setDialogOpen(false);
       await refetch();
       
@@ -129,6 +132,26 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
                   }}
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="priority" className="flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  Priority (for load balancing)
+                </Label>
+                <Select
+                  value={priority.toString()}
+                  onValueChange={(value) => setPriority(parseInt(value))}
+                >
+                  <SelectTrigger id="priority">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">Low (0)</SelectItem>
+                    <SelectItem value="5">Normal (5)</SelectItem>
+                    <SelectItem value="10">High (10)</SelectItem>
+                    <SelectItem value="20">Urgent (20)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <DialogFooter>
               <Button
@@ -136,6 +159,7 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
                 onClick={() => {
                   setDialogOpen(false);
                   setBatchName('');
+                  setPriority(5);
                 }}
               >
                 Cancel
@@ -165,7 +189,19 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
         <SelectContent>
           {batches?.map((batch) => (
             <SelectItem key={batch.id} value={batch.id}>
-              {batch.batch_name} ({batch.status})
+              <div className="flex items-center justify-between w-full gap-2">
+                <span>{batch.batch_name}</span>
+                <div className="flex items-center gap-1">
+                  <Badge variant="outline" className="text-xs">
+                    {batch.status}
+                  </Badge>
+                  {batch.priority > 5 && (
+                    <Badge variant="secondary" className="text-xs">
+                      P{batch.priority}
+                    </Badge>
+                  )}
+                </div>
+              </div>
             </SelectItem>
           ))}
         </SelectContent>
