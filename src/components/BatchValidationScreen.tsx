@@ -328,17 +328,18 @@ const ThumbnailWithSignedUrl = ({
 }) => {
   const { signedUrl } = useSignedUrl(url);
   const [thumb, setThumb] = useState<string | null>(null);
-  const isPdf = /\.pdf($|\?)/i.test(url);
+  const looksPdfByName = /\.pdf($|\?)/i.test((signedUrl || url) || '') || /\.pdf$/i.test(alt);
 
   useEffect(() => {
     const makeThumb = async () => {
+      const src = signedUrl || url;
       try {
-        const src = signedUrl || url;
-        if (!isPdf) {
+        // Quick path: if name/URL doesn't look like a PDF, use the URL directly
+        if (!looksPdfByName) {
           setThumb(src);
           return;
         }
-        // Fetch bytes and render first page to a small canvas
+        // Try to render first page of PDF into a small canvas
         const resp = await fetch(src);
         const buffer = await resp.arrayBuffer();
         const loadingTask = pdfjsLib.getDocument({ data: buffer });
@@ -356,14 +357,14 @@ const ThumbnailWithSignedUrl = ({
         await page.render({ canvasContext: context, viewport: scaledVp }).promise;
         setThumb(canvas.toDataURL('image/png'));
       } catch (e) {
-        console.warn('PDF thumbnail failed, falling back to icon', e);
-        setThumb(null);
+        console.warn('Thumbnail render failed, falling back to direct image', e);
+        setThumb(src);
       }
     };
     makeThumb();
-  }, [signedUrl, url, isPdf]);
+  }, [signedUrl, url, alt, looksPdfByName]);
 
-  if (!thumb && isPdf) {
+  if (!thumb) {
     return (
       <div className="w-16 h-20 flex items-center justify-center bg-muted rounded border border-border">
         <ImageIcon className="h-6 w-6 text-muted-foreground" />
@@ -400,9 +401,10 @@ const ImageRegionSelectorWithSignedUrl = ({
   useEffect(() => {
     const run = async () => {
       if (!signedUrl) return;
-      if (!isPdf) { setPreview(signedUrl); return; }
       try {
-        const loadingTask = pdfjsLib.getDocument({ url: signedUrl });
+        const resp = await fetch(signedUrl);
+        const buffer = await resp.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: buffer });
         const pdf = await loadingTask.promise;
         const page = await pdf.getPage(1);
         const viewport = page.getViewport({ scale: 1.2 });
@@ -414,12 +416,12 @@ const ImageRegionSelectorWithSignedUrl = ({
         await page.render({ canvasContext: ctx, viewport }).promise;
         setPreview(canvas.toDataURL('image/png'));
       } catch (e) {
-        console.error('Failed to render PDF for region selector', e);
-        setPreview(null);
+        // Not a PDF or render failed; fall back to showing the image directly
+        setPreview(signedUrl);
       }
     };
     run();
-  }, [signedUrl, isPdf]);
+  }, [signedUrl]);
 
   if (loading || !signedUrl) {
     return <div className="py-8 text-center text-muted-foreground">Loading image...</div>;
