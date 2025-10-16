@@ -62,6 +62,7 @@ interface Analytics {
   dailyActivity: Array<{ date: string; documents: number; jobs: number }>;
   statusBreakdown: Array<{ status: string; count: number }>;
   errorRate: number;
+  extractionAccuracy: number;
 }
 
 const Analytics = () => {
@@ -94,6 +95,7 @@ const Analytics = () => {
         costData,
         dailyDocs,
         statusData,
+        confidenceScores,
       ] = await Promise.all([
         supabase.from('documents').select('id', { count: 'exact', head: true }),
         supabase
@@ -138,6 +140,11 @@ const Analytics = () => {
           .from('documents')
           .select('validation_status')
           .gte('created_at', daysAgo.toISOString()),
+        supabase
+          .from('documents')
+          .select('confidence_score')
+          .gte('created_at', daysAgo.toISOString())
+          .not('confidence_score', 'is', null),
       ]);
 
       // Calculate top projects
@@ -239,6 +246,12 @@ const Analytics = () => {
         ? ((jobMetrics.failed / jobMetrics.total) * 100)
         : 0;
 
+      // Calculate extraction accuracy
+      const scores = confidenceScores.data || [];
+      const extractionAccuracy = scores.length > 0
+        ? scores.reduce((sum, doc) => sum + (Number(doc.confidence_score) || 0), 0) / scores.length
+        : 0;
+
       setAnalytics({
         totalDocuments: docsTotal.count || 0,
         validatedDocuments: docsValidated.count || 0,
@@ -255,6 +268,7 @@ const Analytics = () => {
         dailyActivity,
         statusBreakdown,
         errorRate,
+        extractionAccuracy,
       });
     } catch (error: any) {
       toast.error('Failed to load analytics: ' + error.message);
@@ -302,7 +316,7 @@ const Analytics = () => {
         </div>
 
         {/* Overview Stats */}
-        <div className="grid md:grid-cols-4 gap-6">
+        <div className="grid md:grid-cols-5 gap-6">
           <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-primary/10 rounded-lg">
@@ -358,6 +372,21 @@ const Analytics = () => {
                 <p className="text-3xl font-bold">{analytics.errorRate.toFixed(1)}%</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   {analytics.jobMetrics.failed} failed jobs
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-br from-blue-500/5 to-blue-500/10 border-blue-500/20">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-blue-500/10 rounded-lg">
+                <BarChart3 className="h-6 w-6 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Extraction Accuracy</p>
+                <p className="text-3xl font-bold">{analytics.extractionAccuracy.toFixed(1)}%</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  OCR confidence score
                 </p>
               </div>
             </div>
