@@ -24,18 +24,31 @@ export const useSignedUrl = (publicUrl: string | null | undefined, expiresIn: nu
         setLoading(true);
         setError(null);
 
-        // Try to extract the storage path from any storage URL
-        // Works for both public and signed object URLs
-        const pathMatch = publicUrl.match(/\/documents\/(.+)$/);
+        // Normalize to pathname to avoid query/fragment issues
+        let filePath: string | null = null;
+        try {
+          const u = new URL(publicUrl);
+          const path = u.pathname; // no query/fragment
+          const m = path.match(/\/documents\/(.+)$/);
+          filePath = m ? decodeURIComponent(m[1]) : null;
+        } catch {
+          // Not a standard URL (could be data:, blob:). Try regex fallback
+          const m = publicUrl.match(/\/documents\/(.+?)(?:\?|#|$)/);
+          filePath = m ? decodeURIComponent(m[1]) : null;
+        }
         
-        if (!pathMatch) {
-          // If it's not a storage URL, just use it directly
+        if (!filePath) {
           setSignedUrl(publicUrl);
           setLoading(false);
           return;
         }
 
-        const filePath = decodeURIComponent(pathMatch[1]);
+        // If it's already a signed URL from storage, just use it
+        if (/\/storage\/v1\/object\/sign\//.test(publicUrl)) {
+          setSignedUrl(publicUrl);
+          setLoading(false);
+          return;
+        }
 
         // Always generate a signed URL (works for public and private buckets)
         const { data, error: urlError } = await supabase.storage
@@ -82,24 +95,28 @@ export const getSignedUrl = async (
     return publicUrl;
   }
 
-  // Extract the storage path from the URL
-  const pathMatch = publicUrl.match(/\/documents\/(.+)$/);
+  // Extract the storage path from the URL safely (ignore query/fragment)
+  let filePath: string | null = null;
+  try {
+    const u = new URL(publicUrl);
+    const m = u.pathname.match(/\/documents\/(.+)$/);
+    filePath = m ? decodeURIComponent(m[1]) : null;
+  } catch {
+    const m = publicUrl.match(/\/documents\/(.+?)(?:\?|#|$)/);
+    filePath = m ? decodeURIComponent(m[1]) : null;
+  }
   
-  if (!pathMatch) {
-    // If it's not a valid storage URL, return the original URL
+  if (!filePath) {
     return publicUrl;
   }
-
-  const filePath = pathMatch[1];
 
   // Generate signed URL
   const { data, error } = await supabase.storage
     .from('documents')
     .createSignedUrl(filePath, expiresIn);
 
-  if (error) {
-    console.error('Error creating signed URL:', error);
-    throw error;
+  if (error || !data?.signedUrl) {
+    return publicUrl;
   }
 
   return data.signedUrl;

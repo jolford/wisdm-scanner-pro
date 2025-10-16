@@ -71,7 +71,10 @@ useEffect(() => {
     if (!displayUrl) { setPreviewUrl(null); return; }
     if (!isPdf) { setPreviewUrl(displayUrl); return; }
     try {
-      const loadingTask = pdfjsLib.getDocument({ url: displayUrl });
+      // Fetch bytes first to avoid any cross-origin quirks
+      const resp = await fetch(displayUrl);
+      const buffer = await resp.arrayBuffer();
+      const loadingTask = pdfjsLib.getDocument({ data: buffer });
       const pdf = await loadingTask.promise;
       const page = await pdf.getPage(1);
       let viewport = page.getViewport({ scale: 1.2 });

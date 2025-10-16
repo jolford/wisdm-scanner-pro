@@ -338,8 +338,10 @@ const ThumbnailWithSignedUrl = ({
           setThumb(src);
           return;
         }
-        // Render first page of PDF to a small canvas
-        const loadingTask = pdfjsLib.getDocument({ url: src });
+        // Fetch bytes and render first page to a small canvas
+        const resp = await fetch(src);
+        const buffer = await resp.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: buffer });
         const pdf = await loadingTask.promise;
         const page = await pdf.getPage(1);
         const viewport = page.getViewport({ scale: 0.5 });
