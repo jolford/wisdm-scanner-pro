@@ -360,6 +360,7 @@ const ThumbnailWithSignedUrl = ({
         await page.render({ canvasContext: context, viewport: scaledVp }).promise;
         setThumb(canvas.toDataURL('image/png'));
       } catch (e) {
+        console.error('PDF thumbnail render failed (bytes path)', { src, error: e });
         console.warn('Thumbnail render failed, trying URL method', e);
         try {
           const loadingTask = pdfjsLib.getDocument({ url: src });
@@ -390,10 +391,11 @@ const ThumbnailWithSignedUrl = ({
   }, [signedUrl, url, alt, fileType]);
 
   if (!thumb) {
+    const href = signedUrl || url;
     return (
-      <div className="w-16 h-20 flex items-center justify-center bg-muted rounded border border-border">
+      <a href={href} target="_blank" rel="noreferrer" className="w-16 h-20 flex items-center justify-center bg-muted rounded border border-border hover:bg-muted/60">
         <ImageIcon className="h-6 w-6 text-muted-foreground" />
-      </div>
+      </a>
     );
   }
 
