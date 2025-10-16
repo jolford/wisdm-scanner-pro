@@ -30,6 +30,8 @@ export const useAuth = () => {
         checkAdminStatus(session.user.id);
       } else {
         setIsAdmin(false);
+        setIsSystemAdmin(false);
+        setIsTenantAdmin(false);
         setLoading(false);
       }
     });
@@ -39,7 +41,7 @@ export const useAuth = () => {
 
   const checkAdminStatus = async (userId: string) => {
     try {
-      const { data: roles, error } = await supabase
+      const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
@@ -47,17 +49,18 @@ export const useAuth = () => {
 
       if (error) throw error;
 
-      const hasSystemAdmin = roles?.some(r => r.role === 'system_admin') || false;
-      const hasAdmin = roles?.some(r => r.role === 'admin') || false;
+      const roles = data?.map(r => r.role) || [];
+      const systemAdmin = roles.includes('system_admin');
+      const tenantAdmin = roles.includes('admin');
 
-      setIsSystemAdmin(hasSystemAdmin);
-      setIsTenantAdmin(hasAdmin && !hasSystemAdmin);
-      setIsAdmin(hasSystemAdmin || hasAdmin);
+      setIsSystemAdmin(systemAdmin);
+      setIsTenantAdmin(tenantAdmin);
+      setIsAdmin(systemAdmin || tenantAdmin);
     } catch (error) {
       console.error('Error checking admin status:', error);
+      setIsAdmin(false);
       setIsSystemAdmin(false);
       setIsTenantAdmin(false);
-      setIsAdmin(false);
     } finally {
       setLoading(false);
     }
