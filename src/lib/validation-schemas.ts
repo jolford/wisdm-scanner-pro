@@ -16,6 +16,7 @@ export const projectSchema = z.object({
     .trim()
     .max(500, 'Description must be less than 500 characters')
     .optional(),
+  enableCheckScanning: z.boolean().default(false),
   extractionFields: z.array(
     z.object({
       name: z.string()

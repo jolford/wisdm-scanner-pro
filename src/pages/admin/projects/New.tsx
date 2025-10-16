@@ -47,6 +47,7 @@ const NewProject = () => {
   
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
+  const [enableCheckScanning, setEnableCheckScanning] = useState(false);
   const [fields, setFields] = useState<ExtractionField[]>([
     { name: '', description: '' }
   ]);
@@ -100,6 +101,7 @@ const NewProject = () => {
       projectSchema.parse({
         name: projectName,
         description: projectDescription,
+        enableCheckScanning,
         extractionFields: validFields,
         exportConfig,
       });
@@ -122,6 +124,7 @@ const NewProject = () => {
       const { error } = await supabase.from('projects').insert([{
         name: projectName,
         description: projectDescription,
+        enable_check_scanning: enableCheckScanning,
         extraction_fields: validFields as any,
         export_types: selectedExportTypes,
         queues: queues as any,
@@ -203,6 +206,33 @@ const NewProject = () => {
                 placeholder="Describe what this project is used for..."
                 rows={3}
               />
+            </div>
+
+            <div className="flex items-center space-x-2 p-4 border border-border rounded-lg bg-muted/30">
+              <Checkbox
+                id="check-scanning"
+                checked={enableCheckScanning}
+                onCheckedChange={(checked) => {
+                  setEnableCheckScanning(checked as boolean);
+                  // Pre-populate MICR fields when enabled
+                  if (checked && fields.length === 1 && !fields[0].name) {
+                    setFields([
+                      { name: 'Routing Number', description: 'Bank routing number (9 digits)' },
+                      { name: 'Account Number', description: 'Bank account number' },
+                      { name: 'Check Number', description: 'Check serial number' },
+                      { name: 'Amount', description: 'Check amount' },
+                    ]);
+                  }
+                }}
+              />
+              <div className="flex-1">
+                <Label htmlFor="check-scanning" className="cursor-pointer font-medium">
+                  Enable Check/MICR Scanning Mode
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Optimizes extraction for checks with MICR line reading (routing number, account number, check number, amount)
+                </p>
+              </div>
             </div>
 
             <div>

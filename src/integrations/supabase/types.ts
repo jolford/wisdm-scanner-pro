@@ -433,6 +433,7 @@ export type Database = {
           created_by: string
           customer_id: string | null
           description: string | null
+          enable_check_scanning: boolean | null
           export_types: string[] | null
           extraction_fields: Json
           id: string
@@ -447,6 +448,7 @@ export type Database = {
           created_by: string
           customer_id?: string | null
           description?: string | null
+          enable_check_scanning?: boolean | null
           export_types?: string[] | null
           extraction_fields?: Json
           id?: string
@@ -461,6 +463,7 @@ export type Database = {
           created_by?: string
           customer_id?: string | null
           description?: string | null
+          enable_check_scanning?: boolean | null
           export_types?: string[] | null
           extraction_fields?: Json
           id?: string
