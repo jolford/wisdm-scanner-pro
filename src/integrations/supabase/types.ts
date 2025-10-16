@@ -311,6 +311,118 @@ export type Database = {
         }
         Relationships: []
       }
+      job_metrics: {
+        Row: {
+          avg_processing_time_ms: number | null
+          completed_jobs: number | null
+          created_at: string | null
+          customer_id: string | null
+          failed_jobs: number | null
+          id: string
+          job_type: string
+          metric_date: string
+          metric_hour: number | null
+          total_jobs: number | null
+        }
+        Insert: {
+          avg_processing_time_ms?: number | null
+          completed_jobs?: number | null
+          created_at?: string | null
+          customer_id?: string | null
+          failed_jobs?: number | null
+          id?: string
+          job_type: string
+          metric_date: string
+          metric_hour?: number | null
+          total_jobs?: number | null
+        }
+        Update: {
+          avg_processing_time_ms?: number | null
+          completed_jobs?: number | null
+          created_at?: string | null
+          customer_id?: string | null
+          failed_jobs?: number | null
+          id?: string
+          job_type?: string
+          metric_date?: string
+          metric_hour?: number | null
+          total_jobs?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "job_metrics_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      jobs: {
+        Row: {
+          attempts: number | null
+          completed_at: string | null
+          created_at: string | null
+          customer_id: string | null
+          error_message: string | null
+          id: string
+          job_type: string
+          max_attempts: number | null
+          payload: Json
+          priority: Database["public"]["Enums"]["job_priority"]
+          result: Json | null
+          scheduled_for: string | null
+          started_at: string | null
+          status: Database["public"]["Enums"]["job_status"]
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          error_message?: string | null
+          id?: string
+          job_type: string
+          max_attempts?: number | null
+          payload: Json
+          priority?: Database["public"]["Enums"]["job_priority"]
+          result?: Json | null
+          scheduled_for?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["job_status"]
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          attempts?: number | null
+          completed_at?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          error_message?: string | null
+          id?: string
+          job_type?: string
+          max_attempts?: number | null
+          payload?: Json
+          priority?: Database["public"]["Enums"]["job_priority"]
+          result?: Json | null
+          scheduled_for?: string | null
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["job_status"]
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "jobs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       license_usage: {
         Row: {
           document_id: string | null
@@ -483,6 +595,53 @@ export type Database = {
           },
         ]
       }
+      tenant_limits: {
+        Row: {
+          allow_high_priority: boolean | null
+          created_at: string | null
+          customer_id: string
+          default_priority: Database["public"]["Enums"]["job_priority"] | null
+          id: string
+          max_concurrent_jobs: number | null
+          max_daily_documents: number | null
+          max_jobs_per_hour: number | null
+          max_jobs_per_minute: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          allow_high_priority?: boolean | null
+          created_at?: string | null
+          customer_id: string
+          default_priority?: Database["public"]["Enums"]["job_priority"] | null
+          id?: string
+          max_concurrent_jobs?: number | null
+          max_daily_documents?: number | null
+          max_jobs_per_hour?: number | null
+          max_jobs_per_minute?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          allow_high_priority?: boolean | null
+          created_at?: string | null
+          customer_id?: string
+          default_priority?: Database["public"]["Enums"]["job_priority"] | null
+          id?: string
+          max_concurrent_jobs?: number | null
+          max_daily_documents?: number | null
+          max_jobs_per_hour?: number | null
+          max_jobs_per_minute?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_limits_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_customers: {
         Row: {
           created_at: string | null
@@ -572,6 +731,10 @@ export type Database = {
         Args: { _documents_needed?: number; _license_id: string }
         Returns: boolean
       }
+      check_tenant_rate_limit: {
+        Args: { _customer_id: string; _job_type?: string }
+        Returns: boolean
+      }
       consume_license_documents: {
         Args:
           | {
@@ -588,6 +751,10 @@ export type Database = {
         Returns: boolean
       }
       generate_license_key: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_next_job: {
         Args: Record<PropertyKey, never>
         Returns: string
       }
@@ -625,6 +792,8 @@ export type Database = {
         | "id_card"
         | "check"
         | "other"
+      job_priority: "low" | "normal" | "high" | "urgent"
+      job_status: "pending" | "processing" | "completed" | "failed" | "retrying"
       license_status: "active" | "expired" | "suspended" | "exhausted"
       validation_status: "pending" | "validated" | "rejected" | "needs_review"
     }
@@ -773,6 +942,8 @@ export const Constants = {
         "check",
         "other",
       ],
+      job_priority: ["low", "normal", "high", "urgent"],
+      job_status: ["pending", "processing", "completed", "failed", "retrying"],
       license_status: ["active", "expired", "suspended", "exhausted"],
       validation_status: ["pending", "validated", "rejected", "needs_review"],
     },
