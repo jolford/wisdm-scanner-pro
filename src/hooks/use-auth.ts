@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom';
 export const useAuth = () => {
   const [user, setUser] = useState<any>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isSystemAdmin, setIsSystemAdmin] = useState(false);
+  const [isTenantAdmin, setIsTenantAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -37,16 +39,24 @@ export const useAuth = () => {
 
   const checkAdminStatus = async (userId: string) => {
     try {
-      const { data, error } = await supabase
+      const { data: roles, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId)
-        .eq('role', 'admin')
-        .maybeSingle();
+        .in('role', ['admin', 'system_admin']);
 
-      setIsAdmin(!!data);
+      if (error) throw error;
+
+      const hasSystemAdmin = roles?.some(r => r.role === 'system_admin') || false;
+      const hasAdmin = roles?.some(r => r.role === 'admin') || false;
+
+      setIsSystemAdmin(hasSystemAdmin);
+      setIsTenantAdmin(hasAdmin && !hasSystemAdmin);
+      setIsAdmin(hasSystemAdmin || hasAdmin);
     } catch (error) {
       console.error('Error checking admin status:', error);
+      setIsSystemAdmin(false);
+      setIsTenantAdmin(false);
       setIsAdmin(false);
     } finally {
       setLoading(false);
@@ -61,6 +71,8 @@ export const useAuth = () => {
   return {
     user,
     isAdmin,
+    isSystemAdmin,
+    isTenantAdmin,
     loading,
     signOut,
   };

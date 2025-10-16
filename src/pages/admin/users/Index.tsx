@@ -225,20 +225,20 @@ const UsersIndex = () => {
     }
   };
 
-  const handleToggleAdminRole = async (userId: string, isCurrentlyAdmin: boolean) => {
+  const handleToggleAdminRole = async (userId: string, currentRole: 'user' | 'admin' | 'system_admin' | null) => {
     try {
-      if (isCurrentlyAdmin) {
-        // Remove admin role
+      if (currentRole === 'admin' || currentRole === 'system_admin') {
+        // Remove the role
         const { error } = await supabase
           .from('user_roles')
           .delete()
           .eq('user_id', userId)
-          .eq('role', 'admin');
+          .eq('role', currentRole);
 
         if (error) throw error;
-        toast.success('Admin role removed');
+        toast.success('Role removed');
       } else {
-        // Add admin role
+        // Add admin role (tenant-level)
         const { error } = await supabase
           .from('user_roles')
           .insert({
@@ -253,6 +253,37 @@ const UsersIndex = () => {
       loadUsers();
     } catch (error: any) {
       toast.error('Failed to update role: ' + error.message);
+    }
+  };
+
+  const handleToggleSystemAdminRole = async (userId: string, isCurrentlySystemAdmin: boolean) => {
+    try {
+      if (isCurrentlySystemAdmin) {
+        // Remove system_admin role
+        const { error } = await supabase
+          .from('user_roles')
+          .delete()
+          .eq('user_id', userId)
+          .eq('role', 'system_admin');
+
+        if (error) throw error;
+        toast.success('System Admin role removed');
+      } else {
+        // Add system_admin role
+        const { error } = await supabase
+          .from('user_roles')
+          .insert({
+            user_id: userId,
+            role: 'system_admin',
+          });
+
+        if (error) throw error;
+        toast.success('System Admin role granted');
+      }
+
+      loadUsers();
+    } catch (error: any) {
+      toast.error('Failed to update system admin role: ' + error.message);
     }
   };
 
@@ -316,14 +347,30 @@ const UsersIndex = () => {
                   </TableCell>
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={user.roles?.includes('admin') || false}
-                        onCheckedChange={() => handleToggleAdminRole(user.id, user.roles?.includes('admin') || false)}
-                      />
-                      <span className="text-sm">
-                        {user.roles?.includes('admin') ? 'Admin' : 'User'}
-                      </span>
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={user.roles?.includes('system_admin') || false}
+                          onCheckedChange={() => handleToggleSystemAdminRole(user.id, user.roles?.includes('system_admin') || false)}
+                        />
+                        <span className="text-sm font-medium">
+                          {user.roles?.includes('system_admin') ? 'System Admin' : 'System User'}
+                        </span>
+                      </div>
+                      {!user.roles?.includes('system_admin') && (
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={user.roles?.includes('admin') || false}
+                            onCheckedChange={() => handleToggleAdminRole(
+                              user.id, 
+                              user.roles?.includes('admin') ? 'admin' : null
+                            )}
+                          />
+                          <span className="text-sm">
+                            {user.roles?.includes('admin') ? 'Tenant Admin' : 'Regular User'}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>
