@@ -190,16 +190,15 @@ export const BatchValidationScreen = ({
                 <div className="p-4 flex items-center justify-between bg-muted/30">
                   <div className="flex items-center gap-3 flex-1">
                     {/* Thumbnail */}
-                    {doc.file_url && (
+                    {doc.file_url ? (
                       <div className="flex-shrink-0">
-                        <img 
-                          src={doc.file_url} 
+                        <ThumbnailWithSignedUrl 
+                          url={doc.file_url}
                           alt={doc.file_name}
                           className="w-16 h-20 object-cover rounded border border-border"
                         />
                       </div>
-                    )}
-                    {!doc.file_url && (
+                    ) : (
                       <div className="w-16 h-20 flex items-center justify-center bg-muted rounded border border-border">
                         <ImageIcon className="h-6 w-6 text-muted-foreground" />
                       </div>
@@ -306,6 +305,29 @@ export const BatchValidationScreen = ({
         )}
       </div>
     </div>
+  );
+};
+
+// Thumbnail component that uses a signed URL when needed
+const ThumbnailWithSignedUrl = ({
+  url,
+  alt,
+  className,
+}: {
+  url: string;
+  alt: string;
+  className?: string;
+}) => {
+  const { signedUrl } = useSignedUrl(url);
+  return (
+    <img
+      src={signedUrl || url}
+      alt={alt}
+      className={className}
+      onError={(e) => {
+        (e.currentTarget as HTMLImageElement).src = '/placeholder.svg';
+      }}
+    />
   );
 };
 

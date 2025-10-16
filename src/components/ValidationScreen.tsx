@@ -53,8 +53,9 @@ export const ValidationScreen = ({
   const { toast } = useToast();
   const { isAdmin } = useAuth();
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
-  const imageContainerRef = useRef<HTMLDivElement>(null);
-
+const imageContainerRef = useRef<HTMLDivElement>(null);
+const { signedUrl: displayUrl } = useSignedUrl(currentImageUrl);
+const isPdf = fileName?.toLowerCase().endsWith('.pdf');
   // Generate suggestions from extracted text
   useEffect(() => {
     if (extractedText && projectFields.length > 0) {
@@ -336,7 +337,7 @@ export const ValidationScreen = ({
           >
             {currentImageUrl ? (
               <img
-                src={currentImageUrl}
+                src={displayUrl || currentImageUrl}
                 alt="Scanned document"
                 className="w-full h-auto object-contain transition-transform cursor-move"
                 style={{
@@ -355,7 +356,7 @@ export const ValidationScreen = ({
           {showRegionSelector && (
             <div className="mt-4">
               <ImageRegionSelector
-                imageUrl={currentImageUrl}
+                imageUrl={displayUrl || currentImageUrl}
                 onRegionSelected={handleRegionSelected}
                 extractionFields={projectFields}
               />
