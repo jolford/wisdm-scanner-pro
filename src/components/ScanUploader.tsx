@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Upload, Scan, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { isTiffFile, convertTiffToPngDataUrl } from '@/lib/image-utils';
 
 interface ScanUploaderProps {
   onScanComplete: (text: string, imageUrl: string, fileName: string) => void;
@@ -32,15 +33,20 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
       return;
     }
 
-    // TIF/TIFF files are not well supported by browsers
-    // Show a helpful error message
-    if (file.type === 'image/tiff' || file.name.toLowerCase().endsWith('.tif') || file.name.toLowerCase().endsWith('.tiff')) {
-      toast({
-        title: 'TIF Format Not Supported',
-        description: 'Please convert TIF files to JPG, PNG, or WEBP before uploading. You can use free online converters or image editing software.',
-        variant: 'destructive',
-      });
-      return;
+    // Convert TIFF to PNG using UTIF
+    if (isTiffFile(file)) {
+      try {
+        const pngDataUrl = await convertTiffToPngDataUrl(file);
+        onScanComplete('', pngDataUrl, file.name.replace(/\.tiff?$/i, '.png'));
+        return;
+      } catch (e) {
+        toast({
+          title: 'Failed to read TIFF',
+          description: 'Could not decode the TIFF image. Please convert it to PNG or JPG and try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     const reader = new FileReader();
@@ -132,7 +138,7 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
             Drag and drop or click to select files
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Supports JPG, PNG, WEBP, PDF • Multiple files supported
+            Supports JPG, PNG, WEBP, TIFF, PDF • Multiple files supported
           </p>
         </div>
 

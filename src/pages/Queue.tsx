@@ -31,6 +31,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import jsPDF from 'jspdf';
+import { isTiffFile, convertTiffToPngDataUrl } from '@/lib/image-utils';
 
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
@@ -322,20 +323,26 @@ const Queue = () => {
         if (file.type === 'application/pdf') {
           await processPdf(file);
         } else if (file.type.startsWith('image/')) {
-          const reader = new FileReader();
-          await new Promise((resolve, reject) => {
-            reader.onload = async (e) => {
-              try {
-                const imageData = e.target?.result as string;
-                await handleScanComplete('', imageData, file.name);
-                resolve(null);
-              } catch (error) {
-                reject(error);
-              }
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
+          if (isTiffFile(file)) {
+            // Convert TIFF to PNG before sending to OCR
+            const pngDataUrl = await convertTiffToPngDataUrl(file);
+            await handleScanComplete('', pngDataUrl, file.name.replace(/\.tiff?$/i, '.png'));
+          } else {
+            const reader = new FileReader();
+            await new Promise((resolve, reject) => {
+              reader.onload = async (e) => {
+                try {
+                  const imageData = e.target?.result as string;
+                  await handleScanComplete('', imageData, file.name);
+                  resolve(null);
+                } catch (error) {
+                  reject(error);
+                }
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(file);
+            });
+          }
         }
       } catch (error) {
         console.error(`Error processing file ${file.name}:`, error);
