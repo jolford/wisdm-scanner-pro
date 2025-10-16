@@ -105,7 +105,7 @@ export function PricingPDFGenerator() {
     const proFeatures = [
       '50,000 documents/month ($0.014 per document)',
       '15 concurrent users',
-      'Advanced OCR (Gemini Flash)',
+      'Premium OCR (Gemini Pro)',
       'All export formats + PDF generation',
       'Batch validation workflow • Priority support'
     ];
@@ -136,7 +136,7 @@ export function PricingPDFGenerator() {
     const businessFeatures = [
       '200,000 documents/month ($0.010 per document)',
       'Unlimited users',
-      'Premium OCR (Gemini Pro)',
+      'Enterprise OCR (Gemini Pro + Custom Training)',
       'ECM integration (FileBound/DocMgt)',
       'Custom document classes • Dedicated account manager'
     ];
