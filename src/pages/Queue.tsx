@@ -189,70 +189,94 @@ const Queue = () => {
         description: `Found ${boundaries.length} document(s) using ${effectiveConfig.method} separation`,
       });
       
-      // Process each separated document
-      for (let i = 0; i < boundaries.length; i++) {
-        const boundary = boundaries[i];
-        const docName = getDocumentName(file.name, i, boundaries.length);
+      // Process documents in parallel batches for speed
+      const BATCH_SIZE = 8;
+      const processingErrors: string[] = [];
+      
+      for (let batchStart = 0; batchStart < boundaries.length; batchStart += BATCH_SIZE) {
+        const batchEnd = Math.min(batchStart + BATCH_SIZE, boundaries.length);
+        const batch = boundaries.slice(batchStart, batchEnd);
         
-        // Extract text from pages in this boundary
-        let extractedPdfText = '';
-        for (let pageNum = boundary.startPage; pageNum <= boundary.endPage; pageNum++) {
-          try {
-            const page = await pdfDoc.getPage(pageNum);
-            const textContent = await page.getTextContent();
-            const pageText = (textContent.items || [])
-              .map((item: any) => (item && item.str) ? item.str : '')
-              .join(' ');
-            extractedPdfText += pageText + '\n';
-          } catch (e) {
-            console.warn(`Failed to extract text from page ${pageNum}:`, e);
-          }
-        }
-        
-        // If no text extracted, try OCR on first page of document
-        if (!extractedPdfText || extractedPdfText.trim().length < 10) {
-          try {
-            const page = await pdfDoc.getPage(boundary.startPage);
-            let viewport = page.getViewport({ scale: 1.5 });
-            const maxDim = 2000;
-            const scale = Math.min(1.5, maxDim / Math.max(viewport.width, viewport.height));
-            viewport = page.getViewport({ scale });
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = Math.ceil(viewport.width);
-            canvas.height = Math.ceil(viewport.height);
-            if (!ctx) throw new Error('Canvas context not available');
-            await page.render({ canvasContext: ctx as any, viewport }).promise;
-            const dataUrl = canvas.toDataURL('image/png');
+        await Promise.all(
+          batch.map(async (boundary, batchIndex) => {
+            const i = batchStart + batchIndex;
+            const docName = getDocumentName(file.name, i, boundaries.length);
+            
+            try {
+              // Extract text from pages in this boundary
+              let extractedPdfText = '';
+              for (let pageNum = boundary.startPage; pageNum <= boundary.endPage; pageNum++) {
+                try {
+                  const page = await pdfDoc.getPage(pageNum);
+                  const textContent = await page.getTextContent();
+                  const pageText = (textContent.items || [])
+                    .map((item: any) => (item && item.str) ? item.str : '')
+                    .join(' ');
+                  extractedPdfText += pageText + '\n';
+                } catch (e) {
+                  console.warn(`Failed to extract text from page ${pageNum}:`, e);
+                }
+              }
+              
+              // If no text extracted, try OCR on first page of document
+              if (!extractedPdfText || extractedPdfText.trim().length < 10) {
+                try {
+                  const page = await pdfDoc.getPage(boundary.startPage);
+                  let viewport = page.getViewport({ scale: 1.5 });
+                  const maxDim = 2000;
+                  const scale = Math.min(1.5, maxDim / Math.max(viewport.width, viewport.height));
+                  viewport = page.getViewport({ scale });
+                  const canvas = document.createElement('canvas');
+                  const ctx = canvas.getContext('2d');
+                  canvas.width = Math.ceil(viewport.width);
+                  canvas.height = Math.ceil(viewport.height);
+                  if (!ctx) throw new Error('Canvas context not available');
+                  await page.render({ canvasContext: ctx as any, viewport }).promise;
+                  const dataUrl = canvas.toDataURL('image/png');
 
-            const { data, error } = await supabase.functions.invoke('ocr-scan', {
-              body: { 
-                imageData: dataUrl,
-                isPdf: false,
-                extractionFields: selectedProject?.extraction_fields || []
-              },
-            });
-            if (error) throw error;
+                  const { data, error } = await supabase.functions.invoke('ocr-scan', {
+                    body: { 
+                      imageData: dataUrl,
+                      isPdf: false,
+                      extractionFields: selectedProject?.extraction_fields || []
+                    },
+                  });
+                  if (error) throw error;
 
-            await saveDocument(docName, 'application/pdf', dataUrl, data.text, data.metadata || {});
-            continue;
-          } catch (fallbackErr: any) {
-            console.error('PDF OCR fallback failed:', fallbackErr);
-          }
-        }
+                  await saveDocument(docName, 'application/pdf', dataUrl, data.text, data.metadata || {});
+                  return;
+                } catch (fallbackErr: any) {
+                  console.error('PDF OCR fallback failed:', fallbackErr);
+                  throw fallbackErr;
+                }
+              }
 
-        // Process extracted text
-        const { data, error } = await supabase.functions.invoke('ocr-scan', {
-          body: { 
-            textData: extractedPdfText,
-            isPdf: true,
-            extractionFields: selectedProject?.extraction_fields || []
-          },
+              // Process extracted text
+              const { data, error } = await supabase.functions.invoke('ocr-scan', {
+                body: { 
+                  textData: extractedPdfText,
+                  isPdf: true,
+                  extractionFields: selectedProject?.extraction_fields || []
+                },
+              });
+              
+              if (error) throw error;
+              
+              await saveDocument(docName, 'application/pdf', '', data.text, data.metadata || {});
+            } catch (err: any) {
+              console.error(`Failed to process document ${docName}:`, err);
+              processingErrors.push(`${docName}: ${err.message}`);
+            }
+          })
+        );
+      }
+      
+      if (processingErrors.length > 0) {
+        toast({
+          title: 'Some Documents Failed',
+          description: `${processingErrors.length} document(s) failed to process`,
+          variant: 'destructive',
         });
-        
-        if (error) throw error;
-        
-        await saveDocument(docName, 'application/pdf', '', data.text, data.metadata || {});
       }
       
       toast({ 
