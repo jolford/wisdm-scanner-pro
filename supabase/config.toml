@@ -12,3 +12,6 @@ verify_jwt = true
 
 [functions.api-jobs]
 verify_jwt = true
+
+[functions.api-docs-pdf]
+verify_jwt = false
