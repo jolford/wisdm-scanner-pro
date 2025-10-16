@@ -287,9 +287,11 @@ const Batches = () => {
                       <FolderOpen className="h-5 w-5 text-primary" />
                       {batch.batch_name}
                     </h3>
-                    <Badge className={getStatusColor(batch.status)}>
-                      {batch.status}
-                    </Badge>
+                    {batch.status !== 'new' && (
+                      <Badge className={getStatusColor(batch.status)}>
+                        {batch.status}
+                      </Badge>
+                    )}
                   </div>
                   <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                     <Button
@@ -374,9 +376,11 @@ const Batches = () => {
                       <div className="text-muted-foreground">{batch.total_documents} docs</div>
                       <div className="text-primary font-medium">{batch.validated_documents} validated</div>
                     </div>
-                    <Badge className={getStatusColor(batch.status)}>
-                      {batch.status}
-                    </Badge>
+                    {batch.status !== 'new' && (
+                      <Badge className={getStatusColor(batch.status)}>
+                        {batch.status}
+                      </Badge>
+                    )}
                     <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                       <Button
                         size="icon"
