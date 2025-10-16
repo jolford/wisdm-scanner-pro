@@ -799,6 +799,9 @@ const Queue = () => {
                 </h1>
                 <p className="text-xs text-muted-foreground">Scan → Extract → Validate → Export</p>
               </div>
+              <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
+                <span className="text-xs font-semibold text-primary">⚡ POWERED BY AI</span>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Button variant="outline" onClick={() => navigate('/help')} className="gap-2">
