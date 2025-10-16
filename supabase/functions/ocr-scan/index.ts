@@ -37,14 +37,35 @@ serve(async (req) => {
       throw new Error('PDF text extraction required. Please ensure text is extracted before sending.');
     }
 
-    // Build optimized single-call prompt with handwriting support
-    let systemPrompt = 'You are an advanced OCR and ICR (Intelligent Character Recognition) system. Extract all text from documents including printed text, handwritten text, and cursive writing. Be very careful to accurately recognize handwritten characters.';
-    let userPrompt = 'Extract all text from this document, including any handwritten text. Pay special attention to handwritten characters and cursive writing.';
+    // Build optimized single-call prompt with handwriting and barcode support
+    let systemPrompt = 'You are an advanced OCR and ICR (Intelligent Character Recognition) system. Extract all text from documents including printed text, handwritten text, cursive writing, and barcodes. Be very careful to accurately recognize handwritten characters and barcode labels.';
+    let userPrompt = 'Extract all text from this document, including any handwritten text. Pay special attention to handwritten characters, cursive writing, and barcode labels.';
     
     if (extractionFields && extractionFields.length > 0) {
       const fieldNames = extractionFields.map((f: any) => f.name);
-      systemPrompt = `You are an advanced OCR and ICR system that can read both printed and handwritten text. Extract text and return JSON: {"fullText": "complete extracted text", "fields": {${fieldNames.map((n: string) => `"${n}": "value"`).join(', ')}}}. Extract actual values from the document for each field, including handwritten values.`;
-      userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'} including handwritten text and identify: ${fieldNames.join(', ')}. Return as JSON.`;
+      const hasAccessioningField = extractionFields.some((f: any) => 
+        f.name.toLowerCase().includes('accessioning') || 
+        f.name.toLowerCase().includes('requisition')
+      );
+      
+      if (hasAccessioningField) {
+        systemPrompt = `You are an advanced OCR and ICR system specialized in reading barcodes, printed text, and handwritten text. Extract text and return JSON: {"fullText": "complete extracted text", "fields": {${fieldNames.map((n: string) => `"${n}": "value"`).join(', ')}}}. 
+
+CRITICAL INSTRUCTIONS FOR BARCODE/ACCESSIONING NUMBER EXTRACTION:
+1. Look for barcode labels or stickers, typically in the upper right corner of forms
+2. Accessioning/Requisition numbers usually follow formats like: CL####-######## or EN####-########
+3. Read the human-readable text below or adjacent to the barcode - this is the most accurate source
+4. Double-check each digit and hyphen for accuracy
+5. Common patterns: CL2021-00353877, EN2022-12345678
+6. Ignore OCR noise near barcodes - focus on clear, consistently formatted numbers
+7. If you see a barcode label section with "Requisition Label" or similar, that's where the accessioning number is located
+
+Extract actual values from the document for each field with extreme precision for accessioning numbers.`;
+        userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'}. CRITICAL: Locate and accurately read the BARCODE LABEL or REQUISITION LABEL (usually upper right corner). The accessioning number follows a format like CL####-######## or EN####-########. Read the human-readable text carefully, verifying each digit. Also extract: ${fieldNames.join(', ')}. Return as JSON with extreme accuracy for the accessioning number.`;
+      } else {
+        systemPrompt = `You are an advanced OCR and ICR system that can read both printed and handwritten text. Extract text and return JSON: {"fullText": "complete extracted text", "fields": {${fieldNames.map((n: string) => `"${n}": "value"`).join(', ')}}}. Extract actual values from the document for each field, including handwritten values.`;
+        userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'} including handwritten text and identify: ${fieldNames.join(', ')}. Return as JSON.`;
+      }
     }
 
     // Single AI call for everything
