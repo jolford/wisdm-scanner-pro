@@ -1,1 +1,14 @@
 project_id = "pbyerakkryuflamlmpvm"
+
+# REST API Functions
+[functions.api-documents]
+verify_jwt = true
+
+[functions.api-batches]
+verify_jwt = true
+
+[functions.api-analytics]
+verify_jwt = true
+
+[functions.api-jobs]
+verify_jwt = true
