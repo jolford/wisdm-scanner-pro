@@ -12,6 +12,12 @@ import {
   Building2,
   Key,
   Calendar,
+  DollarSign,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  XCircle,
+  Activity,
 } from 'lucide-react';
 import {
   Select,
@@ -20,6 +26,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from '@/components/ui/chart';
+import { Bar, BarChart, Line, LineChart, Pie, PieChart, Cell, XAxis, YAxis, CartesianGrid, Legend, ResponsiveContainer } from 'recharts';
 
 interface Analytics {
   totalDocuments: number;
@@ -32,6 +46,22 @@ interface Analytics {
   documentsThisWeek: number;
   topProjects: Array<{ name: string; count: number }>;
   recentActivity: Array<{ date: string; count: number }>;
+  jobMetrics: {
+    total: number;
+    completed: number;
+    failed: number;
+    pending: number;
+    processing: number;
+    avgProcessingTime: number;
+  };
+  costMetrics: {
+    totalCost: number;
+    avgCostPerDoc: number;
+    topSpenders: Array<{ customer: string; cost: number }>;
+  };
+  dailyActivity: Array<{ date: string; documents: number; jobs: number }>;
+  statusBreakdown: Array<{ status: string; count: number }>;
+  errorRate: number;
 }
 
 const Analytics = () => {
@@ -60,6 +90,10 @@ const Analytics = () => {
         docsThisMonth,
         docsThisWeek,
         projectStats,
+        jobStats,
+        costData,
+        dailyDocs,
+        statusData,
       ] = await Promise.all([
         supabase.from('documents').select('id', { count: 'exact', head: true }),
         supabase
@@ -88,6 +122,22 @@ const Analytics = () => {
           .from('documents')
           .select('project_id, projects!inner(name)')
           .gte('created_at', daysAgo.toISOString()),
+        supabase
+          .from('jobs')
+          .select('status, created_at, completed_at, started_at')
+          .gte('created_at', daysAgo.toISOString()),
+        supabase
+          .from('tenant_usage')
+          .select('customer_id, total_cost_usd, documents_processed, customers!inner(company_name)')
+          .gte('period_start', daysAgo.toISOString()),
+        supabase
+          .from('documents')
+          .select('created_at')
+          .gte('created_at', daysAgo.toISOString()),
+        supabase
+          .from('documents')
+          .select('validation_status')
+          .gte('created_at', daysAgo.toISOString()),
       ]);
 
       // Calculate top projects
@@ -102,6 +152,93 @@ const Analytics = () => {
         .sort((a, b) => b.count - a.count)
         .slice(0, 5);
 
+      // Calculate job metrics
+      const jobs = jobStats.data || [];
+      const completedJobs = jobs.filter(j => j.status === 'completed');
+      const processingTimes = completedJobs
+        .map(j => {
+          if (j.started_at && j.completed_at) {
+            return new Date(j.completed_at).getTime() - new Date(j.started_at).getTime();
+          }
+          return 0;
+        })
+        .filter(t => t > 0);
+
+      const avgProcessingTime = processingTimes.length > 0
+        ? processingTimes.reduce((a, b) => a + b, 0) / processingTimes.length
+        : 0;
+
+      const jobMetrics = {
+        total: jobs.length,
+        completed: jobs.filter(j => j.status === 'completed').length,
+        failed: jobs.filter(j => j.status === 'failed').length,
+        pending: jobs.filter(j => j.status === 'pending').length,
+        processing: jobs.filter(j => j.status === 'processing').length,
+        avgProcessingTime: Math.round(avgProcessingTime / 1000), // in seconds
+      };
+
+      // Calculate cost metrics
+      const costs = costData.data || [];
+      const totalCost = costs.reduce((sum, c) => sum + (Number(c.total_cost_usd) || 0), 0);
+      const totalDocs = costs.reduce((sum, c) => sum + (c.documents_processed || 0), 0);
+      
+      const customerCosts: Record<string, number> = {};
+      costs.forEach((c: any) => {
+        const name = c.customers?.company_name || 'Unknown';
+        customerCosts[name] = (customerCosts[name] || 0) + Number(c.total_cost_usd || 0);
+      });
+
+      const topSpenders = Object.entries(customerCosts)
+        .map(([customer, cost]) => ({ customer, cost }))
+        .sort((a, b) => b.cost - a.cost)
+        .slice(0, 5);
+
+      const costMetrics = {
+        totalCost,
+        avgCostPerDoc: totalDocs > 0 ? totalCost / totalDocs : 0,
+        topSpenders,
+      };
+
+      // Calculate daily activity
+      const dailyDocCounts: Record<string, number> = {};
+      const dailyJobCounts: Record<string, number> = {};
+      
+      (dailyDocs.data || []).forEach(doc => {
+        const date = new Date(doc.created_at).toISOString().split('T')[0];
+        dailyDocCounts[date] = (dailyDocCounts[date] || 0) + 1;
+      });
+
+      jobs.forEach(job => {
+        const date = new Date(job.created_at).toISOString().split('T')[0];
+        dailyJobCounts[date] = (dailyJobCounts[date] || 0) + 1;
+      });
+
+      const allDates = new Set([...Object.keys(dailyDocCounts), ...Object.keys(dailyJobCounts)]);
+      const dailyActivity = Array.from(allDates)
+        .sort()
+        .slice(-14)
+        .map(date => ({
+          date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+          documents: dailyDocCounts[date] || 0,
+          jobs: dailyJobCounts[date] || 0,
+        }));
+
+      // Calculate status breakdown
+      const statusCounts: Record<string, number> = {};
+      (statusData.data || []).forEach(doc => {
+        const status = doc.validation_status || 'pending';
+        statusCounts[status] = (statusCounts[status] || 0) + 1;
+      });
+
+      const statusBreakdown = Object.entries(statusCounts).map(([status, count]) => ({
+        status: status.charAt(0).toUpperCase() + status.slice(1),
+        count,
+      }));
+
+      const errorRate = docsTotal.count && docsTotal.count > 0
+        ? ((jobMetrics.failed / jobMetrics.total) * 100)
+        : 0;
+
       setAnalytics({
         totalDocuments: docsTotal.count || 0,
         validatedDocuments: docsValidated.count || 0,
@@ -113,6 +250,11 @@ const Analytics = () => {
         documentsThisWeek: docsThisWeek.count || 0,
         topProjects,
         recentActivity: [],
+        jobMetrics,
+        costMetrics,
+        dailyActivity,
+        statusBreakdown,
+        errorRate,
       });
     } catch (error: any) {
       toast.error('Failed to load analytics: ' + error.message);
@@ -131,10 +273,17 @@ const Analytics = () => {
     ? ((analytics.validatedDocuments / analytics.totalDocuments) * 100).toFixed(1)
     : '0';
 
+  const chartConfig = {
+    documents: { label: 'Documents', color: 'hsl(var(--primary))' },
+    jobs: { label: 'Jobs', color: 'hsl(var(--accent))' },
+  };
+
+  const statusColors = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(142 76% 36%)', 'hsl(48 96% 53%)'];
+
   return (
     <AdminLayout
       title="Analytics & Reports"
-      description="Track performance and usage metrics"
+      description="Comprehensive performance and usage metrics"
     >
       <div className="space-y-6">
         {/* Time Range Selector */}
@@ -153,7 +302,7 @@ const Analytics = () => {
         </div>
 
         {/* Overview Stats */}
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-4 gap-6">
           <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-primary/10 rounded-lg">
@@ -187,14 +336,108 @@ const Analytics = () => {
           <Card className="p-6 bg-gradient-to-br from-accent/5 to-accent/10 border-accent/20">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-accent/10 rounded-lg">
-                <Calendar className="h-6 w-6 text-accent" />
+                <DollarSign className="h-6 w-6 text-accent" />
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">This Month</p>
-                <p className="text-3xl font-bold">{analytics.documentsThisMonth}</p>
-                <p className="text-xs text-muted-foreground mt-1">documents processed</p>
+                <p className="text-sm text-muted-foreground">Total Cost</p>
+                <p className="text-3xl font-bold">${analytics.costMetrics.totalCost.toFixed(2)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ${analytics.costMetrics.avgCostPerDoc.toFixed(4)}/doc
+                </p>
               </div>
             </div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-br from-orange-500/5 to-orange-500/10 border-orange-500/20">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-orange-500/10 rounded-lg">
+                <AlertTriangle className="h-6 w-6 text-orange-600" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Error Rate</p>
+                <p className="text-3xl font-bold">{analytics.errorRate.toFixed(1)}%</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {analytics.jobMetrics.failed} failed jobs
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+
+        {/* Job Performance Metrics */}
+        <div className="grid md:grid-cols-4 gap-6">
+          <Card className="p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <Activity className="h-5 w-5 text-primary" />
+              <p className="text-sm text-muted-foreground">Total Jobs</p>
+            </div>
+            <p className="text-2xl font-bold">{analytics.jobMetrics.total}</p>
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <p className="text-sm text-muted-foreground">Completed</p>
+            </div>
+            <p className="text-2xl font-bold">{analytics.jobMetrics.completed}</p>
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <XCircle className="h-5 w-5 text-red-600" />
+              <p className="text-sm text-muted-foreground">Failed</p>
+            </div>
+            <p className="text-2xl font-bold">{analytics.jobMetrics.failed}</p>
+          </Card>
+
+          <Card className="p-6">
+            <div className="flex items-center gap-3 mb-2">
+              <Clock className="h-5 w-5 text-accent" />
+              <p className="text-sm text-muted-foreground">Avg Processing</p>
+            </div>
+            <p className="text-2xl font-bold">{analytics.jobMetrics.avgProcessingTime}s</p>
+          </Card>
+        </div>
+
+        {/* Charts Section */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Daily Activity Chart */}
+          <Card className="p-6">
+            <h3 className="text-lg font-bold mb-4">Daily Activity (Last 14 Days)</h3>
+            <ChartContainer config={chartConfig} className="h-[300px]">
+              <BarChart data={analytics.dailyActivity}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <ChartLegend content={<ChartLegendContent />} />
+                <Bar dataKey="documents" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="jobs" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ChartContainer>
+          </Card>
+
+          {/* Status Breakdown Pie Chart */}
+          <Card className="p-6">
+            <h3 className="text-lg font-bold mb-4">Document Status Distribution</h3>
+            <ChartContainer config={chartConfig} className="h-[300px]">
+              <PieChart>
+                <Pie
+                  data={analytics.statusBreakdown}
+                  dataKey="count"
+                  nameKey="status"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={100}
+                  label={(entry) => `${entry.status}: ${entry.count}`}
+                >
+                  {analytics.statusBreakdown.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={statusColors[index % statusColors.length]} />
+                  ))}
+                </Pie>
+                <ChartTooltip content={<ChartTooltipContent />} />
+              </PieChart>
+            </ChartContainer>
           </Card>
         </div>
 
