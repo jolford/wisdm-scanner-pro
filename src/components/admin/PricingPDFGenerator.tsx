@@ -21,7 +21,14 @@ export function PricingPDFGenerator() {
     const logoHeight = (img.height / img.width) * logoWidth;
     pdf.addImage(img, 'PNG', (pageWidth - logoWidth) / 2, 15, logoWidth, logoHeight);
     
+    // "Powered by AI" badge below logo
+    pdf.setFontSize(9);
+    pdf.setTextColor(59, 130, 246);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('⚡ POWERED BY AI', pageWidth / 2, 15 + logoHeight + 3, { align: 'center' });
+    
     // Title
+    pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(24);
     pdf.setTextColor(31, 41, 55);
     pdf.text('WISDM Scanner Pro', pageWidth / 2, 45, { align: 'center' });
