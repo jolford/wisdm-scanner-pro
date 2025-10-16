@@ -357,8 +357,31 @@ const ThumbnailWithSignedUrl = ({
         await page.render({ canvasContext: context, viewport: scaledVp }).promise;
         setThumb(canvas.toDataURL('image/png'));
       } catch (e) {
-        console.warn('Thumbnail render failed, falling back to direct image', e);
-        setThumb(src);
+        console.warn('Thumbnail render failed, trying URL method', e);
+        try {
+          const loadingTask = pdfjsLib.getDocument({ url: src });
+          const pdf = await loadingTask.promise;
+          const page = await pdf.getPage(1);
+          const viewport = page.getViewport({ scale: 0.5 });
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          if (!context) { setThumb(null); return; }
+          const targetWidth = 64;
+          const scale = targetWidth / viewport.width;
+          const scaledVp = page.getViewport({ scale });
+          canvas.width = Math.round(scaledVp.width);
+          canvas.height = Math.round(scaledVp.height);
+          await page.render({ canvasContext: context, viewport: scaledVp }).promise;
+          setThumb(canvas.toDataURL('image/png'));
+        } catch (e2) {
+          console.warn('Thumbnail URL render failed, falling back', e2);
+          // If it's a PDF, prefer showing the icon placeholder
+          if (looksPdfByName) {
+            setThumb(null);
+          } else {
+            setThumb(src);
+          }
+        }
       }
     };
     makeThumb();
@@ -416,8 +439,21 @@ const ImageRegionSelectorWithSignedUrl = ({
         await page.render({ canvasContext: ctx, viewport }).promise;
         setPreview(canvas.toDataURL('image/png'));
       } catch (e) {
-        // Not a PDF or render failed; fall back to showing the image directly
-        setPreview(signedUrl);
+        try {
+          const loadingTask = pdfjsLib.getDocument({ url: signedUrl });
+          const pdf = await loadingTask.promise;
+          const page = await pdf.getPage(1);
+          const viewport = page.getViewport({ scale: 1.2 });
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { setPreview(null); return; }
+          canvas.width = Math.round(viewport.width);
+          canvas.height = Math.round(viewport.height);
+          await page.render({ canvasContext: ctx, viewport }).promise;
+          setPreview(canvas.toDataURL('image/png'));
+        } catch (e2) {
+          setPreview(null);
+        }
       }
     };
     run();
