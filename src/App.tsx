@@ -32,7 +32,7 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light">{/* Force light mode only */}
       <div className="flex flex-col min-h-screen">
         <Toaster />
         <Sonner />

@@ -17,7 +17,6 @@ import {
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   Sidebar,
   SidebarContent,
@@ -146,7 +145,6 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
                     )}
                   </div>
                 </div>
-                <ThemeToggle />
               </div>
             </div>
           </header>
