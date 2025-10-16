@@ -171,6 +171,24 @@ const Queue = () => {
     setIsProcessing(true);
     
     try {
+      // First, upload the original PDF file to storage
+      const fileName = `${selectedBatchId}/${Date.now()}_${file.name}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(fileName, file, {
+          contentType: 'application/pdf',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw new Error(`Failed to upload PDF: ${uploadError.message}`);
+      }
+
+      // Get public URL for the uploaded PDF
+      const { data: { publicUrl } } = supabase.storage
+        .from('documents')
+        .getPublicUrl(fileName);
+
       // Get separation config from project
       const separationConfig: SeparationConfig = (selectedProject as any)?.metadata?.separation_config || { method: 'page_count', pagesPerDocument: 1 } as SeparationConfig;
       
@@ -244,7 +262,8 @@ const Queue = () => {
                   });
                   if (error) throw error;
 
-                  await saveDocument(docName, 'application/pdf', dataUrl, data.text, data.metadata || {});
+                  // Use the original PDF URL for the file_url, not the temporary dataUrl
+                  await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {});
                   return;
                 } catch (fallbackErr: any) {
                   console.error('PDF OCR fallback failed:', fallbackErr);
@@ -263,7 +282,8 @@ const Queue = () => {
               
               if (error) throw error;
               
-              await saveDocument(docName, 'application/pdf', '', data.text, data.metadata || {});
+              // Use the original PDF URL for the file_url
+              await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {});
             } catch (err: any) {
               console.error(`Failed to process document ${docName}:`, err);
               processingErrors.push(`${docName}: ${err.message}`);

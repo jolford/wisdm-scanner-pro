@@ -170,6 +170,24 @@ const Index = () => {
     setIsProcessing(true);
     
     try {
+      // First, upload the PDF file to storage
+      const fileName = `${selectedBatchId}/${Date.now()}_${file.name}`;
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(fileName, file, {
+          contentType: 'application/pdf',
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw new Error(`Failed to upload PDF: ${uploadError.message}`);
+      }
+
+      // Get public URL for the uploaded PDF
+      const { data: { publicUrl } } = supabase.storage
+        .from('documents')
+        .getPublicUrl(fileName);
+
       // Fast path: extract text from PDF using pdfjs for small, text-based PDFs
       let arrayBuffer: ArrayBuffer | null = null;
       let extractedPdfText = '';
@@ -203,7 +221,7 @@ const Index = () => {
 
         setExtractedText(data.text);
         setExtractedMetadata(data.metadata || {});
-        await saveDocument(file.name, 'application/pdf', '', data.text, data.metadata || {});
+        await saveDocument(file.name, 'application/pdf', publicUrl, data.text, data.metadata || {});
         toast({ title: 'PDF Processed', description: 'Extracted text and fields from PDF.' });
       } else {
         // Fallback: render first PDF page to image and run OCR
@@ -237,7 +255,7 @@ const Index = () => {
           setCurrentImage(dataUrl);
           setExtractedText(data.text);
           setExtractedMetadata(data.metadata || {});
-          await saveDocument(file.name, 'application/pdf', dataUrl, data.text, data.metadata || {});
+          await saveDocument(file.name, 'application/pdf', publicUrl, data.text, data.metadata || {});
           toast({ title: 'PDF Processed via OCR', description: 'Extracted text from rendered PDF page.' });
         } catch (fallbackErr: any) {
           console.error('PDF image OCR fallback failed:', fallbackErr);
