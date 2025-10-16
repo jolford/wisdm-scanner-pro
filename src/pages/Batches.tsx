@@ -321,7 +321,7 @@ const Batches = () => {
 
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Calendar className="h-4 w-4" />
-                    <span>{new Date(batch.created_at).toLocaleDateString()}</span>
+                    <span>{new Date(batch.created_at).toLocaleString()}</span>
                   </div>
 
                   <div className="flex items-center gap-2 text-muted-foreground">
@@ -361,7 +361,7 @@ const Batches = () => {
                         </span>
                         <span className="flex items-center gap-1">
                           <Calendar className="h-3 w-3" />
-                          {new Date(batch.created_at).toLocaleDateString()}
+                          {new Date(batch.created_at).toLocaleString()}
                         </span>
                         <span className="flex items-center gap-1">
                           <User className="h-3 w-3" />
