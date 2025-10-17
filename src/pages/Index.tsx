@@ -31,6 +31,7 @@ const Index = () => {
   const { license, hasCapacity, consumeDocuments } = useLicense();
   const [extractedText, setExtractedText] = useState('');
   const [extractedMetadata, setExtractedMetadata] = useState<Record<string, string>>({});
+  const [boundingBoxes, setBoundingBoxes] = useState<Record<string, any>>({});
   const [currentImage, setCurrentImage] = useState('');
   const [currentFileName, setCurrentFileName] = useState('');
   const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
@@ -232,6 +233,7 @@ const Index = () => {
 
         setExtractedText(data.text);
         setExtractedMetadata(data.metadata || {});
+        setBoundingBoxes(data.boundingBoxes || {});
         await saveDocument(file.name, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || []);
         toast({ title: 'PDF Processed', description: 'Extracted text and fields from PDF.' });
       } else {
@@ -271,6 +273,7 @@ const Index = () => {
           setCurrentImage(dataUrl);
           setExtractedText(data.text);
           setExtractedMetadata(data.metadata || {});
+          setBoundingBoxes(data.boundingBoxes || {});
           await saveDocument(file.name, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || []);
           toast({ title: 'PDF Processed via OCR', description: 'Extracted text from rendered PDF page.' });
         } catch (fallbackErr: any) {
@@ -331,6 +334,7 @@ const Index = () => {
 
       setExtractedText(data.text);
       setExtractedMetadata(data.metadata || {});
+      setBoundingBoxes(data.boundingBoxes || {});
       
       // Save document with line items
       await saveDocument(fileName, 'image', imageUrl, data.text, data.metadata || {}, data.lineItems || []);
@@ -372,6 +376,7 @@ const Index = () => {
   const handleReset = () => {
     setExtractedText('');
     setExtractedMetadata({});
+    setBoundingBoxes({});
     setCurrentImage('');
     setCurrentFileName('');
     setCurrentDocumentId(null);
@@ -501,6 +506,7 @@ const Index = () => {
             fileName={currentFileName}
             extractedText={extractedText}
             metadata={extractedMetadata}
+            boundingBoxes={boundingBoxes}
             projectFields={selectedProject?.extraction_fields || []}
             onValidate={handleValidation}
             onSkip={handleReset}

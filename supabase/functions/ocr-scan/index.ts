@@ -38,9 +38,9 @@ serve(async (req) => {
       throw new Error('PDF text extraction required. Please ensure text is extracted before sending.');
     }
 
-    // Build optimized single-call prompt with handwriting, barcode, classification, and table extraction support
-    let systemPrompt = 'You are an advanced OCR, ICR, and document classification system. Extract all text from documents including printed text, handwritten text, cursive writing, and barcodes. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other). Be very careful to accurately recognize handwritten characters and barcode labels.';
-    let userPrompt = 'Extract all text from this document, including any handwritten text. Classify the document type. Pay special attention to handwritten characters, cursive writing, and barcode labels.';
+    // Build optimized single-call prompt with handwriting, barcode, classification, table extraction, and bounding box support
+    let systemPrompt = 'You are an advanced OCR, ICR, and document classification system. Extract all text from documents including printed text, handwritten text, cursive writing, and barcodes. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other). Be very careful to accurately recognize handwritten characters and barcode labels. For each extracted field, provide approximate bounding box coordinates (x, y, width, height) as percentages of the document dimensions (0-100).';
+    let userPrompt = 'Extract all text from this document, including any handwritten text. Classify the document type. Pay special attention to handwritten characters, cursive writing, and barcode labels. For each field value, estimate its location on the document as bounding box coordinates.';
     
     // Determine if we need table extraction
     const hasTableExtraction = tableExtractionFields && Array.isArray(tableExtractionFields) && tableExtractionFields.length > 0;
@@ -53,12 +53,12 @@ serve(async (req) => {
       );
       
       if (hasAccessioningField) {
-        const baseJson = `{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": "value"`).join(', ')}}}`;
+        const baseJson = `{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}}`;
         const tableJson = hasTableExtraction 
           ? `, "lineItems": [{${tableExtractionFields.map((f: any) => `"${f.name}": "value"`).join(', ')}}]`
           : '';
         
-        systemPrompt = `You are an advanced OCR, ICR, and document classification system specialized in reading barcodes, printed text, and handwritten text. Extract text and return JSON: ${baseJson.slice(0, -1)}${tableJson}}.
+        systemPrompt = `You are an advanced OCR, ICR, and document classification system specialized in reading barcodes, printed text, and handwritten text. Extract text and return JSON: ${baseJson.slice(0, -1)}${tableJson}}. For each field, provide value and bbox (bounding box) as percentages of document dimensions.
 
 CRITICAL INSTRUCTIONS FOR BARCODE/ACCESSIONING NUMBER EXTRACTION:
 1. Look for barcode labels or stickers, typically in the upper right corner of forms
@@ -78,12 +78,12 @@ Extract actual values from the document for each field with extreme precision fo
 
         userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'}. CRITICAL: Locate and accurately read the BARCODE LABEL or REQUISITION LABEL (usually upper right corner). The accessioning number follows a format like CL####-######## or EN####-########. Read the human-readable text carefully, verifying each digit. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other). Also extract: ${fieldNames.join(', ')}.${tableInstructions} Return as JSON with extreme accuracy for the accessioning number and document classification.`;
       } else {
-        const baseJson = `{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": "value"`).join(', ')}}}`;
+        const baseJson = `{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}}`;
         const tableJson = hasTableExtraction 
           ? `, "lineItems": [{${tableExtractionFields.map((f: any) => `"${f.name}": "value"`).join(', ')}}]`
           : '';
         
-        systemPrompt = `You are an advanced OCR, ICR, and document classification system that can read both printed and handwritten text. Extract text and return JSON: ${baseJson.slice(0, -1)}${tableJson}}. Extract actual values from the document for each field, including handwritten values. Classify the document type based on its structure and content.`;
+        systemPrompt = `You are an advanced OCR, ICR, and document classification system that can read both printed and handwritten text. Extract text and return JSON: ${baseJson.slice(0, -1)}${tableJson}}. For each field, provide value and bbox (bounding box) as percentages of document dimensions. Extract actual values from the document for each field, including handwritten values. Classify the document type based on its structure and content.`;
         
         let tableInstructions = '';
         if (hasTableExtraction) {
@@ -197,7 +197,16 @@ Extract actual values from the document for each field with extreme precision fo
         confidence = parsed.confidence || 0;
         
         if (extractionFields && extractionFields.length > 0) {
-          metadata = parsed.fields || {};
+          // Handle both old format (string values) and new format (objects with value and bbox)
+          const fields = parsed.fields || {};
+          metadata = {};
+          Object.keys(fields).forEach(key => {
+            if (typeof fields[key] === 'string') {
+              metadata[key] = fields[key];
+            } else if (fields[key] && typeof fields[key] === 'object') {
+              metadata[key] = fields[key].value || fields[key];
+            }
+          });
         }
         
         if (hasTableExtraction && parsed.lineItems) {
@@ -211,13 +220,32 @@ Extract actual values from the document for each field with extreme precision fo
 
     console.log('OCR completed - Document Type:', documentType, 'Confidence:', confidence, 'Metadata:', metadata, 'Line Items:', lineItems.length);
 
+    // Extract bounding boxes if available
+    let fieldBoundingBoxes: Record<string, any> = {};
+    try {
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (parsed.fields) {
+          Object.keys(parsed.fields).forEach(key => {
+            if (parsed.fields[key] && typeof parsed.fields[key] === 'object' && parsed.fields[key].bbox) {
+              fieldBoundingBoxes[key] = parsed.fields[key].bbox;
+            }
+          });
+        }
+      }
+    } catch (e) {
+      console.log('No bounding boxes extracted');
+    }
+
     return new Response(
       JSON.stringify({ 
         text: extractedText,
         metadata: metadata,
         lineItems: lineItems,
         documentType: documentType,
-        confidence: confidence
+        confidence: confidence,
+        boundingBoxes: fieldBoundingBoxes
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

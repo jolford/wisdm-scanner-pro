@@ -13,6 +13,7 @@ import { safeErrorMessage } from '@/lib/error-handler';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ImageRegionSelector } from './ImageRegionSelector';
 import { RedactionTool } from './RedactionTool';
+import { InteractiveDocumentViewer } from './InteractiveDocumentViewer';
 import { useAuth } from '@/hooks/use-auth';
 import { useSignedUrl } from '@/hooks/use-signed-url';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
@@ -31,6 +32,7 @@ interface ValidationScreenProps {
   extractedText: string;
   metadata: Record<string, string>;
   projectFields: Array<{ name: string; description: string }>;
+  boundingBoxes?: Record<string, { x: number; y: number; width: number; height: number }>;
   onValidate: (status: 'validated' | 'rejected', metadata: Record<string, string>) => void;
   onSkip: () => void;
   onSwitchToExport?: () => void;
@@ -43,6 +45,7 @@ export const ValidationScreen = ({
   extractedText,
   metadata,
   projectFields,
+  boundingBoxes = {},
   onValidate,
   onSkip,
   onSwitchToExport,
@@ -58,6 +61,8 @@ export const ValidationScreen = ({
   const [showRegionSelector, setShowRegionSelector] = useState(false);
   const [showRedactionTool, setShowRedactionTool] = useState(false);
   const [currentImageUrl, setCurrentImageUrl] = useState(imageUrl);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [useInteractiveViewer, setUseInteractiveViewer] = useState(true);
   const { toast } = useToast();
   const { isAdmin } = useAuth();
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
@@ -204,6 +209,34 @@ useEffect(() => {
     });
   };
 
+  const handleRegionClick = async (x: number, y: number) => {
+    toast({
+      title: 'Extracting text...',
+      description: `Extracting text at position (${x.toFixed(1)}%, ${y.toFixed(1)}%)`,
+    });
+    
+    // In a real implementation, you would:
+    // 1. Send the coordinates to an OCR service
+    // 2. Get back the text at that position
+    // 3. Populate the focused field with the extracted text
+    
+    // For now, we'll show a placeholder
+    toast({
+      title: 'Feature Coming Soon',
+      description: 'Point-and-click text extraction will be available in the next update',
+    });
+  };
+
+  const handleFieldFocus = (fieldName: string) => {
+    setFocusedField(fieldName);
+    // Scroll to the field in the form
+    const fieldElement = document.getElementById(fieldName);
+    if (fieldElement) {
+      fieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      fieldElement.focus();
+    }
+  };
+
   const handleRegionSelected = (newMetadata: Record<string, string>) => {
     // Merge new metadata with existing
     const mergedMetadata = { ...editedMetadata, ...newMetadata };
@@ -278,15 +311,25 @@ useEffect(() => {
   return (
     <TooltipProvider>
       <div className="grid grid-cols-[2fr_1fr_2fr] gap-6 h-[calc(100vh-12rem)]">
-        {/* Left: Document Image with Controls */}
-        <Card className="p-6 flex flex-col">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold flex items-center gap-2">
-              <ImageIcon className="h-4 w-4" />
-              Original Document
-            </h3>
-            <Badge variant="outline">{fileName}</Badge>
-          </div>
+        {/* Left: Document Image with Highlights or Traditional View */}
+        {useInteractiveViewer && Object.keys(boundingBoxes).length > 0 ? (
+          <InteractiveDocumentViewer
+            imageUrl={previewUrl || displayUrl || currentImageUrl}
+            fileName={fileName}
+            boundingBoxes={boundingBoxes}
+            onFieldClick={handleFieldFocus}
+            onRegionClick={handleRegionClick}
+            highlightedField={focusedField}
+          />
+        ) : (
+          <Card className="p-6 flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold flex items-center gap-2">
+                <ImageIcon className="h-4 w-4" />
+                Original Document
+              </h3>
+              <Badge variant="outline">{fileName}</Badge>
+            </div>
           
           {/* Image Controls */}
           <div className="flex gap-2 mb-4">
@@ -414,6 +457,7 @@ useEffect(() => {
             </div>
           )}
         </Card>
+        )}
 
       {/* Middle: Extracted Text with Selection */}
       <Card className="p-6 flex flex-col">
@@ -460,6 +504,8 @@ useEffect(() => {
                   id={field.name}
                   value={editedMetadata[field.name] || ''}
                   onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                  onFocus={() => setFocusedField(field.name)}
+                  onBlur={() => setFocusedField(null)}
                   placeholder={`Enter ${field.name}`}
                   maxLength={500}
                   className={`${fieldErrors[field.name] ? 'border-destructive' : ''}`}
