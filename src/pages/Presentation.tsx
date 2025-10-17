@@ -108,9 +108,9 @@ const slides = [
           <div className="space-y-3">
             <h4 className="text-lg font-semibold text-primary">OCR & Recognition</h4>
             <ul className="space-y-2 text-muted-foreground text-sm">
-              <li>• 99.5% accuracy using Google Gemini & OpenAI GPT</li>
+              <li>• 99.5% accuracy using Google Gemini Pro</li>
               <li>• Multi-language support</li>
-              <li>• Handwriting recognition</li>
+              <li>• Handwriting & cursive recognition</li>
               <li>• Barcode & QR code scanning</li>
             </ul>
           </div>
@@ -119,10 +119,39 @@ const slides = [
             <ul className="space-y-2 text-muted-foreground text-sm">
               <li>• Automatic field detection</li>
               <li>• Custom metadata extraction</li>
-              <li>• Document classification</li>
-              <li>• Intelligent separation</li>
+              <li>• Smart document separation</li>
+              <li>• Region-specific re-processing</li>
             </ul>
           </div>
+        </div>
+        <div className="mt-6 p-4 border-2 border-primary rounded-lg bg-primary/5">
+          <h4 className="text-lg font-semibold text-primary mb-3">Automatic Document Classification</h4>
+          <div className="grid grid-cols-4 gap-3 text-sm">
+            <div className="p-2 bg-background rounded text-center">
+              <div className="font-semibold">Invoices</div>
+            </div>
+            <div className="p-2 bg-background rounded text-center">
+              <div className="font-semibold">Receipts</div>
+            </div>
+            <div className="p-2 bg-background rounded text-center">
+              <div className="font-semibold">Purchase Orders</div>
+            </div>
+            <div className="p-2 bg-background rounded text-center">
+              <div className="font-semibold">Checks</div>
+            </div>
+            <div className="p-2 bg-background rounded text-center">
+              <div className="font-semibold">Forms</div>
+            </div>
+            <div className="p-2 bg-background rounded text-center">
+              <div className="font-semibold">Letters</div>
+            </div>
+            <div className="p-2 bg-background rounded text-center col-span-2">
+              <div className="font-semibold">+ More Document Types</div>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            AI automatically identifies document types with confidence scores during OCR processing
+          </p>
         </div>
       </div>
     ),
