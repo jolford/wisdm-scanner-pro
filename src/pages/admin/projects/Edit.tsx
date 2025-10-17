@@ -18,6 +18,7 @@ import { ECMExportConfig } from '@/components/admin/ECMExportConfig';
 import { DocumentSeparationConfig, SeparationConfig } from '@/components/admin/DocumentSeparationConfig';
 import { FolderPicker } from '@/components/admin/FolderPicker';
 import { ScheduledExportConfig } from '@/components/admin/ScheduledExportConfig';
+import { TableExtractionConfig, TableExtractionConfig as TableConfig } from '@/components/admin/TableExtractionConfig';
 
 interface ExtractionField {
   name: string;
@@ -78,6 +79,11 @@ const EditProject = () => {
     barcodePatterns: ['SEPARATOR', 'DIVIDER'],
     blankPageThreshold: 95,
     pagesPerDocument: 1,
+  });
+
+  const [tableExtractionConfig, setTableExtractionConfig] = useState<TableConfig>({
+    enabled: false,
+    fields: [],
   });
 
   useEffect(() => {
@@ -147,6 +153,11 @@ const EditProject = () => {
         // Set separation config from metadata
         if (projectData.metadata?.separation_config) {
           setSeparationConfig(projectData.metadata.separation_config);
+        }
+
+        // Set table extraction config from metadata
+        if (projectData.metadata?.table_extraction_config) {
+          setTableExtractionConfig(projectData.metadata.table_extraction_config);
         }
       }
     } catch (error) {
@@ -237,7 +248,8 @@ const EditProject = () => {
             metadata: { 
               export_config: exportConfig,
               separation_config: separationConfig,
-              document_naming_pattern: documentNamingPattern 
+              document_naming_pattern: documentNamingPattern,
+              table_extraction_config: tableExtractionConfig
             } 
           } as any)
           .eq('id', id);
@@ -399,6 +411,19 @@ const EditProject = () => {
               <p className="text-sm text-muted-foreground mt-2">
                 Define the specific data fields you want to extract from documents in this project.
                 For example: Invoice Number, Date, Amount, Vendor Name, etc.
+              </p>
+            </div>
+
+            <div>
+              <Label className="mb-4 block">Line Item Table Extraction</Label>
+              <Card className="p-4 bg-muted/50">
+                <TableExtractionConfig
+                  config={tableExtractionConfig}
+                  onConfigChange={setTableExtractionConfig}
+                />
+              </Card>
+              <p className="text-sm text-muted-foreground mt-2">
+                Extract line item tables from invoices and receipts. Configure which columns to extract (e.g., Product, Quantity, Price, Total).
               </p>
             </div>
 

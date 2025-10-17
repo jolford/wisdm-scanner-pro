@@ -103,7 +103,7 @@ const Queue = () => {
     }
   };
 
-  const saveDocument = async (fileName: string, fileType: string, fileUrl: string, text: string, metadata: any) => {
+  const saveDocument = async (fileName: string, fileType: string, fileUrl: string, text: string, metadata: any, lineItems: any[] = []) => {
     // Check license capacity before saving
     if (!hasCapacity(1)) {
       toast({
@@ -127,6 +127,7 @@ const Queue = () => {
         file_url: fileUrl,
         extracted_text: text,
         extracted_metadata: metadata,
+        line_items: lineItems,
         uploaded_by: user?.id,
       }]).select().single();
 
@@ -258,17 +259,22 @@ const Queue = () => {
                   await page.render({ canvasContext: ctx as any, viewport }).promise;
                   const dataUrl = canvas.toDataURL('image/png');
 
+                  const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
+                    ? selectedProject?.metadata?.table_extraction_config?.fields || []
+                    : [];
+
                   const { data, error } = await supabase.functions.invoke('ocr-scan', {
                     body: { 
                       imageData: dataUrl,
                       isPdf: false,
-                      extractionFields: selectedProject?.extraction_fields || []
+                      extractionFields: selectedProject?.extraction_fields || [],
+                      tableExtractionFields: tableFields
                     },
                   });
                   if (error) throw error;
 
                   // Use the original PDF URL for the file_url, not the temporary dataUrl
-                  await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {});
+                  await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || []);
                   return;
                 } catch (fallbackErr: any) {
                   console.error('PDF OCR fallback failed:', fallbackErr);
@@ -277,18 +283,23 @@ const Queue = () => {
               }
 
               // Process extracted text
+              const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
+                ? selectedProject?.metadata?.table_extraction_config?.fields || []
+                : [];
+              
               const { data, error } = await supabase.functions.invoke('ocr-scan', {
                 body: { 
                   textData: extractedPdfText,
                   isPdf: true,
-                  extractionFields: selectedProject?.extraction_fields || []
+                  extractionFields: selectedProject?.extraction_fields || [],
+                  tableExtractionFields: tableFields
                 },
               });
               
               if (error) throw error;
               
               // Use the original PDF URL for the file_url
-              await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {});
+              await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || []);
             } catch (err: any) {
               console.error(`Failed to process document ${docName}:`, err);
               processingErrors.push(`${docName}: ${err.message}`);
@@ -398,11 +409,16 @@ const Queue = () => {
     setIsProcessing(true);
 
     try {
+      const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
+        ? selectedProject?.metadata?.table_extraction_config?.fields || []
+        : [];
+      
       const { data, error } = await supabase.functions.invoke('ocr-scan', {
         body: { 
           imageData: imageUrl,
           isPdf: false,
-          extractionFields: selectedProject?.extraction_fields || []
+          extractionFields: selectedProject?.extraction_fields || [],
+          tableExtractionFields: tableFields
         },
       });
 
@@ -412,7 +428,7 @@ const Queue = () => {
         throw new Error(errorMessage);
       }
 
-      await saveDocument(fileName, 'image', imageUrl, data.text, data.metadata || {});
+      await saveDocument(fileName, 'image', imageUrl, data.text, data.metadata || {}, data.lineItems || []);
 
       toast({
         title: 'Scan Complete',

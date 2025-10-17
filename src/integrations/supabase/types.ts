@@ -253,6 +253,7 @@ export type Database = {
           file_type: string
           file_url: string | null
           id: string
+          line_items: Json | null
           needs_review: boolean | null
           page_number: number | null
           project_id: string
@@ -277,6 +278,7 @@ export type Database = {
           file_type: string
           file_url?: string | null
           id?: string
+          line_items?: Json | null
           needs_review?: boolean | null
           page_number?: number | null
           project_id: string
@@ -301,6 +303,7 @@ export type Database = {
           file_type?: string
           file_url?: string | null
           id?: string
+          line_items?: Json | null
           needs_review?: boolean | null
           page_number?: number | null
           project_id?: string

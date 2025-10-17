@@ -177,7 +177,7 @@ export const ImageRegionSelector = ({
 
       const croppedImageData = cropCanvas.toDataURL('image/png');
 
-      // Run OCR on the selected region
+      // Run OCR on the selected region (table extraction not applicable for region selection)
       const { data, error } = await supabase.functions.invoke('ocr-scan', {
         body: { 
           imageData: croppedImageData,
