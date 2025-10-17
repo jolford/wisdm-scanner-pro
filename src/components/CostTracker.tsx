@@ -1,96 +1,140 @@
+// React hooks for state management and side effects
 import { useEffect, useState } from 'react';
+
+// Backend integration for database access
 import { supabase } from '@/integrations/supabase/client';
+
+// UI components from shadcn/ui
 import { Card } from './ui/card';
 import { Progress } from './ui/progress';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+
+// Icon imports for visual indicators
 import { DollarSign, TrendingUp, AlertTriangle, CheckCircle } from 'lucide-react';
 
+/**
+ * Props for the CostTracker component
+ * @property customerId - The ID of the customer whose costs to track
+ */
 interface CostTrackerProps {
   customerId: string;
 }
 
+/**
+ * Usage data structure representing monthly cost/usage for a customer
+ * Tracks documents processed, AI costs, storage costs, and budget limits
+ */
 interface Usage {
   id: string;
   customer_id: string;
-  period_start: string;
-  period_end: string;
-  documents_processed: number;
-  documents_failed: number;
-  ai_cost_usd: number;
-  storage_cost_usd: number;
-  total_cost_usd: number;
-  budget_limit_usd: number | null;
+  period_start: string;           // Start of billing period
+  period_end: string;             // End of billing period
+  documents_processed: number;    // Count of successfully processed documents
+  documents_failed: number;       // Count of failed document processing attempts
+  ai_cost_usd: number;           // Cost of AI processing (OCR, extraction)
+  storage_cost_usd: number;      // Cost of file storage
+  total_cost_usd: number;        // Total cost for the period
+  budget_limit_usd: number | null; // Optional budget cap for alerts
 }
 
+/**
+ * Cost alert structure for budget warnings and overages
+ * Alerts are triggered when spending exceeds thresholds
+ */
 interface CostAlert {
   id: string;
-  alert_type: string;
-  severity: string;
-  message: string;
-  current_spend_usd: number;
-  budget_limit_usd: number;
-  usage_percentage: number;
-  acknowledged: boolean;
-  created_at: string;
+  alert_type: string;             // Type: 'budget_warning' or 'budget_exceeded'
+  severity: string;               // Severity: 'warning' or 'critical'
+  message: string;                // User-friendly alert message
+  current_spend_usd: number;      // Current spending amount
+  budget_limit_usd: number;       // Budget limit that was exceeded
+  usage_percentage: number;       // Percentage of budget used
+  acknowledged: boolean;          // Whether user has acknowledged alert
+  created_at: string;            // When alert was created
 }
 
+/**
+ * CostTracker Component
+ * Displays real-time cost tracking, usage statistics, and budget alerts for a customer
+ * Features:
+ * - Monthly cost breakdown (AI processing, storage)
+ * - Document processing statistics
+ * - Budget usage tracking with visual progress bar
+ * - Active cost alerts with acknowledgment capability
+ * - Real-time updates via Supabase subscriptions
+ * - Monthly cost projections based on current usage
+ */
 export const CostTracker = ({ customerId }: CostTrackerProps) => {
-  const [usage, setUsage] = useState<Usage | null>(null);
-  const [alerts, setAlerts] = useState<CostAlert[]>([]);
-  const [loading, setLoading] = useState(true);
+  // State management
+  const [usage, setUsage] = useState<Usage | null>(null);        // Current month's usage data
+  const [alerts, setAlerts] = useState<CostAlert[]>([]);         // Active unacknowledged alerts
+  const [loading, setLoading] = useState(true);                  // Loading state
 
+  // Initialize component: load data and set up real-time subscriptions
   useEffect(() => {
+    // Load initial data
     loadUsageData();
     loadAlerts();
 
-    // Subscribe to usage updates
+    // Subscribe to real-time updates from Supabase
+    // This ensures the UI updates immediately when costs change or alerts are created
     const channel = supabase
       .channel('cost-updates')
+      // Listen for any changes to tenant_usage table for this customer
       .on(
         'postgres_changes',
         {
-          event: '*',
+          event: '*',                    // All events (INSERT, UPDATE, DELETE)
           schema: 'public',
           table: 'tenant_usage',
           filter: `customer_id=eq.${customerId}`,
         },
         () => {
-          loadUsageData();
+          loadUsageData();  // Reload usage when it changes
         }
       )
+      // Listen for new cost alerts for this customer
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: 'INSERT',              // Only new alerts
           schema: 'public',
           table: 'cost_alerts',
           filter: `customer_id=eq.${customerId}`,
         },
         () => {
-          loadAlerts();
+          loadAlerts();     // Reload alerts when new ones are created
         }
       )
       .subscribe();
 
+    // Cleanup: unsubscribe from real-time updates when component unmounts
     return () => {
       supabase.removeChannel(channel);
     };
   }, [customerId]);
 
+  /**
+   * Load usage data for the current billing period (month)
+   * Fetches cost and document processing statistics from the database
+   */
   const loadUsageData = async () => {
+    // Calculate the start of the current month (billing period)
     const periodStart = new Date();
-    periodStart.setDate(1);
-    periodStart.setHours(0, 0, 0, 0);
+    periodStart.setDate(1);           // First day of month
+    periodStart.setHours(0, 0, 0, 0); // Midnight
 
+    // Query for this month's usage data
     const { data, error } = await supabase
       .from('tenant_usage')
       .select('*')
       .eq('customer_id', customerId)
       .gte('period_start', periodStart.toISOString().split('T')[0])
-      .single();
+      .single();  // Expect exactly one record per customer per period
 
+    // PGRST116 = "no rows returned" - this is OK if it's a new month
     if (error && error.code !== 'PGRST116') {
       console.error('Error loading usage:', error);
     }
@@ -99,13 +143,17 @@ export const CostTracker = ({ customerId }: CostTrackerProps) => {
     setLoading(false);
   };
 
+  /**
+   * Load active (unacknowledged) cost alerts for this customer
+   * Only shows alerts that haven't been acknowledged yet
+   */
   const loadAlerts = async () => {
     const { data, error } = await supabase
       .from('cost_alerts')
       .select('*')
       .eq('customer_id', customerId)
-      .eq('acknowledged', false)
-      .order('created_at', { ascending: false });
+      .eq('acknowledged', false)          // Only unacknowledged alerts
+      .order('created_at', { ascending: false });  // Newest first
 
     if (error) {
       console.error('Error loading alerts:', error);
@@ -115,10 +163,17 @@ export const CostTracker = ({ customerId }: CostTrackerProps) => {
     setAlerts(data || []);
   };
 
+  /**
+   * Mark an alert as acknowledged by the current user
+   * Updates the database and refreshes the alerts list
+   * @param alertId - The ID of the alert to acknowledge
+   */
   const acknowledgeAlert = async (alertId: string) => {
+    // Get current authenticated user
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
 
+    // Update alert in database
     const { error } = await supabase
       .from('cost_alerts')
       .update({
@@ -133,9 +188,11 @@ export const CostTracker = ({ customerId }: CostTrackerProps) => {
       return;
     }
 
+    // Refresh alerts list to remove the acknowledged one
     loadAlerts();
   };
 
+  // Loading state: show skeleton placeholder while data loads
   if (loading) {
     return (
       <Card className="p-6">
@@ -147,6 +204,7 @@ export const CostTracker = ({ customerId }: CostTrackerProps) => {
     );
   }
 
+  // No data state: show message if no usage data exists
   if (!usage) {
     return (
       <Card className="p-6">
@@ -155,10 +213,12 @@ export const CostTracker = ({ customerId }: CostTrackerProps) => {
     );
   }
 
+  // Calculate budget usage percentage (capped at 100%)
   const budgetUsagePercent = usage.budget_limit_usd
     ? Math.min((usage.total_cost_usd / usage.budget_limit_usd) * 100, 100)
     : 0;
 
+  // Calculate average cost per document for cost efficiency metrics
   const avgCostPerDoc = usage.documents_processed > 0
     ? usage.ai_cost_usd / usage.documents_processed
     : 0;

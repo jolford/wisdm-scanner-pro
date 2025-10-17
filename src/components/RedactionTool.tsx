@@ -1,96 +1,152 @@
+// React hooks for component lifecycle and state management
 import { useRef, useState, useEffect } from 'react';
+
+// UI components from shadcn/ui
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+
+// Icon imports for visual indicators
 import { Eraser, Save, Undo, X } from 'lucide-react';
+
+// Custom hooks and utilities
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
+/**
+ * RedactionBox structure defining a rectangular area to redact on the image
+ * Coordinates are in image pixels (not screen pixels)
+ */
 interface RedactionBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+  x: number;        // X coordinate of top-left corner
+  y: number;        // Y coordinate of top-left corner
+  width: number;    // Width of the redaction box
+  height: number;   // Height of the redaction box
 }
 
+/**
+ * Props for the RedactionTool component
+ */
 interface RedactionToolProps {
-  imageUrl: string;
-  documentId: string;
-  onRedactionSaved: (redactedUrl: string, isPermanent: boolean) => void;
-  onCancel: () => void;
+  imageUrl: string;                      // URL of the image to redact
+  documentId: string;                    // Document ID for saving redacted version
+  onRedactionSaved: (redactedUrl: string, isPermanent: boolean) => void; // Callback when redaction is saved
+  onCancel: () => void;                  // Callback to cancel redaction
 }
 
+/**
+ * RedactionTool Component
+ * Interactive canvas-based tool for redacting sensitive information from documents
+ * Features:
+ * - Draw rectangular redaction boxes on images
+ * - Choice between permanent redaction or creating a redacted version
+ * - Undo functionality for removing boxes
+ * - Saves redacted image to Supabase Storage
+ * - Updates document record with redaction metadata
+ */
 export const RedactionTool = ({ 
   imageUrl, 
   documentId, 
   onRedactionSaved,
   onCancel 
 }: RedactionToolProps) => {
+  // Refs for canvas and image elements
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
-  const [redactionBoxes, setRedactionBoxes] = useState<RedactionBox[]>([]);
-  const [redactionMode, setRedactionMode] = useState<'permanent' | 'version'>('version');
-  const [isSaving, setIsSaving] = useState(false);
+  
+  // Drawing state
+  const [isDrawing, setIsDrawing] = useState(false);                    // Is user currently drawing a box
+  const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null); // Starting point of current box
+  const [redactionBoxes, setRedactionBoxes] = useState<RedactionBox[]>([]); // All completed redaction boxes
+  
+  // Redaction settings
+  const [redactionMode, setRedactionMode] = useState<'permanent' | 'version'>('version'); // Permanent or create version
+  const [isSaving, setIsSaving] = useState(false);                      // Save operation in progress
+  
   const { toast } = useToast();
 
+  /**
+   * Load image onto canvas when component mounts or imageUrl changes
+   * Sets up the canvas dimensions to match the image size
+   */
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     const img = new Image();
-    img.crossOrigin = 'anonymous';
+    img.crossOrigin = 'anonymous';  // Required for canvas toBlob to work with external images
     img.onload = () => {
       imageRef.current = img;
+      // Set canvas size to match image dimensions
       canvas.width = img.width;
       canvas.height = img.height;
-      redrawCanvas();
+      redrawCanvas();  // Draw the image
     };
     img.src = imageUrl;
   }, [imageUrl]);
 
+  /**
+   * Redraw the entire canvas including image and all redaction boxes
+   * Called after any change to the redaction boxes
+   */
   const redrawCanvas = () => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx || !imageRef.current) return;
 
-    // Clear and draw image
+    // Clear canvas and draw the original image
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(imageRef.current, 0, 0);
 
-    // Draw all redaction boxes
-    ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+    // Draw all completed redaction boxes as solid black rectangles
+    ctx.fillStyle = 'rgba(0, 0, 0, 1)';  // Solid black (100% opacity)
     redactionBoxes.forEach(box => {
       ctx.fillRect(box.x, box.y, box.width, box.height);
     });
   };
 
+  // Redraw canvas whenever redaction boxes change
   useEffect(() => {
     redrawCanvas();
   }, [redactionBoxes]);
 
+  /**
+   * Convert mouse event coordinates to canvas pixel coordinates
+   * Accounts for canvas scaling/sizing in the browser
+   * @param e - Mouse event from canvas interaction
+   * @returns Coordinates in canvas pixel space
+   */
   const getCanvasCoordinates = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
 
+    // Get canvas position and size in the browser
     const rect = canvas.getBoundingClientRect();
+    // Calculate scale factors (canvas size vs displayed size)
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
 
+    // Convert browser coordinates to canvas coordinates
     return {
       x: (e.clientX - rect.left) * scaleX,
       y: (e.clientY - rect.top) * scaleY
     };
   };
 
+  /**
+   * Handle mouse down event - start drawing a new redaction box
+   */
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const coords = getCanvasCoordinates(e);
     setStartPoint(coords);
     setIsDrawing(true);
   };
 
+  /**
+   * Handle mouse move event - show preview of redaction box being drawn
+   * Only active when isDrawing is true (mouse is held down)
+   */
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawing || !startPoint) return;
 
@@ -100,12 +156,12 @@ export const RedactionTool = ({
 
     const currentPoint = getCanvasCoordinates(e);
     
-    // Redraw everything
+    // Redraw everything (image + completed boxes)
     redrawCanvas();
 
-    // Draw current rectangle being created
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    // Draw the current rectangle being created (semi-transparent preview)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';        // Semi-transparent black
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';  // White outline
     ctx.lineWidth = 2;
     
     const width = currentPoint.x - startPoint.x;
@@ -115,6 +171,9 @@ export const RedactionTool = ({
     ctx.strokeRect(startPoint.x, startPoint.y, width, height);
   };
 
+  /**
+   * Handle mouse up event - complete the redaction box and add to list
+   */
   const handleMouseUp = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawing || !startPoint) return;
 
@@ -122,8 +181,9 @@ export const RedactionTool = ({
     const width = currentPoint.x - startPoint.x;
     const height = currentPoint.y - startPoint.y;
 
-    // Only add box if it has some size
+    // Only add box if it has meaningful size (not just a click)
     if (Math.abs(width) > 5 && Math.abs(height) > 5) {
+      // Normalize coordinates (handle negative width/height from right-to-left or bottom-to-top drawing)
       const newBox: RedactionBox = {
         x: Math.min(startPoint.x, currentPoint.x),
         y: Math.min(startPoint.y, currentPoint.y),
@@ -134,15 +194,27 @@ export const RedactionTool = ({
       setRedactionBoxes(prev => [...prev, newBox]);
     }
 
+    // Reset drawing state
     setIsDrawing(false);
     setStartPoint(null);
   };
 
+  /**
+   * Remove the most recently added redaction box
+   */
   const handleUndo = () => {
-    setRedactionBoxes(prev => prev.slice(0, -1));
+    setRedactionBoxes(prev => prev.slice(0, -1));  // Remove last item
   };
 
+  /**
+   * Save the redacted image to storage and update the document record
+   * Process:
+   * 1. Convert canvas to image blob
+   * 2. Upload to Supabase Storage
+   * 3. Update document record with redacted URL and metadata
+   */
   const handleSaveRedaction = async () => {
+    // Validation: ensure at least one redaction box exists
     if (redactionBoxes.length === 0) {
       toast({
         title: 'No Redactions',
@@ -158,7 +230,7 @@ export const RedactionTool = ({
       const canvas = canvasRef.current;
       if (!canvas) throw new Error('Canvas not found');
 
-      // Convert canvas to blob
+      // Convert canvas to blob (PNG image)
       const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob(blob => {
           if (blob) resolve(blob);
@@ -166,23 +238,23 @@ export const RedactionTool = ({
         }, 'image/png');
       });
 
-      // Upload to storage
+      // Upload redacted image to Supabase Storage
       const fileName = `redacted_${documentId}_${Date.now()}.png`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('documents')
         .upload(fileName, blob, {
           contentType: 'image/png',
-          upsert: false
+          upsert: false  // Don't overwrite if file exists
         });
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
+      // Get public URL for the uploaded file
       const { data: { publicUrl } } = supabase.storage
         .from('documents')
         .getPublicUrl(fileName);
 
-      // Update document record with properly typed metadata
+      // Prepare redaction metadata for storage
       const redactionMetadata = {
         redacted_at: new Date().toISOString(),
         redaction_boxes: redactionBoxes.map(box => ({
@@ -194,13 +266,16 @@ export const RedactionTool = ({
         mode: redactionMode
       };
 
+      // Update document record based on redaction mode
+      // Permanent: replace original file_url
+      // Version: store in redacted_file_url (preserves original)
       const updateData = redactionMode === 'permanent'
         ? {
-            file_url: publicUrl,
+            file_url: publicUrl,                      // Replace original
             redaction_metadata: redactionMetadata as any
           }
         : {
-            redacted_file_url: publicUrl,
+            redacted_file_url: publicUrl,             // Keep original, add redacted version
             redaction_metadata: redactionMetadata as any
           };
 
@@ -211,6 +286,7 @@ export const RedactionTool = ({
 
       if (updateError) throw updateError;
 
+      // Success notification
       toast({
         title: 'Redaction Saved',
         description: redactionMode === 'permanent' 
@@ -218,6 +294,7 @@ export const RedactionTool = ({
           : 'Redacted version created, original preserved'
       });
 
+      // Callback to parent component
       onRedactionSaved(publicUrl, redactionMode === 'permanent');
     } catch (error: any) {
       console.error('Error saving redaction:', error);
