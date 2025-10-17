@@ -817,45 +817,45 @@ const Queue = () => {
                 alt="WISDM Logo" 
                 className="h-10 w-auto transition-transform duration-300 hover:scale-105" 
               />
-              <div className="h-8 w-px bg-border" />
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
+              <div className="h-8 w-px bg-border hidden sm:block" />
+              <div className="min-w-0">
+                <h1 className="text-base sm:text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent truncate">
                   Document Processing
                 </h1>
-                <p className="text-xs text-muted-foreground">Scan → Extract → Validate → Export</p>
+                <p className="text-xs text-muted-foreground hidden sm:block">Scan → Extract → Validate → Export</p>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
-                <span className="text-xs font-semibold text-primary">⚡ POWERED BY AI</span>
+              <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
+                <span className="text-xs font-semibold text-primary">⚡ AI</span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={() => navigate('/help')} className="gap-2">
-                <HelpCircle className="h-4 w-4" />
-                Help
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+              <Button variant="outline" size="sm" onClick={() => navigate('/help')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
+                <HelpCircle className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Help</span>
               </Button>
               {isAdmin && (
-                <Button variant="outline" onClick={() => navigate('/admin')} className="gap-2">
-                  <Settings className="h-4 w-4" />
-                  Admin
+                <Button variant="outline" size="sm" onClick={() => navigate('/admin')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
+                  <Settings className="h-4 w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Admin</span>
                 </Button>
               )}
-              <Button variant="outline" onClick={() => navigate('/batches')} className="gap-2">
-                <FolderOpen className="h-4 w-4" />
-                Batches
+              <Button variant="outline" size="sm" onClick={() => navigate('/batches')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
+                <FolderOpen className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Batches</span>
               </Button>
-              <Button variant="outline" onClick={signOut} className="gap-2">
-                <LogOut className="h-4 w-4" />
-                Sign Out
+              <Button variant="outline" size="sm" onClick={signOut} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
+                <LogOut className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Sign Out</span>
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
         <LicenseWarning />
         
-        <div className="space-y-6 mb-6">
+        <div className="space-y-3 sm:space-y-6 mb-4 sm:mb-6">
           <ProjectSelector
             selectedProjectId={selectedProjectId}
             onProjectSelect={(id, project) => {
@@ -880,48 +880,50 @@ const Queue = () => {
 
         {selectedProjectId && selectedBatchId && (
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-6 h-12 bg-muted/50 p-1 backdrop-blur-sm">
-              <TabsTrigger value="scan" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
-                <Upload className="h-4 w-4" />
+            <TabsList className="grid w-full grid-cols-4 mb-4 sm:mb-6 h-auto sm:h-12 bg-muted/50 p-1 backdrop-blur-sm">
+              <TabsTrigger value="scan" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-0 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
+                <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="font-medium">Scan</span>
               </TabsTrigger>
-              <TabsTrigger value="validation" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
-                <Eye className="h-4 w-4" />
-                <span className="font-medium">Validation</span>
-                <Badge variant="secondary" className="ml-1 bg-primary/10 text-primary border-0">
+              <TabsTrigger value="validation" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-0 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
+                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="font-medium hidden sm:inline">Validation</span>
+                <span className="font-medium sm:hidden">Valid</span>
+                <Badge variant="secondary" className="text-xs sm:ml-1 bg-primary/10 text-primary border-0">
                   {validationQueue.length}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="validated" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
-                <CheckCircle className="h-4 w-4" />
-                <span className="font-medium">Validated</span>
-                <Badge variant="secondary" className="ml-1 bg-success/10 text-success border-0">
+              <TabsTrigger value="validated" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-0 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
+                <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="font-medium hidden sm:inline">Validated</span>
+                <span className="font-medium sm:hidden">Done</span>
+                <Badge variant="secondary" className="text-xs sm:ml-1 bg-success/10 text-success border-0">
                   {validatedDocs.length}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="export" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
-                <Download className="h-4 w-4" />
+              <TabsTrigger value="export" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-0 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
+                <Download className="h-3 w-3 sm:h-4 sm:w-4" />
                 <span className="font-medium">Export</span>
               </TabsTrigger>
             </TabsList>
             
             <TabsContent value="scan" className="animate-fade-in">
               {!permissions.can_scan ? (
-                <Card className="p-12 text-center border-destructive/50 bg-destructive/5">
-                  <Upload className="h-16 w-16 mx-auto mb-4 text-destructive" />
-                  <h3 className="text-xl font-semibold mb-2">Scan Access Restricted</h3>
-                  <p className="text-muted-foreground">You don't have permission to scan documents. Contact your administrator.</p>
+                <Card className="p-6 sm:p-12 text-center border-destructive/50 bg-destructive/5">
+                  <Upload className="h-12 w-12 sm:h-16 sm:w-16 mx-auto mb-4 text-destructive" />
+                  <h3 className="text-lg sm:text-xl font-semibold mb-2">Scan Access Restricted</h3>
+                  <p className="text-sm sm:text-base text-muted-foreground">You don't have permission to scan documents. Contact your administrator.</p>
                 </Card>
               ) : (
               <Tabs defaultValue="upload" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted/30">
-                  <TabsTrigger value="upload" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
-                    <Upload className="h-4 w-4" />
-                    Upload File
+                <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-6 bg-muted/30">
+                  <TabsTrigger value="upload" className="gap-1 sm:gap-2 text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                    <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
+                    Upload
                   </TabsTrigger>
-                  <TabsTrigger value="scanner" className="gap-2 data-[state=active]:bg-card data-[state=active]:shadow-sm">
-                    <ScanLine className="h-4 w-4" />
-                    Physical Scanner
+                  <TabsTrigger value="scanner" className="gap-1 sm:gap-2 text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                    <ScanLine className="h-3 w-3 sm:h-4 sm:w-4" />
+                    Scanner
                   </TabsTrigger>
                 </TabsList>
                 

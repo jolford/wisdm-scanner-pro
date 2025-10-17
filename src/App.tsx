@@ -7,6 +7,7 @@ import Queue from "./pages/Queue";
 import Auth from "./pages/Auth";
 import Batches from "./pages/Batches";
 import BatchDetail from "./pages/BatchDetail";
+import Install from "./pages/Install";
 import AdminDashboard from "./pages/admin/Dashboard";
 import AdminProjects from "./pages/admin/projects/Index";
 import NewProject from "./pages/admin/projects/New";
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/" element={<Queue />} />
             <Route path="/old" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
+            <Route path="/install" element={<Install />} />
             <Route path="/batches" element={<Batches />} />
             <Route path="/batches/:id" element={<BatchDetail />} />
             <Route path="/admin" element={<AdminDashboard />} />

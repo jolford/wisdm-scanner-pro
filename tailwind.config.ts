@@ -13,6 +13,9 @@ export default {
       },
     },
     extend: {
+      screens: {
+        'xs': '475px', // Extra small breakpoint for very small phones
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
