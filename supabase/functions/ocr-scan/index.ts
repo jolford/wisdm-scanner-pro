@@ -37,9 +37,9 @@ serve(async (req) => {
       throw new Error('PDF text extraction required. Please ensure text is extracted before sending.');
     }
 
-    // Build optimized single-call prompt with handwriting and barcode support
-    let systemPrompt = 'You are an advanced OCR and ICR (Intelligent Character Recognition) system. Extract all text from documents including printed text, handwritten text, cursive writing, and barcodes. Be very careful to accurately recognize handwritten characters and barcode labels.';
-    let userPrompt = 'Extract all text from this document, including any handwritten text. Pay special attention to handwritten characters, cursive writing, and barcode labels.';
+    // Build optimized single-call prompt with handwriting, barcode, and classification support
+    let systemPrompt = 'You are an advanced OCR, ICR, and document classification system. Extract all text from documents including printed text, handwritten text, cursive writing, and barcodes. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other). Be very careful to accurately recognize handwritten characters and barcode labels.';
+    let userPrompt = 'Extract all text from this document, including any handwritten text. Classify the document type. Pay special attention to handwritten characters, cursive writing, and barcode labels.';
     
     if (extractionFields && extractionFields.length > 0) {
       const fieldNames = extractionFields.map((f: any) => f.name);
@@ -49,7 +49,7 @@ serve(async (req) => {
       );
       
       if (hasAccessioningField) {
-        systemPrompt = `You are an advanced OCR and ICR system specialized in reading barcodes, printed text, and handwritten text. Extract text and return JSON: {"fullText": "complete extracted text", "fields": {${fieldNames.map((n: string) => `"${n}": "value"`).join(', ')}}}. 
+        systemPrompt = `You are an advanced OCR, ICR, and document classification system specialized in reading barcodes, printed text, and handwritten text. Extract text and return JSON: {"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": "value"`).join(', ')}}}.
 
 CRITICAL INSTRUCTIONS FOR BARCODE/ACCESSIONING NUMBER EXTRACTION:
 1. Look for barcode labels or stickers, typically in the upper right corner of forms
@@ -60,12 +60,16 @@ CRITICAL INSTRUCTIONS FOR BARCODE/ACCESSIONING NUMBER EXTRACTION:
 6. Ignore OCR noise near barcodes - focus on clear, consistently formatted numbers
 7. If you see a barcode label section with "Requisition Label" or similar, that's where the accessioning number is located
 
-Extract actual values from the document for each field with extreme precision for accessioning numbers.`;
-        userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'}. CRITICAL: Locate and accurately read the BARCODE LABEL or REQUISITION LABEL (usually upper right corner). The accessioning number follows a format like CL####-######## or EN####-########. Read the human-readable text carefully, verifying each digit. Also extract: ${fieldNames.join(', ')}. Return as JSON with extreme accuracy for the accessioning number.`;
+Extract actual values from the document for each field with extreme precision for accessioning numbers. Classify the document type.`;
+        userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'}. CRITICAL: Locate and accurately read the BARCODE LABEL or REQUISITION LABEL (usually upper right corner). The accessioning number follows a format like CL####-######## or EN####-########. Read the human-readable text carefully, verifying each digit. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other). Also extract: ${fieldNames.join(', ')}. Return as JSON with extreme accuracy for the accessioning number and document classification.`;
       } else {
-        systemPrompt = `You are an advanced OCR and ICR system that can read both printed and handwritten text. Extract text and return JSON: {"fullText": "complete extracted text", "fields": {${fieldNames.map((n: string) => `"${n}": "value"`).join(', ')}}}. Extract actual values from the document for each field, including handwritten values.`;
-        userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'} including handwritten text and identify: ${fieldNames.join(', ')}. Return as JSON.`;
+        systemPrompt = `You are an advanced OCR, ICR, and document classification system that can read both printed and handwritten text. Extract text and return JSON: {"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": "value"`).join(', ')}}}. Extract actual values from the document for each field, including handwritten values. Classify the document type based on its structure and content.`;
+        userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'} including handwritten text. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other) with confidence score. Also identify: ${fieldNames.join(', ')}. Return as JSON.`;
       }
+    } else {
+      // No extraction fields - just OCR and classification
+      systemPrompt = 'You are an advanced OCR, ICR, and document classification system. Extract all text and classify the document type. Return JSON: {"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0}.';
+      userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'} including handwritten text. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other) and provide a confidence score. Return as JSON.`;
     }
 
     // Single AI call for everything
@@ -143,26 +147,34 @@ Extract actual values from the document for each field with extreme precision fo
     // Parse response
     let extractedText = responseText;
     let metadata: Record<string, string> = {};
+    let documentType = 'other';
+    let confidence = 0;
     
-    if (extractionFields && extractionFields.length > 0) {
-      try {
-        const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsed = JSON.parse(jsonMatch[0]);
-          extractedText = parsed.fullText || responseText;
+    try {
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        extractedText = parsed.fullText || responseText;
+        documentType = parsed.documentType || 'other';
+        confidence = parsed.confidence || 0;
+        
+        if (extractionFields && extractionFields.length > 0) {
           metadata = parsed.fields || {};
         }
-      } catch (e) {
-        console.error('JSON parse failed, using raw text:', e);
       }
+    } catch (e) {
+      console.error('JSON parse failed, using raw text:', e);
+      extractedText = responseText;
     }
 
-    console.log('OCR completed - Metadata:', metadata);
+    console.log('OCR completed - Document Type:', documentType, 'Confidence:', confidence, 'Metadata:', metadata);
 
     return new Response(
       JSON.stringify({ 
         text: extractedText,
-        metadata: metadata
+        metadata: metadata,
+        documentType: documentType,
+        confidence: confidence
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

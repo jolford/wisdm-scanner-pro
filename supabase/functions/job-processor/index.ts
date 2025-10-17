@@ -117,75 +117,28 @@ Deno.serve(async (req) => {
 });
 
 async function processOcrDocument(job: Job, supabase: any) {
-  const { imageData, extractionFields, projectId, batchId, documentId, isPdf } = job.payload;
-
-  if (!lovableApiKey) {
-    return { error: 'LOVABLE_API_KEY not configured' };
-  }
+  const { imageData, extractionFields, projectId, batchId, documentId, isPdf, textData } = job.payload;
 
   try {
-    // Prepare prompts for AI
-    const systemPrompt = isPdf 
-      ? 'You are a precise document text extraction system. Extract ALL text from this PDF page exactly as it appears...'
-      : 'You are an OCR system...';
-
-    const hasFields = extractionFields && extractionFields.length > 0;
-    let userPrompt = isPdf 
-      ? 'Extract all text from this PDF page, maintaining original formatting and structure...'
-      : 'Extract all text from this image...';
-
-    if (hasFields) {
-      userPrompt += `\n\nExtract these specific fields as JSON:\n${JSON.stringify(extractionFields, null, 2)}`;
-    }
-
-    // Call Lovable AI Gateway
-    const response = await fetch('https://api.lovable.app/v1/ai/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          {
-            role: 'user',
-            content: [
-              { type: 'text', text: userPrompt },
-              { type: 'image_url', image_url: { url: imageData } },
-            ],
-          },
-        ],
-      }),
+    // Call ocr-scan edge function
+    const { data: ocrResult, error: ocrError } = await supabase.functions.invoke('ocr-scan', {
+      body: {
+        imageData,
+        isPdf,
+        extractionFields,
+        textData
+      }
     });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AI Gateway error:', response.status, errorText);
-      return { error: `AI processing failed: ${errorText}` };
+    if (ocrError) {
+      console.error('OCR function error:', ocrError);
+      return { error: `OCR processing failed: ${ocrError.message}` };
     }
 
-    const data = await response.json();
-    const extractedText = data.choices?.[0]?.message?.content || '';
+    const { text: extractedText, metadata: extractedMetadata, documentType, confidence } = ocrResult;
 
-    // Track cost
-    const usage = data.usage;
-    const model = 'google/gemini-2.5-flash';
-    let estimatedCost = 0;
-    
-    if (usage) {
-      // Calculate cost using database function
-      const { data: costData } = await supabase.rpc('calculate_ai_cost', {
-        _model: model,
-        _input_tokens: usage.prompt_tokens || 0,
-        _output_tokens: usage.completion_tokens || 0,
-        _is_image: true
-      });
-      estimatedCost = costData || 0.002; // Fallback estimate
-    } else {
-      estimatedCost = 0.002; // Default estimate per document
-    }
+    // Track cost (estimate based on document processing)
+    const estimatedCost = 0.002; // Default estimate per document
 
     // Update tenant usage
     if (job.customer_id) {
@@ -198,26 +151,31 @@ async function processOcrDocument(job: Job, supabase: any) {
       });
     }
 
-    // Parse metadata if extraction fields were provided
-    let extractedMetadata = {};
-    if (hasFields && extractedText) {
-      try {
-        const jsonMatch = extractedText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          extractedMetadata = JSON.parse(jsonMatch[0]);
-        }
-      } catch (e) {
-        console.error('Failed to parse extracted metadata:', e);
+    // Prepare document update with classification
+    const updateData: any = {
+      extracted_text: extractedText,
+      extracted_metadata: extractedMetadata || {},
+      validation_status: 'pending'
+    };
+    
+    // Add classification if available
+    if (documentType) {
+      updateData.extracted_metadata = {
+        ...updateData.extracted_metadata,
+        documentType,
+        classificationConfidence: confidence || 0
+      };
+      
+      // If confidence is high, set confidence score
+      if (confidence && confidence >= 0.9) {
+        updateData.confidence_score = confidence;
       }
     }
 
     // Update document in database
     const { error: updateError } = await supabase
       .from('documents')
-      .update({
-        extracted_text: extractedText,
-        extracted_metadata: extractedMetadata,
-      })
+      .update(updateData)
       .eq('id', documentId);
 
     if (updateError) {
@@ -237,7 +195,9 @@ async function processOcrDocument(job: Job, supabase: any) {
       result: { 
         documentId, 
         extractedText: extractedText.substring(0, 200) + '...',
-        metadata: extractedMetadata 
+        metadata: extractedMetadata,
+        documentType,
+        confidence
       } 
     };
 
