@@ -21,6 +21,7 @@ import NewCustomer from "./pages/admin/customers/New";
 import EditCustomer from "./pages/admin/customers/Edit";
 import UsersIndex from "./pages/admin/users/Index";
 import DocumentsAdmin from "./pages/admin/Documents";
+import CostTracking from "./pages/admin/CostTracking";
 import Analytics from "./pages/admin/Analytics";
 import ErrorLogs from "./pages/admin/ErrorLogs";
 import Help from "./pages/Help";
@@ -61,6 +62,7 @@ const App = () => (
             <Route path="/admin/customers/:id/edit" element={<EditCustomer />} />
             <Route path="/admin/users" element={<UsersIndex />} />
             <Route path="/admin/documents" element={<DocumentsAdmin />} />
+            <Route path="/admin/cost-tracking" element={<CostTracking />} />
             <Route path="/admin/analytics" element={<Analytics />} />
             <Route path="/admin/error-logs" element={<ErrorLogs />} />
             <Route path="/help" element={<Help />} />

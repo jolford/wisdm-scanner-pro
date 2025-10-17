@@ -13,6 +13,7 @@ import {
   FileText,
   AlertCircle,
   HelpCircle,
+  DollarSign,
 } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,6 +44,7 @@ const menuItems = [
   { title: 'Customers', url: '/admin/customers', icon: Building2 },
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Licenses', url: '/admin/licenses', icon: Key },
+  { title: 'Cost Tracking', url: '/admin/cost-tracking', icon: DollarSign },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
   { title: 'Error Logs', url: '/admin/error-logs', icon: AlertCircle },
 ];
