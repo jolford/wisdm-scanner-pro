@@ -28,6 +28,7 @@ import ErrorLogs from "./pages/admin/ErrorLogs";
 import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 import ApiDocs from "./pages/ApiDocs";
+import Presentation from "./pages/Presentation";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -69,6 +70,7 @@ const App = () => (
             <Route path="/admin/error-logs" element={<ErrorLogs />} />
             <Route path="/help" element={<Help />} />
             <Route path="/api-docs" element={<ApiDocs />} />
+            <Route path="/presentation" element={<Presentation />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
