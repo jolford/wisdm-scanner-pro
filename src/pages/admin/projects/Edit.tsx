@@ -145,9 +145,13 @@ const EditProject = () => {
           setExportConfig(config);
         }
 
-        // Set queues with proper type checking
+        // Set queues with proper type checking and migration from "Validated" to "Quality Control"
         if (data.queues && Array.isArray(data.queues)) {
-          setQueues(data.queues as unknown as Queue[]);
+          const migratedQueues = (data.queues as unknown as Queue[]).map(queue => ({
+            ...queue,
+            name: queue.name === 'Validated' ? 'Quality Control' : queue.name
+          }));
+          setQueues(migratedQueues);
         }
 
         // Set separation config from metadata
