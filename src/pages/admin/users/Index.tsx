@@ -337,33 +337,20 @@ const UsersIndex = () => {
     if (!deleteUserId) return;
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        toast.error('Not authenticated');
-        return;
-      }
-
-      // Call edge function to delete user with admin privileges
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId: deleteUserId }),
+      // Invoke backend function with current session automatically
+      const { data, error: funcError } = await supabase.functions.invoke('delete-user', {
+        body: { userId: deleteUserId },
       });
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Failed to delete user');
+      if (funcError) {
+        throw new Error(funcError.message || 'Failed to delete user');
       }
 
       toast.success('User deleted successfully');
       setDeleteUserId(null);
       loadUsers();
     } catch (error: any) {
-      toast.error('Failed to delete user: ' + error.message);
+      toast.error('Failed to delete user: ' + (error?.message || 'Unknown error'));
     }
   };
 
