@@ -81,6 +81,18 @@ export const BatchValidationScreen = ({
     };
   };
 
+  // Helper to extract string value from metadata (handles both old format and new format with bbox)
+  const getMetadataValue = (metadata: any, fieldName: string): string => {
+    const value = metadata[fieldName];
+    if (!value) return '';
+    // New format: { value: "...", bbox: {...} }
+    if (typeof value === 'object' && value.value !== undefined) {
+      return String(value.value);
+    }
+    // Old format: just a string
+    return String(value);
+  };
+
   const handleRegionUpdate = (docId: string, newMetadata: Record<string, string>) => {
     setEditedMetadata(prev => ({
       ...prev,
@@ -102,10 +114,16 @@ export const BatchValidationScreen = ({
     try {
       const metadata = getMetadataForDoc(doc);
       
+      // Normalize metadata to ensure we're only storing string values
+      const normalizedMetadata: Record<string, string> = {};
+      Object.keys(metadata).forEach(key => {
+        normalizedMetadata[key] = getMetadataValue(metadata, key);
+      });
+      
       const { error } = await supabase
         .from('documents')
         .update({
-          extracted_metadata: metadata,
+          extracted_metadata: normalizedMetadata,
           validation_status: status,
           validated_at: new Date().toISOString(),
         })
@@ -217,7 +235,7 @@ export const BatchValidationScreen = ({
                       <div className="flex flex-wrap gap-2 mt-1">
                         {projectFields.map((field) => (
                           <Badge key={field.name} variant="outline" className="text-xs">
-                            {field.name}: {metadata[field.name] || 'N/A'}
+                            {field.name}: {getMetadataValue(metadata, field.name) || 'N/A'}
                           </Badge>
                         ))}
                       </div>
@@ -287,7 +305,7 @@ export const BatchValidationScreen = ({
                             </Label>
                             <Input
                               id={`${doc.id}-${field.name}`}
-                              value={metadata[field.name] || ''}
+                              value={getMetadataValue(metadata, field.name)}
                               onChange={(e) =>
                                 handleFieldChange(doc.id, field.name, e.target.value)
                               }
