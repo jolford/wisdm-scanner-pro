@@ -1134,7 +1134,7 @@ const Queue = () => {
                   <div>
                     <h4 className="font-semibold mb-3">Export Metadata</h4>
                     <div className="grid grid-cols-2 gap-3">
-                      {selectedProject?.export_types?.includes('csv') && (
+                      {(selectedProject?.export_types?.includes('csv') || getExportConfig().csv?.enabled) && (
                         <Button 
                           onClick={() => exportBatch('csv')} 
                           disabled={validatedDocs.length === 0 || isExporting} 
@@ -1145,7 +1145,7 @@ const Queue = () => {
                           <span className="font-medium">CSV Format</span>
                         </Button>
                       )}
-                      {selectedProject?.export_types?.includes('json') && (
+                      {(selectedProject?.export_types?.includes('json') || getExportConfig().json?.enabled) && (
                         <Button 
                           onClick={() => exportBatch('json')} 
                           disabled={validatedDocs.length === 0 || isExporting} 
@@ -1156,7 +1156,7 @@ const Queue = () => {
                           <span className="font-medium">JSON Format</span>
                         </Button>
                       )}
-                      {selectedProject?.export_types?.includes('xml') && (
+                      {(selectedProject?.export_types?.includes('xml') || getExportConfig().xml?.enabled) && (
                         <Button 
                           onClick={() => exportBatch('xml')} 
                           disabled={validatedDocs.length === 0 || isExporting} 
@@ -1167,7 +1167,7 @@ const Queue = () => {
                           <span className="font-medium">XML Format</span>
                         </Button>
                       )}
-                      {selectedProject?.export_types?.includes('txt') && (
+                      {(selectedProject?.export_types?.includes('txt') || getExportConfig().txt?.enabled) && (
                         <Button 
                           onClick={() => exportBatch('txt')} 
                           disabled={validatedDocs.length === 0 || isExporting} 
@@ -1181,7 +1181,7 @@ const Queue = () => {
                     </div>
                   </div>
 
-                  {selectedProject?.export_types?.includes('images') && (
+                  {(selectedProject?.export_types?.includes('images') || getExportConfig().images?.enabled) && (
                     <div className="pt-4 border-t">
                       <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Image Export</h4>
                       <Button 
@@ -1196,7 +1196,7 @@ const Queue = () => {
                     </div>
                   )}
 
-                  {selectedProject?.export_types?.includes('pdf') && (
+                  {(selectedProject?.export_types?.includes('pdf') || getExportConfig().pdf?.enabled) && (
                     <div className="pt-4 border-t">
                       <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">PDF Report</h4>
                       <Button 
