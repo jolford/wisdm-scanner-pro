@@ -1,3 +1,41 @@
+/**
+ * Error Logs Admin Page
+ * 
+ * Centralized error tracking and debugging interface for system administrators.
+ * Displays all application errors logged from the frontend, including uncaught errors
+ * and unhandled promise rejections.
+ * 
+ * Features:
+ * - Real-time error log display (automatically updates via Supabase Realtime)
+ * - Expandable error details (stack traces, metadata, user agent)
+ * - Error filtering and pagination (limit: 100 most recent)
+ * - Individual error deletion
+ * - Bulk "Clear All" operation
+ * - Manual test error generation for debugging
+ * - Component name and URL tracking
+ * - Timestamp-based sorting (newest first)
+ * 
+ * Error Information Captured:
+ * - Error message and stack trace
+ * - Component/context where error occurred
+ * - User ID (if authenticated)
+ * - User agent string (browser/device info)
+ * - URL where error happened
+ * - Additional metadata (custom context)
+ * - Timestamp of error occurrence
+ * 
+ * Use Cases:
+ * - Debugging production issues
+ * - Monitoring application health
+ * - Identifying problematic components
+ * - Tracking user-specific errors
+ * - Testing error logging functionality
+ * 
+ * @requires useRequireAuth - Admin-only access
+ * @requires AdminLayout - Standard admin page wrapper
+ * @requires Supabase Realtime - Auto-updates when new errors occur
+ */
+
 import { useEffect, useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { useRequireAuth } from '@/hooks/use-require-auth';

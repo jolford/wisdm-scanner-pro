@@ -1,3 +1,33 @@
+/**
+ * AI Cost Tracking Admin Page
+ * 
+ * Monitors and manages AI processing costs across all tenants/customers in the system.
+ * Provides budget oversight, usage tracking, and alerting for cost management.
+ * 
+ * Features:
+ * - Real-time cost tracking per customer/tenant
+ * - Budget limit configuration and monitoring
+ * - Automated budget alert system (warnings at 80%, critical at 100%)
+ * - Document processing statistics (successful vs failed)
+ * - Average cost per document calculations
+ * - Period-based reporting (current month, last month, all time)
+ * - Active budget alerts dashboard
+ * - Visual progress indicators for budget usage
+ * 
+ * Data Sources:
+ * - tenant_usage: Monthly usage and cost data per customer
+ * - cost_alerts: Budget warning and exceeded notifications
+ * - customers: Customer organization information
+ * 
+ * Budget Alert Thresholds:
+ * - Warning: 80% of budget (orange badge)
+ * - Exceeded: 100%+ of budget (destructive badge)
+ * - Healthy: < 80% of budget (default badge)
+ * 
+ * @requires useRequireAuth - Admin-only access
+ * @requires AdminLayout - Consistent admin page structure
+ */
+
 import { useEffect, useState } from 'react';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { AdminLayout } from '@/components/admin/AdminLayout';

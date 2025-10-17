@@ -1,3 +1,19 @@
+/**
+ * Admin Dashboard Component
+ * 
+ * Main administrative dashboard that provides an overview of the entire WISDM Scanner Pro system.
+ * Displays key metrics, statistics, and quick action buttons for system administrators.
+ * 
+ * Features:
+ * - Real-time system statistics (projects, documents, users, licenses, customers)
+ * - Quick navigation cards for common admin tasks
+ * - Pricing PDF generator for sales/marketing materials
+ * - Admin-only access with authentication guard
+ * 
+ * @requires useRequireAuth - Ensures only admins can access
+ * @requires AdminLayout - Provides consistent admin page structure
+ */
+
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Button } from '@/components/ui/button';
@@ -9,24 +25,34 @@ import { AdminLayout } from '@/components/admin/AdminLayout';
 import { PricingPDFGenerator } from '@/components/admin/PricingPDFGenerator';
 
 const AdminDashboard = () => {
+  // Authentication guard - ensures only admins can access this page
   const { loading, isAdmin } = useRequireAuth(true);
   const navigate = useNavigate();
+  
+  // System-wide statistics state
   const [stats, setStats] = useState({
-    projects: 0,
-    documents: 0,
-    users: 0,
-    licenses: 0,
-    customers: 0,
+    projects: 0,      // Total number of projects in the system
+    documents: 0,     // Total documents processed
+    users: 0,         // Total registered users
+    licenses: 0,      // Total active licenses
+    customers: 0,     // Total customer organizations
   });
 
+  // Load statistics when component mounts and user is authenticated as admin
   useEffect(() => {
     if (!loading && isAdmin) {
       loadStats();
     }
   }, [loading, isAdmin]);
 
+  /**
+   * Fetch system-wide statistics from database
+   * Uses parallel queries for optimal performance
+   * Only fetches counts (head: true) to minimize data transfer
+   */
   const loadStats = async () => {
     try {
+      // Execute all stat queries in parallel for better performance
       const [projectsRes, documentsRes, profilesRes, licensesRes, customersRes] = await Promise.all([
         supabase.from('projects').select('id', { count: 'exact', head: true }),
         supabase.from('documents').select('id', { count: 'exact', head: true }),
@@ -35,6 +61,7 @@ const AdminDashboard = () => {
         supabase.from('customers').select('id', { count: 'exact', head: true }),
       ]);
 
+      // Update state with fetched counts, defaulting to 0 if no data
       setStats({
         projects: projectsRes.count || 0,
         documents: documentsRes.count || 0,
@@ -44,9 +71,11 @@ const AdminDashboard = () => {
       });
     } catch (error) {
       console.error('Error loading stats:', error);
+      // Silently fail - stats will remain at 0
     }
   };
 
+  // Show loading spinner while checking authentication
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">

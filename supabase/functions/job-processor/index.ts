@@ -1,21 +1,57 @@
+/**
+ * Job Processor Edge Function
+ * 
+ * Background job processing system that handles asynchronous tasks using a fair-share
+ * scheduling algorithm. Processes jobs from the queue and updates their status.
+ * 
+ * Supported Job Types:
+ * - ocr_document: OCR processing and data extraction from documents
+ * - export_batch: Batch export to external systems (placeholder)
+ * 
+ * Features:
+ * - Fair-share scheduling (distributes load evenly across customers)
+ * - Automatic retry with exponential backoff
+ * - Job metrics tracking (completion time, success/failure rates)
+ * - Cost tracking per customer
+ * - Status updates (pending → processing → completed/failed)
+ * 
+ * Retry Logic:
+ * - Maximum 3 attempts per job
+ * - Exponential backoff: 2min, 4min, 8min between retries
+ * - Jobs marked as 'failed' after max attempts
+ * 
+ * Job Flow:
+ * 1. Get next job using get_next_job() RPC (fair-share)
+ * 2. Fetch job details from database
+ * 3. Process based on job_type
+ * 4. Update job status (completed/failed)
+ * 5. Update metrics and cost tracking
+ * 
+ * @invocation Triggered manually or by scheduler (cron)
+ * @requires SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, LOVABLE_API_KEY
+ */
+
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 
+// Environment variables - secrets managed by Supabase
 const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
 
+// CORS headers for API responses
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Job interface matching database schema
 interface Job {
   id: string;
   job_type: string;
-  payload: any;
+  payload: any;            // Job-specific data
   customer_id: string | null;
   user_id: string;
-  attempts: number;
+  attempts: number;        // Retry counter
   started_at?: string;
 }
 

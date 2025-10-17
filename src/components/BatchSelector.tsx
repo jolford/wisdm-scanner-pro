@@ -1,3 +1,33 @@
+/**
+ * Batch Selector Component
+ * 
+ * UI component for selecting and creating document processing batches within a project.
+ * Provides dropdown selection for existing batches and a dialog for creating new batches.
+ * 
+ * Features:
+ * - Dropdown list of active batches (status: new, scanning, indexing)
+ * - Real-time batch data loading via React Query
+ * - "Create New Batch" dialog with name and priority inputs
+ * - Priority selection (Low=0, Normal=5, High=10, Urgent=20)
+ * - Automatic batch selection after creation
+ * - Status and priority badges for visual identification
+ * - Keyboard shortcuts (Enter to create)
+ * 
+ * Props:
+ * @param selectedBatchId - Currently selected batch ID
+ * @param onBatchSelect - Callback when batch is selected (id, batch object)
+ * @param projectId - Project context for filtering batches
+ * 
+ * Business Logic:
+ * - Only shows active batches (not completed/exported)
+ * - Sorted by priority (high to low) then creation date
+ * - Associated with authenticated user (created_by)
+ * - Enables load balancing via priority system
+ * 
+ * @requires useAuth - For user ID
+ * @requires useQuery - For data fetching
+ */
+
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -11,10 +41,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { Badge } from '@/components/ui/badge';
 
+// Component props interface
 interface BatchSelectorProps {
-  selectedBatchId: string | null;
-  onBatchSelect: (id: string | null, batch: any) => void;
-  projectId: string | null;
+  selectedBatchId: string | null;           // Currently selected batch
+  onBatchSelect: (id: string | null, batch: any) => void;  // Selection callback
+  projectId: string | null;                 // Project context
 }
 
 export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: BatchSelectorProps) => {

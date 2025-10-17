@@ -1,3 +1,34 @@
+/**
+ * Documents Admin Page
+ * 
+ * Provides system administrators with bulk document management capabilities.
+ * Allows viewing, selecting, and deleting documents across the entire system.
+ * 
+ * Features:
+ * - View all documents in the system with key metadata
+ * - Bulk selection via checkboxes (select all / individual selection)
+ * - Batch delete selected documents
+ * - "Clear All" function to remove all documents (with confirmation)
+ * - Real-time document statistics
+ * - Automatic data refresh capability
+ * - Status badge visualization (validated, pending, etc.)
+ * - Linked project and batch information display
+ * 
+ * Data Displayed:
+ * - File name and type
+ * - Associated project and batch
+ * - Validation status with color-coded badges
+ * - Creation timestamp
+ * 
+ * Safety Features:
+ * - Confirmation dialogs for destructive operations
+ * - Admin-only access via authentication guard
+ * - Row-level security enforcement via RLS policies
+ * 
+ * @requires useRequireAuth - Ensures admin authentication
+ * @requires AdminLayout - Standard admin page layout
+ */
+
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';

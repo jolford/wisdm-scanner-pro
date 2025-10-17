@@ -1,3 +1,31 @@
+/**
+ * Analytics & Reports Admin Page
+ * 
+ * Comprehensive analytics dashboard providing detailed insights into system performance,
+ * usage patterns, costs, and operational metrics across all customers and projects.
+ * 
+ * Features:
+ * - Time-range filtering (7/30/90/365 days)
+ * - Document processing metrics (total, validated, pending)
+ * - Cost tracking and budgeting (total spend, cost per document)
+ * - Job performance analytics (completion rates, processing times, error rates)
+ * - Daily activity charts showing document and job trends
+ * - Status distribution visualization (pie charts)
+ * - Extraction accuracy metrics
+ * - Top performing projects identification
+ * - Customer spending analysis
+ * 
+ * Data Sources:
+ * - documents: Processing and validation status
+ * - jobs: Job execution metrics and performance
+ * - tenant_usage: Cost and budget tracking
+ * - job_metrics: Aggregated performance data
+ * 
+ * @requires useRequireAuth - Admin-only access control
+ * @requires AdminLayout - Standard admin page layout
+ * @requires Recharts - For data visualization components
+ */
+
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Card } from '@/components/ui/card';
 import { useEffect, useState } from 'react';

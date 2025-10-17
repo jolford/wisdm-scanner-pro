@@ -1,7 +1,41 @@
+/**
+ * Documents API Edge Function
+ * 
+ * RESTful API endpoint for managing individual documents in the system.
+ * Provides operations for listing, retrieving, updating, and deleting documents.
+ * 
+ * Supported Operations:
+ * - GET /api-documents - List documents with filtering
+ * - GET /api-documents/{id} - Get specific document details
+ * - PUT /api-documents/{id} - Update document metadata/status
+ * - DELETE /api-documents/{id} - Delete document
+ * 
+ * Query Parameters (GET list):
+ * - project_id: Filter by project
+ * - batch_id: Filter by batch
+ * - status: Filter by validation status
+ * - limit: Results per page (default: 50)
+ * - offset: Pagination offset (default: 0)
+ * 
+ * Security:
+ * - Requires Bearer token authentication
+ * - Users can only access documents they uploaded (uploaded_by = user.id)
+ * - RLS policies enforced at database level
+ * 
+ * Update Fields (PUT):
+ * - validation_status: Change validation state (pending, validated, needs_review)
+ * - validation_notes: Add notes from validator
+ * - extracted_metadata: Update extracted data
+ * - document_class_id: Assign document classification
+ * 
+ * @returns Document object(s) with project, batch, and class information
+ */
+
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.0';
 
+// CORS headers for cross-origin requests
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
