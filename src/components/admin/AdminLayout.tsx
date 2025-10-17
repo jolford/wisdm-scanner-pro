@@ -14,6 +14,7 @@ import {
   AlertCircle,
   HelpCircle,
   DollarSign,
+  Target,
 } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,6 +40,7 @@ interface AdminLayoutProps {
 
 const menuItems = [
   { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
+  { title: 'System Viability', url: '/admin/viability', icon: Target },
   { title: 'Projects', url: '/admin/projects', icon: FolderOpen },
   { title: 'Documents', url: '/admin/documents', icon: FileText },
   { title: 'Customers', url: '/admin/customers', icon: Building2 },

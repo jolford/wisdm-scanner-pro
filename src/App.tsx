@@ -24,6 +24,7 @@ import UsersIndex from "./pages/admin/users/Index";
 import DocumentsAdmin from "./pages/admin/Documents";
 import CostTracking from "./pages/admin/CostTracking";
 import Analytics from "./pages/admin/Analytics";
+import SystemViability from "./pages/admin/SystemViability";
 import ErrorLogs from "./pages/admin/ErrorLogs";
 import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
@@ -67,6 +68,7 @@ const App = () => (
             <Route path="/admin/documents" element={<DocumentsAdmin />} />
             <Route path="/admin/cost-tracking" element={<CostTracking />} />
             <Route path="/admin/analytics" element={<Analytics />} />
+            <Route path="/admin/viability" element={<SystemViability />} />
             <Route path="/admin/error-logs" element={<ErrorLogs />} />
             <Route path="/help" element={<Help />} />
             <Route path="/api-docs" element={<ApiDocs />} />

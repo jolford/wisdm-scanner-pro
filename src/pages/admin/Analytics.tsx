@@ -242,7 +242,7 @@ const Analytics = () => {
         count,
       }));
 
-      const errorRate = docsTotal.count && docsTotal.count > 0
+      const errorRate = jobMetrics.total > 0
         ? ((jobMetrics.failed / jobMetrics.total) * 100)
         : 0;
 
