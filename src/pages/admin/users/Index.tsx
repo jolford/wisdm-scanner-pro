@@ -337,13 +337,27 @@ const UsersIndex = () => {
     if (!deleteUserId) return;
 
     try {
-      // Delete user's profile (cascade will handle related records)
-      const { error } = await supabase
-        .from('profiles')
-        .delete()
-        .eq('id', deleteUserId);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Not authenticated');
+        return;
+      }
 
-      if (error) throw error;
+      // Call edge function to delete user with admin privileges
+      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/delete-user`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: deleteUserId }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete user');
+      }
 
       toast.success('User deleted successfully');
       setDeleteUserId(null);

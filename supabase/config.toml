@@ -15,3 +15,6 @@ verify_jwt = true
 
 [functions.api-docs-pdf]
 verify_jwt = false
+
+[functions.delete-user]
+verify_jwt = true
