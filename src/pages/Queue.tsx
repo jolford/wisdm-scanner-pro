@@ -911,8 +911,8 @@ const Queue = () => {
               </TabsTrigger>
               <TabsTrigger value="validated" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-0 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
                 <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="font-medium hidden sm:inline">Validated</span>
-                <span className="font-medium sm:hidden">Done</span>
+                <span className="font-medium hidden sm:inline">Quality Control</span>
+                <span className="font-medium sm:hidden">QC</span>
                 <Badge variant="secondary" className="text-xs sm:ml-1 bg-success/10 text-success border-0">
                   {validatedDocs.length}
                 </Badge>
@@ -1019,7 +1019,7 @@ const Queue = () => {
                   <Card className="p-12 text-center border-dashed border-2 bg-gradient-to-br from-success/5 to-accent/10">
                     <div className="animate-scale-in">
                       <CheckCircle className="h-16 w-16 mx-auto mb-4 text-success/40" />
-                      <h3 className="text-xl font-semibold mb-2">No Validated Documents</h3>
+                      <h3 className="text-xl font-semibold mb-2">No Quality Control Documents</h3>
                       <p className="text-muted-foreground">Validate documents to see them here</p>
                     </div>
                   </Card>
@@ -1035,7 +1035,7 @@ const Queue = () => {
                             <FileText className="h-5 w-5 text-success" />
                             <h3 className="text-lg font-semibold">{doc.file_name}</h3>
                             <Badge variant="outline" className="bg-success/10 text-success border-success/30">
-                              Validated
+                              Quality Control
                             </Badge>
                           </div>
                           <p className="text-sm text-muted-foreground mb-4">
@@ -1099,7 +1099,7 @@ const Queue = () => {
                     </div>
                     <div>
                       <p className="text-2xl font-bold text-primary">{validatedDocs.length}</p>
-                      <p className="text-sm text-muted-foreground">Validated</p>
+                      <p className="text-sm text-muted-foreground">Quality Control</p>
                     </div>
                   </div>
                 </div>

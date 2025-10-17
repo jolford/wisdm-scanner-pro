@@ -70,7 +70,7 @@ const EditProject = () => {
   const [queues, setQueues] = useState<Queue[]>([
     { name: 'Scan', enabled: true },
     { name: 'Validation', enabled: true },
-    { name: 'Validated', enabled: true },
+    { name: 'Quality Control', enabled: true },
     { name: 'Export', enabled: true },
   ]);
 
@@ -466,38 +466,80 @@ const EditProject = () => {
                           </Label>
                         </div>
                         
-                        {isECM ? (
-                          <div className="pl-6">
-                            <ECMExportConfig
-                              type={type as 'filebound' | 'docmgt'}
-                              config={config}
-                              extractionFields={fields}
-                              onConfigChange={(newConfig) => 
-                                setExportConfig(prev => ({ 
-                                  ...prev, 
-                                  [type]: newConfig 
-                                }))
-                              }
-                              disabled={!config.enabled}
-                            />
-                          </div>
-                        ) : (
-                          <div className="pl-6 space-y-3">
-                            <div>
-                              <Label htmlFor={`dest-${type}`} className="text-xs mb-1">
-                                Export Destination
-                              </Label>
-                              <FolderPicker
-                                value={config.destination}
-                                onChange={(path) => 
+                        {config.enabled && (
+                          isECM ? (
+                            <div className="pl-6 mt-3">
+                              <ECMExportConfig
+                                type={type as 'filebound' | 'docmgt'}
+                                config={config}
+                                extractionFields={fields}
+                                onConfigChange={(newConfig) => 
                                   setExportConfig(prev => ({ 
                                     ...prev, 
-                                    [type]: { ...prev[type], destination: path }
+                                    [type]: newConfig 
                                   }))
                                 }
                                 disabled={!config.enabled}
                               />
                             </div>
+                          ) : (
+                            <div className="pl-6 space-y-3 mt-3">
+                              <div>
+                                <Label htmlFor={`dest-${type}`} className="text-xs mb-1">
+                                  Export Destination
+                                </Label>
+                                <FolderPicker
+                                  value={config.destination}
+                                  onChange={(path) => 
+                                    setExportConfig(prev => ({ 
+                                      ...prev, 
+                                      [type]: { ...prev[type], destination: path }
+                                    }))
+                                  }
+                                  disabled={!config.enabled}
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`convert-${type}`} className="text-xs mb-1">
+                                  Convert Format on Export
+                                </Label>
+                                <Select
+                                  value={config.convertFormat || 'none'}
+                                  onValueChange={(value) => 
+                                    setExportConfig(prev => ({ 
+                                      ...prev, 
+                                      [type]: { ...prev[type], convertFormat: value as 'none' | 'pdf' | 'jpg' | 'tiff' }
+                                    }))
+                                  }
+                                  disabled={!config.enabled}
+                                >
+                                  <SelectTrigger id={`convert-${type}`}>
+                                    <SelectValue placeholder="Select format" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-popover z-50">
+                                    <SelectItem value="none">No Conversion</SelectItem>
+                                    <SelectItem value="pdf">Convert to PDF</SelectItem>
+                                    <SelectItem value="jpg">Convert to JPG</SelectItem>
+                                    <SelectItem value="tiff">Convert to TIFF</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  Automatically convert documents to selected format during export
+                                </p>
+                              </div>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </Card>
+                  );
+                })}
+              </div>
+              <p className="text-sm text-muted-foreground mt-2">
+                Configure export formats, destinations, and automatic format conversion. For ECM systems (Filebound/Docmgt), test connection to fetch available projects and map fields. Documents can be automatically converted to PDF, JPG, or TIFF format during export.
+              </p>
+            </div>
+
             <div>
               <Label className="mb-4 block">Document Separation</Label>
               <Card className="p-4 bg-muted/50">
@@ -508,46 +550,6 @@ const EditProject = () => {
               </Card>
               <p className="text-sm text-muted-foreground mt-2">
                 Configure how multi-page PDFs are automatically split into individual documents during scanning.
-              </p>
-            </div>
-
-            <div>
-                              <Label htmlFor={`convert-${type}`} className="text-xs mb-1">
-                                Convert Format on Export
-                              </Label>
-                              <Select
-                                value={config.convertFormat || 'none'}
-                                onValueChange={(value) => 
-                                  setExportConfig(prev => ({ 
-                                    ...prev, 
-                                    [type]: { ...prev[type], convertFormat: value as 'none' | 'pdf' | 'jpg' | 'tiff' }
-                                  }))
-                                }
-                                disabled={!config.enabled}
-                              >
-                                <SelectTrigger id={`convert-${type}`}>
-                                  <SelectValue placeholder="Select format" />
-                                </SelectTrigger>
-                                <SelectContent className="bg-popover z-50">
-                                  <SelectItem value="none">No Conversion</SelectItem>
-                                  <SelectItem value="pdf">Convert to PDF</SelectItem>
-                                  <SelectItem value="jpg">Convert to JPG</SelectItem>
-                                  <SelectItem value="tiff">Convert to TIFF</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <p className="text-xs text-muted-foreground mt-1">
-                                Automatically convert documents to selected format during export
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                Configure export formats, destinations, and automatic format conversion. For ECM systems (Filebound/Docmgt), test connection to fetch available projects and map fields. Documents can be automatically converted to PDF, JPG, or TIFF format during export.
               </p>
             </div>
 
