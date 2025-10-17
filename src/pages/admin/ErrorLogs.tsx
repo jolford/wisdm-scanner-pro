@@ -6,10 +6,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertCircle, RefreshCw, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertCircle, RefreshCw, Trash2, ChevronDown, ChevronUp, Bug } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { logError } from '@/lib/error-logger';
 
 interface ErrorLog {
   id: string;
@@ -33,6 +34,20 @@ const ErrorLogs = () => {
   useEffect(() => {
     if (!loading && isAdmin) {
       loadLogs();
+
+      // Realtime updates for new error logs
+      const channel = supabase
+        .channel('error-logs')
+        .on(
+          'postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'error_logs' },
+          () => loadLogs()
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [loading, isAdmin]);
 
@@ -82,6 +97,12 @@ const ErrorLogs = () => {
     }
   };
 
+  const handleLogTest = async () => {
+    await logError(new Error('Test error log'), 'ManualTest', { source: 'ErrorLogsPage' });
+    toast({ title: 'Test Error Logged', description: 'A test error was inserted.' });
+    loadLogs();
+  };
+
   const handleDeleteLog = async (id: string) => {
     try {
       const { error } = await supabase
@@ -125,6 +146,14 @@ const ErrorLogs = () => {
             </span>
           </div>
           <div className="flex gap-2">
+            <Button variant="outline" onClick={async () => {
+              await logError(new Error('Test error log'), 'ManualTest', { source: 'ErrorLogsPage' });
+              toast({ title: 'Test Error Logged', description: 'A test error was inserted.' });
+              loadLogs();
+            }}>
+              <Bug className="h-4 w-4 mr-2" />
+              Log Test Error
+            </Button>
             <Button variant="outline" onClick={loadLogs}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
