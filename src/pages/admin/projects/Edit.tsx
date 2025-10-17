@@ -17,6 +17,7 @@ import wisdmLogo from '@/assets/wisdm-logo.png';
 import { ECMExportConfig } from '@/components/admin/ECMExportConfig';
 import { DocumentSeparationConfig, SeparationConfig } from '@/components/admin/DocumentSeparationConfig';
 import { FolderPicker } from '@/components/admin/FolderPicker';
+import { ScheduledExportConfig } from '@/components/admin/ScheduledExportConfig';
 
 interface ExtractionField {
   name: string;
@@ -549,6 +550,21 @@ const EditProject = () => {
               </div>
               <p className="text-sm text-muted-foreground mt-2">
                 Configure which processing queues are active for this project's workflow.
+              </p>
+            </div>
+
+            <div>
+              <Label className="mb-4 block">Scheduled Exports</Label>
+              <Card className="p-4 bg-muted/50">
+                <ScheduledExportConfig
+                  projectId={id || ''}
+                  availableExportTypes={Object.keys(exportConfig).filter(
+                    type => !['filebound', 'docmgt'].includes(type)
+                  )}
+                />
+              </Card>
+              <p className="text-sm text-muted-foreground mt-2">
+                Configure automatic exports to run on a schedule. Batches with validated status will be exported automatically.
               </p>
             </div>
 

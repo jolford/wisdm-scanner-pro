@@ -18,3 +18,6 @@ verify_jwt = false
 
 [functions.delete-user]
 verify_jwt = true
+
+[functions.process-scheduled-exports]
+verify_jwt = false
