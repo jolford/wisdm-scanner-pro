@@ -25,22 +25,56 @@ export const ImageRegionSelector = ({
   const { toast } = useToast();
 
   useEffect(() => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      setImage(img);
-      if (canvasRef.current) {
-        const canvas = canvasRef.current;
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
-        }
+    const loadImage = async () => {
+      try {
+        // Fetch the image as a blob to avoid CORS issues
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        
+        const img = new Image();
+        img.onload = () => {
+          setImage(img);
+          if (canvasRef.current) {
+            const canvas = canvasRef.current;
+            // Set reasonable max dimensions
+            const maxWidth = 1200;
+            const scale = Math.min(1, maxWidth / img.width);
+            canvas.width = img.width * scale;
+            canvas.height = img.height * scale;
+            
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            }
+          }
+          // Clean up blob URL
+          URL.revokeObjectURL(objectUrl);
+        };
+        
+        img.onerror = () => {
+          console.error('Failed to load image for region selector');
+          toast({
+            title: 'Image Load Error',
+            description: 'Failed to load image for region selection',
+            variant: 'destructive',
+          });
+          URL.revokeObjectURL(objectUrl);
+        };
+        
+        img.src = objectUrl;
+      } catch (error) {
+        console.error('Error loading image:', error);
+        toast({
+          title: 'Image Load Error',
+          description: 'Could not load image for selection',
+          variant: 'destructive',
+        });
       }
     };
-    img.src = imageUrl;
-  }, [imageUrl]);
+
+    loadImage();
+  }, [imageUrl, toast]);
 
   const redrawCanvas = () => {
     if (!canvasRef.current || !image) return;
@@ -133,12 +167,13 @@ export const ImageRegionSelector = ({
       
       if (!cropCtx || !image) throw new Error('Canvas context not available');
 
-      // Draw the cropped region
-      cropCtx.drawImage(
-        image,
-        x, y, width, height,
-        0, 0, width, height
-      );
+      // Draw the cropped region from the canvas (not the image element)
+      const sourceCanvas = canvas;
+      const sourceCtx = sourceCanvas.getContext('2d');
+      if (!sourceCtx) throw new Error('Source canvas context not available');
+      
+      const imageData = sourceCtx.getImageData(x, y, width, height);
+      cropCtx.putImageData(imageData, 0, 0);
 
       const croppedImageData = cropCanvas.toDataURL('image/png');
 
