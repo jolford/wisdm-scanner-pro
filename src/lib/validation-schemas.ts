@@ -34,7 +34,7 @@ export const projectSchema = z.object({
       enabled: z.boolean(),
       destination: z.string()
         .trim()
-        .max(255, 'Destination path must be less than 255 characters')
+        .max(500, 'Destination path must be less than 500 characters')
         .optional(),
       url: z.string()
         .trim()
@@ -63,11 +63,14 @@ export const projectSchema = z.object({
       }
       
       // Otherwise it's a file export - validate destination
+      // Allow Windows paths (C:\, \\network\), Unix paths (/path/), and spaces
       if (data.destination) {
-        return /^[a-zA-Z0-9\/_\-\.]+$/.test(data.destination);
+        // Allow any valid path characters including backslashes, colons, spaces, etc.
+        // Just check that it's not empty after trimming
+        return data.destination.trim().length > 0;
       }
       
-      return true;
+      return false; // Must have either URL or destination if enabled
     }, {
       message: 'Please complete all required fields for the export type'
     })
