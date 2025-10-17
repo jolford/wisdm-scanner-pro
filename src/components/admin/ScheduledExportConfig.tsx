@@ -180,7 +180,7 @@ export const ScheduledExportConfig = ({ projectId, availableExportTypes }: Sched
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Scheduled Exports</h3>
-        <Button onClick={addSchedule} size="sm">
+        <Button type="button" onClick={addSchedule} size="sm">
           <Plus className="h-4 w-4 mr-2" />
           Add Schedule
         </Button>
@@ -198,6 +198,7 @@ export const ScheduledExportConfig = ({ projectId, availableExportTypes }: Sched
                 <Label>Active</Label>
               </div>
               <Button
+                type="button"
                 variant="ghost"
                 size="sm"
                 onClick={() => removeSchedule(index)}
@@ -298,7 +299,7 @@ export const ScheduledExportConfig = ({ projectId, availableExportTypes }: Sched
       ))}
 
       {schedules.length > 0 && (
-        <Button onClick={saveSchedules} disabled={loading}>
+        <Button type="button" onClick={saveSchedules} disabled={loading}>
           {loading ? 'Saving...' : 'Save Schedules'}
         </Button>
       )}
