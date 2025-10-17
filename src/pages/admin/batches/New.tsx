@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { batchSchema } from '@/lib/validation-schemas';
 import { safeErrorMessage } from '@/lib/error-handler';
+import { BatchCustomFields, BatchField } from '@/components/admin/BatchCustomFields';
 
 const NewBatch = () => {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ const NewBatch = () => {
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [priority, setPriority] = useState('0');
   const [notes, setNotes] = useState('');
+  const [customFields, setCustomFields] = useState<BatchField[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const { data: projects } = useQuery({
@@ -61,12 +63,23 @@ const NewBatch = () => {
 
     setIsSubmitting(true);
     try {
+      // Build custom fields object
+      const customFieldsObj = customFields
+        .filter(f => f.name.trim() && f.value.trim())
+        .reduce((acc, field) => {
+          acc[field.name] = field.value;
+          return acc;
+        }, {} as Record<string, string>);
+
       const { data, error } = await supabase.from('batches').insert([{
         batch_name: batchName,
         project_id: selectedProjectId,
         priority: parseInt(priority),
         notes,
         created_by: user?.id,
+        metadata: {
+          custom_fields: customFieldsObj,
+        },
       } as any]).select().single();
 
       if (error) throw error;
@@ -153,6 +166,14 @@ const NewBatch = () => {
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Optional notes about this batch"
                 rows={4}
+              />
+            </div>
+
+            <div className="border-t pt-6">
+              <BatchCustomFields
+                fields={customFields}
+                onChange={setCustomFields}
+                disabled={isSubmitting}
               />
             </div>
 

@@ -366,6 +366,27 @@ ${xmlDocs}
           </Card>
         </div>
 
+        {/* Batch Custom Fields */}
+        {(batch.metadata as any)?.custom_fields && Object.keys((batch.metadata as any).custom_fields).length > 0 && (
+          <Card className="p-6 mb-8">
+            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <FolderOpen className="h-5 w-5" />
+              Batch Custom Fields
+            </h2>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Object.entries((batch.metadata as any).custom_fields).map(([key, value]) => (
+                <div key={key} className="p-3 bg-muted/30 rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-1">{key}</p>
+                  <p className="font-medium">{value as string}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-4">
+              These fields are included in all exports for this batch
+            </p>
+          </Card>
+        )}
+
         {/* Documents List */}
         <Card className="p-6">
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">

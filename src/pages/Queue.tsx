@@ -496,6 +496,9 @@ const Queue = () => {
       return;
     }
 
+    // Get batch custom fields from metadata
+    const batchCustomFields = (selectedBatch?.metadata as any)?.custom_fields || {};
+
     const metadataKeys = new Set<string>();
     validatedDocs.forEach(doc => {
       if (doc.extracted_metadata) {
@@ -509,12 +512,19 @@ const Queue = () => {
 
     switch (format) {
       case 'csv':
-        const headers = ['File Name', 'Date', ...Array.from(metadataKeys)];
+        // Include batch custom fields in headers
+        const batchFieldHeaders = Object.keys(batchCustomFields);
+        const headers = ['File Name', 'Date', ...batchFieldHeaders, ...Array.from(metadataKeys)];
         const rows = validatedDocs.map(doc => {
           const row: string[] = [
             doc.file_name,
             new Date(doc.created_at).toLocaleDateString(),
           ];
+          // Add batch custom field values
+          batchFieldHeaders.forEach(key => {
+            row.push(batchCustomFields[key] || '');
+          });
+          // Add document metadata
           metadataKeys.forEach(key => {
             row.push(doc.extracted_metadata?.[key] || '');
           });
@@ -532,10 +542,11 @@ const Queue = () => {
         const jsonData = validatedDocs.map(doc => ({
           fileName: doc.file_name,
           date: new Date(doc.created_at).toISOString(),
+          batchFields: batchCustomFields,
           metadata: doc.extracted_metadata,
           extractedText: doc.extracted_text,
         }));
-        content = JSON.stringify(jsonData, null, 2);
+        content = JSON.stringify({ batch: selectedBatch?.batch_name, batchFields: batchCustomFields, documents: jsonData }, null, 2);
         mimeType = 'application/json';
         extension = 'json';
         break;
@@ -544,6 +555,14 @@ const Queue = () => {
         content = '<?xml version="1.0" encoding="UTF-8"?>\n<batch>\n';
         content += `  <name>${selectedBatch?.batch_name || 'export'}</name>\n`;
         content += `  <exportDate>${new Date().toISOString()}</exportDate>\n`;
+        // Add batch custom fields
+        if (Object.keys(batchCustomFields).length > 0) {
+          content += '  <batchFields>\n';
+          Object.entries(batchCustomFields).forEach(([key, value]) => {
+            content += `    <${key}>${value}</${key}>\n`;
+          });
+          content += '  </batchFields>\n';
+        }
         content += '  <documents>\n';
         validatedDocs.forEach(doc => {
           content += '    <document>\n';
@@ -565,8 +584,15 @@ const Queue = () => {
       case 'txt':
         content = `Batch Export: ${selectedBatch?.batch_name || 'export'}\n`;
         content += `Export Date: ${new Date().toLocaleDateString()}\n`;
-        content += `Total Documents: ${validatedDocs.length}\n\n`;
-        content += '='.repeat(80) + '\n\n';
+        content += `Total Documents: ${validatedDocs.length}\n`;
+        // Add batch custom fields
+        if (Object.keys(batchCustomFields).length > 0) {
+          content += '\nBatch Fields:\n';
+          Object.entries(batchCustomFields).forEach(([key, value]) => {
+            content += `  ${key}: ${value}\n`;
+          });
+        }
+        content += '\n' + '='.repeat(80) + '\n\n';
         validatedDocs.forEach((doc, index) => {
           content += `Document ${index + 1}: ${doc.file_name}\n`;
           content += `Date: ${new Date(doc.created_at).toLocaleDateString()}\n`;
