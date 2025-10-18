@@ -14,7 +14,12 @@ interface ExportConfig {
   url?: string;
   username?: string;
   password?: string;
+  accessToken?: string; // For SharePoint OAuth
   project?: string;
+  repository?: string; // For Documentum
+  cabinet?: string; // For Documentum
+  library?: string; // For SharePoint
+  folder?: string; // For SharePoint
   fieldMappings?: Record<string, string>;
 }
 
@@ -31,7 +36,7 @@ interface ECMField {
 }
 
 interface ECMExportConfigProps {
-  type: 'filebound' | 'docmgt';
+  type: 'filebound' | 'docmgt' | 'documentum' | 'sharepoint';
   config: ExportConfig;
   extractionFields: Array<{ name: string; description: string }>;
   onConfigChange: (config: ExportConfig) => void;
@@ -54,46 +59,102 @@ export function ECMExportConfig({
   const [loadingFields, setLoadingFields] = useState(false);
 
   const testConnection = async () => {
-    if (!config.url || !config.username || !config.password) {
-      toast.error('Please fill in all connection fields');
+    // Validate required fields based on ECM type
+    if (!config.url) {
+      toast.error('ECM URL is required');
       return;
+    }
+    
+    if (type === 'sharepoint') {
+      if (!config.accessToken) {
+        toast.error('Access token is required for SharePoint');
+        return;
+      }
+    } else {
+      if (!config.username || !config.password) {
+        toast.error('Username and password are required');
+        return;
+      }
     }
 
     setTesting(true);
     setConnectionStatus('idle');
 
     try {
-      const functionName = type === 'filebound' ? 'test-filebound-connection' : 'test-docmgt-connection';
+      // Map ECM type to function name
+      const functionMap = {
+        'filebound': 'test-filebound-connection',
+        'docmgt': 'test-docmgt-connection',
+        'documentum': 'test-documentum-connection',
+        'sharepoint': 'test-sharepoint-connection',
+      };
+      
+      const functionName = functionMap[type];
+      
+      // Build request body based on ECM type
+      const requestBody = type === 'sharepoint' 
+        ? { url: config.url, accessToken: config.accessToken }
+        : { url: config.url, username: config.username, password: config.password };
       
       const { data, error } = await supabase.functions.invoke(functionName, {
-        body: {
-          url: config.url,
-          username: config.username,
-          password: config.password,
-        },
+        body: requestBody,
       });
 
       if (error) throw error;
 
       if (data.success) {
         setConnectionStatus('success');
-        const projects = data.projects.map((p: any) => ({
-          id: p.ProjectId?.toString() || p.id?.toString(),
-          name: p.Name || p.name,
-          description: p.Description || p.description
-        }));
+        
+        // Handle different response structures
+        let projects: ECMProject[] = [];
+        
+        if (type === 'documentum') {
+          // Documentum returns repositories with cabinets
+          projects = (data.repositories || []).map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            description: `Repository with ${r.cabinets?.length || 0} cabinets`,
+          }));
+        } else if (type === 'sharepoint') {
+          // SharePoint returns libraries with fields
+          projects = (data.libraries || []).map((l: any) => ({
+            id: l.id,
+            name: l.name,
+            description: `Document library with ${l.fields?.length || 0} fields`,
+          }));
+        } else {
+          // FileBound and DocMgt return projects
+          projects = (data.projects || []).map((p: any) => ({
+            id: p.ProjectId?.toString() || p.id?.toString(),
+            name: p.Name || p.name,
+            description: p.Description || p.description
+          }));
+        }
+        
         setAvailableProjects(projects);
         
-        // Store all project fields for later use
-        if (data.projectFields) {
+        // Store all project/repository/library fields
+        if (data.projectFields || data.libraries || data.repositories) {
           const formattedFields: Record<string, ECMField[]> = {};
-          Object.entries(data.projectFields).forEach(([projId, fields]) => {
-            formattedFields[projId] = (fields as any[]).map((f: any) => ({
-              name: f.FieldName || f.name || f.Name,
-              type: f.FieldType || f.type || f.Type || 'text',
-              required: f.Required || f.required || false
-            }));
-          });
+          
+          if (type === 'sharepoint' && data.libraries) {
+            data.libraries.forEach((lib: any) => {
+              formattedFields[lib.id] = (lib.fields || []).map((f: any) => ({
+                name: f.InternalName || f.Title || f.name,
+                type: f.TypeAsString || f.type || 'text',
+                required: f.Required || false
+              }));
+            });
+          } else if (data.projectFields) {
+            Object.entries(data.projectFields).forEach(([projId, fields]) => {
+              formattedFields[projId] = (fields as any[]).map((f: any) => ({
+                name: f.FieldName || f.name || f.Name,
+                type: f.FieldType || f.type || f.Type || 'text',
+                required: f.Required || f.required || false
+              }));
+            });
+          }
+          
           setAllProjectFields(formattedFields);
         }
         
@@ -193,52 +254,76 @@ export function ECMExportConfig({
     });
   };
 
+  const isSharePoint = type === 'sharepoint';
+  const isTestButtonDisabled = disabled || testing || !config.url || 
+    (isSharePoint ? !config.accessToken : (!config.username || !config.password));
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label htmlFor={`url-${type}`} className="text-xs mb-1">
-            ECM URL *
+            {type === 'sharepoint' ? 'SharePoint Site URL' : 'ECM URL'} *
           </Label>
           <Input
             id={`url-${type}`}
             value={config.url || ''}
             onChange={(e) => onConfigChange({ ...config, url: e.target.value })}
-            placeholder="https://ecm.example.com"
+            placeholder={type === 'sharepoint' ? 'https://contoso.sharepoint.com/sites/yoursite' : 'https://ecm.example.com'}
             disabled={disabled}
           />
         </div>
-        <div>
-          <Label htmlFor={`username-${type}`} className="text-xs mb-1">
-            Username *
-          </Label>
-          <Input
-            id={`username-${type}`}
-            value={config.username || ''}
-            onChange={(e) => onConfigChange({ ...config, username: e.target.value })}
-            placeholder="ECM username"
-            disabled={disabled}
-          />
-        </div>
-        <div>
-          <Label htmlFor={`password-${type}`} className="text-xs mb-1">
-            Password *
-          </Label>
-          <Input
-            id={`password-${type}`}
-            type="password"
-            value={config.password || ''}
-            onChange={(e) => onConfigChange({ ...config, password: e.target.value })}
-            placeholder="ECM password"
-            disabled={disabled}
-          />
-        </div>
+        
+        {isSharePoint ? (
+          <div>
+            <Label htmlFor={`token-${type}`} className="text-xs mb-1">
+              Access Token *
+            </Label>
+            <Input
+              id={`token-${type}`}
+              type="password"
+              value={config.accessToken || ''}
+              onChange={(e) => onConfigChange({ ...config, accessToken: e.target.value })}
+              placeholder="Bearer token for SharePoint API"
+              disabled={disabled}
+            />
+          </div>
+        ) : (
+          <>
+            <div>
+              <Label htmlFor={`username-${type}`} className="text-xs mb-1">
+                Username *
+              </Label>
+              <Input
+                id={`username-${type}`}
+                value={config.username || ''}
+                onChange={(e) => onConfigChange({ ...config, username: e.target.value })}
+                placeholder="ECM username"
+                disabled={disabled}
+              />
+            </div>
+            <div>
+              <Label htmlFor={`password-${type}`} className="text-xs mb-1">
+                Password *
+              </Label>
+              <Input
+                id={`password-${type}`}
+                type="password"
+                value={config.password || ''}
+                onChange={(e) => onConfigChange({ ...config, password: e.target.value })}
+                placeholder="ECM password"
+                disabled={disabled}
+              />
+            </div>
+          </>
+        )}
+        
         <div className="flex items-end">
           <Button
             type="button"
             variant="outline"
             onClick={testConnection}
-            disabled={disabled || testing || !config.url || !config.username || !config.password}
+            disabled={isTestButtonDisabled}
             className="w-full"
           >
             {testing ? (
@@ -266,16 +351,17 @@ export function ECMExportConfig({
       {connectionStatus === 'success' && availableProjects.length > 0 && (
         <div>
           <Label htmlFor={`project-${type}`} className="text-xs mb-1">
-            Select Project *
+            {type === 'documentum' ? 'Select Repository' : type === 'sharepoint' ? 'Select Library' : 'Select Project'} *
           </Label>
           <Select value={selectedProjectId} onValueChange={handleProjectSelect} disabled={disabled}>
             <SelectTrigger>
-              <SelectValue placeholder="Choose a project..." />
+              <SelectValue placeholder={`Choose a ${type === 'documentum' ? 'repository' : type === 'sharepoint' ? 'library' : 'project'}...`} />
             </SelectTrigger>
             <SelectContent>
               {availableProjects.map((project) => (
                 <SelectItem key={project.id} value={project.id}>
                   {project.name}
+                  {project.description && <span className="text-xs text-muted-foreground ml-2">({project.description})</span>}
                 </SelectItem>
               ))}
             </SelectContent>

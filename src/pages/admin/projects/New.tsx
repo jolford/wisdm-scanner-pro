@@ -62,6 +62,8 @@ const NewProject = () => {
     images: { enabled: true, destination: '/exports/images/', convertFormat: 'none' },
     filebound: { enabled: false, destination: '', url: '', username: '', password: '', project: '', convertFormat: 'none' },
     docmgt: { enabled: false, destination: '', url: '', username: '', password: '', project: '', convertFormat: 'none' },
+    documentum: { enabled: false, destination: '', url: '', username: '', password: '', project: '', convertFormat: 'none' },
+    sharepoint: { enabled: false, destination: '', url: '', password: '', project: '', convertFormat: 'none' },
   });
 
   const [queues, setQueues] = useState<Queue[]>([
@@ -355,7 +357,7 @@ const NewProject = () => {
               <Label className="mb-4 block">Export Configuration</Label>
               <div className="space-y-4">
                 {Object.entries(exportConfig).map(([type, config]) => {
-                  const isECM = type === 'filebound' || type === 'docmgt';
+                  const isECM = ['filebound', 'docmgt', 'documentum', 'sharepoint'].includes(type);
                   
                   return (
                     <Card key={type} className="p-4 bg-muted/50">
@@ -379,7 +381,7 @@ const NewProject = () => {
                         {isECM ? (
                           <div className="pl-6">
                             <ECMExportConfig
-                              type={type as 'filebound' | 'docmgt'}
+                              type={type as 'filebound' | 'docmgt' | 'documentum' | 'sharepoint'}
                               config={config}
                               extractionFields={fields}
                               onConfigChange={(newConfig) => 
