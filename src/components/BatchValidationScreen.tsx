@@ -582,10 +582,18 @@ const ImageRegionSelectorWithSignedUrl = ({
   // Detect if file is a PDF
   const isPdf = /\.pdf($|\?)/i.test(fileUrl);
 
-  // Effect to generate preview image from PDF when signed URL is ready
+  // Effect to generate preview image from PDF when signed URL is ready, or use image directly
   useEffect(() => {
     const run = async () => {
       if (!signedUrl) return;
+      
+      // For non-PDF images, just use the URL directly
+      if (!isPdf) {
+        setPreview(signedUrl);
+        return;
+      }
+      
+      // For PDFs, render first page as image
       try {
         // Fetch PDF file
         const resp = await fetch(signedUrl);
@@ -628,7 +636,7 @@ const ImageRegionSelectorWithSignedUrl = ({
     };
     // Run preview generation
     run();
-  }, [signedUrl]);
+  }, [signedUrl, isPdf]);
 
   // Show loading state while fetching signed URL
   if (loading || !signedUrl) {
