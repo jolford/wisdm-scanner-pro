@@ -53,6 +53,7 @@ const EditProject = () => {
   
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
+  const [enableCheckScanning, setEnableCheckScanning] = useState(false);
   const [documentNamingPattern, setDocumentNamingPattern] = useState('');
   const [fields, setFields] = useState<ExtractionField[]>([
     { name: '', description: '' }
@@ -109,6 +110,7 @@ const EditProject = () => {
       if (data) {
         setProjectName(data.name);
         setProjectDescription(data.description || '');
+        setEnableCheckScanning(data.enable_check_scanning || false);
         
         // Set extraction fields with proper type checking
         if (Array.isArray(data.extraction_fields)) {
@@ -244,6 +246,7 @@ const EditProject = () => {
         .update({
           name: projectName,
           description: projectDescription,
+          enable_check_scanning: enableCheckScanning,
           extraction_fields: validFields as any,
           export_types: selectedExportTypes,
           queues: queues as any,
@@ -336,6 +339,22 @@ const EditProject = () => {
                 placeholder="Describe what this project is used for..."
                 rows={3}
               />
+            </div>
+
+            <div className="flex items-center space-x-2 p-4 border border-border rounded-lg bg-muted/30">
+              <Checkbox
+                id="check-scanning"
+                checked={enableCheckScanning}
+                onCheckedChange={(checked) => setEnableCheckScanning(checked as boolean)}
+              />
+              <div className="flex-1">
+                <Label htmlFor="check-scanning" className="cursor-pointer font-medium">
+                  Enable Check/MICR Scanning Mode
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Optimizes extraction for checks with MICR line reading (routing number, account number, check number, amount)
+                </p>
+              </div>
             </div>
 
             <div>
