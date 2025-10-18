@@ -459,8 +459,8 @@ const EditProject = () => {
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {['csv', 'json', 'xml', 'txt', 'pdf', 'images'].map((type) => {
-                    const config = exportConfig[type];
+                {['csv', 'json', 'xml', 'txt', 'pdf', 'images'].map((type) => {
+                    const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
                     return (
                       <div key={type} className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
                         <Checkbox
@@ -537,8 +537,8 @@ const EditProject = () => {
                 <div className="border-t pt-4">
                   <h4 className="text-sm font-medium mb-3">ECM Connectors</h4>
                   <div className="grid grid-cols-2 gap-3">
-                    {['filebound', 'docmgt', 'documentum', 'sharepoint'].map((type) => {
-                      const config = exportConfig[type];
+                  {['filebound', 'docmgt', 'documentum', 'sharepoint'].map((type) => {
+                      const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
                       return (
                         <div key={type} className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
                           <Checkbox
