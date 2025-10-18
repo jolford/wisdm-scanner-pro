@@ -22,6 +22,7 @@ interface ExtractionField {
   name: string;
   description: string;
   required?: boolean;
+  type?: 'text' | 'date' | 'currency' | 'number' | 'email';
 }
 
 interface Queue {
@@ -290,16 +291,42 @@ const NewProject = () => {
                         </Button>
                       </div>
                       <div className="flex-1 space-y-3">
-                        <div>
-                          <Label htmlFor={`field-name-${index}`} className="text-xs">
-                            Field Name
-                          </Label>
-                          <Input
-                            id={`field-name-${index}`}
-                            value={field.name}
-                            onChange={(e) => updateField(index, 'name', e.target.value)}
-                            placeholder="e.g., Invoice Number"
-                          />
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label htmlFor={`field-name-${index}`} className="text-xs">
+                              Field Name
+                            </Label>
+                            <Input
+                              id={`field-name-${index}`}
+                              value={field.name}
+                              onChange={(e) => updateField(index, 'name', e.target.value)}
+                              placeholder="e.g., Invoice Number"
+                            />
+                          </div>
+                          <div>
+                            <Label htmlFor={`field-type-${index}`} className="text-xs">
+                              Field Type
+                            </Label>
+                            <Select
+                              value={field.type || 'text'}
+                              onValueChange={(value) => {
+                                const updated = [...fields];
+                                updated[index].type = value as 'text' | 'date' | 'currency' | 'number' | 'email';
+                                setFields(updated);
+                              }}
+                            >
+                              <SelectTrigger id={`field-type-${index}`}>
+                                <SelectValue placeholder="Select type" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-popover z-50">
+                                <SelectItem value="text">Text</SelectItem>
+                                <SelectItem value="date">Date</SelectItem>
+                                <SelectItem value="currency">Currency</SelectItem>
+                                <SelectItem value="number">Number</SelectItem>
+                                <SelectItem value="email">Email</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                         <div>
                           <Label htmlFor={`field-desc-${index}`} className="text-xs">
