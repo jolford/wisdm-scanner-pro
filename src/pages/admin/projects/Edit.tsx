@@ -23,6 +23,7 @@ import { TableExtractionConfig, TableExtractionConfig as TableConfig } from '@/c
 interface ExtractionField {
   name: string;
   description: string;
+  required?: boolean;
 }
 
 interface Queue {
@@ -188,9 +189,9 @@ const EditProject = () => {
     setFields(fields.filter((_, i) => i !== index));
   };
 
-  const updateField = (index: number, key: keyof ExtractionField, value: string) => {
+  const updateField = (index: number, key: keyof ExtractionField, value: string | boolean) => {
     const updated = [...fields];
-    updated[index][key] = value;
+    updated[index] = { ...updated[index], [key]: value };
     setFields(updated);
   };
 
@@ -393,6 +394,20 @@ const EditProject = () => {
                             onChange={(e) => updateField(index, 'description', e.target.value)}
                             placeholder="e.g., The unique invoice identifier"
                           />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`field-required-${index}`}
+                            checked={field.required || false}
+                            onCheckedChange={(checked) => {
+                              const updated = [...fields];
+                              updated[index].required = checked === true;
+                              setFields(updated);
+                            }}
+                          />
+                          <Label htmlFor={`field-required-${index}`} className="text-xs cursor-pointer">
+                            Required field
+                          </Label>
                         </div>
                       </div>
                       {fields.length > 1 && (
