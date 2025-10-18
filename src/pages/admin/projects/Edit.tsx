@@ -449,16 +449,98 @@ const EditProject = () => {
               </p>
             </div>
 
-            <div>
-              <Label className="mb-4 block">Export Configuration</Label>
+            <Card className="p-6">
               <div className="space-y-4">
-                {Object.entries(exportConfig).map(([type, config]) => {
-                  const isECM = ['filebound', 'docmgt', 'documentum', 'sharepoint'].includes(type);
-                  
-                  return (
+                <div>
+                  <h3 className="text-lg font-medium">Export Configuration</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Configure file exports and ECM connectors
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {['csv', 'json', 'xml', 'txt', 'pdf', 'images'].map((type) => {
+                    const config = exportConfig[type];
+                    return (
+                      <div key={type} className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
+                        <Checkbox
+                          id={`export-${type}`}
+                          checked={config.enabled}
+                          onCheckedChange={(checked) => 
+                            setExportConfig(prev => ({ 
+                              ...prev, 
+                              [type]: { ...prev[type], enabled: checked === true }
+                            }))
+                          }
+                        />
+                        <Label htmlFor={`export-${type}`} className="text-sm font-medium cursor-pointer uppercase">
+                          {type}
+                        </Label>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {Object.entries(exportConfig)
+                  .filter(([type]) => !['filebound', 'docmgt', 'documentum', 'sharepoint'].includes(type) && exportConfig[type].enabled)
+                  .map(([type, config]) => (
                     <Card key={type} className="p-4 bg-muted/50">
+                      <h4 className="text-sm font-medium mb-3 uppercase">{type} Settings</h4>
                       <div className="space-y-3">
-                        <div className="flex items-center space-x-2">
+                        <div>
+                          <Label htmlFor={`dest-${type}`} className="text-xs mb-1">
+                            Export Destination
+                          </Label>
+                          <FolderPicker
+                            value={config.destination}
+                            onChange={(path) => 
+                              setExportConfig(prev => ({ 
+                                ...prev, 
+                                [type]: { ...prev[type], destination: path }
+                              }))
+                            }
+                            disabled={!config.enabled}
+                          />
+                        </div>
+                        
+                        {(type === 'pdf' || type === 'images') && (
+                          <div>
+                            <Label htmlFor={`convert-${type}`} className="text-xs mb-1">
+                              Convert Format on Export
+                            </Label>
+                            <Select
+                              value={config.convertFormat || 'none'}
+                              onValueChange={(value) => 
+                                setExportConfig(prev => ({ 
+                                  ...prev, 
+                                  [type]: { ...prev[type], convertFormat: value as 'none' | 'pdf' | 'jpg' | 'tiff' }
+                                }))
+                              }
+                              disabled={!config.enabled}
+                            >
+                              <SelectTrigger id={`convert-${type}`}>
+                                <SelectValue placeholder="Select format" />
+                              </SelectTrigger>
+                              <SelectContent className="bg-popover z-50">
+                                <SelectItem value="none">No Conversion</SelectItem>
+                                <SelectItem value="pdf">Convert to PDF</SelectItem>
+                                <SelectItem value="jpg">Convert to JPG</SelectItem>
+                                <SelectItem value="tiff">Convert to TIFF</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  ))}
+
+                <div className="border-t pt-4">
+                  <h4 className="text-sm font-medium mb-3">ECM Connectors</h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    {['filebound', 'docmgt', 'documentum', 'sharepoint'].map((type) => {
+                      const config = exportConfig[type];
+                      return (
+                        <div key={type} className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
                           <Checkbox
                             id={`export-${type}`}
                             checked={config.enabled}
@@ -469,84 +551,36 @@ const EditProject = () => {
                               }))
                             }
                           />
-                          <Label htmlFor={`export-${type}`} className="text-sm font-medium cursor-pointer">
-                            {type.toUpperCase()}
+                          <Label htmlFor={`export-${type}`} className="text-sm font-medium cursor-pointer uppercase">
+                            {type}
                           </Label>
                         </div>
-                        
-                        {config.enabled && (
-                          isECM ? (
-                            <div className="pl-6 mt-3">
-                              <ECMExportConfig
-                                type={type as 'filebound' | 'docmgt' | 'documentum' | 'sharepoint'}
-                                config={config}
-                                extractionFields={fields}
-                                onConfigChange={(newConfig) => 
-                                  setExportConfig(prev => ({ 
-                                    ...prev, 
-                                    [type]: newConfig 
-                                  }))
-                                }
-                                disabled={!config.enabled}
-                              />
-                            </div>
-                          ) : (
-                            <div className="pl-6 space-y-3 mt-3">
-                              <div>
-                                <Label htmlFor={`dest-${type}`} className="text-xs mb-1">
-                                  Export Destination
-                                </Label>
-                                <FolderPicker
-                                  value={config.destination}
-                                  onChange={(path) => 
-                                    setExportConfig(prev => ({ 
-                                      ...prev, 
-                                      [type]: { ...prev[type], destination: path }
-                                    }))
-                                  }
-                                  disabled={!config.enabled}
-                                />
-                              </div>
-                              <div>
-                                <Label htmlFor={`convert-${type}`} className="text-xs mb-1">
-                                  Convert Format on Export
-                                </Label>
-                                <Select
-                                  value={config.convertFormat || 'none'}
-                                  onValueChange={(value) => 
-                                    setExportConfig(prev => ({ 
-                                      ...prev, 
-                                      [type]: { ...prev[type], convertFormat: value as 'none' | 'pdf' | 'jpg' | 'tiff' }
-                                    }))
-                                  }
-                                  disabled={!config.enabled}
-                                >
-                                  <SelectTrigger id={`convert-${type}`}>
-                                    <SelectValue placeholder="Select format" />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-popover z-50">
-                                    <SelectItem value="none">No Conversion</SelectItem>
-                                    <SelectItem value="pdf">Convert to PDF</SelectItem>
-                                    <SelectItem value="jpg">Convert to JPG</SelectItem>
-                                    <SelectItem value="tiff">Convert to TIFF</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                                <p className="text-xs text-muted-foreground mt-1">
-                                  Automatically convert documents to selected format during export
-                                </p>
-                              </div>
-                            </div>
-                          )
-                        )}
-                      </div>
-                    </Card>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+
+                  {Object.entries(exportConfig)
+                    .filter(([type]) => ['filebound', 'docmgt', 'documentum', 'sharepoint'].includes(type) && exportConfig[type].enabled)
+                    .map(([type, config]) => (
+                      <Card key={type} className="p-4 bg-muted/50 mt-3">
+                        <h4 className="text-sm font-medium mb-3 uppercase">{type} Configuration</h4>
+                        <ECMExportConfig
+                          type={type as 'filebound' | 'docmgt' | 'documentum' | 'sharepoint'}
+                          config={config}
+                          extractionFields={fields}
+                          onConfigChange={(newConfig) => 
+                            setExportConfig(prev => ({ 
+                              ...prev, 
+                              [type]: newConfig 
+                            }))
+                          }
+                          disabled={!config.enabled}
+                        />
+                      </Card>
+                    ))}
+                </div>
               </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                Configure export formats, destinations, and automatic format conversion. For ECM systems (Filebound/Docmgt), test connection to fetch available projects and map fields. Documents can be automatically converted to PDF, JPG, or TIFF format during export.
-              </p>
-            </div>
+            </Card>
 
             <div>
               <Label className="mb-4 block">Document Separation</Label>
