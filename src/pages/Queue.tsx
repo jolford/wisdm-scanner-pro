@@ -62,6 +62,17 @@ const Queue = () => {
   const [docToDelete, setDocToDelete] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   
+  // MICR support: derive flag and ensure MICR fields are included in extraction when enabled
+  const enableMICR = Boolean((selectedProject as any)?.enable_check_scanning || (selectedProject as any)?.metadata?.enable_check_scanning?.enabled);
+  const baseProjectFields: Array<{ name: string; description: string }> = (selectedProject as any)?.extraction_fields || [];
+  const micrFieldNames: string[] = enableMICR ? ['Routing Number', 'Account Number', 'Check Number'] : [];
+  const extractionFields: Array<{ name: string; description: string }> = [
+    ...baseProjectFields,
+    ...micrFieldNames
+      .filter((f) => !baseProjectFields.some((bf: any) => (bf?.name || '').toLowerCase() === f.toLowerCase()))
+      .map((name) => ({ name, description: '' })),
+  ];
+
   // Initialize active tab from URL parameter or default to 'scan'
   const initialTab = searchParams.get('tab') || 'scan';
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -267,8 +278,9 @@ const Queue = () => {
                     body: { 
                       imageData: dataUrl,
                       isPdf: false,
-                      extractionFields: selectedProject?.extraction_fields || [],
-                      tableExtractionFields: tableFields
+                      extractionFields,
+                      tableExtractionFields: tableFields,
+                      enableCheckScanning: enableMICR,
                     },
                   });
                   if (error) throw error;
@@ -291,8 +303,9 @@ const Queue = () => {
                 body: { 
                   textData: extractedPdfText,
                   isPdf: true,
-                  extractionFields: selectedProject?.extraction_fields || [],
-                  tableExtractionFields: tableFields
+                  extractionFields,
+                  tableExtractionFields: tableFields,
+                  enableCheckScanning: enableMICR,
                 },
               });
               
@@ -417,8 +430,9 @@ const Queue = () => {
         body: { 
           imageData: imageUrl,
           isPdf: false,
-          extractionFields: selectedProject?.extraction_fields || [],
-          tableExtractionFields: tableFields
+          extractionFields,
+          tableExtractionFields: tableFields,
+          enableCheckScanning: enableMICR,
         },
       });
 
@@ -1031,7 +1045,7 @@ const Queue = () => {
               ) : (
                 <BatchValidationScreen
                   documents={validationQueue}
-                  projectFields={selectedProject?.extraction_fields || []}
+                  projectFields={extractionFields}
                   onValidationComplete={loadQueueDocuments}
                   batchId={selectedBatchId}
                   onSwitchToExport={() => handleTabChange('export')}
