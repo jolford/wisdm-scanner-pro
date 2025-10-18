@@ -60,9 +60,10 @@ serve(async (req) => {
 
     // --- PARSE REQUEST BODY ---
     // Extract parameters from the request
-    const { imageData, isPdf, extractionFields, textData, tableExtractionFields } = await req.json();
+    const { imageData, isPdf, extractionFields, textData, tableExtractionFields, enableCheckScanning } = await req.json();
     
     console.log('Processing OCR request...', isPdf ? 'PDF' : 'Image');
+    console.log('MICR Mode:', enableCheckScanning);
     console.log('Extraction fields:', extractionFields);
     console.log('Table extraction fields:', tableExtractionFields);
 
@@ -85,6 +86,12 @@ serve(async (req) => {
     // and identify specific fields with bounding box coordinates
     let systemPrompt = 'You are an advanced OCR, ICR, and document classification system. Extract all text from documents including printed text, handwritten text, cursive writing, and barcodes. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other). Be very careful to accurately recognize handwritten characters and barcode labels. For each extracted field, provide approximate bounding box coordinates (x, y, width, height) as percentages of the document dimensions (0-100).';
     let userPrompt = 'Extract all text from this document, including any handwritten text. Classify the document type. Pay special attention to handwritten characters, cursive writing, and barcode labels. For each field value, estimate its location on the document as bounding box coordinates.';
+    
+    // Add MICR-specific instructions if check scanning is enabled
+    if (enableCheckScanning) {
+      systemPrompt += '\n\nSPECIALIZED CHECK/MICR EXTRACTION: You are also specialized in reading checks and MICR (Magnetic Ink Character Recognition) lines. The MICR line is typically at the bottom of checks and contains routing number, account number, and check number in a specific format. Extract these with extreme accuracy.';
+      userPrompt = 'This is a CHECK document. Extract the MICR line information from the bottom of the check:\n- Routing Number (9 digits)\n- Account Number (variable length)\n- Check Number (variable length)\n- Amount (written and/or numeric)\nThe MICR line uses special characters: ⑆ (transit), ⑈ (amount), ⑉ (on-us). Format: ⑆routing⑆ account⑈ check⑉\nAlso extract any other visible check information. For each field, provide bounding box coordinates.';
+    }
     
     // Determine if we need to extract line item tables (for invoices, receipts, etc.)
     const hasTableExtraction = tableExtractionFields && Array.isArray(tableExtractionFields) && tableExtractionFields.length > 0;

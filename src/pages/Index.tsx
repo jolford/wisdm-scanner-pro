@@ -225,7 +225,8 @@ const Index = () => {
             textData: extractedPdfText,
             isPdf: true,
             extractionFields: selectedProject?.extraction_fields || [],
-            tableExtractionFields: tableFields
+            tableExtractionFields: tableFields,
+            enableCheckScanning: selectedProject?.enable_check_scanning || false
           },
         });
 
@@ -265,7 +266,8 @@ const Index = () => {
               imageData: dataUrl,
               isPdf: false,
               extractionFields: selectedProject?.extraction_fields || [],
-              tableExtractionFields: tableFields
+              tableExtractionFields: tableFields,
+              enableCheckScanning: selectedProject?.enable_check_scanning || false
             },
           });
           if (error) throw error;
@@ -323,7 +325,8 @@ const Index = () => {
           imageData: imageUrl,
           isPdf: false,
           extractionFields: selectedProject?.extraction_fields || [],
-          tableExtractionFields: tableFields
+          tableExtractionFields: tableFields,
+          enableCheckScanning: selectedProject?.enable_check_scanning || false
         },
       });
 
