@@ -1,5 +1,48 @@
 import { supabase } from '@/integrations/supabase/client';
 
+/**
+ * Sanitize error messages to remove PII and sensitive data
+ */
+const sanitizeErrorMessage = (message: string): string => {
+  return message
+    // Remove email addresses
+    .replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[email]')
+    // Remove SSNs
+    .replace(/\b\d{3}-\d{2}-\d{4}\b/g, '[ssn]')
+    // Remove credit card numbers
+    .replace(/\b\d{16}\b/g, '[card]')
+    // Remove phone numbers
+    .replace(/\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, '[phone]')
+    // Limit length
+    .substring(0, 500);
+};
+
+/**
+ * Strip query parameters from URLs to prevent token leakage
+ */
+const sanitizeUrl = (url: string): string => {
+  try {
+    const urlObj = new URL(url);
+    return urlObj.origin + urlObj.pathname;
+  } catch {
+    return '[invalid-url]';
+  }
+};
+
+/**
+ * Sanitize metadata to prevent large payloads
+ */
+const sanitizeMetadata = (metadata?: Record<string, any>): Record<string, any> => {
+  if (!metadata) return {};
+  
+  const jsonStr = JSON.stringify(metadata);
+  if (jsonStr.length > 5000) {
+    return { note: 'Metadata truncated - exceeded size limit' };
+  }
+  
+  return metadata;
+};
+
 export const logError = async (
   error: Error,
   componentName?: string,
@@ -15,12 +58,12 @@ export const logError = async (
     
     const { error: insertError } = await supabase.from('error_logs').insert({
       user_id: user?.id || null,
-      error_message: error.message,
-      error_stack: error.stack,
+      error_message: sanitizeErrorMessage(error.message),
+      error_stack: import.meta.env.PROD ? null : error.stack, // Strip stack traces in production
       component_name: componentName,
       user_agent: navigator.userAgent,
-      url: window.location.href,
-      metadata: metadata || {}
+      url: sanitizeUrl(window.location.href),
+      metadata: sanitizeMetadata(metadata)
     });
 
     if (insertError) {
