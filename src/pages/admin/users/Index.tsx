@@ -392,6 +392,10 @@ const UsersIndex = () => {
                 Manage user access to customer licenses
               </p>
             </div>
+            <Button onClick={() => navigate("/admin/users/new")}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Create New User
+            </Button>
           </div>
 
           <Table>

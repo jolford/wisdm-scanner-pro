@@ -21,6 +21,7 @@ import CustomersIndex from "./pages/admin/customers/Index";
 import NewCustomer from "./pages/admin/customers/New";
 import EditCustomer from "./pages/admin/customers/Edit";
 import UsersIndex from "./pages/admin/users/Index";
+import NewUser from "./pages/admin/users/New";
 import DocumentsAdmin from "./pages/admin/Documents";
 import CostTracking from "./pages/admin/CostTracking";
 import Analytics from "./pages/admin/Analytics";
@@ -66,6 +67,7 @@ const App = () => (
             <Route path="/admin/customers/new" element={<NewCustomer />} />
             <Route path="/admin/customers/:id/edit" element={<EditCustomer />} />
             <Route path="/admin/users" element={<UsersIndex />} />
+            <Route path="/admin/users/new" element={<NewUser />} />
             <Route path="/admin/documents" element={<DocumentsAdmin />} />
             <Route path="/admin/cost-tracking" element={<CostTracking />} />
             <Route path="/admin/analytics" element={<Analytics />} />
