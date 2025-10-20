@@ -10,6 +10,7 @@ export const Footer = () => {
           <div className="flex items-center gap-4">
             <Link to="/help" className="hover:underline">Help Center</Link>
             <Link to="/api-docs" className="hover:underline">API Docs</Link>
+            <Link to="/download/presentation" className="hover:underline font-medium">Download PowerPoint</Link>
           </div>
           <p className="text-xs">Version {APP_VERSION}</p>
         </div>
