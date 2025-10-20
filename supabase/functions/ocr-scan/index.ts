@@ -60,7 +60,7 @@ serve(async (req) => {
 
     // --- PARSE REQUEST BODY ---
     // Extract parameters from the request
-    const { imageData, isPdf, extractionFields, textData, tableExtractionFields, enableCheckScanning } = await req.json();
+    const { imageData, isPdf, extractionFields, textData, tableExtractionFields, enableCheckScanning, documentId, customerId } = await req.json();
     
     console.log('Processing OCR request...', isPdf ? 'PDF' : 'Image');
     console.log('MICR Mode:', enableCheckScanning);
@@ -302,6 +302,49 @@ Extract actual values from the document for each field with extreme precision fo
 
     console.log('OCR completed - Document Type:', documentType, 'Confidence:', confidence, 'Metadata:', metadata, 'Line Items:', lineItems.length);
 
+    // --- TRACK COST AND USAGE ---
+    // Calculate AI cost based on token usage
+    if (customerId && data.usage) {
+      const inputTokens = data.usage.prompt_tokens || 0;
+      const outputTokens = data.usage.completion_tokens || 0;
+      const model = 'google/gemini-2.5-pro';
+      
+      console.log('Tracking usage:', { customerId, inputTokens, outputTokens, model });
+      
+      // Import Supabase client to call update_tenant_usage
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      
+      try {
+        const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.39.3');
+        const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+        
+        // Calculate cost using the database function
+        const { data: costData } = await supabaseAdmin.rpc('calculate_ai_cost', {
+          _model: model,
+          _input_tokens: inputTokens,
+          _output_tokens: outputTokens,
+          _is_image: !isPdf
+        });
+        
+        const costUsd = costData || 0;
+        console.log('Calculated cost:', costUsd);
+        
+        // Track usage
+        await supabaseAdmin.rpc('update_tenant_usage', {
+          _customer_id: customerId,
+          _job_type: 'ocr_document',
+          _cost_usd: costUsd,
+          _documents_count: 1,
+          _failed: false
+        });
+        
+        console.log('Usage tracked successfully');
+      } catch (error) {
+        console.error('Failed to track usage:', error);
+        // Don't fail the OCR operation if usage tracking fails
+      }
+    }
 
     // --- EXTRACT BOUNDING BOXES ---
     // Parse the response again to get bounding box coordinates for each field

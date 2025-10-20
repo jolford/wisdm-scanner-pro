@@ -226,7 +226,8 @@ const Index = () => {
             isPdf: true,
             extractionFields: selectedProject?.extraction_fields || [],
             tableExtractionFields: tableFields,
-            enableCheckScanning: selectedProject?.enable_check_scanning || false
+            enableCheckScanning: selectedProject?.enable_check_scanning || false,
+            customerId: selectedProject?.customer_id
           },
         });
 
@@ -267,7 +268,8 @@ const Index = () => {
               isPdf: false,
               extractionFields: selectedProject?.extraction_fields || [],
               tableExtractionFields: tableFields,
-              enableCheckScanning: selectedProject?.enable_check_scanning || false
+              enableCheckScanning: selectedProject?.enable_check_scanning || false,
+              customerId: selectedProject?.customer_id
             },
           });
           if (error) throw error;
@@ -326,7 +328,8 @@ const Index = () => {
           isPdf: false,
           extractionFields: selectedProject?.extraction_fields || [],
           tableExtractionFields: tableFields,
-          enableCheckScanning: selectedProject?.enable_check_scanning || false
+          enableCheckScanning: selectedProject?.enable_check_scanning || false,
+          customerId: selectedProject?.customer_id
         },
       });
 
