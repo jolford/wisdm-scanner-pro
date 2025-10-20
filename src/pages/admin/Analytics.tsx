@@ -277,7 +277,7 @@ const Analytics = () => {
       // Calculate extraction accuracy
       const scores = confidenceScores.data || [];
       const extractionAccuracy = scores.length > 0
-        ? scores.reduce((sum, doc) => sum + (Number(doc.confidence_score) || 0), 0) / scores.length
+        ? (scores.reduce((sum, doc) => sum + (Number(doc.confidence_score) || 0), 0) / scores.length) * 100
         : 0;
 
       setAnalytics({
