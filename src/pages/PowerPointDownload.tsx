@@ -47,24 +47,38 @@ const PowerPointDownload = () => {
 
       const bulletSlide = (title: string, bullets: string[], bg?: string) => {
         const slide = pptx.addSlide();
-        if (bg) slide.addImage({ path: bg, x: 0, y: 0, w: 10, h: 5.625, transparency: 10 });
+        if (bg) {
+          slide.addImage({ path: bg, x: 0, y: 0, w: 10, h: 5.625, transparency: 50 });
+        }
+        
+        // Add semi-transparent white background box for content area
+        slide.addShape(pptx.ShapeType.rect, {
+          x: 0.3,
+          y: 0.3,
+          w: 9.4,
+          h: 5,
+          fill: { color: "FFFFFF", transparency: 15 },
+          line: { color: "E5E7EB", width: 1 },
+        });
+        
         slide.addText(title, {
           x: 0.5,
           y: 0.5,
           w: 9,
-          h: 0.6,
-          fontSize: 28,
+          h: 0.7,
+          fontSize: 32,
           bold: true,
-          color: "203040",
+          color: "1E293B",
         });
+        
         slide.addText(bullets.map((b) => `• ${b}`).join("\n"), {
           x: 0.8,
-          y: 1.3,
+          y: 1.4,
           w: 8.5,
-          h: 4,
-          fontSize: 18,
-          color: "30363d",
-          lineSpacing: 20,
+          h: 3.8,
+          fontSize: 20,
+          color: "1E293B",
+          lineSpacing: 24,
         });
       };
 
