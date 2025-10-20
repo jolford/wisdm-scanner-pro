@@ -96,16 +96,32 @@ const PowerPointDownload = () => {
       // Slide 6: Enterprise Integration
       const s6 = pptx.addSlide();
       s6.addImage({ path: integration, x: 0, y: 0, w: 10, h: 5.625, transparency: 60 });
-      s6.addShape(pptx.ShapeType.rect, { x: 0.3, y: 0.3, w: 9.4, h: 5, fill: { color: "FFFFFF", transparency: 12 }, line: { color: "E5E7EB", width: 1 } });
-      s6.addText("Enterprise Integration", { x: 0.5, y: 0.5, w: 9, h: 0.7, fontSize: 32, bold: true, color: "1E293B" });
+      s6.addShape(pptx.ShapeType.rect, { x: 0.3, y: 0.3, w: 9.4, h: 5, fill: { color: "FFFFFF", transparency: 20 }, line: { color: "E5E7EB", width: 1 } });
+      s6.addText("Enterprise Integration", { x: 0.5, y: 0.5, w: 9, h: 0.7, fontSize: 32, bold: true, color: "1E293B", fontFace: "Arial" });
       
-      s6.addText("Supported Exports:", { x: 0.8, y: 1.4, w: 4, h: 0.4, fontSize: 16, bold: true, color: "2563EB" });
-      s6.addText("• FileBound ECM\n• Generic Document Management APIs\n• PDF with embedded metadata\n• CSV/Excel data exports\n• Custom API integrations",
-        { x: 0.8, y: 1.8, w: 4, h: 1.5, fontSize: 14, color: "1E293B", lineSpacing: 16 });
+      s6.addText("Supported Exports:", { x: 0.8, y: 1.4, w: 4, h: 0.4, fontSize: 16, bold: true, color: "2563EB", fontFace: "Arial" });
+      s6.addText(
+        [
+          "FileBound ECM",
+          "Generic Document Management APIs",
+          "PDF with embedded metadata",
+          "CSV/Excel data exports",
+          "Custom API integrations",
+        ].join("\n"),
+        { x: 0.8, y: 1.8, w: 4, h: 1.5, fontSize: 14, color: "1E293B", lineSpacing: 16, bullet: true, fontFace: "Arial" }
+      );
 
-      s6.addText("Configuration:", { x: 5.2, y: 1.4, w: 4, h: 0.4, fontSize: 16, bold: true, color: "2563EB" });
-      s6.addText("• Project-specific field mapping\n• Automatic or manual export triggers\n• Document separation rules\n• Batch processing options\n• Real-time status monitoring",
-        { x: 5.2, y: 1.8, w: 4, h: 1.5, fontSize: 14, color: "1E293B", lineSpacing: 16 });
+      s6.addText("Configuration:", { x: 5.2, y: 1.4, w: 4, h: 0.4, fontSize: 16, bold: true, color: "2563EB", fontFace: "Arial" });
+      s6.addText(
+        [
+          "Project-specific field mapping",
+          "Automatic or manual export triggers",
+          "Document separation rules",
+          "Batch processing options",
+          "Real-time status monitoring",
+        ].join("\n"),
+        { x: 5.2, y: 1.8, w: 4, h: 1.5, fontSize: 14, color: "1E293B", lineSpacing: 16, bullet: true, fontFace: "Arial" }
+      );
 
       // Slide 7: Revenue Opportunities
       const s7 = pptx.addSlide();
