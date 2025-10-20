@@ -281,15 +281,16 @@ const Queue = () => {
                     ? selectedProject?.metadata?.table_extraction_config?.fields || []
                     : [];
 
-                  const { data, error } = await supabase.functions.invoke('ocr-scan', {
-                    body: { 
-                      imageData: dataUrl,
-                      isPdf: false,
-                      extractionFields,
-                      tableExtractionFields: tableFields,
-                      enableCheckScanning: enableMICR,
-                    },
-                  });
+          const { data, error } = await supabase.functions.invoke('ocr-scan', {
+            body: { 
+              imageData: dataUrl,
+              isPdf: false,
+              extractionFields,
+              tableExtractionFields: tableFields,
+              enableCheckScanning: enableMICR,
+              customerId: selectedProject?.customer_id,
+            },
+          });
                   if (error) throw error;
 
                   // Use the original PDF URL for the file_url, not the temporary dataUrl
@@ -313,6 +314,7 @@ const Queue = () => {
                   extractionFields,
                   tableExtractionFields: tableFields,
                   enableCheckScanning: enableMICR,
+                  customerId: selectedProject?.customer_id,
                 },
               });
               
@@ -440,6 +442,7 @@ const Queue = () => {
           extractionFields,
           tableExtractionFields: tableFields,
           enableCheckScanning: enableMICR,
+          customerId: selectedProject?.customer_id,
         },
       });
 
