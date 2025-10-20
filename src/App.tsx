@@ -17,6 +17,7 @@ import NewBatch from "./pages/admin/batches/New";
 import AdminBatchDetail from "./pages/admin/batches/Detail";
 import LicensesIndex from "./pages/admin/licenses/Index";
 import NewLicense from "./pages/admin/licenses/New";
+import EditLicense from "./pages/admin/licenses/Edit";
 import CustomersIndex from "./pages/admin/customers/Index";
 import NewCustomer from "./pages/admin/customers/New";
 import EditCustomer from "./pages/admin/customers/Edit";
@@ -67,6 +68,7 @@ const App = () => (
             <Route path="/admin/batches/:id" element={<AdminBatchDetail />} />
             <Route path="/admin/licenses" element={<LicensesIndex />} />
             <Route path="/admin/licenses/new" element={<NewLicense />} />
+            <Route path="/admin/licenses/:id" element={<EditLicense />} />
             <Route path="/admin/customers" element={<CustomersIndex />} />
             <Route path="/admin/customers/new" element={<NewCustomer />} />
             <Route path="/admin/customers/:id/edit" element={<EditCustomer />} />
