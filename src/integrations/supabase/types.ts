@@ -826,6 +826,63 @@ export type Database = {
           },
         ]
       }
+      tos_acceptances: {
+        Row: {
+          accepted_at: string
+          id: string
+          ip_address: string | null
+          privacy_policy_version: string
+          tos_version: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          id?: string
+          ip_address?: string | null
+          privacy_policy_version: string
+          tos_version: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          id?: string
+          ip_address?: string | null
+          privacy_policy_version?: string
+          tos_version?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tos_versions: {
+        Row: {
+          created_at: string
+          effective_date: string
+          id: string
+          is_current: boolean
+          privacy_policy_version: string
+          tos_version: string
+        }
+        Insert: {
+          created_at?: string
+          effective_date: string
+          id?: string
+          is_current?: boolean
+          privacy_policy_version: string
+          tos_version: string
+        }
+        Update: {
+          created_at?: string
+          effective_date?: string
+          id?: string
+          is_current?: boolean
+          privacy_policy_version?: string
+          tos_version?: string
+        }
+        Relationships: []
+      }
       user_customers: {
         Row: {
           created_at: string | null
