@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 
 // Icon imports from lucide-react
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon } from 'lucide-react';
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut } from 'lucide-react';
 
 // Backend and utility imports
 import { supabase } from '@/integrations/supabase/client';
@@ -93,6 +93,9 @@ export const BatchValidationScreen = ({
   
   // Track which documents are currently being validated (for loading states)
   const [validatingDocs, setValidatingDocs] = useState<Set<string>>(new Set());
+  
+  // Track zoom levels for each document
+  const [documentZoom, setDocumentZoom] = useState<Record<string, number>>({});
   
   // Toast notifications for user feedback
   const { toast } = useToast();
@@ -230,6 +233,26 @@ export const BatchValidationScreen = ({
     }
     // Old format: just a string
     return String(value);
+  };
+
+  /**
+   * Handle zoom in for a document
+   */
+  const handleZoomIn = (docId: string) => {
+    setDocumentZoom(prev => ({
+      ...prev,
+      [docId]: Math.min((prev[docId] || 1) + 0.25, 3)
+    }));
+  };
+
+  /**
+   * Handle zoom out for a document
+   */
+  const handleZoomOut = (docId: string) => {
+    setDocumentZoom(prev => ({
+      ...prev,
+      [docId]: Math.max((prev[docId] || 1) - 0.25, 0.5)
+    }));
   };
 
   /**
@@ -458,8 +481,47 @@ export const BatchValidationScreen = ({
                 <CollapsibleContent>
                   <div className="p-4 space-y-4 border-t">
                      <div className="grid grid-cols-2 gap-4">
-                      {/* Left column: Image with region selector for re-extraction */}
-                      <div>
+                      {/* Left column: Image with zoom controls */}
+                      <div className="space-y-3">
+                        {/* Zoom Controls */}
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-semibold text-sm">Document Preview</h4>
+                          <div className="flex items-center gap-1 border rounded-md">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleZoomOut(doc.id)}
+                              disabled={(documentZoom[doc.id] || 1) <= 0.5}
+                              className="h-8 px-2"
+                            >
+                              <ZoomOut className="h-4 w-4" />
+                            </Button>
+                            <span className="text-xs font-medium px-2 min-w-[3rem] text-center">
+                              {Math.round((documentZoom[doc.id] || 1) * 100)}%
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleZoomIn(doc.id)}
+                              disabled={(documentZoom[doc.id] || 1) >= 3}
+                              className="h-8 px-2"
+                            >
+                              <ZoomIn className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                        
+                        {/* Image Preview with Zoom */}
+                        <div className="overflow-auto max-h-[400px] bg-muted/30 rounded-lg p-4">
+                          <FullImageWithSignedUrl
+                            url={doc.file_url}
+                            alt={doc.file_name}
+                            fileType={(doc as any).file_type}
+                            zoom={documentZoom[doc.id] || 1}
+                          />
+                        </div>
+
+                        {/* Region Selector for Re-OCR */}
                         <ImageRegionSelectorWithSignedUrl
                           fileUrl={doc.file_url}
                           onRegionSelected={(newMetadata) => handleRegionUpdate(doc.id, newMetadata)}
@@ -598,6 +660,124 @@ export const BatchValidationScreen = ({
         )}
       </div>
     </div>
+  );
+};
+
+/**
+ * FullImageWithSignedUrl Component
+ * Displays a full-size image with signed URL support and PDF rendering
+ * Used for image preview with zoom functionality
+ */
+const FullImageWithSignedUrl = ({
+  url,
+  alt,
+  fileType,
+  zoom = 1,
+}: {
+  url: string;
+  alt: string;
+  fileType?: string;
+  zoom?: number;
+}) => {
+  // Get signed URL for secure access to the file
+  const { signedUrl, loading } = useSignedUrl(url);
+  
+  // Store the rendered image (data URL for PDFs, or direct URL for images)
+  const [displayUrl, setDisplayUrl] = useState<string | null>(null);
+  
+  // Detect if file is a PDF based on file type or URL
+  const isPdf = Boolean(fileType?.toLowerCase().includes('pdf')) || /\.pdf($|\?)/i.test((signedUrl || url) || '') || /\.pdf$/i.test(alt);
+
+  // Effect to generate display URL when signed URL changes
+  useEffect(() => {
+    const generateDisplayUrl = async () => {
+      const src = signedUrl || url;
+      try {
+        // For non-PDF images, use the URL directly
+        if (!isPdf) {
+          setDisplayUrl(src);
+          return;
+        }
+        
+        // For PDFs: Render first page as image at higher resolution
+        const resp = await fetch(src, { cache: 'no-store' });
+        const buffer = await resp.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: buffer });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+        
+        // Render at 2x scale for better quality
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) return;
+        
+        canvas.width = Math.round(viewport.width);
+        canvas.height = Math.round(viewport.height);
+        
+        await page.render({ canvasContext: context, viewport }).promise;
+        setDisplayUrl(canvas.toDataURL('image/png'));
+      } catch (e) {
+        console.error('PDF render failed', e);
+        // Try alternative method
+        try {
+          const loadingTask = pdfjsLib.getDocument({ url: src });
+          const pdf = await loadingTask.promise;
+          const page = await pdf.getPage(1);
+          const viewport = page.getViewport({ scale: 2 });
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          if (!context) { setDisplayUrl(null); return; }
+          canvas.width = Math.round(viewport.width);
+          canvas.height = Math.round(viewport.height);
+          await page.render({ canvasContext: context, viewport }).promise;
+          setDisplayUrl(canvas.toDataURL('image/png'));
+        } catch (e2) {
+          console.error('Both PDF render methods failed', e2);
+          setDisplayUrl(src);
+        }
+      }
+    };
+    
+    generateDisplayUrl();
+  }, [signedUrl, url, isPdf]);
+
+  // Show loading state
+  if (loading || !signedUrl) {
+    return (
+      <div className="w-full h-48 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-2" />
+          <p className="text-sm text-muted-foreground">Loading image...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if display URL failed to generate
+  if (!displayUrl) {
+    return (
+      <div className="w-full h-48 flex items-center justify-center bg-muted rounded">
+        <ImageIcon className="h-12 w-12 text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Render image with zoom
+  return (
+    <img
+      src={displayUrl}
+      alt={alt}
+      className="w-full h-auto object-contain transition-transform"
+      style={{
+        transform: `scale(${zoom})`,
+        transformOrigin: 'top left'
+      }}
+      onError={(e) => {
+        console.error('Image failed to load');
+        (e.currentTarget as HTMLImageElement).src = '/placeholder.svg';
+      }}
+    />
   );
 };
 
