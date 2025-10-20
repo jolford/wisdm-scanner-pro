@@ -8,10 +8,16 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
+import { Check, X } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 
 const emailSchema = z.string().email('Invalid email address');
-const passwordSchema = z.string().min(8, 'Password must be at least 8 characters');
+const passwordSchema = z.string()
+  .min(8, 'Password must be at least 8 characters')
+  .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+  .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+  .regex(/[0-9]/, 'Password must contain at least one number')
+  .regex(/[^A-Za-z0-9]/, 'Password must contain at least one special character');
 
 const AuthPage = () => {
   const navigate = useNavigate();
@@ -23,6 +29,31 @@ const AuthPage = () => {
   const [fullName, setFullName] = useState('');
   const [tosAccepted, setTosAccepted] = useState(false);
   const [currentTosVersion, setCurrentTosVersion] = useState<{ tos_version: string; privacy_policy_version: string } | null>(null);
+  const [passwordFocused, setPasswordFocused] = useState(false);
+
+  // Password strength checks
+  const passwordChecks = {
+    minLength: password.length >= 8,
+    hasUppercase: /[A-Z]/.test(password),
+    hasLowercase: /[a-z]/.test(password),
+    hasNumber: /[0-9]/.test(password),
+    hasSpecial: /[^A-Za-z0-9]/.test(password),
+  };
+
+  const passwordStrength = Object.values(passwordChecks).filter(Boolean).length;
+  const getStrengthColor = () => {
+    if (passwordStrength <= 2) return 'bg-red-500';
+    if (passwordStrength <= 3) return 'bg-orange-500';
+    if (passwordStrength <= 4) return 'bg-yellow-500';
+    return 'bg-green-500';
+  };
+
+  const getStrengthText = () => {
+    if (passwordStrength <= 2) return 'Weak';
+    if (passwordStrength <= 3) return 'Fair';
+    if (passwordStrength <= 4) return 'Good';
+    return 'Strong';
+  };
 
   useEffect(() => {
     // Check if user is already logged in
@@ -231,12 +262,56 @@ const AuthPage = () => {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onFocus={() => setPasswordFocused(true)}
+              onBlur={() => setPasswordFocused(false)}
               required
             />
-            {isSignUp && (
-              <p className="text-xs text-muted-foreground">
-                Must be at least 8 characters
-              </p>
+            {isSignUp && password && (
+              <div className="space-y-3 mt-3 p-3 bg-muted/50 rounded-lg border">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium">Password Strength:</span>
+                  <span className={`text-xs font-bold ${
+                    passwordStrength <= 2 ? 'text-red-600' :
+                    passwordStrength <= 3 ? 'text-orange-600' :
+                    passwordStrength <= 4 ? 'text-yellow-600' :
+                    'text-green-600'
+                  }`}>
+                    {getStrengthText()}
+                  </span>
+                </div>
+                <div className="flex gap-1">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div
+                      key={i}
+                      className={`h-1 flex-1 rounded-full transition-colors ${
+                        i <= passwordStrength ? getStrengthColor() : 'bg-muted'
+                      }`}
+                    />
+                  ))}
+                </div>
+                <div className="space-y-1.5 text-xs">
+                  <div className={`flex items-center gap-2 ${passwordChecks.minLength ? 'text-green-600' : 'text-muted-foreground'}`}>
+                    {passwordChecks.minLength ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                    <span>At least 8 characters</span>
+                  </div>
+                  <div className={`flex items-center gap-2 ${passwordChecks.hasUppercase ? 'text-green-600' : 'text-muted-foreground'}`}>
+                    {passwordChecks.hasUppercase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                    <span>One uppercase letter</span>
+                  </div>
+                  <div className={`flex items-center gap-2 ${passwordChecks.hasLowercase ? 'text-green-600' : 'text-muted-foreground'}`}>
+                    {passwordChecks.hasLowercase ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                    <span>One lowercase letter</span>
+                  </div>
+                  <div className={`flex items-center gap-2 ${passwordChecks.hasNumber ? 'text-green-600' : 'text-muted-foreground'}`}>
+                    {passwordChecks.hasNumber ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                    <span>One number</span>
+                  </div>
+                  <div className={`flex items-center gap-2 ${passwordChecks.hasSpecial ? 'text-green-600' : 'text-muted-foreground'}`}>
+                    {passwordChecks.hasSpecial ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                    <span>One special character (!@#$%^&*)</span>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
 
