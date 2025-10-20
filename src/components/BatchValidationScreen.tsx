@@ -51,6 +51,7 @@ interface Document {
   extracted_text: string;
   extracted_metadata: Record<string, string>;
   validation_status: string;
+  line_items?: Array<Record<string, any>>;
 }
 
 /**
@@ -415,6 +416,37 @@ export const BatchValidationScreen = ({
                             />
                           </div>
                         ))}
+
+                        {/* Line Items Table */}
+                        {doc.line_items && doc.line_items.length > 0 && (
+                          <div className="mt-6 border-t pt-4">
+                            <h4 className="font-semibold mb-3">Line Items ({doc.line_items.length})</h4>
+                            <div className="border rounded-md overflow-x-auto">
+                              <table className="w-full text-sm">
+                                <thead className="bg-muted">
+                                  <tr>
+                                    {Object.keys(doc.line_items[0]).map((key) => (
+                                      <th key={key} className="px-3 py-2 text-left font-medium">
+                                        {key}
+                                      </th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {doc.line_items.map((item, idx) => (
+                                    <tr key={idx} className="border-t">
+                                      {Object.values(item).map((value, vIdx) => (
+                                        <td key={vIdx} className="px-3 py-2">
+                                          {value !== null && value !== undefined ? String(value) : '-'}
+                                        </td>
+                                      ))}
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
