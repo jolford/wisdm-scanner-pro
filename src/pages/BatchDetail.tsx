@@ -111,6 +111,12 @@ const BatchDetail = () => {
     return exportConfig[type]?.destination || '/exports/';
   };
 
+  const extractMetadataValue = (value: any): string => {
+    if (typeof value === 'string') return value;
+    if (value && typeof value === 'object' && 'value' in value) return value.value;
+    return String(value || '');
+  };
+
   const exportToCSV = () => {
     if (!documents || documents.length === 0) {
       toast({ title: 'No documents to export', variant: 'destructive' });
@@ -124,7 +130,7 @@ const BatchDetail = () => {
       doc.page_number,
       doc.confidence_score || '',
       doc.file_type,
-      ...Object.values(doc.extracted_metadata || {})
+      ...Object.values(doc.extracted_metadata || {}).map(extractMetadataValue)
     ]);
 
     const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
@@ -193,7 +199,7 @@ const BatchDetail = () => {
 
     const text = documents.map(doc => {
       const metadata = Object.entries(doc.extracted_metadata || {})
-        .map(([key, value]) => `${key}: ${value}`)
+        .map(([key, value]) => `${key}: ${extractMetadataValue(value)}`)
         .join('\n');
       return `File: ${doc.file_name}\nStatus: ${doc.validation_status}\nPage: ${doc.page_number}\n${metadata}\n\nExtracted Text:\n${doc.extracted_text || 'N/A'}\n\n${'='.repeat(80)}\n`;
     }).join('\n');
@@ -221,7 +227,7 @@ const BatchDetail = () => {
 
     const xmlDocs = documents.map(doc => {
       const metadata = Object.entries(doc.extracted_metadata || {})
-        .map(([key, value]) => `    <${key}>${value}</${key}>`)
+        .map(([key, value]) => `    <${key}>${extractMetadataValue(value)}</${key}>`)
         .join('\n');
       return `  <document>
     <file_name>${doc.file_name}</file_name>
@@ -440,7 +446,7 @@ ${xmlDocs}
                             {Object.entries(doc.extracted_metadata).map(([key, value]) => (
                               <div key={key} className="text-xs">
                                 <span className="font-medium">{key}:</span>{' '}
-                                <span className="text-muted-foreground">{value as string}</span>
+                                <span className="text-muted-foreground">{extractMetadataValue(value)}</span>
                               </div>
                             ))}
                           </div>

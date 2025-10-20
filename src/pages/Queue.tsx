@@ -51,6 +51,13 @@ const Queue = () => {
   const { license, hasCapacity, consumeDocuments } = useLicense();
   const { permissions, loading: permissionsLoading } = usePermissions();
   
+  // Helper function to extract metadata value (handles both old string format and new {value, bbox} format)
+  const extractMetadataValue = (value: any): string => {
+    if (typeof value === 'string') return value;
+    if (value && typeof value === 'object' && 'value' in value) return value.value;
+    return String(value || '');
+  };
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<any>(null);
@@ -540,7 +547,7 @@ const Queue = () => {
           });
           // Add document metadata
           metadataKeys.forEach(key => {
-            row.push(doc.extracted_metadata?.[key] || '');
+            row.push(extractMetadataValue(doc.extracted_metadata?.[key]) || '');
           });
           return row;
         });
@@ -584,7 +591,7 @@ const Queue = () => {
           content += `      <date>${new Date(doc.created_at).toISOString()}</date>\n`;
           content += '      <metadata>\n';
           Object.entries(doc.extracted_metadata || {}).forEach(([key, value]) => {
-            content += `        <${key}>${value}</${key}>\n`;
+            content += `        <${key}>${extractMetadataValue(value)}</${key}>\n`;
           });
           content += '      </metadata>\n';
           content += '    </document>\n';
@@ -612,7 +619,7 @@ const Queue = () => {
           content += `Date: ${new Date(doc.created_at).toLocaleDateString()}\n`;
           content += 'Metadata:\n';
           Object.entries(doc.extracted_metadata || {}).forEach(([key, value]) => {
-            content += `  ${key}: ${value}\n`;
+            content += `  ${key}: ${extractMetadataValue(value)}\n`;
           });
           content += '\n' + '-'.repeat(80) + '\n\n';
         });
@@ -830,7 +837,7 @@ const Queue = () => {
               doc.addPage();
               yPosition = 20;
             }
-            doc.text(`  ${key}: ${value}`, 25, yPosition);
+            doc.text(`  ${key}: ${extractMetadataValue(value)}`, 25, yPosition);
             yPosition += 6;
           });
         }
@@ -1088,7 +1095,7 @@ const Queue = () => {
                                 {Object.entries(doc.extracted_metadata).map(([key, value]) => (
                                   <div key={key} className="text-sm">
                                     <span className="font-medium text-foreground">{key}:</span>{' '}
-                                    <span className="text-muted-foreground">{value as string}</span>
+                                    <span className="text-muted-foreground">{extractMetadataValue(value)}</span>
                                   </div>
                                 ))}
                               </div>
