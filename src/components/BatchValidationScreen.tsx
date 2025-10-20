@@ -353,7 +353,7 @@ export const BatchValidationScreen = ({
 
   // --- RENDER COMPONENT ---
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 pb-24">
       {/* Header with document count and Validate All button */}
       <div className="flex items-center justify-between mb-4">
         <div>

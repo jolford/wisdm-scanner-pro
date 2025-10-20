@@ -310,7 +310,7 @@ useEffect(() => {
 
   return (
     <TooltipProvider>
-      <div className="grid grid-cols-[2fr_1fr_2fr] gap-6 h-[calc(100vh-12rem)]">
+      <div className="grid grid-cols-[2fr_1fr_2fr] gap-6 h-[calc(100vh-12rem)] pb-24">
         {/* Left: Document Image with Highlights or Traditional View */}
         {useInteractiveViewer && Object.keys(boundingBoxes).length > 0 ? (
           <InteractiveDocumentViewer
