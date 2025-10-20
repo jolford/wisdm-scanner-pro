@@ -1,7 +1,7 @@
 import { useRef, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Crop, RotateCcw } from 'lucide-react';
+import { Crop, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -22,6 +22,7 @@ export const ImageRegionSelector = ({
   const [endPoint, setEndPoint] = useState<{ x: number; y: number } | null>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [zoom, setZoom] = useState(1);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -43,10 +44,7 @@ export const ImageRegionSelector = ({
             canvas.width = img.width * scale;
             canvas.height = img.height * scale;
             
-            const ctx = canvas.getContext('2d');
-            if (ctx) {
-              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-            }
+            redrawCanvasWithZoom(canvas, img, zoom);
           }
           // Clean up blob URL
           URL.revokeObjectURL(objectUrl);
@@ -76,15 +74,16 @@ export const ImageRegionSelector = ({
     loadImage();
   }, [imageUrl, toast]);
 
-  const redrawCanvas = () => {
-    if (!canvasRef.current || !image) return;
-    const canvas = canvasRef.current;
+  const redrawCanvasWithZoom = (canvas: HTMLCanvasElement, img: HTMLImageElement, zoomLevel: number) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear and redraw image
+    // Clear and redraw image with zoom
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.drawImage(image, 0, 0);
+    ctx.save();
+    ctx.scale(zoomLevel, zoomLevel);
+    ctx.drawImage(img, 0, 0, canvas.width / zoomLevel, canvas.height / zoomLevel);
+    ctx.restore();
 
     // Draw selection rectangle
     if (startPoint && endPoint) {
@@ -101,9 +100,14 @@ export const ImageRegionSelector = ({
     }
   };
 
+  const redrawCanvas = () => {
+    if (!canvasRef.current || !image) return;
+    redrawCanvasWithZoom(canvasRef.current, image, zoom);
+  };
+
   useEffect(() => {
     redrawCanvas();
-  }, [startPoint, endPoint, image]);
+  }, [startPoint, endPoint, image, zoom]);
 
   const getCanvasCoordinates = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -217,6 +221,14 @@ export const ImageRegionSelector = ({
     redrawCanvas();
   };
 
+  const handleZoomIn = () => {
+    setZoom((prev) => Math.min(prev + 0.25, 3));
+  };
+
+  const handleZoomOut = () => {
+    setZoom((prev) => Math.max(prev - 0.25, 0.5));
+  };
+
   return (
     <Card className="p-4">
       <div className="mb-3 flex items-center justify-between">
@@ -229,15 +241,40 @@ export const ImageRegionSelector = ({
             Click and drag to select an area for OCR correction
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleReset}
-          disabled={!startPoint && !endPoint}
-        >
-          <RotateCcw className="h-3 w-3 mr-1" />
-          Reset
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 border rounded-md">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleZoomOut}
+              disabled={zoom <= 0.5}
+              className="h-8 px-2"
+            >
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+            <span className="text-xs font-medium px-2 min-w-[3rem] text-center">
+              {Math.round(zoom * 100)}%
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleZoomIn}
+              disabled={zoom >= 3}
+              className="h-8 px-2"
+            >
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleReset}
+            disabled={!startPoint && !endPoint}
+          >
+            <RotateCcw className="h-3 w-3 mr-1" />
+            Reset
+          </Button>
+        </div>
       </div>
       <div className="relative overflow-auto max-h-[500px] bg-muted/30 rounded-lg">
         <canvas
