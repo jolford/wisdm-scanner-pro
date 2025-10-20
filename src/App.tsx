@@ -32,6 +32,10 @@ import NotFound from "./pages/NotFound";
 import ApiDocs from "./pages/ApiDocs";
 import Presentation from "./pages/Presentation";
 import PowerPointDownload from "./pages/PowerPointDownload";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import CookiePolicy from "./pages/CookiePolicy";
+import DataProcessingAgreement from "./pages/DataProcessingAgreement";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -77,6 +81,10 @@ const App = () => (
             <Route path="/api-docs" element={<ApiDocs />} />
             <Route path="/presentation" element={<Presentation />} />
             <Route path="/download/presentation" element={<PowerPointDownload />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+            <Route path="/terms-of-service" element={<TermsOfService />} />
+            <Route path="/cookie-policy" element={<CookiePolicy />} />
+            <Route path="/data-processing-agreement" element={<DataProcessingAgreement />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
