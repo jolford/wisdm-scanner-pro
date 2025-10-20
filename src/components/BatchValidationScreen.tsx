@@ -88,6 +88,9 @@ export const BatchValidationScreen = ({
   // Store user edits to metadata fields (keyed by document ID, then field name)
   const [editedMetadata, setEditedMetadata] = useState<Record<string, Record<string, string>>>({});
   
+  // Store user edits to line items (keyed by document ID)
+  const [editedLineItems, setEditedLineItems] = useState<Record<string, Array<Record<string, any>>>>({});
+  
   // Track which documents are currently being validated (for loading states)
   const [validatingDocs, setValidatingDocs] = useState<Set<string>>(new Set());
   
@@ -124,6 +127,77 @@ export const BatchValidationScreen = ({
         ...(prev[docId] || {}),
         [fieldName]: value,
       }
+    }));
+  };
+
+  /**
+   * Get the line items for a document (edited or original)
+   */
+  const getLineItemsForDoc = (doc: Document): Array<Record<string, any>> => {
+    if (editedLineItems[doc.id]) {
+      return editedLineItems[doc.id];
+    }
+    return doc.line_items || [];
+  };
+
+  /**
+   * Update a line item cell value
+   */
+  const handleLineItemChange = (docId: string, rowIndex: number, columnName: string, value: string) => {
+    setEditedLineItems(prev => {
+      const doc = documents.find(d => d.id === docId);
+      const currentItems = prev[docId] || (doc?.line_items || []);
+      const newItems = [...currentItems];
+      if (!newItems[rowIndex]) {
+        newItems[rowIndex] = {};
+      }
+      newItems[rowIndex] = {
+        ...newItems[rowIndex],
+        [columnName]: value,
+      };
+      return {
+        ...prev,
+        [docId]: newItems,
+      };
+    });
+  };
+
+  /**
+   * Add a new empty line item row
+   */
+  const handleAddLineItem = (docId: string) => {
+    const doc = documents.find(d => d.id === docId);
+    if (!doc) return;
+
+    const currentItems = getLineItemsForDoc(doc);
+    const emptyRow: Record<string, any> = {};
+    
+    // Create empty row with same columns as existing items
+    if (currentItems.length > 0) {
+      Object.keys(currentItems[0]).forEach(key => {
+        emptyRow[key] = '';
+      });
+    }
+
+    setEditedLineItems(prev => ({
+      ...prev,
+      [docId]: [...currentItems, emptyRow],
+    }));
+  };
+
+  /**
+   * Delete a line item row
+   */
+  const handleDeleteLineItem = (docId: string, rowIndex: number) => {
+    const doc = documents.find(d => d.id === docId);
+    if (!doc) return;
+
+    const currentItems = getLineItemsForDoc(doc);
+    const newItems = currentItems.filter((_, idx) => idx !== rowIndex);
+
+    setEditedLineItems(prev => ({
+      ...prev,
+      [docId]: newItems,
     }));
   };
 
@@ -206,6 +280,7 @@ export const BatchValidationScreen = ({
         .from('documents')
         .update({
           extracted_metadata: normalizedMetadata,
+          line_items: editedLineItems[doc.id] || doc.line_items || [],
           validation_status: status,
           validated_at: new Date().toISOString(),
         })
@@ -418,33 +493,90 @@ export const BatchValidationScreen = ({
                         ))}
 
                         {/* Line Items Table */}
-                        {doc.line_items && doc.line_items.length > 0 && (
+                        {(doc.line_items && doc.line_items.length > 0) || editedLineItems[doc.id] ? (
                           <div className="mt-6 border-t pt-4">
-                            <h4 className="font-semibold mb-3">Line Items ({doc.line_items.length})</h4>
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-semibold">Line Items ({getLineItemsForDoc(doc).length})</h4>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleAddLineItem(doc.id)}
+                              >
+                                Add Row
+                              </Button>
+                            </div>
                             <div className="border rounded-md overflow-x-auto">
                               <table className="w-full text-sm">
                                 <thead className="bg-muted">
                                   <tr>
-                                    {Object.keys(doc.line_items[0]).map((key) => (
+                                    {getLineItemsForDoc(doc).length > 0 && Object.keys(getLineItemsForDoc(doc)[0]).map((key) => (
                                       <th key={key} className="px-3 py-2 text-left font-medium">
                                         {key}
                                       </th>
                                     ))}
+                                    <th className="px-3 py-2 w-20"></th>
                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {doc.line_items.map((item, idx) => (
+                                  {getLineItemsForDoc(doc).map((item, idx) => (
                                     <tr key={idx} className="border-t">
-                                      {Object.values(item).map((value, vIdx) => (
-                                        <td key={vIdx} className="px-3 py-2">
-                                          {value !== null && value !== undefined ? String(value) : '-'}
+                                      {Object.entries(item).map(([key, value], vIdx) => (
+                                        <td key={vIdx} className="px-2 py-1">
+                                          <Input
+                                            value={value !== null && value !== undefined ? String(value) : ''}
+                                            onChange={(e) => handleLineItemChange(doc.id, idx, key, e.target.value)}
+                                            className="h-8 text-sm"
+                                          />
                                         </td>
                                       ))}
+                                      <td className="px-2 py-1">
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => handleDeleteLineItem(doc.id, idx)}
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <XCircle className="h-4 w-4" />
+                                        </Button>
+                                      </td>
                                     </tr>
                                   ))}
                                 </tbody>
                               </table>
                             </div>
+                          </div>
+                        ) : (
+                          <div className="mt-6 border-t pt-4">
+                            <div className="flex items-center justify-between mb-3">
+                              <h4 className="font-semibold">Line Items</h4>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  // Initialize with empty row with project table extraction field names
+                                  const tableConfig = (documents[0] as any)?.table_extraction_config;
+                                  const emptyRow: Record<string, any> = {};
+                                  if (tableConfig?.fields && Array.isArray(tableConfig.fields)) {
+                                    tableConfig.fields.forEach((field: any) => {
+                                      emptyRow[field.name] = '';
+                                    });
+                                  } else {
+                                    // Default columns if no config
+                                    emptyRow['Line Number'] = '';
+                                    emptyRow['Description'] = '';
+                                    emptyRow['Quantity'] = '';
+                                    emptyRow['Amount'] = '';
+                                  }
+                                  setEditedLineItems(prev => ({
+                                    ...prev,
+                                    [doc.id]: [emptyRow],
+                                  }));
+                                }}
+                              >
+                                Add Line Items
+                              </Button>
+                            </div>
+                            <p className="text-sm text-muted-foreground">No line items extracted. Click "Add Line Items" to manually add rows.</p>
                           </div>
                         )}
                       </div>
