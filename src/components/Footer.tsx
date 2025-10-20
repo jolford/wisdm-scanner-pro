@@ -10,13 +10,13 @@ export const Footer = () => {
           <div className="flex items-center gap-4 flex-wrap justify-center">
             <Link to="/help" className="hover:underline">Help Center</Link>
             <Link to="/api-docs" className="hover:underline">API Docs</Link>
+            <Link to="/compliance" className="hover:underline font-semibold">Compliance Hub</Link>
             <Link to="/download/presentation" className="hover:underline font-medium">Download PowerPoint</Link>
           </div>
           <div className="flex items-center gap-4 flex-wrap justify-center text-xs">
-            <Link to="/privacy-policy" className="hover:underline">Privacy Policy</Link>
-            <Link to="/terms-of-service" className="hover:underline">Terms of Service</Link>
-            <Link to="/cookie-policy" className="hover:underline">Cookie Policy</Link>
-            <Link to="/data-processing-agreement" className="hover:underline">DPA</Link>
+            <Link to="/privacy-policy" className="hover:underline">Privacy</Link>
+            <Link to="/terms-of-service" className="hover:underline">Terms</Link>
+            <Link to="/security-policy" className="hover:underline">Security</Link>
           </div>
           <p className="text-xs">Version {APP_VERSION}</p>
         </div>

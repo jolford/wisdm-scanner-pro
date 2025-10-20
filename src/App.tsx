@@ -37,6 +37,10 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
 import DataProcessingAgreement from "./pages/DataProcessingAgreement";
+import SecurityPolicy from "./pages/SecurityPolicy";
+import IncidentResponse from "./pages/IncidentResponse";
+import BusinessContinuity from "./pages/BusinessContinuity";
+import ComplianceHub from "./pages/ComplianceHub";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -87,6 +91,10 @@ const App = () => (
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/cookie-policy" element={<CookiePolicy />} />
             <Route path="/data-processing-agreement" element={<DataProcessingAgreement />} />
+            <Route path="/security-policy" element={<SecurityPolicy />} />
+            <Route path="/incident-response" element={<IncidentResponse />} />
+            <Route path="/business-continuity" element={<BusinessContinuity />} />
+            <Route path="/compliance" element={<ComplianceHub />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
