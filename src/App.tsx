@@ -30,6 +30,7 @@ import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 import ApiDocs from "./pages/ApiDocs";
 import Presentation from "./pages/Presentation";
+import PowerPointDownload from "./pages/PowerPointDownload";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
