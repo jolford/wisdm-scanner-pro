@@ -4,8 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ArrowLeft, Key, AlertCircle, CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { Plus, ArrowLeft, Key, AlertCircle, CheckCircle2, XCircle, Clock, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { MaintenanceInvoiceGenerator } from '@/components/admin/MaintenanceInvoiceGenerator';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 
 const LicensesIndex = () => {
@@ -124,72 +126,101 @@ const LicensesIndex = () => {
             {licenses.map((license) => {
               const usagePercent = getUsagePercentage(license.remaining_documents, license.total_documents);
               const isExpiringSoon = new Date(license.end_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+              const isLowVolume = usagePercent < 20;
               
               return (
                 <Card
                   key={license.id}
-                  className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)] hover:shadow-lg transition-shadow cursor-pointer"
-                  onClick={() => navigate(`/admin/licenses/${license.id}`)}
+                  className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)] hover:shadow-lg transition-shadow"
                 >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold mb-1">
-                        {license.customers?.company_name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {license.customers?.contact_email}
-                      </p>
-                      <Badge className={getStatusColor(license.status)}>
-                        <span className="flex items-center gap-1">
-                          {getStatusIcon(license.status)}
-                          {license.status}
-                        </span>
-                      </Badge>
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="bg-muted/50 rounded-lg p-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-muted-foreground">License Key</span>
-                        <Key className="h-3 w-3 text-muted-foreground" />
-                      </div>
-                      <p className="font-mono text-sm font-semibold">{license.license_key}</p>
-                    </div>
-
-                    <div className="bg-muted/50 rounded-lg p-3">
-                      <div className="flex justify-between items-baseline mb-2">
-                        <span className="text-xs text-muted-foreground">Documents Remaining</span>
-                        <span className={`text-lg font-bold ${usagePercent < 20 ? 'text-destructive' : ''}`}>
-                          {license.remaining_documents.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="w-full bg-muted rounded-full h-2">
-                        <div 
-                          className={`h-2 rounded-full transition-all ${
-                            usagePercent > 50 ? 'bg-green-500' : 
-                            usagePercent > 20 ? 'bg-orange-500' : 
-                            'bg-red-500'
-                          }`}
-                          style={{ width: `${usagePercent}%` }}
-                        />
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {usagePercent}% of {license.total_documents.toLocaleString()} total
-                      </p>
-                    </div>
-
-                    <div className="flex justify-between text-xs text-muted-foreground pt-2 border-t">
-                      <span>
-                        Expires: {new Date(license.end_date).toLocaleDateString()}
-                      </span>
-                      {isExpiringSoon && (
-                        <Badge variant="outline" className="text-orange-600">
-                          Expiring Soon
+                  <div 
+                    className="cursor-pointer"
+                    onClick={() => navigate(`/admin/licenses/${license.id}`)}
+                  >
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold mb-1">
+                          {license.customers?.company_name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground mb-2">
+                          {license.customers?.contact_email}
+                        </p>
+                        <Badge className={getStatusColor(license.status)}>
+                          <span className="flex items-center gap-1">
+                            {getStatusIcon(license.status)}
+                            {license.status}
+                          </span>
                         </Badge>
-                      )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-muted-foreground">License Key</span>
+                          <Key className="h-3 w-3 text-muted-foreground" />
+                        </div>
+                        <p className="font-mono text-sm font-semibold">{license.license_key}</p>
+                      </div>
+
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <div className="flex justify-between items-baseline mb-2">
+                          <span className="text-xs text-muted-foreground">Documents Remaining</span>
+                          <span className={`text-lg font-bold ${usagePercent < 20 ? 'text-destructive' : ''}`}>
+                            {license.remaining_documents.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="w-full bg-muted rounded-full h-2">
+                          <div 
+                            className={`h-2 rounded-full transition-all ${
+                              usagePercent > 50 ? 'bg-green-500' : 
+                              usagePercent > 20 ? 'bg-orange-500' : 
+                              'bg-red-500'
+                            }`}
+                            style={{ width: `${usagePercent}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {usagePercent}% of {license.total_documents.toLocaleString()} total
+                        </p>
+                      </div>
+
+                      <div className="flex justify-between text-xs text-muted-foreground pt-2 border-t">
+                        <span>
+                          Expires: {new Date(license.end_date).toLocaleDateString()}
+                        </span>
+                        {isExpiringSoon && (
+                          <Badge variant="outline" className="text-orange-600">
+                            Expiring Soon
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                   </div>
+
+                  {/* Generate Invoice Button - Only show for low volume licenses */}
+                  {isLowVolume && (
+                    <div className="mt-4 pt-4 border-t" onClick={(e) => e.stopPropagation()}>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            className="w-full"
+                            size="sm"
+                          >
+                            <FileText className="h-4 w-4 mr-2" />
+                            Generate Maintenance Invoice
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+                          <DialogHeader>
+                            <DialogTitle>Generate Maintenance Invoice</DialogTitle>
+                          </DialogHeader>
+                          <MaintenanceInvoiceGenerator license={license} />
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+                  )}
                 </Card>
               );
             })}
