@@ -22,7 +22,8 @@ const CookiePolicy = () => {
             <section>
               <h2 className="text-2xl font-semibold mb-3">1. What Are Cookies?</h2>
               <p className="text-muted-foreground">
-                Cookies are small text files stored on your device when you visit websites. They help websites remember your preferences, improve functionality, and provide analytics about site usage.
+                Cookies are small text files stored on your device when you visit websites. They help websites remember
+                your preferences, improve functionality, and provide analytics about site usage.
               </p>
             </section>
 
@@ -43,7 +44,7 @@ const CookiePolicy = () => {
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">3. Types of Cookies We Use</h2>
-              
+
               <h3 className="text-xl font-semibold mb-2">Essential Cookies (Required)</h3>
               <p className="text-muted-foreground mb-3">
                 These cookies are necessary for the Service to function properly. They cannot be disabled.
@@ -150,9 +151,15 @@ const CookiePolicy = () => {
                 We use services from trusted third parties that may place cookies on your device:
               </p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li><strong>Google Analytics:</strong> Website analytics and user behavior tracking</li>
-                <li><strong>Supabase:</strong> Authentication and database services</li>
-                <li><strong>Payment Processors:</strong> Secure payment processing (if applicable)</li>
+                <li>
+                  <strong>Google Analytics:</strong> Website analytics and user behavior tracking
+                </li>
+                <li>
+                  <strong>Supabase:</strong> Authentication and database services
+                </li>
+                <li>
+                  <strong>Payment Processors:</strong> Secure payment processing (if applicable)
+                </li>
               </ul>
               <p className="text-muted-foreground mt-3">
                 These third parties have their own privacy policies governing cookie use. We recommend reviewing them.
@@ -174,48 +181,71 @@ const CookiePolicy = () => {
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">6. Managing Your Cookie Preferences</h2>
-              
+
               <h3 className="text-xl font-semibold mb-2">Browser Settings</h3>
-              <p className="text-muted-foreground mb-3">
-                You can control cookies through your browser settings:
-              </p>
+              <p className="text-muted-foreground mb-3">You can control cookies through your browser settings:</p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li><strong>Chrome:</strong> Settings → Privacy and security → Cookies</li>
-                <li><strong>Firefox:</strong> Settings → Privacy & Security → Cookies</li>
-                <li><strong>Safari:</strong> Preferences → Privacy → Cookies</li>
-                <li><strong>Edge:</strong> Settings → Cookies and site permissions</li>
+                <li>
+                  <strong>Chrome:</strong> Settings → Privacy and security → Cookies
+                </li>
+                <li>
+                  <strong>Firefox:</strong> Settings → Privacy & Security → Cookies
+                </li>
+                <li>
+                  <strong>Safari:</strong> Preferences → Privacy → Cookies
+                </li>
+                <li>
+                  <strong>Edge:</strong> Settings → Cookies and site permissions
+                </li>
               </ul>
 
               <h3 className="text-xl font-semibold mb-2 mt-4">Opt-Out Options</h3>
-              <p className="text-muted-foreground mb-3">
-                To opt out of analytics cookies:
-              </p>
+              <p className="text-muted-foreground mb-3">To opt out of analytics cookies:</p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li><strong>Google Analytics:</strong> <a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener noreferrer" className="text-primary underline">Google Analytics Opt-out Browser Add-on</a></li>
-                <li><strong>Do Not Track:</strong> Enable "Do Not Track" in your browser (we honor this signal)</li>
+                <li>
+                  <strong>Google Analytics:</strong>{" "}
+                  <a
+                    href="https://tools.google.com/dlpage/gaoptout"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary underline"
+                  >
+                    Google Analytics Opt-out Browser Add-on
+                  </a>
+                </li>
+                <li>
+                  <strong>Do Not Track:</strong> Enable "Do Not Track" in your browser (we honor this signal)
+                </li>
               </ul>
 
               <p className="text-muted-foreground mt-4">
-                <strong>Note:</strong> Disabling essential cookies may affect the functionality of our Service, including the ability to log in and access features.
+                <strong>Note:</strong> Disabling essential cookies may affect the functionality of our Service,
+                including the ability to log in and access features.
               </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">7. Cookie Retention</h2>
-              <p className="text-muted-foreground">
-                Cookies have different lifespans:
-              </p>
+              <p className="text-muted-foreground">Cookies have different lifespans:</p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li><strong>Session Cookies:</strong> Deleted when you close your browser</li>
-                <li><strong>Persistent Cookies:</strong> Remain until expiration date or manual deletion</li>
-                <li><strong>Typical Duration:</strong> 24 hours to 2 years depending on cookie type</li>
+                <li>
+                  <strong>Session Cookies:</strong> Deleted when you close your browser
+                </li>
+                <li>
+                  <strong>Persistent Cookies:</strong> Remain until expiration date or manual deletion
+                </li>
+                <li>
+                  <strong>Typical Duration:</strong> 24 hours to 2 years depending on cookie type
+                </li>
               </ul>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">8. Updates to This Policy</h2>
               <p className="text-muted-foreground">
-                We may update this Cookie Policy periodically to reflect changes in our practices or for legal, operational, or regulatory reasons. We will notify you of material changes via email or service notification.
+                We may update this Cookie Policy periodically to reflect changes in our practices or for legal,
+                operational, or regulatory reasons. We will notify you of material changes via email or service
+                notification.
               </p>
             </section>
 
@@ -225,28 +255,36 @@ const CookiePolicy = () => {
                 If you are located in the EU or California, you have additional rights:
               </p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li><strong>Right to Access:</strong> Request information about cookies used</li>
-                <li><strong>Right to Deletion:</strong> Request deletion of cookie data</li>
-                <li><strong>Right to Object:</strong> Opt out of non-essential cookies</li>
-                <li><strong>Right to Withdraw Consent:</strong> Revoke cookie consent at any time</li>
+                <li>
+                  <strong>Right to Access:</strong> Request information about cookies used
+                </li>
+                <li>
+                  <strong>Right to Deletion:</strong> Request deletion of cookie data
+                </li>
+                <li>
+                  <strong>Right to Object:</strong> Opt out of non-essential cookies
+                </li>
+                <li>
+                  <strong>Right to Withdraw Consent:</strong> Revoke cookie consent at any time
+                </li>
               </ul>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">10. Contact Us</h2>
-              <p className="text-muted-foreground mb-3">
-                For questions about our use of cookies:
-              </p>
+              <p className="text-muted-foreground mb-3">For questions about our use of cookies:</p>
               <div className="p-4 bg-muted/50 rounded-lg">
                 <p className="font-semibold">Western Integrated Systems</p>
-                <p className="text-muted-foreground">Email: privacy@wisdm.com</p>
+                <p className="text-muted-foreground">Email: support@westint.com</p>
                 <p className="text-muted-foreground">Address: [Your Business Address]</p>
               </div>
             </section>
 
             <div className="mt-8 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
               <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                <strong>Legal Notice:</strong> This is a template Cookie Policy. Consult with legal counsel to ensure compliance with GDPR, ePrivacy Directive, CCPA, and other applicable regulations. Implement a proper cookie consent mechanism before deployment.
+                <strong>Legal Notice:</strong> This is a template Cookie Policy. Consult with legal counsel to ensure
+                compliance with GDPR, ePrivacy Directive, CCPA, and other applicable regulations. Implement a proper
+                cookie consent mechanism before deployment.
               </p>
             </div>
           </div>
