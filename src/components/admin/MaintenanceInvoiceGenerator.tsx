@@ -136,20 +136,21 @@ export const MaintenanceInvoiceGenerator = ({ license }: MaintenanceInvoiceGener
       const tax = 0;
       const total = subtotal + tax;
       
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.text('SUBTOTAL', pageWidth - 60, yPos);
       doc.text(`$${subtotal.toFixed(2)}`, pageWidth - 20, yPos, { align: 'right' });
       
-      yPos += 6;
+      yPos += 7;
       doc.text('TAX', pageWidth - 60, yPos);
       doc.text(`$${tax.toFixed(2)}`, pageWidth - 20, yPos, { align: 'right' });
       
-      yPos += 6;
+      yPos += 7;
       doc.setFontSize(11);
       doc.text('TOTAL', pageWidth - 60, yPos);
       doc.text(`$${total.toFixed(2)}`, pageWidth - 20, yPos, { align: 'right' });
       
-      yPos += 8;
+      yPos += 10;
       doc.setFontSize(12);
       doc.text('BALANCE DUE', pageWidth - 60, yPos);
       doc.text(`$${total.toFixed(2)}`, pageWidth - 20, yPos, { align: 'right' });
