@@ -8,31 +8,25 @@ export default function SecurityPolicy() {
 
   return (
     <div className="min-h-screen bg-background p-8">
-      <Button
-        variant="ghost"
-        onClick={() => navigate(-1)}
-        className="mb-6"
-      >
+      <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6">
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back
       </Button>
 
       <Card className="max-w-4xl mx-auto p-8">
         <h1 className="text-3xl font-bold mb-6">Information Security Policy</h1>
-        <p className="text-muted-foreground mb-8">
-          Effective Date: January 1, 2025 | Version 1.0
-        </p>
+        <p className="text-muted-foreground mb-8">Effective Date: January 1, 2025 | Version 1.1</p>
 
         <section className="space-y-6">
           <div>
             <h2 className="text-2xl font-semibold mb-3">1. Purpose and Scope</h2>
             <p className="mb-4">
-              This Information Security Policy establishes the framework for protecting WISDM Scanner Pro's
-              information assets, including customer data, business information, and system infrastructure.
+              This Information Security Policy establishes the framework for protecting WISDM Scanner Pro's information
+              assets, including customer data, business information, and system infrastructure.
             </p>
             <p>
-              <strong>Scope:</strong> This policy applies to all employees, contractors, vendors, and third parties
-              who access or process company or customer data.
+              <strong>Scope:</strong> This policy applies to all employees, contractors, vendors, and third parties who
+              access or process company or customer data.
             </p>
           </div>
 
@@ -48,9 +42,15 @@ export default function SecurityPolicy() {
 
             <h3 className="text-xl font-semibold mb-2">2.2 Roles and Responsibilities</h3>
             <ul className="list-disc pl-6 space-y-2">
-              <li><strong>System Administrators:</strong> Implement and maintain security controls</li>
-              <li><strong>Development Team:</strong> Follow secure coding practices and conduct code reviews</li>
-              <li><strong>All Users:</strong> Comply with security policies and report incidents</li>
+              <li>
+                <strong>System Administrators:</strong> Implement and maintain security controls
+              </li>
+              <li>
+                <strong>Development Team:</strong> Follow secure coding practices and conduct code reviews
+              </li>
+              <li>
+                <strong>All Users:</strong> Comply with security policies and report incidents
+              </li>
             </ul>
           </div>
 
@@ -85,9 +85,15 @@ export default function SecurityPolicy() {
             <h2 className="text-2xl font-semibold mb-3">4. Data Protection</h2>
             <h3 className="text-xl font-semibold mb-2">4.1 Data Classification</h3>
             <ul className="list-disc pl-6 mb-4 space-y-2">
-              <li><strong>Confidential:</strong> Customer data, PII, authentication credentials</li>
-              <li><strong>Internal:</strong> Business operations data, internal communications</li>
-              <li><strong>Public:</strong> Marketing materials, public documentation</li>
+              <li>
+                <strong>Confidential:</strong> Customer data, PII, authentication credentials
+              </li>
+              <li>
+                <strong>Internal:</strong> Business operations data, internal communications
+              </li>
+              <li>
+                <strong>Public:</strong> Marketing materials, public documentation
+              </li>
             </ul>
 
             <h3 className="text-xl font-semibold mb-2">4.2 Encryption</h3>
@@ -189,17 +195,19 @@ export default function SecurityPolicy() {
           <div>
             <h2 className="text-2xl font-semibold mb-3">11. Contact Information</h2>
             <p>
-              For questions regarding this policy, contact:<br />
-              Security Team: security@wisdm.com<br />
-              Privacy Officer: privacy@wisdm.com
+              For questions regarding this policy, contact:
+              <br />
+              Security Team: support@westint.com
+              <br />
+              Privacy Officer: support@westint.com
             </p>
           </div>
 
           <div className="bg-muted p-6 rounded-lg mt-8">
             <p className="text-sm font-semibold mb-2">Legal Notice:</p>
             <p className="text-sm">
-              This security policy template should be reviewed and customized by your legal and security teams
-              to ensure it meets your specific organizational and regulatory requirements.
+              This security policy template should be reviewed and customized by your legal and security teams to ensure
+              it meets your specific organizational and regulatory requirements.
             </p>
           </div>
         </section>
