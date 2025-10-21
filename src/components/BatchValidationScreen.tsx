@@ -97,6 +97,9 @@ export const BatchValidationScreen = ({
   // Track zoom levels for each document
   const [documentZoom, setDocumentZoom] = useState<Record<string, number>>({});
   
+  // Track which documents have region selector active
+  const [showRegionSelector, setShowRegionSelector] = useState<Set<string>>(new Set());
+  
   // Toast notifications for user feedback
   const { toast } = useToast();
 
@@ -521,12 +524,34 @@ export const BatchValidationScreen = ({
                           />
                         </div>
 
-                        {/* Region Selector for Re-OCR */}
-                        <ImageRegionSelectorWithSignedUrl
-                          fileUrl={doc.file_url}
-                          onRegionSelected={(newMetadata) => handleRegionUpdate(doc.id, newMetadata)}
-                          extractionFields={projectFields}
-                        />
+                        {/* Toggle Region Selector Button */}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setShowRegionSelector(prev => {
+                              const newSet = new Set(prev);
+                              if (newSet.has(doc.id)) {
+                                newSet.delete(doc.id);
+                              } else {
+                                newSet.add(doc.id);
+                              }
+                              return newSet;
+                            });
+                          }}
+                          className="w-full"
+                        >
+                          {showRegionSelector.has(doc.id) ? 'Hide' : 'Show'} Region Selector
+                        </Button>
+
+                        {/* Region Selector for Re-OCR (conditionally shown) */}
+                        {showRegionSelector.has(doc.id) && (
+                          <ImageRegionSelectorWithSignedUrl
+                            fileUrl={doc.file_url}
+                            onRegionSelected={(newMetadata) => handleRegionUpdate(doc.id, newMetadata)}
+                            extractionFields={projectFields}
+                          />
+                        )}
                       </div>
 
                       {/* Right column: Editable metadata fields */}

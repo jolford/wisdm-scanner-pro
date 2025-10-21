@@ -311,7 +311,7 @@ useEffect(() => {
   return (
     <TooltipProvider>
       <div className="grid grid-cols-[2fr_1fr_2fr] gap-6 min-h-[calc(100vh-12rem)] pb-40">
-        {/* Left: Document Image with Highlights or Traditional View */}
+        {/* Left: Document Viewer */}
         {useInteractiveViewer && Object.keys(boundingBoxes).length > 0 ? (
           <InteractiveDocumentViewer
             imageUrl={previewUrl || displayUrl || currentImageUrl}
@@ -322,7 +322,7 @@ useEffect(() => {
             highlightedField={focusedField}
           />
         ) : (
-          <Card className="p-6 flex flex-col">
+          <Card className="p-6 flex flex-col" key="traditional-viewer">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold flex items-center gap-2">
                 <ImageIcon className="h-4 w-4" />
