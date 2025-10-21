@@ -249,7 +249,7 @@ export function PricingPDFGenerator() {
     pdf.setFontSize(8);
     pdf.setTextColor(156, 163, 175);
     pdf.text('Contact us for a custom quote or enterprise volume pricing', pageWidth / 2, 280, { align: 'center' });
-    pdf.text('sales@wisdm-scanner.com | www.wisdm-scanner.com', pageWidth / 2, 285, { align: 'center' });
+    pdf.text('Executive Sales Manager Maria Kinney | sales@westint.com', pageWidth / 2, 285, { align: 'center' });
     
     // Save the PDF
     pdf.save('WISDM-Scanner-Pro-Pricing-2025.pdf');
