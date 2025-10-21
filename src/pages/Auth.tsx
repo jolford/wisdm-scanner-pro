@@ -23,6 +23,7 @@ const AuthPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isResetPassword, setIsResetPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -216,6 +217,47 @@ const AuthPage = () => {
     }
   };
 
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validate email
+    try {
+      emailSchema.parse(email);
+    } catch (error: any) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter a valid email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Reset Email Sent',
+        description: 'Check your email for a password reset link. It may take a few minutes to arrive.',
+      });
+      
+      setIsResetPassword(false);
+    } catch (error: any) {
+      toast({
+        title: 'Reset Failed',
+        description: error.message || 'Failed to send reset email',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-8 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm shadow-[var(--shadow-elegant)]">
@@ -223,11 +265,11 @@ const AuthPage = () => {
           <img src={wisdmLogo} alt="WISDM Logo" className="h-12 w-auto mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-2">WISDM Scanner Pro</h1>
           <p className="text-muted-foreground">
-            {isSignUp ? 'Create your account' : 'Sign in to access your account'}
+            {isResetPassword ? 'Reset your password' : isSignUp ? 'Create your account' : 'Sign in to access your account'}
           </p>
         </div>
 
-        <form onSubmit={isSignUp ? handleSignUp : handleSignIn} className="space-y-4">
+        <form onSubmit={isResetPassword ? handleResetPassword : isSignUp ? handleSignUp : handleSignIn} className="space-y-4">
           {isSignUp && (
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>
@@ -254,18 +296,30 @@ const AuthPage = () => {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onFocus={() => setPasswordFocused(true)}
-              onBlur={() => setPasswordFocused(false)}
-              required
-            />
+          {!isResetPassword && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                {!isSignUp && (
+                  <button
+                    type="button"
+                    onClick={() => setIsResetPassword(true)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                )}
+              </div>
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                onFocus={() => setPasswordFocused(true)}
+                onBlur={() => setPasswordFocused(false)}
+                required
+              />
             {isSignUp && password && (
               <div className="space-y-3 mt-3 p-3 bg-muted/50 rounded-lg border">
                 <div className="flex items-center justify-between">
@@ -313,7 +367,8 @@ const AuthPage = () => {
                 </div>
               </div>
             )}
-          </div>
+            </div>
+          )}
 
           {isSignUp && (
             <div className="flex items-start space-x-2 pt-2">
@@ -346,20 +401,34 @@ const AuthPage = () => {
             className="w-full"
             disabled={loading || (isSignUp && !tosAccepted)}
           >
-            {loading ? 'Please wait...' : isSignUp ? 'Create Account' : 'Sign In'}
+            {loading ? 'Please wait...' : isResetPassword ? 'Send Reset Link' : isSignUp ? 'Create Account' : 'Sign In'}
           </Button>
 
-          <div className="text-center text-sm">
-            <button
-              type="button"
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setTosAccepted(false);
-              }}
-              className="text-primary hover:underline"
-            >
-              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-            </button>
+          <div className="text-center text-sm space-y-2">
+            {isResetPassword ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsResetPassword(false);
+                  setPassword('');
+                }}
+                className="text-primary hover:underline"
+              >
+                Back to sign in
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSignUp(!isSignUp);
+                  setTosAccepted(false);
+                  setIsResetPassword(false);
+                }}
+                className="text-primary hover:underline"
+              >
+                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+              </button>
+            )}
           </div>
         </form>
 
