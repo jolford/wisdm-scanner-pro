@@ -54,11 +54,15 @@ const RecoveryRedirect: React.FC = () => {
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search || '');
 
-  const hasHashRecovery = location.hash && location.hash.includes('type=recovery');
+  const hash = location.hash || '';
+  const hasHashRecovery = hash.includes('type=recovery');
+  const hasAccessToken = hash.includes('access_token=');
+  const hasAuthError = hash.includes('error=') || hash.includes('error_description=');
   const hasQueryRecovery = searchParams.get('type') === 'recovery' || searchParams.get('mode') === 'recovery';
 
-  if (hasHashRecovery) {
-    return <Navigate to={`/auth${location.hash}`} replace />;
+  if (hasHashRecovery || hasAccessToken || hasAuthError) {
+    // Preserve the original hash so the auth page can parse tokens or errors
+    return <Navigate to={`/auth${hash}`} replace />;
   }
   if (hasQueryRecovery) {
     return <Navigate to="/auth?mode=recovery" replace />;

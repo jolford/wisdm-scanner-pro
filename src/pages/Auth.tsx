@@ -67,6 +67,15 @@ const AuthPage = () => {
       searchParams.get('mode') === 'recovery';
     const blockRedirect = isRecoveryParam || hasAccessToken;
 
+    // Surface any auth errors from the recovery link
+    try {
+      const hashParams = new URLSearchParams(locationHash.startsWith('#') ? locationHash.slice(1) : locationHash);
+      const authError = hashParams.get('error_description') || hashParams.get('error');
+      if (authError) {
+        toast({ title: 'Recovery Link Error', description: decodeURIComponent(authError), variant: 'destructive' });
+      }
+    } catch {}
+
     // Listen for auth changes FIRST to catch PASSWORD_RECOVERY
     const {
       data: { subscription },
