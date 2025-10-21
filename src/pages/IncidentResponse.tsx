@@ -8,27 +8,21 @@ export default function IncidentResponse() {
 
   return (
     <div className="min-h-screen bg-background p-8">
-      <Button
-        variant="ghost"
-        onClick={() => navigate(-1)}
-        className="mb-6"
-      >
+      <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6">
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back
       </Button>
 
       <Card className="max-w-4xl mx-auto p-8">
         <h1 className="text-3xl font-bold mb-6">Incident Response Plan</h1>
-        <p className="text-muted-foreground mb-8">
-          Effective Date: January 1, 2025 | Version 1.0
-        </p>
+        <p className="text-muted-foreground mb-8">Effective Date: January 1, 2025 | Version 1.0</p>
 
         <section className="space-y-6">
           <div>
             <h2 className="text-2xl font-semibold mb-3">1. Purpose and Scope</h2>
             <p className="mb-4">
-              This Incident Response Plan establishes procedures for identifying, responding to, and recovering
-              from security incidents that may affect WISDM Scanner Pro systems, data, or services.
+              This Incident Response Plan establishes procedures for identifying, responding to, and recovering from
+              security incidents that may affect WISDM Scanner Pro systems, data, or services.
             </p>
             <p>
               <strong>Scope:</strong> This plan covers all security incidents including data breaches, unauthorized
@@ -40,16 +34,26 @@ export default function IncidentResponse() {
             <h2 className="text-2xl font-semibold mb-3">2. Incident Response Team</h2>
             <h3 className="text-xl font-semibold mb-2">2.1 Team Structure</h3>
             <ul className="list-disc pl-6 mb-4 space-y-2">
-              <li><strong>Incident Response Manager:</strong> Coordinates response activities</li>
-              <li><strong>Technical Lead:</strong> Conducts technical investigation and remediation</li>
-              <li><strong>Communications Lead:</strong> Manages internal and external communications</li>
-              <li><strong>Legal Counsel:</strong> Provides legal guidance and regulatory compliance</li>
-              <li><strong>Customer Success:</strong> Manages customer communications and support</li>
+              <li>
+                <strong>Incident Response Manager:</strong> Coordinates response activities
+              </li>
+              <li>
+                <strong>Technical Lead:</strong> Conducts technical investigation and remediation
+              </li>
+              <li>
+                <strong>Communications Lead:</strong> Manages internal and external communications
+              </li>
+              <li>
+                <strong>Legal Counsel:</strong> Provides legal guidance and regulatory compliance
+              </li>
+              <li>
+                <strong>Customer Success:</strong> Manages customer communications and support
+              </li>
             </ul>
 
             <h3 className="text-xl font-semibold mb-2">2.2 Contact Information</h3>
             <ul className="list-disc pl-6 space-y-2">
-              <li>Incident Response Hotline: security@wisdm.com</li>
+              <li>Incident Response Hotline: support@westint.com</li>
               <li>Emergency Contact: Available 24/7 for critical incidents</li>
               <li>Escalation Path: Technical Lead → CTO → CEO</li>
             </ul>
@@ -58,7 +62,7 @@ export default function IncidentResponse() {
           <div>
             <h2 className="text-2xl font-semibold mb-3">3. Incident Classification</h2>
             <h3 className="text-xl font-semibold mb-2">3.1 Severity Levels</h3>
-            
+
             <div className="mb-4">
               <h4 className="font-semibold">Critical (P1)</h4>
               <ul className="list-disc pl-6 space-y-1">
@@ -66,7 +70,9 @@ export default function IncidentResponse() {
                 <li>Complete system outage affecting all customers</li>
                 <li>Active ransomware or destructive attack</li>
                 <li>Unauthorized access to production systems</li>
-                <li><strong>Response Time:</strong> Immediate (within 15 minutes)</li>
+                <li>
+                  <strong>Response Time:</strong> Immediate (within 15 minutes)
+                </li>
               </ul>
             </div>
 
@@ -77,7 +83,9 @@ export default function IncidentResponse() {
                 <li>Partial system outage affecting multiple customers</li>
                 <li>Malware detection on critical systems</li>
                 <li>Successful phishing attack against employees</li>
-                <li><strong>Response Time:</strong> Within 1 hour</li>
+                <li>
+                  <strong>Response Time:</strong> Within 1 hour
+                </li>
               </ul>
             </div>
 
@@ -88,7 +96,9 @@ export default function IncidentResponse() {
                 <li>Performance degradation</li>
                 <li>Failed intrusion attempts</li>
                 <li>Policy violations</li>
-                <li><strong>Response Time:</strong> Within 4 hours</li>
+                <li>
+                  <strong>Response Time:</strong> Within 4 hours
+                </li>
               </ul>
             </div>
 
@@ -98,18 +108,20 @@ export default function IncidentResponse() {
                 <li>Minor security events</li>
                 <li>Configuration issues</li>
                 <li>Informational alerts</li>
-                <li><strong>Response Time:</strong> Within 24 hours</li>
+                <li>
+                  <strong>Response Time:</strong> Within 24 hours
+                </li>
               </ul>
             </div>
           </div>
 
           <div>
             <h2 className="text-2xl font-semibold mb-3">4. Incident Response Process</h2>
-            
+
             <h3 className="text-xl font-semibold mb-2">Phase 1: Detection and Reporting</h3>
             <ul className="list-disc pl-6 mb-4 space-y-2">
               <li>Incidents may be detected through automated monitoring, user reports, or security tools</li>
-              <li>Any employee discovering a potential incident must immediately report to security@wisdm.com</li>
+              <li>Any employee discovering a potential incident must immediately report to support@westint.com</li>
               <li>Initial report should include: date/time, affected systems, description, reporter contact</li>
               <li>Incident Response Manager is notified and creates incident ticket</li>
             </ul>
@@ -124,7 +136,9 @@ export default function IncidentResponse() {
             </ul>
 
             <h3 className="text-xl font-semibold mb-2">Phase 3: Containment</h3>
-            <p className="mb-2"><strong>Short-term Containment:</strong></p>
+            <p className="mb-2">
+              <strong>Short-term Containment:</strong>
+            </p>
             <ul className="list-disc pl-6 mb-4 space-y-2">
               <li>Isolate affected systems to prevent spread</li>
               <li>Disable compromised user accounts</li>
@@ -133,7 +147,9 @@ export default function IncidentResponse() {
               <li>Implement temporary workarounds to maintain operations</li>
             </ul>
 
-            <p className="mb-2"><strong>Long-term Containment:</strong></p>
+            <p className="mb-2">
+              <strong>Long-term Containment:</strong>
+            </p>
             <ul className="list-disc pl-6 mb-4 space-y-2">
               <li>Apply security patches and updates</li>
               <li>Implement additional monitoring</li>
@@ -255,9 +271,10 @@ export default function IncidentResponse() {
           <div className="bg-muted p-6 rounded-lg mt-8">
             <p className="text-sm font-semibold mb-2">Emergency Contact:</p>
             <p className="text-sm">
-              To report a security incident: security@wisdm.com<br />
-              For critical incidents requiring immediate response, use the emergency escalation procedures
-              outlined in your employee handbook.
+              To report a security incident: support@westint.com
+              <br />
+              For critical incidents requiring immediate response, use the emergency escalation procedures outlined in
+              your employee handbook.
             </p>
           </div>
         </section>
