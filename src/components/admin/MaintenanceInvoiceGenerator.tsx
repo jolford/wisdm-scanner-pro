@@ -131,29 +131,32 @@ export const MaintenanceInvoiceGenerator = ({ license }: MaintenanceInvoiceGener
       });
       
       // Totals Section
-      yPos += 10;
+      yPos += 12;
       const subtotal = calculateSubtotal();
       const tax = 0;
       const total = subtotal + tax;
       
+      const labelX = pageWidth - 90;
+      const amountX = pageWidth - 20;
+      
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('SUBTOTAL', pageWidth - 60, yPos);
-      doc.text(`$${subtotal.toFixed(2)}`, pageWidth - 20, yPos, { align: 'right' });
+      doc.text('SUBTOTAL', labelX, yPos, { align: 'right' });
+      doc.text(`$${subtotal.toFixed(2)}`, amountX, yPos, { align: 'right' });
       
-      yPos += 7;
-      doc.text('TAX', pageWidth - 60, yPos);
-      doc.text(`$${tax.toFixed(2)}`, pageWidth - 20, yPos, { align: 'right' });
+      yPos += 8;
+      doc.text('TAX', labelX, yPos, { align: 'right' });
+      doc.text(`$${tax.toFixed(2)}`, amountX, yPos, { align: 'right' });
       
-      yPos += 7;
+      yPos += 8;
       doc.setFontSize(11);
-      doc.text('TOTAL', pageWidth - 60, yPos);
-      doc.text(`$${total.toFixed(2)}`, pageWidth - 20, yPos, { align: 'right' });
+      doc.text('TOTAL', labelX, yPos, { align: 'right' });
+      doc.text(`$${total.toFixed(2)}`, amountX, yPos, { align: 'right' });
       
-      yPos += 10;
+      yPos += 12;
       doc.setFontSize(12);
-      doc.text('BALANCE DUE', pageWidth - 60, yPos);
-      doc.text(`$${total.toFixed(2)}`, pageWidth - 20, yPos, { align: 'right' });
+      doc.text('BALANCE DUE', labelX, yPos, { align: 'right' });
+      doc.text(`$${total.toFixed(2)}`, amountX, yPos, { align: 'right' });
       
       // Notes section
       if (invoiceData.notes) {
