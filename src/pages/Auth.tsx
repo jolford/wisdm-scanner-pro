@@ -24,6 +24,7 @@ const AuthPage = () => {
   const { toast } = useToast();
   const [isSignUp, setIsSignUp] = useState(false);
   const [isResetPassword, setIsResetPassword] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -57,9 +58,19 @@ const AuthPage = () => {
   };
 
   useEffect(() => {
+    // Check for password recovery flow
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get('access_token');
+    const type = hashParams.get('type');
+    
+    if (type === 'recovery' && accessToken) {
+      setIsUpdatingPassword(true);
+      return;
+    }
+
     // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
+      if (session && !isUpdatingPassword) {
         navigate('/');
       }
     });
@@ -80,13 +91,13 @@ const AuthPage = () => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) {
+      if (session && !isUpdatingPassword) {
         navigate('/');
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, isUpdatingPassword]);
 
   const recordTosAcceptance = async (userId: string) => {
     if (!currentTosVersion) return;
@@ -258,6 +269,48 @@ const AuthPage = () => {
     }
   };
 
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Validate password
+    try {
+      passwordSchema.parse(password);
+    } catch (error: any) {
+      toast({
+        title: 'Validation Error',
+        description: error.errors?.[0]?.message || 'Please check your password',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: password,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Password Updated',
+        description: 'Your password has been successfully updated.',
+      });
+
+      setIsUpdatingPassword(false);
+      navigate('/');
+    } catch (error: any) {
+      toast({
+        title: 'Update Failed',
+        description: error.message || 'Failed to update password',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 flex items-center justify-center p-4">
       <Card className="w-full max-w-md p-8 bg-gradient-to-br from-card to-card/80 backdrop-blur-sm shadow-[var(--shadow-elegant)]">
@@ -265,12 +318,18 @@ const AuthPage = () => {
           <img src={wisdmLogo} alt="WISDM Logo" className="h-12 w-auto mx-auto mb-4" />
           <h1 className="text-2xl font-bold mb-2">WISDM Scanner Pro</h1>
           <p className="text-muted-foreground">
-            {isResetPassword ? 'Reset your password' : isSignUp ? 'Create your account' : 'Sign in to access your account'}
+            {isUpdatingPassword 
+              ? 'Enter your new password' 
+              : isResetPassword 
+              ? 'Reset your password' 
+              : isSignUp 
+              ? 'Create your account' 
+              : 'Sign in to access your account'}
           </p>
         </div>
 
-        <form onSubmit={isResetPassword ? handleResetPassword : isSignUp ? handleSignUp : handleSignIn} className="space-y-4">
-          {isSignUp && (
+        <form onSubmit={isUpdatingPassword ? handleUpdatePassword : isResetPassword ? handleResetPassword : isSignUp ? handleSignUp : handleSignIn} className="space-y-4">
+          {isSignUp && !isUpdatingPassword && (
             <div className="space-y-2">
               <Label htmlFor="fullName">Full Name</Label>
               <Input
@@ -284,23 +343,25 @@ const AuthPage = () => {
             </div>
           )}
 
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
+          {!isUpdatingPassword && (
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+          )}
 
           {!isResetPassword && (
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                {!isSignUp && (
+                <Label htmlFor="password">{isUpdatingPassword ? 'New Password' : 'Password'}</Label>
+                {!isSignUp && !isUpdatingPassword && (
                   <button
                     type="button"
                     onClick={() => setIsResetPassword(true)}
@@ -320,7 +381,7 @@ const AuthPage = () => {
                 onBlur={() => setPasswordFocused(false)}
                 required
               />
-            {isSignUp && password && (
+            {(isSignUp || isUpdatingPassword) && password && (
               <div className="space-y-3 mt-3 p-3 bg-muted/50 rounded-lg border">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium">Password Strength:</span>
@@ -370,7 +431,7 @@ const AuthPage = () => {
             </div>
           )}
 
-          {isSignUp && (
+          {isSignUp && !isUpdatingPassword && (
             <div className="flex items-start space-x-2 pt-2">
               <Checkbox
                 id="tos"
@@ -401,35 +462,45 @@ const AuthPage = () => {
             className="w-full"
             disabled={loading || (isSignUp && !tosAccepted)}
           >
-            {loading ? 'Please wait...' : isResetPassword ? 'Send Reset Link' : isSignUp ? 'Create Account' : 'Sign In'}
+            {loading 
+              ? 'Please wait...' 
+              : isUpdatingPassword 
+              ? 'Update Password' 
+              : isResetPassword 
+              ? 'Send Reset Link' 
+              : isSignUp 
+              ? 'Create Account' 
+              : 'Sign In'}
           </Button>
 
-          <div className="text-center text-sm space-y-2">
-            {isResetPassword ? (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsResetPassword(false);
-                  setPassword('');
-                }}
-                className="text-primary hover:underline"
-              >
-                Back to sign in
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setTosAccepted(false);
-                  setIsResetPassword(false);
-                }}
-                className="text-primary hover:underline"
-              >
-                {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-              </button>
-            )}
-          </div>
+          {!isUpdatingPassword && (
+            <div className="text-center text-sm space-y-2">
+              {isResetPassword ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsResetPassword(false);
+                    setPassword('');
+                  }}
+                  className="text-primary hover:underline"
+                >
+                  Back to sign in
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setTosAccepted(false);
+                    setIsResetPassword(false);
+                  }}
+                  className="text-primary hover:underline"
+                >
+                  {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+                </button>
+              )}
+            </div>
+          )}
         </form>
 
         {isSignUp && (
