@@ -58,17 +58,18 @@ const AuthPage = () => {
   };
 
   useEffect(() => {
-    // Check for password recovery flow
+    // Check for password recovery flow (hash or query)
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
-    const accessToken = hashParams.get('access_token');
-    const type = hashParams.get('type');
+    const searchParams = new URLSearchParams(window.location.search);
+    const type = hashParams.get('type') || searchParams.get('type');
+    const mode = searchParams.get('mode');
+
+    const isRecovery = type === 'recovery' || mode === 'recovery' || window.location.hash.includes('type=recovery');
     
-    if (type === 'recovery' && accessToken) {
+    if (isRecovery) {
       setIsUpdatingPassword(true);
       return;
     }
-
-    // Check if user is already logged in
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session && !isUpdatingPassword) {
         navigate('/');

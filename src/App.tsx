@@ -55,8 +55,13 @@ const RecoveryRedirect: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
+    const searchParams = new URLSearchParams(location.search || '');
+
     if (location.hash && location.hash.includes('type=recovery')) {
       navigate(`/auth${location.hash}`, { replace: true });
+    } else if (searchParams.get('type') === 'recovery') {
+      // Fallback if a provider preserved query params but stripped the hash
+      navigate(`/auth?mode=recovery`, { replace: true });
     }
   }, [location, navigate]);
 
