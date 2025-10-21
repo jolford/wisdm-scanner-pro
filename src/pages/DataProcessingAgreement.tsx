@@ -22,25 +22,48 @@ const DataProcessingAgreement = () => {
             <section>
               <h2 className="text-2xl font-semibold mb-3">1. Introduction and Definitions</h2>
               <p className="text-muted-foreground mb-3">
-                This Data Processing Agreement ("DPA") forms part of the agreement between Western Integrated Systems ("Processor," "we," or "us") and the customer ("Controller," "you," or "Customer") for the provision of document processing services.
+                This Data Processing Agreement ("DPA") forms part of the agreement between Western Integrated Systems
+                ("Processor," "we," or "us") and the customer ("Controller," "you," or "Customer") for the provision of
+                document processing services.
               </p>
-              
+
               <h3 className="text-xl font-semibold mb-2">Definitions</h3>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li><strong>Controller:</strong> The entity that determines the purposes and means of processing Personal Data</li>
-                <li><strong>Processor:</strong> Western Integrated Systems, which processes Personal Data on behalf of the Controller</li>
-                <li><strong>Personal Data:</strong> Any information relating to an identified or identifiable natural person contained in processed documents</li>
-                <li><strong>Processing:</strong> Any operation performed on Personal Data, including scanning, OCR, storage, validation, and export</li>
-                <li><strong>Sub-processor:</strong> Third-party service providers engaged by the Processor to assist in data processing</li>
-                <li><strong>Data Subject:</strong> An identified or identifiable natural person whose Personal Data is processed</li>
-                <li><strong>GDPR:</strong> General Data Protection Regulation (EU) 2016/679</li>
+                <li>
+                  <strong>Controller:</strong> The entity that determines the purposes and means of processing Personal
+                  Data
+                </li>
+                <li>
+                  <strong>Processor:</strong> Western Integrated Systems, which processes Personal Data on behalf of the
+                  Controller
+                </li>
+                <li>
+                  <strong>Personal Data:</strong> Any information relating to an identified or identifiable natural
+                  person contained in processed documents
+                </li>
+                <li>
+                  <strong>Processing:</strong> Any operation performed on Personal Data, including scanning, OCR,
+                  storage, validation, and export
+                </li>
+                <li>
+                  <strong>Sub-processor:</strong> Third-party service providers engaged by the Processor to assist in
+                  data processing
+                </li>
+                <li>
+                  <strong>Data Subject:</strong> An identified or identifiable natural person whose Personal Data is
+                  processed
+                </li>
+                <li>
+                  <strong>GDPR:</strong> General Data Protection Regulation (EU) 2016/679
+                </li>
               </ul>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">2. Scope and Applicability</h2>
               <p className="text-muted-foreground mb-3">
-                This DPA applies to all processing of Personal Data by the Processor on behalf of the Controller in connection with:
+                This DPA applies to all processing of Personal Data by the Processor on behalf of the Controller in
+                connection with:
               </p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
                 <li>Document scanning and upload services</li>
@@ -54,9 +77,7 @@ const DataProcessingAgreement = () => {
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">3. Processor Obligations</h2>
-              <p className="text-muted-foreground mb-3">
-                The Processor shall:
-              </p>
+              <p className="text-muted-foreground mb-3">The Processor shall:</p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
                 <li>Process Personal Data only on documented instructions from the Controller</li>
                 <li>Ensure personnel processing Personal Data are bound by confidentiality obligations</li>
@@ -72,9 +93,7 @@ const DataProcessingAgreement = () => {
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">4. Controller Obligations</h2>
-              <p className="text-muted-foreground mb-3">
-                The Controller warrants that:
-              </p>
+              <p className="text-muted-foreground mb-3">The Controller warrants that:</p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
                 <li>It has a lawful basis for processing the Personal Data</li>
                 <li>It has provided appropriate notices to Data Subjects</li>
@@ -87,7 +106,7 @@ const DataProcessingAgreement = () => {
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">5. Nature and Purpose of Processing</h2>
-              
+
               <h3 className="text-xl font-semibold mb-2">Subject Matter</h3>
               <p className="text-muted-foreground">
                 Document processing, OCR, indexing, validation, and export services
@@ -104,9 +123,7 @@ const DataProcessingAgreement = () => {
               </p>
 
               <h3 className="text-xl font-semibold mb-2 mt-4">Types of Personal Data</h3>
-              <p className="text-muted-foreground mb-2">
-                Depending on documents processed, may include:
-              </p>
+              <p className="text-muted-foreground mb-2">Depending on documents processed, may include:</p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-1">
                 <li>Names and contact information</li>
                 <li>Identification numbers (SSN, tax ID, passport)</li>
@@ -135,22 +152,46 @@ const DataProcessingAgreement = () => {
 
               <h3 className="text-xl font-semibold mb-2">Technical Measures</h3>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li><strong>Encryption:</strong> TLS 1.3 for data in transit, AES-256 for data at rest</li>
-                <li><strong>Access Control:</strong> Role-based access control (RBAC) and multi-factor authentication</li>
-                <li><strong>Network Security:</strong> Firewalls, intrusion detection systems, and DDoS protection</li>
-                <li><strong>Data Segregation:</strong> Logical separation of customer data in multi-tenant architecture</li>
-                <li><strong>Monitoring:</strong> 24/7 security monitoring and automated threat detection</li>
-                <li><strong>Backups:</strong> Regular encrypted backups with off-site storage</li>
+                <li>
+                  <strong>Encryption:</strong> TLS 1.3 for data in transit, AES-256 for data at rest
+                </li>
+                <li>
+                  <strong>Access Control:</strong> Role-based access control (RBAC) and multi-factor authentication
+                </li>
+                <li>
+                  <strong>Network Security:</strong> Firewalls, intrusion detection systems, and DDoS protection
+                </li>
+                <li>
+                  <strong>Data Segregation:</strong> Logical separation of customer data in multi-tenant architecture
+                </li>
+                <li>
+                  <strong>Monitoring:</strong> 24/7 security monitoring and automated threat detection
+                </li>
+                <li>
+                  <strong>Backups:</strong> Regular encrypted backups with off-site storage
+                </li>
               </ul>
 
               <h3 className="text-xl font-semibold mb-2 mt-4">Organizational Measures</h3>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li><strong>Confidentiality:</strong> Staff training and confidentiality agreements</li>
-                <li><strong>Access Management:</strong> Principle of least privilege, regular access reviews</li>
-                <li><strong>Incident Response:</strong> Documented breach notification procedures</li>
-                <li><strong>Vendor Management:</strong> Security assessments of Sub-processors</li>
-                <li><strong>Security Testing:</strong> Regular penetration testing and vulnerability scans</li>
-                <li><strong>Certifications:</strong> [List relevant certifications: SOC 2, ISO 27001, etc.]</li>
+                <li>
+                  <strong>Confidentiality:</strong> Staff training and confidentiality agreements
+                </li>
+                <li>
+                  <strong>Access Management:</strong> Principle of least privilege, regular access reviews
+                </li>
+                <li>
+                  <strong>Incident Response:</strong> Documented breach notification procedures
+                </li>
+                <li>
+                  <strong>Vendor Management:</strong> Security assessments of Sub-processors
+                </li>
+                <li>
+                  <strong>Security Testing:</strong> Regular penetration testing and vulnerability scans
+                </li>
+                <li>
+                  <strong>Certifications:</strong> [List relevant certifications: SOC 2, ISO 27001, etc.]
+                </li>
               </ul>
             </section>
 
@@ -159,7 +200,7 @@ const DataProcessingAgreement = () => {
               <p className="text-muted-foreground mb-3">
                 The Controller authorizes the Processor to engage the following Sub-processors:
               </p>
-              
+
               <div className="overflow-x-auto">
                 <table className="w-full text-sm border-collapse">
                   <thead>
@@ -190,7 +231,8 @@ const DataProcessingAgreement = () => {
               </div>
 
               <p className="text-muted-foreground mt-4">
-                The Processor will notify the Controller of any intended changes to Sub-processors at least 30 days in advance. The Controller may object within 15 days on reasonable data protection grounds.
+                The Processor will notify the Controller of any intended changes to Sub-processors at least 30 days in
+                advance. The Controller may object within 15 days on reasonable data protection grounds.
               </p>
             </section>
 
@@ -200,26 +242,39 @@ const DataProcessingAgreement = () => {
                 The Processor shall assist the Controller in fulfilling Data Subject rights requests:
               </p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li><strong>Right of Access:</strong> Provide copies of Personal Data</li>
-                <li><strong>Right to Rectification:</strong> Correct inaccurate data</li>
-                <li><strong>Right to Erasure:</strong> Delete data ("right to be forgotten")</li>
-                <li><strong>Right to Restriction:</strong> Limit processing activities</li>
-                <li><strong>Right to Data Portability:</strong> Export data in structured format</li>
-                <li><strong>Right to Object:</strong> Cease certain processing activities</li>
+                <li>
+                  <strong>Right of Access:</strong> Provide copies of Personal Data
+                </li>
+                <li>
+                  <strong>Right to Rectification:</strong> Correct inaccurate data
+                </li>
+                <li>
+                  <strong>Right to Erasure:</strong> Delete data ("right to be forgotten")
+                </li>
+                <li>
+                  <strong>Right to Restriction:</strong> Limit processing activities
+                </li>
+                <li>
+                  <strong>Right to Data Portability:</strong> Export data in structured format
+                </li>
+                <li>
+                  <strong>Right to Object:</strong> Cease certain processing activities
+                </li>
               </ul>
               <p className="text-muted-foreground mt-3">
-                The Processor will respond to Controller requests within 5 business days. The Controller is responsible for verifying Data Subject identity and validity of requests.
+                The Processor will respond to Controller requests within 5 business days. The Controller is responsible
+                for verifying Data Subject identity and validity of requests.
               </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">9. Data Breach Notification</h2>
-              <p className="text-muted-foreground mb-3">
-                In the event of a Personal Data breach, the Processor shall:
-              </p>
+              <p className="text-muted-foreground mb-3">In the event of a Personal Data breach, the Processor shall:</p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
                 <li>Notify the Controller without undue delay (within 48 hours of discovery)</li>
-                <li>Provide details including nature of breach, categories of data affected, and number of Data Subjects</li>
+                <li>
+                  Provide details including nature of breach, categories of data affected, and number of Data Subjects
+                </li>
                 <li>Describe likely consequences and measures taken or proposed to mitigate</li>
                 <li>Cooperate with the Controller's investigation and notification obligations</li>
                 <li>Document the breach and remediation steps taken</li>
@@ -258,9 +313,7 @@ const DataProcessingAgreement = () => {
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">12. Data Retention and Deletion</h2>
-              <p className="text-muted-foreground mb-3">
-                Upon termination or expiration of services:
-              </p>
+              <p className="text-muted-foreground mb-3">Upon termination or expiration of services:</p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
                 <li>The Processor will delete or return all Personal Data within 30 days</li>
                 <li>The Controller may request export of data before deletion</li>
@@ -268,14 +321,16 @@ const DataProcessingAgreement = () => {
                 <li>Deletion will be certified in writing upon Controller request</li>
               </ul>
               <p className="text-muted-foreground mt-3">
-                During the service period, data retention follows project-specific settings configured by the Controller.
+                During the service period, data retention follows project-specific settings configured by the
+                Controller.
               </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">13. Liability and Indemnification</h2>
               <p className="text-muted-foreground">
-                Each party's liability under this DPA shall be subject to the limitations and exclusions in the main service agreement, except for:
+                Each party's liability under this DPA shall be subject to the limitations and exclusions in the main
+                service agreement, except for:
               </p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
                 <li>Breaches of data protection laws</li>
@@ -287,33 +342,38 @@ const DataProcessingAgreement = () => {
             <section>
               <h2 className="text-2xl font-semibold mb-3">14. Term and Termination</h2>
               <p className="text-muted-foreground">
-                This DPA remains in effect for the duration of the service agreement and any period during which the Processor processes Personal Data on behalf of the Controller. Either party may terminate if the other materially breaches this DPA and fails to remedy within 30 days.
+                This DPA remains in effect for the duration of the service agreement and any period during which the
+                Processor processes Personal Data on behalf of the Controller. Either party may terminate if the other
+                materially breaches this DPA and fails to remedy within 30 days.
               </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">15. Governing Law</h2>
               <p className="text-muted-foreground">
-                This DPA is governed by [Jurisdiction] law. In case of conflict between this DPA and the main service agreement, this DPA shall prevail on data protection matters.
+                This DPA is governed by [Jurisdiction] law. In case of conflict between this DPA and the main service
+                agreement, this DPA shall prevail on data protection matters.
               </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">16. Contact Information</h2>
-              <p className="text-muted-foreground mb-3">
-                Data Protection Officer:
-              </p>
+              <p className="text-muted-foreground mb-3">Data Protection Officer:</p>
               <div className="p-4 bg-muted/50 rounded-lg">
                 <p className="font-semibold">Western Integrated Systems</p>
                 <p className="text-muted-foreground">DPO Email: dpo@wisdm.com</p>
-                <p className="text-muted-foreground">Privacy Email: privacy@wisdm.com</p>
+                <p className="text-muted-foreground">Privacy Email: support@westint.com</p>
                 <p className="text-muted-foreground">Address: [Your Business Address]</p>
               </div>
             </section>
 
             <div className="mt-8 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
               <p className="text-sm text-red-700 dark:text-red-300">
-                <strong>IMPORTANT LEGAL NOTICE:</strong> This is a template Data Processing Agreement. This document MUST be reviewed and customized by qualified legal counsel before use. DPAs have significant legal and regulatory implications under GDPR, CCPA, and other data protection laws. Ensure all technical and organizational measures accurately reflect your actual practices. Enterprise customers typically require negotiated, signed DPAs.
+                <strong>IMPORTANT LEGAL NOTICE:</strong> This is a template Data Processing Agreement. This document
+                MUST be reviewed and customized by qualified legal counsel before use. DPAs have significant legal and
+                regulatory implications under GDPR, CCPA, and other data protection laws. Ensure all technical and
+                organizational measures accurately reflect your actual practices. Enterprise customers typically require
+                negotiated, signed DPAs.
               </p>
             </div>
           </div>
