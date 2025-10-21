@@ -58,23 +58,37 @@ const AuthPage = () => {
   };
 
   useEffect(() => {
-    // Check for password recovery flow (hash or query)
-    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const locationHash = window.location.hash || '';
     const searchParams = new URLSearchParams(window.location.search);
-    const type = hashParams.get('type') || searchParams.get('type');
-    const mode = searchParams.get('mode');
+    const isRecoveryParam =
+      locationHash.includes('type=recovery') ||
+      searchParams.get('type') === 'recovery' ||
+      searchParams.get('mode') === 'recovery';
 
-    const isRecovery = type === 'recovery' || mode === 'recovery' || window.location.hash.includes('type=recovery');
-    
-    if (isRecovery) {
-      setIsUpdatingPassword(true);
-      return;
-    }
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session && !isUpdatingPassword) {
+    // Listen for auth changes FIRST to catch PASSWORD_RECOVERY
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsUpdatingPassword(true);
+        return;
+      }
+      if (session && !isRecoveryParam && !isUpdatingPassword) {
         navigate('/');
       }
     });
+
+    // If the URL indicates recovery, enable update mode
+    if (isRecoveryParam) {
+      setIsUpdatingPassword(true);
+    } else {
+      // Otherwise, check for an existing session and redirect
+      supabase.auth.getSession().then(({ data: { session } }) => {
+        if (session && !isUpdatingPassword) {
+          navigate('/');
+        }
+      });
+    }
 
     // Fetch current ToS version
     supabase
@@ -82,20 +96,11 @@ const AuthPage = () => {
       .select('tos_version, privacy_policy_version')
       .eq('is_current', true)
       .single()
-      .then(({ data, error }) => {
+      .then(({ data }) => {
         if (data) {
           setCurrentTosVersion(data);
         }
       });
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session && !isUpdatingPassword) {
-        navigate('/');
-      }
-    });
 
     return () => subscription.unsubscribe();
   }, [navigate, isUpdatingPassword]);

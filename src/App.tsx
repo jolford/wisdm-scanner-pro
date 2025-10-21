@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Queue from "./pages/Queue";
 import Auth from "./pages/Auth";
@@ -51,20 +51,18 @@ const queryClient = new QueryClient();
 // Redirect users to the Auth page when arriving via a password recovery link
 // This catches older reset emails that might point to "/" instead of "/auth"
 const RecoveryRedirect: React.FC = () => {
-  const navigate = useNavigate();
   const location = useLocation();
+  const searchParams = new URLSearchParams(location.search || '');
 
-  useEffect(() => {
-    const searchParams = new URLSearchParams(location.search || '');
+  const hasHashRecovery = location.hash && location.hash.includes('type=recovery');
+  const hasQueryRecovery = searchParams.get('type') === 'recovery' || searchParams.get('mode') === 'recovery';
 
-    if (location.hash && location.hash.includes('type=recovery')) {
-      navigate(`/auth${location.hash}`, { replace: true });
-    } else if (searchParams.get('type') === 'recovery') {
-      // Fallback if a provider preserved query params but stripped the hash
-      navigate(`/auth?mode=recovery`, { replace: true });
-    }
-  }, [location, navigate]);
-
+  if (hasHashRecovery) {
+    return <Navigate to={`/auth${location.hash}`} replace />;
+  }
+  if (hasQueryRecovery) {
+    return <Navigate to="/auth?mode=recovery" replace />;
+  }
   return null;
 };
 
