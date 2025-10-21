@@ -22,7 +22,9 @@ const PrivacyPolicy = () => {
             <section>
               <h2 className="text-2xl font-semibold mb-3">1. Introduction</h2>
               <p className="text-muted-foreground">
-                Western Integrated Systems ("we," "our," or "us") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our document processing and OCR services.
+                Western Integrated Systems ("we," "our," or "us") is committed to protecting your privacy. This Privacy
+                Policy explains how we collect, use, disclose, and safeguard your information when you use our document
+                processing and OCR services.
               </p>
             </section>
 
@@ -56,12 +58,24 @@ const PrivacyPolicy = () => {
             <section>
               <h2 className="text-2xl font-semibold mb-3">3. How We Use Your Information</h2>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li><strong>Service Delivery:</strong> Process documents, perform OCR, and provide validation tools</li>
-                <li><strong>Account Management:</strong> Create and maintain your user account</li>
-                <li><strong>Communication:</strong> Send service updates, technical notices, and support messages</li>
-                <li><strong>Improvement:</strong> Analyze usage patterns to enhance our services</li>
-                <li><strong>Security:</strong> Detect and prevent fraud, abuse, and security incidents</li>
-                <li><strong>Legal Compliance:</strong> Meet regulatory requirements and legal obligations</li>
+                <li>
+                  <strong>Service Delivery:</strong> Process documents, perform OCR, and provide validation tools
+                </li>
+                <li>
+                  <strong>Account Management:</strong> Create and maintain your user account
+                </li>
+                <li>
+                  <strong>Communication:</strong> Send service updates, technical notices, and support messages
+                </li>
+                <li>
+                  <strong>Improvement:</strong> Analyze usage patterns to enhance our services
+                </li>
+                <li>
+                  <strong>Security:</strong> Detect and prevent fraud, abuse, and security incidents
+                </li>
+                <li>
+                  <strong>Legal Compliance:</strong> Meet regulatory requirements and legal obligations
+                </li>
               </ul>
             </section>
 
@@ -82,13 +96,22 @@ const PrivacyPolicy = () => {
             <section>
               <h2 className="text-2xl font-semibold mb-3">5. Data Retention</h2>
               <p className="text-muted-foreground">
-                We retain your information for as long as necessary to provide our services and comply with legal obligations:
+                We retain your information for as long as necessary to provide our services and comply with legal
+                obligations:
               </p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li><strong>Account Data:</strong> Retained while your account is active</li>
-                <li><strong>Documents:</strong> Configurable retention periods per project settings</li>
-                <li><strong>Metadata:</strong> May be retained for analytics and service improvement</li>
-                <li><strong>Legal Requirements:</strong> Some data may be retained longer to comply with regulations</li>
+                <li>
+                  <strong>Account Data:</strong> Retained while your account is active
+                </li>
+                <li>
+                  <strong>Documents:</strong> Configurable retention periods per project settings
+                </li>
+                <li>
+                  <strong>Metadata:</strong> May be retained for analytics and service improvement
+                </li>
+                <li>
+                  <strong>Legal Requirements:</strong> Some data may be retained longer to comply with regulations
+                </li>
               </ul>
             </section>
 
@@ -98,10 +121,19 @@ const PrivacyPolicy = () => {
                 We do not sell your personal information. We may share data with:
               </p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li><strong>Service Providers:</strong> Third-party vendors who assist in service delivery (cloud hosting, payment processing)</li>
-                <li><strong>Legal Requirements:</strong> When required by law, subpoena, or legal process</li>
-                <li><strong>Business Transfers:</strong> In connection with mergers, acquisitions, or asset sales</li>
-                <li><strong>Consent:</strong> When you explicitly authorize disclosure</li>
+                <li>
+                  <strong>Service Providers:</strong> Third-party vendors who assist in service delivery (cloud hosting,
+                  payment processing)
+                </li>
+                <li>
+                  <strong>Legal Requirements:</strong> When required by law, subpoena, or legal process
+                </li>
+                <li>
+                  <strong>Business Transfers:</strong> In connection with mergers, acquisitions, or asset sales
+                </li>
+                <li>
+                  <strong>Consent:</strong> When you explicitly authorize disclosure
+                </li>
               </ul>
             </section>
 
@@ -111,61 +143,79 @@ const PrivacyPolicy = () => {
                 Depending on your jurisdiction, you may have the following rights:
               </p>
               <ul className="list-disc pl-6 text-muted-foreground space-y-2">
-                <li><strong>Access:</strong> Request copies of your personal data</li>
-                <li><strong>Correction:</strong> Update or correct inaccurate information</li>
-                <li><strong>Deletion:</strong> Request deletion of your data ("right to be forgotten")</li>
-                <li><strong>Portability:</strong> Receive your data in a machine-readable format</li>
-                <li><strong>Objection:</strong> Object to certain types of processing</li>
-                <li><strong>Restriction:</strong> Request limited processing of your data</li>
+                <li>
+                  <strong>Access:</strong> Request copies of your personal data
+                </li>
+                <li>
+                  <strong>Correction:</strong> Update or correct inaccurate information
+                </li>
+                <li>
+                  <strong>Deletion:</strong> Request deletion of your data ("right to be forgotten")
+                </li>
+                <li>
+                  <strong>Portability:</strong> Receive your data in a machine-readable format
+                </li>
+                <li>
+                  <strong>Objection:</strong> Object to certain types of processing
+                </li>
+                <li>
+                  <strong>Restriction:</strong> Request limited processing of your data
+                </li>
               </ul>
-              <p className="text-muted-foreground mt-3">
-                To exercise these rights, contact us at privacy@wisdm.com
-              </p>
+              <p className="text-muted-foreground mt-3">To exercise these rights, contact us at support@westint.com</p>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">8. Cookies and Tracking</h2>
               <p className="text-muted-foreground">
-                We use cookies and similar technologies to enhance user experience and analyze usage. See our <a href="/cookie-policy" className="text-primary underline">Cookie Policy</a> for details.
+                We use cookies and similar technologies to enhance user experience and analyze usage. See our{" "}
+                <a href="/cookie-policy" className="text-primary underline">
+                  Cookie Policy
+                </a>{" "}
+                for details.
               </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">9. International Data Transfers</h2>
               <p className="text-muted-foreground">
-                Your information may be transferred to and processed in countries other than your own. We ensure appropriate safeguards are in place, including standard contractual clauses and data processing agreements.
+                Your information may be transferred to and processed in countries other than your own. We ensure
+                appropriate safeguards are in place, including standard contractual clauses and data processing
+                agreements.
               </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">10. Children's Privacy</h2>
               <p className="text-muted-foreground">
-                Our services are not directed to individuals under 18 years of age. We do not knowingly collect personal information from children.
+                Our services are not directed to individuals under 18 years of age. We do not knowingly collect personal
+                information from children.
               </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">11. Changes to This Policy</h2>
               <p className="text-muted-foreground">
-                We may update this Privacy Policy periodically. We will notify you of material changes via email or through our service. Your continued use after changes constitutes acceptance.
+                We may update this Privacy Policy periodically. We will notify you of material changes via email or
+                through our service. Your continued use after changes constitutes acceptance.
               </p>
             </section>
 
             <section>
               <h2 className="text-2xl font-semibold mb-3">12. Contact Us</h2>
-              <p className="text-muted-foreground">
-                For questions about this Privacy Policy or our data practices:
-              </p>
+              <p className="text-muted-foreground">For questions about this Privacy Policy or our data practices:</p>
               <div className="mt-3 p-4 bg-muted/50 rounded-lg">
                 <p className="font-semibold">Western Integrated Systems</p>
-                <p className="text-muted-foreground">Email: privacy@wisdm.com</p>
+                <p className="text-muted-foreground">Email: support@westint.com</p>
                 <p className="text-muted-foreground">Address: [Your Business Address]</p>
               </div>
             </section>
 
             <div className="mt-8 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
               <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                <strong>Legal Notice:</strong> This is a template Privacy Policy. Consult with legal counsel to ensure compliance with applicable laws in your jurisdiction (GDPR, CCPA, etc.) and customize based on your specific business practices.
+                <strong>Legal Notice:</strong> This is a template Privacy Policy. Consult with legal counsel to ensure
+                compliance with applicable laws in your jurisdiction (GDPR, CCPA, etc.) and customize based on your
+                specific business practices.
               </p>
             </div>
           </div>
