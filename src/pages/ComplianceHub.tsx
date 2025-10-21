@@ -53,11 +53,7 @@ export default function ComplianceHub() {
 
   return (
     <div className="min-h-screen bg-background p-8">
-      <Button
-        variant="ghost"
-        onClick={() => navigate(-1)}
-        className="mb-6"
-      >
+      <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6">
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back
       </Button>
@@ -66,8 +62,8 @@ export default function ComplianceHub() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold mb-4">Compliance Documentation</h1>
           <p className="text-lg text-muted-foreground">
-            Comprehensive security, privacy, and operational documentation to support
-            SOC 2 readiness and regulatory compliance.
+            Comprehensive security, privacy, and operational documentation to support SOC 2 readiness and regulatory
+            compliance.
           </p>
         </div>
 
@@ -100,18 +96,17 @@ export default function ComplianceHub() {
             <div>
               <h3 className="text-lg font-semibold mb-2">What is SOC 2?</h3>
               <p className="text-muted-foreground">
-                SOC 2 (Service Organization Control 2) is an auditing framework that ensures
-                service providers securely manage customer data. It focuses on five Trust Service
-                Criteria: Security, Availability, Processing Integrity, Confidentiality, and Privacy.
+                SOC 2 (Service Organization Control 2) is an auditing framework that ensures service providers securely
+                manage customer data. It focuses on five Trust Service Criteria: Security, Availability, Processing
+                Integrity, Confidentiality, and Privacy.
               </p>
             </div>
 
             <div>
               <h3 className="text-lg font-semibold mb-2">Our Compliance Status</h3>
               <p className="text-muted-foreground mb-4">
-                WISDM Scanner Pro has implemented comprehensive security controls aligned with
-                SOC 2 requirements. While formal certification requires an independent audit,
-                our platform includes:
+                WISDM Scanner Pro has implemented comprehensive security controls aligned with SOC 2 requirements. While
+                formal certification requires an independent audit, our platform includes:
               </p>
               <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
                 <li>Row Level Security (RLS) policies on all database tables</li>
@@ -153,10 +148,10 @@ export default function ComplianceHub() {
             <div className="bg-muted p-6 rounded-lg mt-6">
               <p className="text-sm font-semibold mb-2">Need More Information?</p>
               <p className="text-sm text-muted-foreground mb-4">
-                For questions about our security practices, compliance status, or to request
-                specific documentation for your procurement process, please contact us.
+                For questions about our security practices, compliance status, or to request specific documentation for
+                your procurement process, please contact us.
               </p>
-              <Button variant="outline" onClick={() => window.location.href = 'mailto:security@wisdm.com'}>
+              <Button variant="outline" onClick={() => (window.location.href = "mailto:support@westint.com")}>
                 Contact Security Team
               </Button>
             </div>
