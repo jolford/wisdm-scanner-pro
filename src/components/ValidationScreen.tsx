@@ -586,13 +586,13 @@ useEffect(() => {
         
         {/* Calculation Variance Warning */}
         {editedMetadata['_calculationMatch'] === 'false' && (
-          <div className="mb-4 p-3 bg-muted/30 border border-border rounded-lg">
-            <div className="flex items-start gap-2">
-              <Badge variant="secondary">
-                ⚠️ Calculation variance detected
+          <div className="mb-4 p-4 bg-destructive/10 border-2 border-destructive/50 rounded-lg">
+            <div className="flex items-start gap-2 mb-3">
+              <Badge variant="destructive" className="text-sm">
+                ⚠️ CALCULATION MISMATCH
               </Badge>
             </div>
-            <div className="mt-2 text-sm space-y-1">
+            <div className="space-y-2 text-sm">
               <p>
                 <span className="font-medium">Line Items Total:</span>{' '}
                 <span className="font-mono">${editedMetadata['_calculatedLineItemsTotal']}</span>
@@ -601,14 +601,14 @@ useEffect(() => {
                 <span className="font-medium">Invoice Total:</span>{' '}
                 <span className="font-mono">${editedMetadata['_invoiceTotal']}</span>
               </p>
-              <p className="text-muted-foreground">
-                <span className="font-medium">Variance:</span>{' '}
-                <span className="font-mono font-semibold">${editedMetadata['_calculationVariance']}</span>
-                {' '}({editedMetadata['_calculationVariancePercent']}%)
+              <p className="text-destructive font-semibold pt-2 border-t border-destructive/20">
+                <span className="font-bold">VARIANCE:</span>{' '}
+                <span className="font-mono text-lg">${editedMetadata['_calculationVariance']}</span>
+                <span className="ml-2 text-base">({editedMetadata['_calculationVariancePercent']}%)</span>
               </p>
             </div>
-            <p className="mt-2 text-xs text-muted-foreground">
-              Please verify line items and totals before validating.
+            <p className="mt-3 text-sm text-destructive font-medium">
+              ⚠️ Please verify line items and totals before validating
             </p>
           </div>
         )}
