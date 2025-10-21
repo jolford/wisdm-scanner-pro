@@ -37,13 +37,20 @@ import { isTiffFile, convertTiffToPngDataUrl } from '@/lib/image-utils';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
 
-// Configure PDF.js worker using a dedicated module worker (avoids CDN)
-if ((pdfjsLib as any).GlobalWorkerOptions) {
-  (pdfjsLib as any).GlobalWorkerOptions.workerPort = new (PdfWorker as any)();
-  
-}
+// PDF.js worker is initialized lazily inside the Queue component to avoid errors on non-queue routes.
 
 const Queue = () => {
+  // Lazily initialize PDF.js worker to prevent global crashes on auth pages
+  useEffect(() => {
+    try {
+      if ((pdfjsLib as any).GlobalWorkerOptions) {
+        (pdfjsLib as any).GlobalWorkerOptions.workerPort = new (PdfWorker as any)();
+      }
+    } catch (e) {
+      console.warn('PDF worker init failed', e);
+    }
+  }, []);
+
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
