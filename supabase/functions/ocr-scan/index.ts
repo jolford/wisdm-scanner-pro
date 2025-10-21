@@ -309,19 +309,25 @@ Extract actual values from the document for each field with extreme precision fo
         let hasValidAmounts = false;
         
         lineItems.forEach((item: any) => {
-          // Look for common total/amount field names
-          const amountFields = ['total', 'amount', 'lineTotal', 'extendedPrice', 'price'];
           let itemAmount = 0;
           
-          for (const field of amountFields) {
-            if (item[field]) {
-              // Parse the amount, removing currency symbols and commas
-              const cleanAmount = String(item[field]).replace(/[$,]/g, '').trim();
-              const parsed = parseFloat(cleanAmount);
-              if (!isNaN(parsed)) {
-                itemAmount = parsed;
-                hasValidAmounts = true;
-                break;
+          // Search through all item keys for amount-like fields
+          for (const key of Object.keys(item)) {
+            const lowerKey = key.toLowerCase();
+            // Match fields containing: total, amount, price, extended, subtotal
+            if (lowerKey.includes('total') || lowerKey.includes('amount') || 
+                lowerKey.includes('price') || lowerKey.includes('extended') ||
+                lowerKey.includes('subtotal')) {
+              const value = item[key];
+              if (value !== null && value !== undefined && value !== '') {
+                // Parse the amount, removing currency symbols and commas
+                const cleanAmount = String(value).replace(/[$,]/g, '').trim();
+                const parsed = parseFloat(cleanAmount);
+                if (!isNaN(parsed) && parsed !== 0) {
+                  itemAmount = parsed;
+                  hasValidAmounts = true;
+                  break;
+                }
               }
             }
           }
@@ -331,16 +337,24 @@ Extract actual values from the document for each field with extreme precision fo
         
         // Look for invoice total in metadata
         if (hasValidAmounts && metadata) {
-          const totalFields = ['total', 'Total', 'invoiceTotal', 'Invoice Total', 'grandTotal', 'Grand Total', 'amount', 'Amount'];
           let invoiceTotal: number | null = null;
           
-          for (const field of totalFields) {
-            if (metadata[field]) {
-              const cleanTotal = String(metadata[field]).replace(/[$,]/g, '').trim();
-              const parsed = parseFloat(cleanTotal);
-              if (!isNaN(parsed)) {
-                invoiceTotal = parsed;
-                break;
+          // Search through all metadata keys for total-like fields
+          for (const key of Object.keys(metadata)) {
+            const lowerKey = key.toLowerCase();
+            // Match fields containing: total, amount, grand, balance, due
+            if (lowerKey.includes('total') || lowerKey.includes('amount') || 
+                lowerKey.includes('grand') || lowerKey.includes('balance') ||
+                lowerKey.includes('due')) {
+              const value = metadata[key];
+              if (value !== null && value !== undefined && value !== '') {
+                const cleanTotal = String(value).replace(/[$,]/g, '').trim();
+                const parsed = parseFloat(cleanTotal);
+                if (!isNaN(parsed) && parsed > 0) {
+                  invoiceTotal = parsed;
+                  console.log(`Found invoice total in field '${key}': ${invoiceTotal}`);
+                  break;
+                }
               }
             }
           }
@@ -358,6 +372,8 @@ Extract actual values from the document for each field with extreme precision fo
             metadata['_calculationMatch'] = variance < 0.01 ? 'true' : 'false';
             
             console.log(`Calculation verification: Line items total = ${calculatedTotal.toFixed(2)}, Invoice total = ${invoiceTotal.toFixed(2)}, Variance = ${variance.toFixed(2)} (${variancePercent.toFixed(2)}%)`);
+          } else {
+            console.log('No valid invoice total found in metadata for calculation verification');
           }
         }
       } catch (verifyError) {
