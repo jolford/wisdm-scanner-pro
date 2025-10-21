@@ -547,6 +547,8 @@ useEffect(() => {
               <RedactionTool
                 imageUrl={currentImageUrl}
                 documentId={documentId}
+                ocrText={extractedText}
+                ocrMetadata={{ fields: metadata, boundingBoxes }}
                 onRedactionSaved={handleRedactionSaved}
                 onCancel={() => setShowRedactionTool(false)}
               />

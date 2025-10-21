@@ -6,13 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 // Icon imports for visual indicators
-import { Eraser, Save, Undo, X } from 'lucide-react';
+import { Eraser, Save, Undo, X, Wand2, AlertTriangle } from 'lucide-react';
 
 // Custom hooks and utilities
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { detectKeywords, generateRedactionBoxes, mergeRedactionBoxes, type DetectedKeyword } from '@/lib/keyword-redaction';
 
 /**
  * RedactionBox structure defining a rectangular area to redact on the image
@@ -31,6 +34,8 @@ interface RedactionBox {
 interface RedactionToolProps {
   imageUrl: string;                      // URL of the image to redact
   documentId: string;                    // Document ID for saving redacted version
+  ocrText?: string;                      // OCR text for keyword detection
+  ocrMetadata?: any;                     // OCR metadata with bounding boxes
   onRedactionSaved: (redactedUrl: string, isPermanent: boolean) => void; // Callback when redaction is saved
   onCancel: () => void;                  // Callback to cancel redaction
 }
@@ -47,7 +52,9 @@ interface RedactionToolProps {
  */
 export const RedactionTool = ({ 
   imageUrl, 
-  documentId, 
+  documentId,
+  ocrText,
+  ocrMetadata,
   onRedactionSaved,
   onCancel 
 }: RedactionToolProps) => {
@@ -60,11 +67,26 @@ export const RedactionTool = ({
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null); // Starting point of current box
   const [redactionBoxes, setRedactionBoxes] = useState<RedactionBox[]>([]); // All completed redaction boxes
   
+  // Keyword detection state
+  const [detectedKeywords, setDetectedKeywords] = useState<DetectedKeyword[]>([]);
+  const [showKeywordAlert, setShowKeywordAlert] = useState(false);
+  
   // Redaction settings
   const [redactionMode, setRedactionMode] = useState<'permanent' | 'version'>('version'); // Permanent or create version
   const [isSaving, setIsSaving] = useState(false);                      // Save operation in progress
   
   const { toast } = useToast();
+
+  /**
+   * Detect keywords in OCR data when component mounts
+   */
+  useEffect(() => {
+    if (ocrText && ocrText.length > 0) {
+      const detected = detectKeywords(ocrText, ocrMetadata);
+      setDetectedKeywords(detected);
+      setShowKeywordAlert(detected.length > 0);
+    }
+  }, [ocrText, ocrMetadata]);
 
   /**
    * Load image onto canvas when component mounts or imageUrl changes
@@ -207,6 +229,36 @@ export const RedactionTool = ({
   };
 
   /**
+   * Apply automatic redaction based on detected keywords
+   */
+  const handleAutoRedact = () => {
+    if (detectedKeywords.length === 0) {
+      toast({
+        title: 'No Keywords Detected',
+        description: 'No sensitive keywords were found in the document',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Generate redaction boxes from detected keywords
+    const autoBoxes = generateRedactionBoxes(detectedKeywords, 15);
+    
+    // Merge overlapping boxes for cleaner redaction
+    const mergedBoxes = mergeRedactionBoxes(autoBoxes, 30);
+    
+    // Add to existing boxes
+    setRedactionBoxes(prev => [...prev, ...mergedBoxes]);
+    
+    toast({
+      title: 'Auto-Redaction Applied',
+      description: `Added ${mergedBoxes.length} redaction boxes for ${detectedKeywords.length} keyword(s)`
+    });
+    
+    setShowKeywordAlert(false);
+  };
+
+  /**
    * Save the redacted image to storage and update the document record
    * Process:
    * 1. Convert canvas to image blob
@@ -321,6 +373,42 @@ export const RedactionTool = ({
       </div>
 
       <div className="space-y-4">
+        {/* Keyword Detection Alert */}
+        {showKeywordAlert && detectedKeywords.length > 0 && (
+          <Alert className="border-warning bg-warning/10">
+            <AlertTriangle className="h-4 w-4 text-warning" />
+            <AlertDescription className="ml-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1">
+                  <p className="font-semibold mb-2">Sensitive Keywords Detected</p>
+                  <p className="text-sm mb-2">
+                    Found {detectedKeywords.length} keyword(s) that may require redaction for compliance with fair housing laws (e.g., CA AB 1466):
+                  </p>
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {detectedKeywords.slice(0, 10).map((kw, idx) => (
+                      <Badge key={idx} variant="outline" className="text-xs">
+                        {kw.term} ({kw.matches.length})
+                      </Badge>
+                    ))}
+                    {detectedKeywords.length > 10 && (
+                      <Badge variant="outline" className="text-xs">
+                        +{detectedKeywords.length - 10} more
+                      </Badge>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={handleAutoRedact}
+                  className="shrink-0"
+                >
+                  <Wand2 className="h-3 w-3 mr-1" />
+                  Auto-Redact
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
         <div>
           <Label className="text-sm font-medium mb-2 block">Redaction Mode</Label>
           <RadioGroup
@@ -354,11 +442,26 @@ export const RedactionTool = ({
           />
         </div>
 
-        <p className="text-xs text-muted-foreground">
-          💡 Click and drag to draw redaction boxes. Redacted areas will appear as black boxes.
-        </p>
+        <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg">
+          <div className="flex-1">
+            <p className="mb-1">💡 <strong>Manual:</strong> Click and drag to draw redaction boxes</p>
+            {detectedKeywords.length > 0 && (
+              <p>🤖 <strong>Auto:</strong> Click "Auto-Redact" to automatically redact detected sensitive keywords</p>
+            )}
+          </div>
+        </div>
 
         <div className="flex gap-2">
+          {detectedKeywords.length > 0 && redactionBoxes.length === 0 && (
+            <Button
+              onClick={handleAutoRedact}
+              variant="secondary"
+              className="flex-1"
+            >
+              <Wand2 className="h-4 w-4 mr-2" />
+              Auto-Redact Keywords
+            </Button>
+          )}
           <Button
             onClick={handleUndo}
             variant="outline"
