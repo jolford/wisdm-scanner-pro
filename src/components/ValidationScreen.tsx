@@ -488,8 +488,53 @@ useEffect(() => {
       <Card className="p-6 flex flex-col">
         <h3 className="font-semibold mb-4">Index Fields</h3>
         
+        {/* Calculation Variance Warning */}
+        {editedMetadata['_calculationMatch'] === 'false' && (
+          <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+            <div className="flex items-start gap-2">
+              <Badge variant="outline" className="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 border-yellow-300 dark:border-yellow-700">
+                ⚠️ Calculation Variance
+              </Badge>
+            </div>
+            <div className="mt-2 text-sm space-y-1">
+              <p>
+                <span className="font-medium">Line Items Total:</span>{' '}
+                <span className="font-mono">${editedMetadata['_calculatedLineItemsTotal']}</span>
+              </p>
+              <p>
+                <span className="font-medium">Invoice Total:</span>{' '}
+                <span className="font-mono">${editedMetadata['_invoiceTotal']}</span>
+              </p>
+              <p className="text-yellow-700 dark:text-yellow-300">
+                <span className="font-medium">Variance:</span>{' '}
+                <span className="font-mono font-semibold">${editedMetadata['_calculationVariance']}</span>
+                {' '}({editedMetadata['_calculationVariancePercent']}%)
+              </p>
+            </div>
+            <p className="mt-2 text-xs text-yellow-600 dark:text-yellow-400">
+              Please verify line items and totals before validating.
+            </p>
+          </div>
+        )}
+        
+        {editedMetadata['_calculationMatch'] === 'true' && (
+          <div className="mb-4 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
+            <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-300">
+              <CheckCircle2 className="h-4 w-4" />
+              <span className="font-medium">Calculation Verified</span>
+              <span className="font-mono ml-auto">${editedMetadata['_calculatedLineItemsTotal']}</span>
+            </div>
+          </div>
+        )}
+        
         <div className="flex-1 overflow-auto space-y-4">
-          {projectFields.map((field) => (
+          {projectFields.map((field) => {
+            // Skip internal calculation fields from display
+            if (field.name.startsWith('_calculation') || field.name.startsWith('_invoiceTotal') || field.name.startsWith('_calculated')) {
+              return null;
+            }
+            
+            return (
             <div key={field.name} className="space-y-2">
               <Label htmlFor={field.name} className="text-sm">
                 {field.name}
@@ -535,7 +580,8 @@ useEffect(() => {
                 </div>
               )}
             </div>
-          ))}
+            );
+          })}
 
           {projectFields.length === 0 && (
             <div className="text-center py-8 text-muted-foreground">

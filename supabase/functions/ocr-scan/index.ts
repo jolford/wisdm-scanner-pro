@@ -300,6 +300,72 @@ Extract actual values from the document for each field with extreme precision fo
       extractedText = responseText;
     }
 
+    // --- CALCULATION VERIFICATION ---
+    // Verify line items sum matches invoice total (if both are available)
+    if (lineItems && lineItems.length > 0) {
+      try {
+        // Calculate sum of line items
+        let calculatedTotal = 0;
+        let hasValidAmounts = false;
+        
+        lineItems.forEach((item: any) => {
+          // Look for common total/amount field names
+          const amountFields = ['total', 'amount', 'lineTotal', 'extendedPrice', 'price'];
+          let itemAmount = 0;
+          
+          for (const field of amountFields) {
+            if (item[field]) {
+              // Parse the amount, removing currency symbols and commas
+              const cleanAmount = String(item[field]).replace(/[$,]/g, '').trim();
+              const parsed = parseFloat(cleanAmount);
+              if (!isNaN(parsed)) {
+                itemAmount = parsed;
+                hasValidAmounts = true;
+                break;
+              }
+            }
+          }
+          
+          calculatedTotal += itemAmount;
+        });
+        
+        // Look for invoice total in metadata
+        if (hasValidAmounts && metadata) {
+          const totalFields = ['total', 'Total', 'invoiceTotal', 'Invoice Total', 'grandTotal', 'Grand Total', 'amount', 'Amount'];
+          let invoiceTotal: number | null = null;
+          
+          for (const field of totalFields) {
+            if (metadata[field]) {
+              const cleanTotal = String(metadata[field]).replace(/[$,]/g, '').trim();
+              const parsed = parseFloat(cleanTotal);
+              if (!isNaN(parsed)) {
+                invoiceTotal = parsed;
+                break;
+              }
+            }
+          }
+          
+          // Calculate variance if we found an invoice total
+          if (invoiceTotal !== null && invoiceTotal > 0) {
+            const variance = Math.abs(calculatedTotal - invoiceTotal);
+            const variancePercent = (variance / invoiceTotal) * 100;
+            
+            // Store variance information in metadata
+            metadata['_calculatedLineItemsTotal'] = calculatedTotal.toFixed(2);
+            metadata['_invoiceTotal'] = invoiceTotal.toFixed(2);
+            metadata['_calculationVariance'] = variance.toFixed(2);
+            metadata['_calculationVariancePercent'] = variancePercent.toFixed(2);
+            metadata['_calculationMatch'] = variance < 0.01 ? 'true' : 'false';
+            
+            console.log(`Calculation verification: Line items total = ${calculatedTotal.toFixed(2)}, Invoice total = ${invoiceTotal.toFixed(2)}, Variance = ${variance.toFixed(2)} (${variancePercent.toFixed(2)}%)`);
+          }
+        }
+      } catch (verifyError) {
+        console.error('Calculation verification failed:', verifyError);
+        // Don't fail the OCR due to verification errors
+      }
+    }
+
     console.log('OCR completed - Document Type:', documentType, 'Confidence:', confidence, 'Metadata:', metadata, 'Line Items:', lineItems.length);
 
     // --- TRACK COST AND USAGE ---
