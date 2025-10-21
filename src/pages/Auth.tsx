@@ -60,10 +60,12 @@ const AuthPage = () => {
   useEffect(() => {
     const locationHash = window.location.hash || '';
     const searchParams = new URLSearchParams(window.location.search);
+    const hasAccessToken = locationHash.includes('access_token=');
     const isRecoveryParam =
       locationHash.includes('type=recovery') ||
       searchParams.get('type') === 'recovery' ||
       searchParams.get('mode') === 'recovery';
+    const blockRedirect = isRecoveryParam || hasAccessToken;
 
     // Listen for auth changes FIRST to catch PASSWORD_RECOVERY
     const {
@@ -73,13 +75,13 @@ const AuthPage = () => {
         setIsUpdatingPassword(true);
         return;
       }
-      if (session && !isRecoveryParam && !isUpdatingPassword) {
+      if (session && !blockRedirect && !isUpdatingPassword) {
         navigate('/');
       }
     });
 
-    // If the URL indicates recovery, enable update mode
-    if (isRecoveryParam) {
+    // If the URL indicates recovery or contains an access token, enable update mode
+    if (blockRedirect) {
       setIsUpdatingPassword(true);
     } else {
       // Otherwise, check for an existing session and redirect
