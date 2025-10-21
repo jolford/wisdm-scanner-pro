@@ -100,6 +100,102 @@ useEffect(() => {
   };
   run();
 }, [displayUrl, isPdf]);
+
+// Client-side calculation verification (fallback for older docs)
+useEffect(() => {
+  const compute = async () => {
+    if (!documentId) return;
+    if (editedMetadata['_calculationMatch']) return; // already computed
+
+    const { data, error } = await supabase
+      .from('documents')
+      .select('line_items, extracted_metadata')
+      .eq('id', documentId)
+      .single();
+
+    if (error) {
+      console.warn('Failed to fetch document for calculation verification', error);
+      return;
+    }
+
+    const items: any[] = (data?.line_items as any[]) || [];
+    if (!items.length) return;
+
+    const meta: Record<string, any> = (data?.extracted_metadata as any) || editedMetadata;
+
+    let calculatedTotal = 0;
+    let hasValidAmounts = false;
+
+    try {
+      items.forEach((item: any) => {
+        for (const key of Object.keys(item || {})) {
+          const lowerKey = key.toLowerCase();
+          if (
+            lowerKey.includes('total') ||
+            lowerKey.includes('amount') ||
+            lowerKey.includes('price') ||
+            lowerKey.includes('extended') ||
+            lowerKey.includes('subtotal')
+          ) {
+            const value = item[key];
+            if (value !== null && value !== undefined && value !== '') {
+              const clean = String(value).replace(/[$,]/g, '').trim();
+              const num = parseFloat(clean);
+              if (!isNaN(num) && num !== 0) {
+                calculatedTotal += num;
+                hasValidAmounts = true;
+                break;
+              }
+            }
+          }
+        }
+      });
+
+      if (!hasValidAmounts) return;
+
+      let invoiceTotal: number | null = null;
+      for (const key of Object.keys(meta || {})) {
+        const lowerKey = key.toLowerCase();
+        if (
+          lowerKey.includes('total') ||
+          lowerKey.includes('amount') ||
+          lowerKey.includes('grand') ||
+          lowerKey.includes('balance') ||
+          lowerKey.includes('due')
+        ) {
+          const value = meta[key];
+          if (value !== null && value !== undefined && value !== '') {
+            const clean = String(value).replace(/[$,]/g, '').trim();
+            const num = parseFloat(clean);
+            if (!isNaN(num) && num > 0) {
+              invoiceTotal = num;
+              break;
+            }
+          }
+        }
+      }
+
+      if (invoiceTotal === null) return;
+
+      const variance = Math.abs(calculatedTotal - invoiceTotal);
+      const variancePercent = (variance / invoiceTotal) * 100;
+
+      setEditedMetadata(prev => ({
+        ...prev,
+        _calculatedLineItemsTotal: calculatedTotal.toFixed(2),
+        _invoiceTotal: invoiceTotal!.toFixed(2),
+        _calculationVariance: variance.toFixed(2),
+        _calculationVariancePercent: variancePercent.toFixed(2),
+        _calculationMatch: variance < 0.01 ? 'true' : 'false',
+      }));
+    } catch (e) {
+      console.warn('Client-side calculation verification failed', e);
+    }
+  };
+
+  compute();
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [documentId]);
   // Generate suggestions from extracted text
   useEffect(() => {
     if (extractedText && projectFields.length > 0) {
@@ -490,10 +586,10 @@ useEffect(() => {
         
         {/* Calculation Variance Warning */}
         {editedMetadata['_calculationMatch'] === 'false' && (
-          <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+          <div className="mb-4 p-3 bg-muted/30 border border-border rounded-lg">
             <div className="flex items-start gap-2">
-              <Badge variant="outline" className="bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200 border-yellow-300 dark:border-yellow-700">
-                ⚠️ Calculation Variance
+              <Badge variant="secondary">
+                ⚠️ Calculation variance detected
               </Badge>
             </div>
             <div className="mt-2 text-sm space-y-1">
@@ -505,23 +601,23 @@ useEffect(() => {
                 <span className="font-medium">Invoice Total:</span>{' '}
                 <span className="font-mono">${editedMetadata['_invoiceTotal']}</span>
               </p>
-              <p className="text-yellow-700 dark:text-yellow-300">
+              <p className="text-muted-foreground">
                 <span className="font-medium">Variance:</span>{' '}
                 <span className="font-mono font-semibold">${editedMetadata['_calculationVariance']}</span>
                 {' '}({editedMetadata['_calculationVariancePercent']}%)
               </p>
             </div>
-            <p className="mt-2 text-xs text-yellow-600 dark:text-yellow-400">
+            <p className="mt-2 text-xs text-muted-foreground">
               Please verify line items and totals before validating.
             </p>
           </div>
         )}
         
         {editedMetadata['_calculationMatch'] === 'true' && (
-          <div className="mb-4 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800 rounded-lg">
-            <div className="flex items-center gap-2 text-sm text-green-700 dark:text-green-300">
-              <CheckCircle2 className="h-4 w-4" />
-              <span className="font-medium">Calculation Verified</span>
+          <div className="mb-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+            <div className="flex items-center gap-2 text-sm">
+              <CheckCircle2 className="h-4 w-4 text-primary" />
+              <span className="font-medium">Calculation verified</span>
               <span className="font-mono ml-auto">${editedMetadata['_calculatedLineItemsTotal']}</span>
             </div>
           </div>
