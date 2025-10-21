@@ -1,7 +1,8 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Queue from "./pages/Queue";
 import Auth from "./pages/Auth";
@@ -47,6 +48,21 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
+// Redirect users to the Auth page when arriving via a password recovery link
+// This catches older reset emails that might point to "/" instead of "/auth"
+const RecoveryRedirect: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash && location.hash.includes('type=recovery')) {
+      navigate(`/auth${location.hash}`, { replace: true });
+    }
+  }, [location, navigate]);
+
+  return null;
+};
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -55,6 +71,7 @@ const App = () => (
           <Toaster />
           <Sonner />
         <BrowserRouter>
+          <RecoveryRedirect />
           <div className="flex-1">
           <Routes>
             <Route path="/" element={<Queue />} />
