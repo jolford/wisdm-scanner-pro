@@ -116,26 +116,30 @@ serve(async (req) => {
           ? `, "lineItems": [{${tableExtractionFields.map((f: any) => `"${f.name}": "value"`).join(', ')}}]`
           : '';
         
-        systemPrompt = `You are an advanced OCR, ICR, and document classification system specialized in reading barcodes, printed text, and handwritten text. Extract text and return JSON: ${baseJson.slice(0, -1)}${tableJson}}. For each field, provide value and bbox (bounding box) as percentages of document dimensions. CRITICAL: Also provide a "words" array containing every word in the document with its bounding box for precise redaction capabilities.
+        systemPrompt = `CRITICAL: You MUST return ONLY valid JSON with no additional text, explanations, or markdown formatting. 
 
-CRITICAL INSTRUCTIONS FOR BARCODE/ACCESSIONING NUMBER EXTRACTION:
-1. Look for barcode labels or stickers, typically in the upper right corner of forms
-2. Accessioning/Requisition numbers usually follow formats like: CL####-######## or EN####-########
-3. Read the human-readable text below or adjacent to the barcode - this is the most accurate source
-4. Double-check each digit and hyphen for accuracy
-5. Common patterns: CL2021-00353877, EN2022-12345678
-6. Ignore OCR noise near barcodes - focus on clear, consistently formatted numbers
-7. If you see a barcode label section with "Requisition Label" or similar, that's where the accessioning number is located
+You are an advanced OCR system. Return this EXACT JSON structure: ${baseJson.slice(0, -1)}${tableJson}}
 
-Extract actual values from the document for each field with extreme precision for accessioning numbers. Classify the document type.`;
+BARCODE/ACCESSIONING EXTRACTION RULES:
+1. Look for barcode labels (typically upper right corner)
+2. Accessioning numbers follow formats: CL####-######## or EN####-########
+3. Read human-readable text below/adjacent to barcode
+4. Verify each digit and hyphen
+
+RESPONSE REQUIREMENTS:
+- Return ONLY the JSON object
+- NO markdown code blocks (\`\`\`json)
+- NO explanatory text before or after JSON
+- Use double quotes for all strings
+- Ensure valid JSON syntax`;
 
         // Add table extraction instructions if needed
         let tableInstructions = '';
         if (hasTableExtraction) {
-          tableInstructions = `\n\nTABLE EXTRACTION: This document contains a line item table. Extract ALL rows from the table into the "lineItems" array. Each item should have: ${tableExtractionFields.map((f: any) => f.name).join(', ')}. Be thorough and include every row in the table.`;
+          tableInstructions = ` Extract ALL rows from line item tables into "lineItems" array with fields: ${tableExtractionFields.map((f: any) => f.name).join(', ')}.`;
         }
 
-        userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'}. CRITICAL: Locate and accurately read the BARCODE LABEL or REQUISITION LABEL (usually upper right corner). The accessioning number follows a format like CL####-######## or EN####-########. Read the human-readable text carefully, verifying each digit. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other). Also extract: ${fieldNames.join(', ')}.${tableInstructions} IMPORTANT: Provide word-level bounding boxes in the "words" array for automated redaction. Return as JSON with extreme accuracy for the accessioning number and document classification.`;
+        userPrompt = `Extract from this ${isPdf ? 'PDF' : 'image'}: ${fieldNames.join(', ')}.${tableInstructions} Classify document type. RESPOND WITH ONLY THE JSON OBJECT - NO OTHER TEXT.`;
       } else {
         // STANDARD PROMPT FOR GENERAL FIELD EXTRACTION
         const baseJson = `{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}, "words": [{"text": "word", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}]}`;
@@ -143,14 +147,24 @@ Extract actual values from the document for each field with extreme precision fo
           ? `, "lineItems": [{${tableExtractionFields.map((f: any) => `"${f.name}": "value"`).join(', ')}}]`
           : '';
         
-        systemPrompt = `You are an advanced OCR, ICR, and document classification system that can read both printed and handwritten text. Extract text and return JSON: ${baseJson.slice(0, -1)}${tableJson}}. For each field, provide value and bbox (bounding box) as percentages of document dimensions. Extract actual values from the document for each field, including handwritten values. Classify the document type based on its structure and content. CRITICAL: Include a "words" array with every word and its bounding box for automated redaction.`;
+        systemPrompt = `CRITICAL: You MUST return ONLY valid JSON with no additional text, explanations, or markdown formatting.
+
+You are an advanced OCR system. Return this EXACT JSON structure: ${baseJson.slice(0, -1)}${tableJson}}
+
+RESPONSE REQUIREMENTS:
+- Return ONLY the JSON object
+- NO markdown code blocks (\`\`\`json)
+- NO explanatory text before or after JSON
+- Use double quotes for all strings
+- Property names: use "text" not "text_content" or "text_text"
+- Ensure valid JSON syntax`;
         
         let tableInstructions = '';
         if (hasTableExtraction) {
-          tableInstructions = ` IMPORTANT: This document contains a line item table. Extract ALL rows from the table into the "lineItems" array. Each item must have: ${tableExtractionFields.map((f: any) => f.name).join(', ')}. Include every single row from the table.`;
+          tableInstructions = ` Extract ALL rows from line item tables into "lineItems" array with fields: ${tableExtractionFields.map((f: any) => f.name).join(', ')}.`;
         }
         
-        userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'} including handwritten text. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other) with confidence score. Also identify: ${fieldNames.join(', ')}.${tableInstructions} IMPORTANT: Provide word-level bounding boxes in the "words" array for automated redaction. Return as JSON.`;
+        userPrompt = `Extract from this ${isPdf ? 'PDF' : 'image'}: ${fieldNames.join(', ')}.${tableInstructions} Classify document type. RESPOND WITH ONLY THE JSON OBJECT - NO OTHER TEXT.`;
       }
     } else {
       // NO CUSTOM FIELDS - JUST OCR AND CLASSIFICATION
@@ -160,18 +174,24 @@ Extract actual values from the document for each field with extreme precision fo
         ? `, "lineItems": [{${tableExtractionFields.map((f: any) => `"${f.name}": "value"`).join(', ')}}]`
         : '';
       
-      systemPrompt = `You are an advanced OCR, ICR, and document classification system. Extract all text and classify the document type. Return ONLY valid JSON in this EXACT format: ${baseJson.slice(0, -1)}${tableJson}}. CRITICAL REQUIREMENTS:
-1. Each word object in the "words" array MUST use "text" (not "text_content" or "text_text") as the property name
-2. Do NOT wrap JSON in markdown code blocks
-3. Use only double quotes for all strings and property names
-4. Ensure all JSON is valid and parseable`;
+      systemPrompt = `CRITICAL: You MUST return ONLY valid JSON with no additional text, explanations, or markdown formatting.
+
+You are an advanced OCR system. Return this EXACT JSON structure: ${baseJson.slice(0, -1)}${tableJson}}
+
+RESPONSE REQUIREMENTS:
+- Return ONLY the JSON object
+- NO markdown code blocks (\`\`\`json)
+- NO explanatory text before or after JSON
+- Use double quotes for all strings
+- Property names: use "text" not "text_content" or "text_text"
+- Ensure valid JSON syntax`;
       
       let tableInstructions = '';
       if (hasTableExtraction) {
-        tableInstructions = ` This document contains a line item table. Extract ALL rows into the "lineItems" array with fields: ${tableExtractionFields.map((f: any) => f.name).join(', ')}.`;
+        tableInstructions = ` Extract ALL rows from line item tables into "lineItems" array with fields: ${tableExtractionFields.map((f: any) => f.name).join(', ')}.`;
       }
       
-      userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'} including handwritten text. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other) and provide a confidence score.${tableInstructions} CRITICAL: Return ONLY valid JSON. Each word in "words" array must use exactly: {"text": "word", "bbox": {"x": num, "y": num, "width": num, "height": num}}`;
+      userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'}.${tableInstructions} Classify document type. RESPOND WITH ONLY THE JSON OBJECT - NO OTHER TEXT.`;
     }
 
 
@@ -216,7 +236,6 @@ Extract actual values from the document for each field with extreme precision fo
           }
         ],
         temperature: 0.1,  // Low temperature for more deterministic/accurate extraction
-        response_format: { type: "json_object" },  // Force JSON output
       }),
     });
 
@@ -307,7 +326,7 @@ Extract actual values from the document for each field with extreme precision fo
           // Remove any control characters
           repairedJson = repairedJson.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
           // Fix Unicode escapes
-          repairedJson = repairedJson.replace(/\\u([0-9A-Fa-f]{4})/g, (match, grp) => String.fromCharCode(parseInt(grp, 16)));
+          repairedJson = repairedJson.replace(/\\u([0-9A-Fa-f]{4})/g, (_match: string, grp: string) => String.fromCharCode(parseInt(grp, 16)));
           
           try {
             parsed = JSON.parse(repairedJson);
