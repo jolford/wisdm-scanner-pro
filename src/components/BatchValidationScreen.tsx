@@ -104,6 +104,19 @@ export const BatchValidationScreen = ({
   const { toast } = useToast();
 
   /**
+   * Reset all state when batchId changes to prevent showing wrong thumbnails/data
+   * from previous batch
+   */
+  useEffect(() => {
+    setExpandedDocs(new Set());
+    setEditedMetadata({});
+    setEditedLineItems({});
+    setValidatingDocs(new Set());
+    setDocumentZoom({});
+    setShowRegionSelector(new Set());
+  }, [batchId]);
+
+  /**
    * Toggle the expanded/collapsed state of a document card
    * @param docId - The ID of the document to toggle
    */
