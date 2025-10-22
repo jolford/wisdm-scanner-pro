@@ -2,12 +2,14 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, ArrowLeft, Key, AlertCircle, CheckCircle2, XCircle, Clock, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { MaintenanceInvoiceGenerator } from '@/components/admin/MaintenanceInvoiceGenerator';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Progress } from '@/components/ui/progress';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 
 const LicensesIndex = () => {
@@ -57,29 +59,27 @@ const LicensesIndex = () => {
     );
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'active':
-        return <CheckCircle2 className="h-4 w-4" />;
-      case 'expired':
-        return <Clock className="h-4 w-4" />;
-      case 'exhausted':
-        return <AlertCircle className="h-4 w-4" />;
-      case 'suspended':
-        return <XCircle className="h-4 w-4" />;
-      default:
-        return <Key className="h-4 w-4" />;
-    }
+  const getStatusBadge = (status: string) => {
+    const variants = {
+      active: { variant: 'success' as const, icon: <CheckCircle2 className="h-3 w-3" /> },
+      expired: { variant: 'secondary' as const, icon: <Clock className="h-3 w-3" /> },
+      exhausted: { variant: 'warning' as const, icon: <AlertCircle className="h-3 w-3" /> },
+      suspended: { variant: 'destructive' as const, icon: <XCircle className="h-3 w-3" /> },
+    };
+    const config = variants[status as keyof typeof variants] || variants.active;
+    
+    return (
+      <Badge variant={config.variant} className="gap-1">
+        {config.icon}
+        {status}
+      </Badge>
+    );
   };
 
-  const getStatusColor = (status: string) => {
-    const colors = {
-      active: 'bg-green-500',
-      expired: 'bg-gray-500',
-      exhausted: 'bg-orange-500',
-      suspended: 'bg-red-500',
-    };
-    return colors[status as keyof typeof colors] || 'bg-gray-500';
+  const getProgressVariant = (percent: number): "default" | "success" | "warning" | "info" => {
+    if (percent > 50) return 'success';
+    if (percent > 20) return 'warning';
+    return 'default';
   };
 
   const getUsagePercentage = (remaining: number, total: number) => {
@@ -102,7 +102,7 @@ const LicensesIndex = () => {
             <div className="flex items-center gap-3">
               <img src={wisdmLogo} alt="WISDM Logo" className="h-10 w-auto" />
               <div className="border-l border-border/50 pl-3">
-                <h1 className="text-xl font-bold">License Management</h1>
+                <h1>License Management</h1>
                 <p className="text-xs text-muted-foreground">Manage customer licenses and volume tracking</p>
               </div>
             </div>
@@ -131,77 +131,70 @@ const LicensesIndex = () => {
               return (
                 <Card
                   key={license.id}
-                  className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)] hover:shadow-lg transition-shadow"
+                  className="card-elevated-hover overflow-hidden"
+                  onClick={() => navigate(`/admin/licenses/${license.id}`)}
                 >
-                  <div 
-                    className="cursor-pointer"
-                    onClick={() => navigate(`/admin/licenses/${license.id}`)}
-                  >
+                  <CardContent className="p-6">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
-                        <h3 className="text-lg font-semibold mb-1">
+                        <h3 className="mb-1">
                           {license.customers?.company_name}
                         </h3>
-                        <p className="text-sm text-muted-foreground mb-2">
+                        <p className="text-sm text-muted-foreground mb-3">
                           {license.customers?.contact_email}
                         </p>
                         <div className="flex gap-2 flex-wrap">
-                          <Badge className={getStatusColor(license.status)}>
-                            <span className="flex items-center gap-1">
-                              {getStatusIcon(license.status)}
-                              {license.status}
-                            </span>
-                          </Badge>
-                          <Badge variant="outline" className="capitalize">
+                          {getStatusBadge(license.status)}
+                          <Badge variant="info-soft" className="capitalize">
                             {license.plan_type || 'professional'}
                           </Badge>
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-3">
-                      <div className="bg-muted/50 rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-muted-foreground">License Key</span>
+                    <div className="space-y-4">
+                      <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="text-xs font-medium text-muted-foreground">License Key</span>
                           <Key className="h-3 w-3 text-muted-foreground" />
                         </div>
-                        <p className="font-mono text-sm font-semibold">{license.license_key}</p>
+                        <p className="font-mono text-xs font-semibold tracking-wider">{license.license_key}</p>
                       </div>
 
-                      <div className="bg-muted/50 rounded-lg p-3">
-                        <div className="flex justify-between items-baseline mb-2">
-                          <span className="text-xs text-muted-foreground">Documents Remaining</span>
-                          <span className={`text-lg font-bold ${usagePercent < 20 ? 'text-destructive' : ''}`}>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-xs font-medium text-muted-foreground">Document Usage</span>
+                          <span className="text-2xl font-bold">
                             {license.remaining_documents.toLocaleString()}
                           </span>
                         </div>
-                        <div className="w-full bg-muted rounded-full h-2">
-                          <div 
-                            className={`h-2 rounded-full transition-all ${
-                              usagePercent > 50 ? 'bg-green-500' : 
-                              usagePercent > 20 ? 'bg-orange-500' : 
-                              'bg-red-500'
-                            }`}
-                            style={{ width: `${usagePercent}%` }}
-                          />
+                        <Progress 
+                          value={usagePercent} 
+                          className={`h-2 ${
+                            usagePercent > 50 ? '[&>div]:bg-success' : 
+                            usagePercent > 20 ? '[&>div]:bg-warning' : 
+                            '[&>div]:bg-destructive'
+                          }`}
+                        />
+                        <div className="flex justify-between text-xs text-muted-foreground">
+                          <span>{usagePercent}% remaining</span>
+                          <span>{license.total_documents.toLocaleString()} total</span>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {usagePercent}% of {license.total_documents.toLocaleString()} total
-                        </p>
                       </div>
 
-                      <div className="flex justify-between text-xs text-muted-foreground pt-2 border-t">
-                        <span>
-                          Expires: {new Date(license.end_date).toLocaleDateString()}
+                      <div className="flex items-center justify-between pt-3 border-t">
+                        <span className="text-xs text-muted-foreground">
+                          Expires {new Date(license.end_date).toLocaleDateString()}
                         </span>
                         {isExpiringSoon && (
-                          <Badge variant="outline" className="text-orange-600">
+                          <Badge variant="warning-soft" className="text-xs">
+                            <Clock className="h-3 w-3 mr-1" />
                             Expiring Soon
                           </Badge>
                         )}
                       </div>
                     </div>
-                  </div>
+                  </CardContent>
 
                   {/* Generate Invoice Button - Only show for low volume licenses */}
                   {isLowVolume && (
@@ -231,17 +224,15 @@ const LicensesIndex = () => {
             })}
           </div>
         ) : (
-          <Card className="p-12 text-center bg-gradient-to-br from-card to-card/80">
-            <Key className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-xl font-semibold mb-2">No Licenses Yet</h3>
-            <p className="text-muted-foreground mb-4">
-              Create your first license to start tracking document volume
-            </p>
-            <Button onClick={() => navigate('/admin/licenses/new')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create License
-            </Button>
-          </Card>
+          <EmptyState
+            icon={Key}
+            title="No Licenses Yet"
+            description="Create your first license to start tracking document volume and managing customer access."
+            action={{
+              label: "Create License",
+              onClick: () => navigate('/admin/licenses/new')
+            }}
+          />
         )}
       </main>
     </div>

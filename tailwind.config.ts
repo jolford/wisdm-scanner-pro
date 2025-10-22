@@ -63,15 +63,35 @@ export default {
         success: {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
+          light: "hsl(var(--success-light))",
         },
         warning: {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
+          light: "hsl(var(--warning-light))",
         },
         info: {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
+          light: "hsl(var(--info-light))",
         },
+        processing: {
+          DEFAULT: "hsl(var(--processing))",
+          foreground: "hsl(var(--processing-foreground))",
+          light: "hsl(var(--processing-light))",
+        },
+      },
+      boxShadow: {
+        'xs': 'var(--shadow-xs)',
+        'sm': 'var(--shadow-sm)',
+        'md': 'var(--shadow-md)',
+        'lg': 'var(--shadow-lg)',
+        'xl': 'var(--shadow-xl)',
+      },
+      transitionDuration: {
+        'fast': '150ms',
+        'smooth': '300ms',
+        'slow': '500ms',
       },
       borderRadius: {
         lg: "var(--radius)",

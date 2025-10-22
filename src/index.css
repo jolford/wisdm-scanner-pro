@@ -38,23 +38,40 @@ All colors MUST be HSL.
 
     --radius: 0.75rem;
     
-    --success: 142 76% 36%;
+    /* Enhanced Status Colors */
+    --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
+    --success-light: 142 71% 95%;
     
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
+    --warning-light: 38 92% 95%;
     
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
+    --info-light: 199 89% 95%;
     
+    --processing: 280 61% 50%;
+    --processing-foreground: 0 0% 100%;
+    --processing-light: 280 61% 95%;
+    
+    /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(224 76% 48%) 100%);
     --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(217 10% 98%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(142 71% 45%) 0%, hsl(142 71% 35%) 100%);
+    --gradient-warning: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(38 92% 40%) 100%);
     
-    --shadow-sm: 0 1px 2px 0 hsl(217 91% 60% / 0.05);
+    /* Shadows with elevation */
+    --shadow-xs: 0 1px 2px 0 hsl(217 91% 60% / 0.05);
+    --shadow-sm: 0 1px 3px 0 hsl(217 91% 60% / 0.1), 0 1px 2px -1px hsl(217 91% 60% / 0.1);
     --shadow-md: 0 4px 6px -1px hsl(217 91% 60% / 0.1), 0 2px 4px -2px hsl(217 91% 60% / 0.1);
     --shadow-lg: 0 10px 15px -3px hsl(217 91% 60% / 0.15), 0 4px 6px -4px hsl(217 91% 60% / 0.1);
+    --shadow-xl: 0 20px 25px -5px hsl(217 91% 60% / 0.15), 0 8px 10px -6px hsl(217 91% 60% / 0.1);
     
+    /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
@@ -95,23 +112,37 @@ All colors MUST be HSL.
     --input: 217 33% 18%;
     --ring: 217 91% 60%;
     
-    --success: 142 76% 36%;
+    /* Enhanced Status Colors - Dark Mode */
+    --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
+    --success-light: 142 71% 15%;
     
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
+    --warning-light: 38 92% 15%;
     
     --info: 199 89% 48%;
     --info-foreground: 0 0% 100%;
+    --info-light: 199 89% 15%;
+    
+    --processing: 280 61% 50%;
+    --processing-foreground: 0 0% 100%;
+    --processing-light: 280 61% 15%;
     
     --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%) 0%, hsl(224 76% 48%) 100%);
     --gradient-subtle: linear-gradient(180deg, hsl(222 47% 7%) 0%, hsl(222 47% 5%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(142 71% 45%) 0%, hsl(142 71% 35%) 100%);
+    --gradient-warning: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(38 92% 40%) 100%);
     
-    --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
+    --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.2);
+    --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.3), 0 1px 2px -1px hsl(0 0% 0% / 0.2);
     --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.4), 0 2px 4px -2px hsl(0 0% 0% / 0.3);
     --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.5), 0 4px 6px -4px hsl(0 0% 0% / 0.4);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.6), 0 8px 10px -6px hsl(0 0% 0% / 0.5);
     
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 
     --sidebar-background: 240 5.9% 10%;
     --sidebar-foreground: 240 4.8% 95.9%;
@@ -130,17 +161,81 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
+  }
+
+  /* Typography Scale */
+  h1 {
+    @apply text-4xl font-bold tracking-tight leading-tight;
+  }
+  
+  h2 {
+    @apply text-3xl font-bold tracking-tight leading-tight;
+  }
+  
+  h3 {
+    @apply text-2xl font-semibold tracking-tight leading-snug;
+  }
+  
+  h4 {
+    @apply text-xl font-semibold tracking-tight leading-snug;
+  }
+  
+  h5 {
+    @apply text-lg font-semibold tracking-tight leading-normal;
+  }
+  
+  h6 {
+    @apply text-base font-semibold tracking-tight leading-normal;
+  }
+  
+  p {
+    @apply leading-relaxed;
   }
 }
 
 @layer utilities {
+  /* Interactive Effects */
   .hover-lift {
     @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-lg;
   }
   
+  .hover-glow {
+    @apply transition-all duration-300 hover:shadow-xl;
+  }
+  
   .glass-effect {
     @apply bg-card/80 backdrop-blur-md border border-border/50;
+  }
+  
+  /* Status Backgrounds */
+  .bg-status-success {
+    @apply bg-[hsl(var(--success-light))] text-success border-success/20;
+  }
+  
+  .bg-status-warning {
+    @apply bg-[hsl(var(--warning-light))] text-warning border-warning/20;
+  }
+  
+  .bg-status-info {
+    @apply bg-[hsl(var(--info-light))] text-info border-info/20;
+  }
+  
+  .bg-status-processing {
+    @apply bg-[hsl(var(--processing-light))] text-[hsl(var(--processing))] border-[hsl(var(--processing))]/20;
+  }
+  
+  /* Card Variants */
+  .card-elevated {
+    @apply bg-card border border-border rounded-lg shadow-md;
+  }
+  
+  .card-elevated-hover {
+    @apply card-elevated hover-lift cursor-pointer;
+  }
+  
+  .card-flat {
+    @apply bg-card border border-border rounded-lg;
   }
   
   /* Mobile-friendly touch targets */
@@ -177,5 +272,19 @@ All colors MUST be HSL.
   
   .animate-fade-in {
     animation: fade-in 0.3s ease-out;
+  }
+  
+  /* Progress bar animation */
+  @keyframes progress {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+  
+  .animate-progress {
+    animation: progress 1.5s ease-in-out infinite;
   }
 }
