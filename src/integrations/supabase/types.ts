@@ -985,29 +985,26 @@ export type Database = {
         Args: { _customer_id: string; _job_type?: string }
         Returns: boolean
       }
-      consume_license_documents: {
-        Args:
-          | {
+      consume_license_documents:
+        | {
+            Args: {
               _document_id: string
               _documents_count?: number
               _license_id: string
             }
-          | {
+            Returns: boolean
+          }
+        | {
+            Args: {
               _document_id: string
               _documents_count?: number
               _license_id: string
               _user_id: string
             }
-        Returns: boolean
-      }
-      generate_license_key: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      get_next_job: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+            Returns: boolean
+          }
+      generate_license_key: { Args: never; Returns: string }
+      get_next_job: { Args: never; Returns: string }
       has_customer: {
         Args: { _customer_id: string; _user_id: string }
         Returns: boolean
@@ -1023,10 +1020,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_system_admin: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
+      is_system_admin: { Args: { _user_id: string }; Returns: boolean }
       is_tenant_admin: {
         Args: { _customer_id: string; _user_id: string }
         Returns: boolean
