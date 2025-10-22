@@ -74,12 +74,22 @@ const AuthPage = () => {
     try {
       const hashParams = new URLSearchParams(locationHash.startsWith('#') ? locationHash.slice(1) : locationHash);
       const authError = hashParams.get('error_description') || hashParams.get('error');
+      const accessToken = hashParams.get('access_token');
+      const refreshToken = hashParams.get('refresh_token');
       if (authError) {
         toast({ 
           title: 'Recovery Link Error', 
           description: decodeURIComponent(authError), 
           variant: 'destructive' 
         });
+      }
+      // Ensure a valid session exists when arriving from the reset link
+      if (accessToken && refreshToken) {
+        setTimeout(() => {
+          supabase.auth
+            .setSession({ access_token: accessToken, refresh_token: refreshToken })
+            .catch((e) => console.error('Failed to set session from recovery tokens', e));
+        }, 0);
       }
     } catch {}
 
