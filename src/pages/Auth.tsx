@@ -61,10 +61,13 @@ const AuthPage = () => {
     const locationHash = window.location.hash || '';
     const searchParams = new URLSearchParams(window.location.search);
     const hasAccessToken = locationHash.includes('access_token=');
-    const isRecoveryParam =
-      locationHash.includes('type=recovery') ||
-      searchParams.get('type') === 'recovery' ||
-      searchParams.get('mode') === 'recovery';
+    const hashType = locationHash.match(/type=([^&]+)/)?.[1];
+    const searchType = searchParams.get('type');
+    const isRecoveryParam = 
+      hashType === 'recovery' || 
+      searchType === 'recovery' ||
+      locationHash.includes('recovery_token=') ||
+      locationHash.includes('type=recovery');
     const blockRedirect = isRecoveryParam || hasAccessToken;
 
     // Surface any auth errors from the recovery link
@@ -72,7 +75,11 @@ const AuthPage = () => {
       const hashParams = new URLSearchParams(locationHash.startsWith('#') ? locationHash.slice(1) : locationHash);
       const authError = hashParams.get('error_description') || hashParams.get('error');
       if (authError) {
-        toast({ title: 'Recovery Link Error', description: decodeURIComponent(authError), variant: 'destructive' });
+        toast({ 
+          title: 'Recovery Link Error', 
+          description: decodeURIComponent(authError), 
+          variant: 'destructive' 
+        });
       }
     } catch {}
 
@@ -80,10 +87,14 @@ const AuthPage = () => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth event:', event, 'Session:', !!session);
+      
       if (event === 'PASSWORD_RECOVERY') {
         setIsUpdatingPassword(true);
+        setIsResetPassword(false);
         return;
       }
+      
       if (session && !blockRedirect && !isUpdatingPassword) {
         navigate('/');
       }
@@ -91,7 +102,9 @@ const AuthPage = () => {
 
     // If the URL indicates recovery or contains an access token, enable update mode
     if (blockRedirect) {
+      console.log('Recovery mode detected');
       setIsUpdatingPassword(true);
+      setIsResetPassword(false);
     } else {
       // Otherwise, check for an existing session and redirect
       supabase.auth.getSession().then(({ data: { session } }) => {
@@ -210,11 +223,19 @@ const AuthPage = () => {
     // Validate inputs
     try {
       emailSchema.parse(email);
-      passwordSchema.parse(password);
     } catch (error: any) {
       toast({
         title: 'Validation Error',
-        description: error.errors?.[0]?.message || 'Please check your inputs',
+        description: 'Please enter a valid email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!password) {
+      toast({
+        title: 'Validation Error',
+        description: 'Please enter your password',
         variant: 'destructive',
       });
       return;
@@ -264,21 +285,22 @@ const AuthPage = () => {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth`,
+        redirectTo: `${window.location.origin}/auth?type=recovery`,
       });
 
       if (error) throw error;
 
       toast({
         title: 'Reset Email Sent',
-        description: 'Check your email for a password reset link. It may take a few minutes to arrive.',
+        description: 'Check your email for a password reset link. The link will be valid for 1 hour.',
       });
       
       setIsResetPassword(false);
+      setEmail('');
     } catch (error: any) {
       toast({
         title: 'Reset Failed',
-        description: error.message || 'Failed to send reset email',
+        description: error.message || 'Failed to send reset email. Please try again.',
         variant: 'destructive',
       });
     } finally {
