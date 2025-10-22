@@ -50,23 +50,26 @@ import { ErrorBoundary } from "./components/ErrorBoundary";
 const queryClient = new QueryClient();
 
 // Redirect users to the Auth page when arriving via a password recovery link
-// This catches older reset emails that might point to "/" instead of "/auth"
+// This catches reset emails that may point to "/" and use either hash tokens or a code query param
 const RecoveryRedirect: React.FC = () => {
   const location = useLocation();
-  const searchParams = new URLSearchParams(location.search || '');
-
+  const search = location.search || '';
+  const searchParams = new URLSearchParams(search);
   const hash = location.hash || '';
+
+  // Detect recovery signals from either hash or query
   const hasHashRecovery = hash.includes('type=recovery');
   const hasAccessToken = hash.includes('access_token=');
   const hasAuthError = hash.includes('error=') || hash.includes('error_description=');
   const hasQueryRecovery = searchParams.get('type') === 'recovery' || searchParams.get('mode') === 'recovery';
+  const hasCode = searchParams.has('code') || hash.includes('code=');
 
-  if (hasHashRecovery || hasAccessToken || hasAuthError) {
-    // Preserve the original hash so the auth page can parse tokens or errors
-    return <Navigate to={`/auth${hash}`} replace />;
-  }
-  if (hasQueryRecovery) {
-    return <Navigate to="/auth?mode=recovery" replace />;
+  // Avoid redirect loop if already on /auth
+  const isOnAuth = location.pathname === '/auth';
+
+  if (!isOnAuth && (hasHashRecovery || hasAccessToken || hasAuthError || hasQueryRecovery || hasCode)) {
+    // Preserve both search and hash so the Auth page can parse tokens or code
+    return <Navigate to={`/auth${search}${hash}`} replace />;
   }
   return null;
 };
