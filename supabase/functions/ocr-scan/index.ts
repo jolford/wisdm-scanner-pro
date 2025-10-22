@@ -184,7 +184,7 @@ Extract actual values from the document for each field with extreme precision fo
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',  // Using Gemini Flash for fast, accurate OCR
+        model: 'google/gemini-2.5-pro',  // Using Gemini Pro for highest accuracy and reliable JSON
         messages: [
           {
             role: 'system',
@@ -216,6 +216,7 @@ Extract actual values from the document for each field with extreme precision fo
           }
         ],
         temperature: 0.1,  // Low temperature for more deterministic/accurate extraction
+        response_format: { type: "json_object" },  // Force JSON output
       }),
     });
 
@@ -283,10 +284,41 @@ Extract actual values from the document for each field with extreme precision fo
       jsonToParse = jsonToParse.replace(/"text_content":/g, '"text":');
       jsonToParse = jsonToParse.replace(/"text_text":/g, '"text":');
       
+      // Fix common JSON errors
+      // 1. Replace single quotes with double quotes (but not in text content)
+      jsonToParse = jsonToParse.replace(/'/g, '"');
+      // 2. Remove trailing commas before closing braces/brackets
+      jsonToParse = jsonToParse.replace(/,(\s*[}\]])/g, '$1');
+      // 3. Fix missing quotes around property names
+      jsonToParse = jsonToParse.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+      
       // Try to extract JSON object
       const jsonMatch = jsonToParse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
+        let parsed;
+        try {
+          parsed = JSON.parse(jsonMatch[0]);
+        } catch (firstError) {
+          console.error('First JSON parse attempt failed:', firstError);
+          console.log('Attempting to repair JSON...');
+          
+          // Try more aggressive repairs
+          let repairedJson = jsonMatch[0];
+          // Remove any control characters
+          repairedJson = repairedJson.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+          // Fix Unicode escapes
+          repairedJson = repairedJson.replace(/\\u([0-9A-Fa-f]{4})/g, (match, grp) => String.fromCharCode(parseInt(grp, 16)));
+          
+          try {
+            parsed = JSON.parse(repairedJson);
+            console.log('JSON repair successful!');
+          } catch (secondError) {
+            console.error('JSON repair failed:', secondError);
+            console.error('Problematic JSON:', repairedJson.substring(0, 500));
+            throw new Error('Unable to parse AI response as JSON');
+          }
+        }
+        
         extractedText = parsed.fullText || responseText;
         documentType = parsed.documentType || 'other';
         confidence = parsed.confidence || 0;
@@ -318,11 +350,16 @@ Extract actual values from the document for each field with extreme precision fo
         if (hasTableExtraction && parsed.lineItems) {
           lineItems = Array.isArray(parsed.lineItems) ? parsed.lineItems : [];
         }
+      } else {
+        throw new Error('No JSON object found in response');
       }
     } catch (e) {
-      // JSON parsing failed - fall back to using raw text
-      console.error('JSON parse failed, using raw text:', e);
-      extractedText = responseText;
+      // JSON parsing failed completely - this is a critical error
+      console.error('CRITICAL: JSON parse failed completely:', e);
+      console.error('Response text:', responseText.substring(0, 1000));
+      
+      // Return error instead of falling back to raw text
+      throw new Error(`AI returned invalid response format: ${e instanceof Error ? e.message : 'Unknown error'}`);
     }
 
     // --- CALCULATION VERIFICATION ---
