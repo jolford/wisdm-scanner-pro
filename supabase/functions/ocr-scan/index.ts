@@ -83,9 +83,9 @@ serve(async (req) => {
 
     // --- BUILD AI PROMPT ---
     // Create optimized prompts for the AI model to extract text, classify document,
-    // and identify specific fields with bounding box coordinates
-    let systemPrompt = 'You are an advanced OCR, ICR, and document classification system. Extract all text from documents including printed text, handwritten text, cursive writing, and barcodes. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other). Be very careful to accurately recognize handwritten characters and barcode labels. For each extracted field, provide approximate bounding box coordinates (x, y, width, height) as percentages of the document dimensions (0-100).';
-    let userPrompt = 'Extract all text from this document, including any handwritten text. Classify the document type. Pay special attention to handwritten characters, cursive writing, and barcode labels. For each field value, estimate its location on the document as bounding box coordinates.';
+    // identify specific fields with bounding box coordinates, AND extract word-level coordinates
+    let systemPrompt = 'You are an advanced OCR, ICR, and document classification system. Extract all text from documents including printed text, handwritten text, cursive writing, and barcodes. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other). Be very careful to accurately recognize handwritten characters and barcode labels. For each extracted field, provide approximate bounding box coordinates (x, y, width, height) as percentages of the document dimensions (0-100). ADDITIONALLY, provide word-level bounding boxes for the full text to enable precise redaction and text highlighting.';
+    let userPrompt = 'Extract all text from this document, including any handwritten text. Classify the document type. Pay special attention to handwritten characters, cursive writing, and barcode labels. For each field value, estimate its location on the document as bounding box coordinates. IMPORTANT: Also provide word-level bounding boxes for every word in the document to enable automated redaction.';
     
     // Add MICR-specific instructions if check scanning is enabled
     if (enableCheckScanning) {
@@ -111,12 +111,12 @@ serve(async (req) => {
       if (hasAccessioningField) {
         // SPECIALIZED PROMPT FOR BARCODE/ACCESSIONING NUMBER EXTRACTION
         // These numbers are critical for lab forms and must be extracted with high accuracy
-        const baseJson = `{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}}`;
+        const baseJson = `{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}, "words": [{"text": "word", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}]}`;
         const tableJson = hasTableExtraction 
           ? `, "lineItems": [{${tableExtractionFields.map((f: any) => `"${f.name}": "value"`).join(', ')}}]`
           : '';
         
-        systemPrompt = `You are an advanced OCR, ICR, and document classification system specialized in reading barcodes, printed text, and handwritten text. Extract text and return JSON: ${baseJson.slice(0, -1)}${tableJson}}. For each field, provide value and bbox (bounding box) as percentages of document dimensions.
+        systemPrompt = `You are an advanced OCR, ICR, and document classification system specialized in reading barcodes, printed text, and handwritten text. Extract text and return JSON: ${baseJson.slice(0, -1)}${tableJson}}. For each field, provide value and bbox (bounding box) as percentages of document dimensions. CRITICAL: Also provide a "words" array containing every word in the document with its bounding box for precise redaction capabilities.
 
 CRITICAL INSTRUCTIONS FOR BARCODE/ACCESSIONING NUMBER EXTRACTION:
 1. Look for barcode labels or stickers, typically in the upper right corner of forms
@@ -135,39 +135,39 @@ Extract actual values from the document for each field with extreme precision fo
           tableInstructions = `\n\nTABLE EXTRACTION: This document contains a line item table. Extract ALL rows from the table into the "lineItems" array. Each item should have: ${tableExtractionFields.map((f: any) => f.name).join(', ')}. Be thorough and include every row in the table.`;
         }
 
-        userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'}. CRITICAL: Locate and accurately read the BARCODE LABEL or REQUISITION LABEL (usually upper right corner). The accessioning number follows a format like CL####-######## or EN####-########. Read the human-readable text carefully, verifying each digit. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other). Also extract: ${fieldNames.join(', ')}.${tableInstructions} Return as JSON with extreme accuracy for the accessioning number and document classification.`;
+        userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'}. CRITICAL: Locate and accurately read the BARCODE LABEL or REQUISITION LABEL (usually upper right corner). The accessioning number follows a format like CL####-######## or EN####-########. Read the human-readable text carefully, verifying each digit. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other). Also extract: ${fieldNames.join(', ')}.${tableInstructions} IMPORTANT: Provide word-level bounding boxes in the "words" array for automated redaction. Return as JSON with extreme accuracy for the accessioning number and document classification.`;
       } else {
         // STANDARD PROMPT FOR GENERAL FIELD EXTRACTION
-        const baseJson = `{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}}`;
+        const baseJson = `{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}, "words": [{"text": "word", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}]}`;
         const tableJson = hasTableExtraction 
           ? `, "lineItems": [{${tableExtractionFields.map((f: any) => `"${f.name}": "value"`).join(', ')}}]`
           : '';
         
-        systemPrompt = `You are an advanced OCR, ICR, and document classification system that can read both printed and handwritten text. Extract text and return JSON: ${baseJson.slice(0, -1)}${tableJson}}. For each field, provide value and bbox (bounding box) as percentages of document dimensions. Extract actual values from the document for each field, including handwritten values. Classify the document type based on its structure and content.`;
+        systemPrompt = `You are an advanced OCR, ICR, and document classification system that can read both printed and handwritten text. Extract text and return JSON: ${baseJson.slice(0, -1)}${tableJson}}. For each field, provide value and bbox (bounding box) as percentages of document dimensions. Extract actual values from the document for each field, including handwritten values. Classify the document type based on its structure and content. CRITICAL: Include a "words" array with every word and its bounding box for automated redaction.`;
         
         let tableInstructions = '';
         if (hasTableExtraction) {
           tableInstructions = ` IMPORTANT: This document contains a line item table. Extract ALL rows from the table into the "lineItems" array. Each item must have: ${tableExtractionFields.map((f: any) => f.name).join(', ')}. Include every single row from the table.`;
         }
         
-        userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'} including handwritten text. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other) with confidence score. Also identify: ${fieldNames.join(', ')}.${tableInstructions} Return as JSON.`;
+        userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'} including handwritten text. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other) with confidence score. Also identify: ${fieldNames.join(', ')}.${tableInstructions} IMPORTANT: Provide word-level bounding boxes in the "words" array for automated redaction. Return as JSON.`;
       }
     } else {
       // NO CUSTOM FIELDS - JUST OCR AND CLASSIFICATION
       // Extract all text and classify the document without specific field extraction
-      const baseJson = '{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0}';
+      const baseJson = '{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "words": [{"text": "word", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}]}';
       const tableJson = hasTableExtraction 
         ? `, "lineItems": [{${tableExtractionFields.map((f: any) => `"${f.name}": "value"`).join(', ')}}]`
         : '';
       
-      systemPrompt = `You are an advanced OCR, ICR, and document classification system. Extract all text and classify the document type. Return JSON: ${baseJson.slice(0, -1)}${tableJson}}.`;
+      systemPrompt = `You are an advanced OCR, ICR, and document classification system. Extract all text and classify the document type. Return JSON: ${baseJson.slice(0, -1)}${tableJson}}. CRITICAL: Include a "words" array with every word and its bounding box for automated redaction.`;
       
       let tableInstructions = '';
       if (hasTableExtraction) {
         tableInstructions = ` This document contains a line item table. Extract ALL rows into the "lineItems" array with fields: ${tableExtractionFields.map((f: any) => f.name).join(', ')}.`;
       }
       
-      userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'} including handwritten text. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other) and provide a confidence score.${tableInstructions} Return as JSON.`;
+      userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'} including handwritten text. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other) and provide a confidence score.${tableInstructions} IMPORTANT: Provide word-level bounding boxes in the "words" array for automated redaction. Return as JSON.`;
     }
 
 
@@ -261,6 +261,7 @@ Extract actual values from the document for each field with extreme precision fo
     let lineItems: any[] = [];
     let documentType = 'other';
     let confidence = 0;
+    let wordBoundingBoxes: Array<{ text: string; bbox: any }> = [];
     
     try {
       // Try to extract JSON from the response (AI may include extra text around it)
@@ -270,6 +271,11 @@ Extract actual values from the document for each field with extreme precision fo
         extractedText = parsed.fullText || responseText;
         documentType = parsed.documentType || 'other';
         confidence = parsed.confidence || 0;
+        
+        // Extract word-level bounding boxes for redaction
+        if (parsed.words && Array.isArray(parsed.words)) {
+          wordBoundingBoxes = parsed.words;
+        }
         
         // Extract field values and handle both old and new formats
         if (extractionFields && extractionFields.length > 0) {
@@ -459,7 +465,8 @@ Extract actual values from the document for each field with extreme precision fo
         lineItems: lineItems,             // Extracted table rows (if applicable)
         documentType: documentType,       // Classified document type
         confidence: confidence,           // OCR confidence score
-        boundingBoxes: fieldBoundingBoxes // Field locations on document
+        boundingBoxes: fieldBoundingBoxes, // Field locations on document
+        wordBoundingBoxes: wordBoundingBoxes // Word-level bounding boxes for redaction
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

@@ -65,9 +65,9 @@ export const DEFAULT_REDACTION_KEYWORDS: RedactionKeyword[] = [
 ];
 
 /**
- * Detect keywords in OCR text and metadata
+ * Detect keywords in OCR text and word-level bounding boxes
  * @param ocrText - Full text extracted from document
- * @param ocrMetadata - Metadata with field bounding boxes
+ * @param ocrMetadata - Metadata with field and word bounding boxes
  * @param customKeywords - Additional keywords to search for
  * @returns Array of detected keywords with their locations
  */
@@ -96,11 +96,25 @@ export const detectKeywords = (
     while ((match = regex.exec(keyword.caseSensitive ? ocrText : searchText)) !== null) {
       const matchedText = ocrText.substring(match.index, match.index + match[0].length);
       
-      // Try to find bounding box from OCR metadata
+      // Try to find bounding box from word-level OCR data
       let boundingBox;
       
-      // Check if we have boundingBoxes at the top level
-      if (ocrMetadata?.boundingBoxes) {
+      // NEW: Check for word-level bounding boxes (most accurate)
+      if (ocrMetadata?.wordBoundingBoxes && Array.isArray(ocrMetadata.wordBoundingBoxes)) {
+        // Search through word-level bounding boxes
+        for (const wordData of ocrMetadata.wordBoundingBoxes) {
+          if (wordData.text && wordData.bbox &&
+              wordData.text.toLowerCase().includes(searchTerm)) {
+            // Convert percentage-based coordinates to pixel coordinates if needed
+            // Assuming the bbox is in format: {x: %, y: %, width: %, height: %}
+            boundingBox = wordData.bbox;
+            break;
+          }
+        }
+      }
+      
+      // FALLBACK: Check if we have field-level boundingBoxes
+      if (!boundingBox && ocrMetadata?.boundingBoxes) {
         // Look through field bounding boxes to see if any field contains this keyword
         for (const [fieldName, bbox] of Object.entries(ocrMetadata.boundingBoxes)) {
           const fieldValue = ocrMetadata.fields?.[fieldName];
@@ -134,25 +148,51 @@ export const detectKeywords = (
 /**
  * Generate redaction boxes from detected keywords
  * @param detectedKeywords - Keywords detected with bounding boxes
- * @param padding - Extra padding around the text (in pixels)
- * @returns Array of redaction boxes
+ * @param padding - Extra padding around the text (in percentage or pixels)
+ * @param imageWidth - Width of the image (to convert percentage to pixels)
+ * @param imageHeight - Height of the image (to convert percentage to pixels)
+ * @returns Array of redaction boxes in pixel coordinates
  */
 export const generateRedactionBoxes = (
   detectedKeywords: DetectedKeyword[],
-  padding: number = 10
+  padding: number = 2,
+  imageWidth?: number,
+  imageHeight?: number
 ): Array<{ x: number; y: number; width: number; height: number }> => {
   const boxes: Array<{ x: number; y: number; width: number; height: number }> = [];
   
   for (const detected of detectedKeywords) {
     for (const match of detected.matches) {
       if (match.boundingBox) {
-        const { x, y, width, height } = match.boundingBox;
-        boxes.push({
-          x: Math.max(0, x - padding),
-          y: Math.max(0, y - padding),
-          width: width + padding * 2,
-          height: height + padding * 2
-        });
+        let { x, y, width, height } = match.boundingBox;
+        
+        // Convert percentage-based coordinates to pixels if dimensions provided
+        if (imageWidth && imageHeight) {
+          // Assume bbox values are percentages (0-100)
+          x = (x / 100) * imageWidth;
+          y = (y / 100) * imageHeight;
+          width = (width / 100) * imageWidth;
+          height = (height / 100) * imageHeight;
+          
+          // Convert padding from percentage to pixels
+          const paddingX = (padding / 100) * imageWidth;
+          const paddingY = (padding / 100) * imageHeight;
+          
+          boxes.push({
+            x: Math.max(0, x - paddingX),
+            y: Math.max(0, y - paddingY),
+            width: width + paddingX * 2,
+            height: height + paddingY * 2
+          });
+        } else {
+          // Use as-is (assume already in correct coordinate system)
+          boxes.push({
+            x: Math.max(0, x - padding),
+            y: Math.max(0, y - padding),
+            width: width + padding * 2,
+            height: height + padding * 2
+          });
+        }
       }
     }
   }

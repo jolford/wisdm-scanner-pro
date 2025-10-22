@@ -548,7 +548,7 @@ useEffect(() => {
                 imageUrl={currentImageUrl}
                 documentId={documentId}
                 ocrText={extractedText}
-                ocrMetadata={{ fields: metadata, boundingBoxes }}
+                ocrMetadata={{ fields: metadata, boundingBoxes, wordBoundingBoxes: (metadata as any).wordBoundingBoxes }}
                 onRedactionSaved={handleRedactionSaved}
                 onCancel={() => setShowRedactionTool(false)}
               />

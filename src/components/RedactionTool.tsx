@@ -82,10 +82,7 @@ export const RedactionTool = ({
    */
   useEffect(() => {
     if (ocrText && ocrText.length > 0) {
-      console.log('RedactionTool - OCR Text length:', ocrText.length);
-      console.log('RedactionTool - OCR Metadata:', ocrMetadata);
       const detected = detectKeywords(ocrText, ocrMetadata);
-      console.log('RedactionTool - Detected keywords:', detected);
       setDetectedKeywords(detected);
       setShowKeywordAlert(detected.length > 0);
     }
@@ -244,8 +241,23 @@ export const RedactionTool = ({
       return;
     }
 
-    // Generate redaction boxes from detected keywords
-    const autoBoxes = generateRedactionBoxes(detectedKeywords, 15);
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      toast({
+        title: 'Canvas Not Ready',
+        description: 'Please wait for the image to load',
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // Generate redaction boxes from detected keywords with image dimensions
+    const autoBoxes = generateRedactionBoxes(
+      detectedKeywords, 
+      2, // 2% padding
+      canvas.width, 
+      canvas.height
+    );
     
     if (autoBoxes.length === 0) {
       toast({
