@@ -298,33 +298,62 @@ RESPONSE REQUIREMENTS:
         }
       }
       
-      // Normalize inconsistent property names (text_content, text_text -> text)
-      jsonToParse = jsonToParse.replace(/"text_content":/g, '"text":');
-      jsonToParse = jsonToParse.replace(/"text_text":/g, '"text":');
+      // Decode HTML entities first (before any other processing)
+      jsonToParse = jsonToParse
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'");
       
-      // Fix common JSON errors
-      // 1. Replace single quotes with double quotes (but not in text content)
-      jsonToParse = jsonToParse.replace(/'/g, '"');
-      // 2. Remove trailing commas before closing braces/brackets
-      jsonToParse = jsonToParse.replace(/,(\s*[}\]])/g, '$1');
-      // 3. Fix missing quotes around property names
-      jsonToParse = jsonToParse.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+      // Try to extract JSON object - be greedy but ensure we get a complete object
+      let jsonMatch = jsonToParse.match(/\{[\s\S]*\}/);
       
-      // Try to extract JSON object
-      const jsonMatch = jsonToParse.match(/\{[\s\S]*\}/);
+      // If no complete JSON found, try to find at least the start and close it
+      if (!jsonMatch && jsonToParse.includes('{')) {
+        console.log('Incomplete JSON detected, attempting to salvage...');
+        const startIdx = jsonToParse.indexOf('{');
+        let partialJson = jsonToParse.substring(startIdx);
+        
+        // Try to extract fullText at minimum
+        const fullTextMatch = partialJson.match(/"fullText"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+        if (fullTextMatch) {
+          // Build minimal valid JSON with just fullText
+          jsonToParse = `{"fullText": "${fullTextMatch[1]}", "documentType": "other", "confidence": 0}`;
+          jsonMatch = [jsonToParse];
+        }
+      }
+      
       if (jsonMatch) {
         let parsed;
         try {
-          parsed = JSON.parse(jsonMatch[0]);
+          // Normalize inconsistent property names
+          let cleanJson = jsonMatch[0]
+            .replace(/"text_content":/g, '"text":')
+            .replace(/"text_text":/g, '"text":')
+            // Remove trailing commas
+            .replace(/,(\s*[}\]])/g, '$1')
+            // Remove control characters
+            .replace(/[\x00-\x1F\x7F-\x9F]/g, '');
+          
+          parsed = JSON.parse(cleanJson);
         } catch (firstError) {
           console.error('First JSON parse attempt failed:', firstError);
-          console.log('Attempting to repair JSON...');
+          console.log('Attempting more aggressive repairs...');
           
           // Try more aggressive repairs
           let repairedJson = jsonMatch[0];
-          // Remove any control characters
-          repairedJson = repairedJson.replace(/[\x00-\x1F\x7F-\x9F]/g, '');
-          // Fix Unicode escapes
+          
+          // 1. Remove any control characters and normalize whitespace
+          repairedJson = repairedJson.replace(/[\x00-\x1F\x7F-\x9F]/g, ' ');
+          
+          // 2. Fix missing quotes around property names
+          repairedJson = repairedJson.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
+          
+          // 3. Remove trailing commas
+          repairedJson = repairedJson.replace(/,(\s*[}\]])/g, '$1');
+          
+          // 4. Fix Unicode escapes
           repairedJson = repairedJson.replace(/\\u([0-9A-Fa-f]{4})/g, (_match: string, grp: string) => String.fromCharCode(parseInt(grp, 16)));
           
           try {
@@ -332,36 +361,49 @@ RESPONSE REQUIREMENTS:
             console.log('JSON repair successful!');
           } catch (secondError) {
             console.error('JSON repair failed:', secondError);
-            console.error('Problematic JSON:', repairedJson.substring(0, 500));
-            throw new Error('Unable to parse AI response as JSON');
+            console.error('Problematic JSON (first 500 chars):', repairedJson.substring(0, 500));
+            
+            // Last resort: extract fullText with regex
+            const fullTextMatch = repairedJson.match(/"fullText"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+            if (fullTextMatch) {
+              console.log('Extracted fullText from failed JSON');
+              extractedText = fullTextMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+              // Use defaults for other fields and continue processing
+              parsed = null; // Signal that we only have fullText
+            } else {
+              throw new Error('Unable to parse AI response as JSON');
+            }
           }
         }
         
-        extractedText = parsed.fullText || responseText;
-        documentType = parsed.documentType || 'other';
-        confidence = parsed.confidence || 0;
-        
-        // Extract field values and handle both old and new formats
-        if (extractionFields && extractionFields.length > 0) {
-          // Handle both formats:
-          // Old: { "fieldName": "value" }
-          // New: { "fieldName": { "value": "value", "bbox": {...} } }
-          const fields = parsed.fields || {};
-          metadata = {};
-          Object.keys(fields).forEach(key => {
-            if (typeof fields[key] === 'string') {
-              // Old format: direct string value
-              metadata[key] = fields[key];
-            } else if (fields[key] && typeof fields[key] === 'object') {
-              // New format: object with value and bbox
-              metadata[key] = fields[key].value || fields[key];
-            }
-          });
-        }
-        
-        // Extract line items if table extraction was requested
-        if (hasTableExtraction && parsed.lineItems) {
-          lineItems = Array.isArray(parsed.lineItems) ? parsed.lineItems : [];
+        // Only process parsed data if we successfully parsed it
+        if (parsed) {
+          extractedText = parsed.fullText || responseText;
+          documentType = parsed.documentType || 'other';
+          confidence = parsed.confidence || 0;
+          
+          // Extract field values and handle both old and new formats
+          if (extractionFields && extractionFields.length > 0) {
+            // Handle both formats:
+            // Old: { "fieldName": "value" }
+            // New: { "fieldName": { "value": "value", "bbox": {...} } }
+            const fields = parsed.fields || {};
+            metadata = {};
+            Object.keys(fields).forEach(key => {
+              if (typeof fields[key] === 'string') {
+                // Old format: direct string value
+                metadata[key] = fields[key];
+              } else if (fields[key] && typeof fields[key] === 'object') {
+                // New format: object with value and bbox
+                metadata[key] = fields[key].value || fields[key];
+              }
+            });
+          }
+          
+          // Extract line items if table extraction was requested
+          if (hasTableExtraction && parsed.lineItems) {
+            lineItems = Array.isArray(parsed.lineItems) ? parsed.lineItems : [];
+          }
         }
       } else {
         throw new Error('No JSON object found in response');
