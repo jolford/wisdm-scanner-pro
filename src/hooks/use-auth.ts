@@ -28,6 +28,7 @@ import { useNavigate } from 'react-router-dom';
 export const useAuth = () => {
   // State management for user and roles
   const [user, setUser] = useState<any>(null);                // Current authenticated user
+  const [session, setSession] = useState<any>(null);          // Current session (includes tokens)
   const [isAdmin, setIsAdmin] = useState(false);              // Any admin role
   const [isSystemAdmin, setIsSystemAdmin] = useState(false);  // System-wide admin
   const [isTenantAdmin, setIsTenantAdmin] = useState(false);  // Customer/tenant admin
@@ -37,6 +38,7 @@ export const useAuth = () => {
   useEffect(() => {
     // Get initial session on component mount
     supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         // Check roles for authenticated user
@@ -49,17 +51,33 @@ export const useAuth = () => {
     // Listen for authentication state changes (login, logout, token refresh)
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        // User logged in - check their roles
-        checkAdminStatus(session.user.id);
-      } else {
-        // User logged out - reset all role flags
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth state change:', event); // Debug logging
+      
+      // Handle different auth events
+      if (event === 'SIGNED_OUT') {
+        // User explicitly signed out - clear everything
+        setSession(null);
+        setUser(null);
         setIsAdmin(false);
         setIsSystemAdmin(false);
         setIsTenantAdmin(false);
         setLoading(false);
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        // User signed in, token refreshed, or user updated - update session smoothly
+        // This prevents the user from being kicked out during automatic token refreshes
+        if (session) {
+          setSession(session);
+          setUser(session.user);
+          // Only check admin status on initial sign-in, not on every token refresh
+          if (event === 'SIGNED_IN') {
+            checkAdminStatus(session.user.id);
+          }
+        }
+      } else if (event === 'INITIAL_SESSION' && session) {
+        // Initial session loaded
+        setSession(session);
+        setUser(session.user);
       }
     });
 
@@ -114,6 +132,7 @@ export const useAuth = () => {
   // Return all auth state and functions for use in components
   return {
     user,
+    session,
     isAdmin,
     isSystemAdmin,
     isTenantAdmin,
