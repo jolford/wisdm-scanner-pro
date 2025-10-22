@@ -522,7 +522,6 @@ const Index = () => {
             onValidate={handleValidation}
             onSkip={handleReset}
           />
-          />
         )}
       </main>
 
