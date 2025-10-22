@@ -180,7 +180,7 @@ Extract actual values from the document for each field with extreme precision fo
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-pro',  // Using Gemini Pro for high accuracy OCR
+        model: 'google/gemini-2.5-flash',  // Using Gemini Flash for fast, accurate OCR
         messages: [
           {
             role: 'system',
@@ -264,8 +264,19 @@ Extract actual values from the document for each field with extreme precision fo
     let wordBoundingBoxes: Array<{ text: string; bbox: any }> = [];
     
     try {
-      // Try to extract JSON from the response (AI may include extra text around it)
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      // Try to extract JSON from the response (AI may include extra text or markdown code blocks)
+      let jsonToParse = responseText;
+      
+      // Remove markdown code fences if present (```json ... ```)
+      if (responseText.includes('```')) {
+        const codeBlockMatch = responseText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+        if (codeBlockMatch) {
+          jsonToParse = codeBlockMatch[1].trim();
+        }
+      }
+      
+      // Try to extract JSON object
+      const jsonMatch = jsonToParse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         extractedText = parsed.fullText || responseText;
