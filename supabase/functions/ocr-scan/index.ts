@@ -367,12 +367,15 @@ RESPONSE REQUIREMENTS:
         throw new Error('No JSON object found in response');
       }
     } catch (e) {
-      // JSON parsing failed completely - this is a critical error
-      console.error('CRITICAL: JSON parse failed completely:', e);
-      console.error('Response text:', responseText.substring(0, 1000));
-      
-      // Return error instead of falling back to raw text
-      throw new Error(`AI returned invalid response format: ${e instanceof Error ? e.message : 'Unknown error'}`);
+      // JSON parsing failed - fallback to raw text to avoid blocking the app
+      console.error('JSON parse failed, returning fallback text:', e);
+      console.error('Response text (truncated):', responseText.substring(0, 1000));
+      extractedText = responseText;
+      metadata = {};
+      lineItems = [];
+      documentType = 'other';
+      confidence = 0;
+      // continue without throwing so user gets at least the text
     }
 
     // --- CALCULATION VERIFICATION ---
