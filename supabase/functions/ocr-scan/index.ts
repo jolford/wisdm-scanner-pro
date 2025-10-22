@@ -160,14 +160,18 @@ Extract actual values from the document for each field with extreme precision fo
         ? `, "lineItems": [{${tableExtractionFields.map((f: any) => `"${f.name}": "value"`).join(', ')}}]`
         : '';
       
-      systemPrompt = `You are an advanced OCR, ICR, and document classification system. Extract all text and classify the document type. Return JSON: ${baseJson.slice(0, -1)}${tableJson}}. CRITICAL: Include a "words" array with every word and its bounding box for automated redaction.`;
+      systemPrompt = `You are an advanced OCR, ICR, and document classification system. Extract all text and classify the document type. Return ONLY valid JSON in this EXACT format: ${baseJson.slice(0, -1)}${tableJson}}. CRITICAL REQUIREMENTS:
+1. Each word object in the "words" array MUST use "text" (not "text_content" or "text_text") as the property name
+2. Do NOT wrap JSON in markdown code blocks
+3. Use only double quotes for all strings and property names
+4. Ensure all JSON is valid and parseable`;
       
       let tableInstructions = '';
       if (hasTableExtraction) {
         tableInstructions = ` This document contains a line item table. Extract ALL rows into the "lineItems" array with fields: ${tableExtractionFields.map((f: any) => f.name).join(', ')}.`;
       }
       
-      userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'} including handwritten text. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other) and provide a confidence score.${tableInstructions} IMPORTANT: Provide word-level bounding boxes in the "words" array for automated redaction. Return as JSON.`;
+      userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'} including handwritten text. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other) and provide a confidence score.${tableInstructions} CRITICAL: Return ONLY valid JSON. Each word in "words" array must use exactly: {"text": "word", "bbox": {"x": num, "y": num, "width": num, "height": num}}`;
     }
 
 
@@ -274,6 +278,10 @@ Extract actual values from the document for each field with extreme precision fo
           jsonToParse = codeBlockMatch[1].trim();
         }
       }
+      
+      // Normalize inconsistent property names (text_content, text_text -> text)
+      jsonToParse = jsonToParse.replace(/"text_content":/g, '"text":');
+      jsonToParse = jsonToParse.replace(/"text_text":/g, '"text":');
       
       // Try to extract JSON object
       const jsonMatch = jsonToParse.match(/\{[\s\S]*\}/);
