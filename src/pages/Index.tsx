@@ -33,6 +33,7 @@ const Index = () => {
   const [extractedMetadata, setExtractedMetadata] = useState<Record<string, string>>({});
   const [boundingBoxes, setBoundingBoxes] = useState<Record<string, any>>({});
   const [currentImage, setCurrentImage] = useState('');
+  const [wordBoundingBoxes, setWordBoundingBoxes] = useState<any[]>([]);
   const [currentFileName, setCurrentFileName] = useState('');
   const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -236,6 +237,7 @@ const Index = () => {
         setExtractedText(data.text);
         setExtractedMetadata(data.metadata || {});
         setBoundingBoxes(data.boundingBoxes || {});
+        setWordBoundingBoxes(data.wordBoundingBoxes || []);
         await saveDocument(file.name, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || []);
         toast({ title: 'PDF Processed', description: 'Extracted text and fields from PDF.' });
       } else {
@@ -278,6 +280,7 @@ const Index = () => {
           setExtractedText(data.text);
           setExtractedMetadata(data.metadata || {});
           setBoundingBoxes(data.boundingBoxes || {});
+          setWordBoundingBoxes(data.wordBoundingBoxes || []);
           await saveDocument(file.name, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || []);
           toast({ title: 'PDF Processed via OCR', description: 'Extracted text from rendered PDF page.' });
         } catch (fallbackErr: any) {
@@ -341,6 +344,7 @@ const Index = () => {
       setExtractedText(data.text);
       setExtractedMetadata(data.metadata || {});
       setBoundingBoxes(data.boundingBoxes || {});
+      setWordBoundingBoxes(data.wordBoundingBoxes || []);
       
       // Save document with line items
       await saveDocument(fileName, 'image', imageUrl, data.text, data.metadata || {}, data.lineItems || []);
@@ -513,9 +517,11 @@ const Index = () => {
             extractedText={extractedText}
             metadata={extractedMetadata}
             boundingBoxes={boundingBoxes}
+            wordBoundingBoxes={wordBoundingBoxes}
             projectFields={selectedProject?.extraction_fields || []}
             onValidate={handleValidation}
             onSkip={handleReset}
+          />
           />
         )}
       </main>

@@ -21,3 +21,6 @@ verify_jwt = true
 
 [functions.process-scheduled-exports]
 verify_jwt = false
+
+[functions.ocr-scan]
+verify_jwt = true

@@ -33,6 +33,7 @@ interface ValidationScreenProps {
   metadata: Record<string, string>;
   projectFields: Array<{ name: string; description: string }>;
   boundingBoxes?: Record<string, { x: number; y: number; width: number; height: number }>;
+  wordBoundingBoxes?: Array<{ text: string; bbox: any }>;
   onValidate: (status: 'validated' | 'rejected', metadata: Record<string, string>) => void;
   onSkip: () => void;
   onSwitchToExport?: () => void;
@@ -46,6 +47,7 @@ export const ValidationScreen = ({
   metadata,
   projectFields,
   boundingBoxes = {},
+  wordBoundingBoxes = [],
   onValidate,
   onSkip,
   onSwitchToExport,
@@ -548,7 +550,7 @@ useEffect(() => {
                 imageUrl={currentImageUrl}
                 documentId={documentId}
                 ocrText={extractedText}
-                ocrMetadata={{ fields: metadata, boundingBoxes, wordBoundingBoxes: (metadata as any).wordBoundingBoxes }}
+                ocrMetadata={{ fields: metadata, boundingBoxes, wordBoundingBoxes }}
                 onRedactionSaved={handleRedactionSaved}
                 onCancel={() => setShowRedactionTool(false)}
               />
