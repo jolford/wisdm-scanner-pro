@@ -103,6 +103,21 @@ const Queue = () => {
     }
   }, [authLoading, user, navigate]);
 
+  // Check sessionStorage for pre-selected batch/project from Batches page
+  useEffect(() => {
+    const storedBatchId = sessionStorage.getItem('selectedBatchId');
+    const storedProjectId = sessionStorage.getItem('selectedProjectId');
+    
+    if (storedBatchId && storedProjectId) {
+      setSelectedProjectId(storedProjectId);
+      setSelectedBatchId(storedBatchId);
+      
+      // Clear from sessionStorage after using
+      sessionStorage.removeItem('selectedBatchId');
+      sessionStorage.removeItem('selectedProjectId');
+    }
+  }, []);
+
   useEffect(() => {
     if (selectedBatchId) {
       loadQueueDocuments();

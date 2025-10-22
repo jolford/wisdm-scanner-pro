@@ -21,6 +21,7 @@ interface Batch {
   total_documents: number;
   validated_documents: number;
   created_by: string;
+  project_id: string;
   projects: {
     name: string;
   };
@@ -114,70 +115,27 @@ const Batches = () => {
     }
   };
 
-  const progressBatch = async (e: React.MouseEvent, batchId: string, currentStatus: string) => {
+  const openBatchQueue = async (e: React.MouseEvent, batch: Batch) => {
     e.stopPropagation();
     
-    const statusFlow = ['new', 'scanning', 'indexing', 'validation', 'validated', 'exported'];
-    const currentIndex = statusFlow.indexOf(currentStatus);
+    // Map batch status to queue tab
+    const statusToTab: Record<string, string> = {
+      'new': 'scan',
+      'scanning': 'scan',
+      'indexing': 'validation',
+      'validation': 'validation',
+      'validated': 'export',
+      'complete': 'export',
+      'exported': 'export',
+    };
     
-    if (currentIndex === -1 || currentIndex === statusFlow.length - 1) {
-      toast({
-        title: 'Info',
-        description: 'Batch is already at final status',
-      });
-      return;
-    }
-
-    const nextStatus = statusFlow[currentIndex + 1];
-
-    try {
-      const { error } = await supabase
-        .from('batches')
-        .update({ status: nextStatus as any })
-        .eq('id', batchId);
-
-      if (error) throw error;
-
-      // Trigger automatic export when moving to 'exported' status
-      if (nextStatus === 'exported') {
-        toast({
-          title: 'Exporting...',
-          description: 'Automatically exporting batch to configured destinations',
-        });
-
-        const { data, error: exportError } = await supabase.functions.invoke('auto-export-batch', {
-          body: { batchId }
-        });
-
-        if (exportError) {
-          console.error('Auto-export error:', exportError);
-          toast({
-            title: 'Export Warning',
-            description: 'Batch status updated but auto-export failed. You can manually export from batch details.',
-            variant: 'destructive',
-          });
-        } else if (data?.success) {
-          toast({
-            title: 'Batch Exported',
-            description: `Successfully exported to ${data.exports?.length || 0} format(s)`,
-          });
-        }
-      } else {
-        toast({
-          title: 'Success',
-          description: `Batch moved to ${nextStatus}`,
-        });
-      }
-      
-      loadBatches();
-    } catch (error) {
-      console.error('Error updating batch:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to update batch status',
-        variant: 'destructive',
-      });
-    }
+    const tab = statusToTab[batch.status] || 'scan';
+    
+    // Navigate to queue with batch context stored in sessionStorage
+    sessionStorage.setItem('selectedBatchId', batch.id);
+    sessionStorage.setItem('selectedProjectId', batch.project_id);
+    
+    navigate(`/?tab=${tab}`);
   };
 
   const getStatusColor = (status: string) => {
@@ -302,8 +260,8 @@ const Batches = () => {
                     <Button
                       size="icon"
                       variant="outline"
-                      onClick={(e) => progressBatch(e, batch.id, batch.status)}
-                      title="Progress to next status"
+                      onClick={(e) => openBatchQueue(e, batch)}
+                      title="Open batch in queue"
                     >
                       <ArrowRight className="h-4 w-4" />
                     </Button>
@@ -390,8 +348,8 @@ const Batches = () => {
                       <Button
                         size="icon"
                         variant="outline"
-                        onClick={(e) => progressBatch(e, batch.id, batch.status)}
-                        title="Progress to next status"
+                        onClick={(e) => openBatchQueue(e, batch)}
+                        title="Open batch in queue"
                       >
                         <ArrowRight className="h-4 w-4" />
                       </Button>
