@@ -15,6 +15,7 @@ import {
   HelpCircle,
   DollarSign,
   Target,
+  RefreshCw,
 } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,6 +50,7 @@ const menuItems = [
   { title: 'Cost Tracking', url: '/admin/cost-tracking', icon: DollarSign },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
   { title: 'Error Logs', url: '/admin/error-logs', icon: AlertCircle },
+  { title: 'Reprocess Docs', url: '/admin/reprocess', icon: RefreshCw },
 ];
 
 export function AdminLayout({ children, title, description }: AdminLayoutProps) {

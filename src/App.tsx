@@ -29,6 +29,7 @@ import CostTracking from "./pages/admin/CostTracking";
 import Analytics from "./pages/admin/Analytics";
 import SystemViability from "./pages/admin/SystemViability";
 import ErrorLogs from "./pages/admin/ErrorLogs";
+import DocumentReprocessing from "./pages/admin/DocumentReprocessing";
 import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 import ApiDocs from "./pages/ApiDocs";
@@ -107,6 +108,7 @@ const App = () => (
             <Route path="/admin/analytics" element={<Analytics />} />
             <Route path="/admin/viability" element={<SystemViability />} />
             <Route path="/admin/error-logs" element={<ErrorLogs />} />
+            <Route path="/admin/reprocess" element={<DocumentReprocessing />} />
             <Route path="/help" element={<Help />} />
             <Route path="/api-docs" element={<ApiDocs />} />
             <Route path="/presentation" element={<Presentation />} />
