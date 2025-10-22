@@ -1008,12 +1008,12 @@ const Queue = () => {
                 </Card>
               ) : (
               <Tabs defaultValue="upload" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-6 bg-muted/30">
-                  <TabsTrigger value="upload" className="gap-1 sm:gap-2 text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-6">
+                  <TabsTrigger value="upload" className="gap-1 sm:gap-2 text-xs sm:text-sm">
                     <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
                     Upload
                   </TabsTrigger>
-                  <TabsTrigger value="scanner" className="gap-1 sm:gap-2 text-xs sm:text-sm data-[state=active]:bg-card data-[state=active]:shadow-sm">
+                  <TabsTrigger value="scanner" className="gap-1 sm:gap-2 text-xs sm:text-sm">
                     <ScanLine className="h-3 w-3 sm:h-4 sm:w-4" />
                     Scanner
                   </TabsTrigger>
