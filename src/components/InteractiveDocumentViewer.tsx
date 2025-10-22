@@ -19,6 +19,13 @@ interface InteractiveDocumentViewerProps {
   onFieldClick?: (fieldName: string) => void;
   onRegionClick?: (x: number, y: number) => void;
   highlightedField?: string | null;
+  offensiveHighlights?: Array<{
+    text: string;
+    category: string;
+    severity: string;
+    reason: string;
+    boundingBox: { x: number; y: number; width: number; height: number } | null;
+  }>;
 }
 
 export const InteractiveDocumentViewer = ({
@@ -27,7 +34,8 @@ export const InteractiveDocumentViewer = ({
   boundingBoxes = {},
   onFieldClick,
   onRegionClick,
-  highlightedField
+  highlightedField,
+  offensiveHighlights = []
 }: InteractiveDocumentViewerProps) => {
   const [imageZoom, setImageZoom] = useState(1);
   const [imageRotation, setImageRotation] = useState(0);
@@ -87,7 +95,32 @@ export const InteractiveDocumentViewer = ({
       ctx.font = 'bold 12px sans-serif';
       ctx.fillText(fieldName, x, y - 5);
     });
-  }, [boundingBoxes, highlightedField, imageZoom]);
+
+    // Draw offensive language highlights
+    offensiveHighlights.forEach((highlight) => {
+      if (!highlight.boundingBox) return;
+      
+      const bbox = highlight.boundingBox;
+      // Convert percentage to pixels
+      const x = (bbox.x / 100) * canvas.width;
+      const y = (bbox.y / 100) * canvas.height;
+      const width = (bbox.width / 100) * canvas.width;
+      const height = (bbox.height / 100) * canvas.height;
+
+      // Draw yellow highlight for offensive language
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 3;
+      ctx.fillStyle = 'rgba(250, 204, 21, 0.25)';
+      
+      ctx.fillRect(x, y, width, height);
+      ctx.strokeRect(x, y, width, height);
+
+      // Draw warning label
+      ctx.fillStyle = '#facc15';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.fillText('⚠️ ' + highlight.category, x, y - 5);
+    });
+  }, [boundingBoxes, highlightedField, imageZoom, offensiveHighlights]);
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current || !onRegionClick) return;

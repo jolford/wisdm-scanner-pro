@@ -519,6 +519,7 @@ const Index = () => {
             boundingBoxes={boundingBoxes}
             wordBoundingBoxes={wordBoundingBoxes}
             projectFields={selectedProject?.extraction_fields || []}
+            projectName={selectedProject?.name}
             onValidate={handleValidation}
             onSkip={handleReset}
           />

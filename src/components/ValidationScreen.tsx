@@ -503,6 +503,7 @@ useEffect(() => {
             onFieldClick={handleFieldFocus}
             onRegionClick={handleRegionClick}
             highlightedField={focusedField}
+            offensiveHighlights={offensiveHighlights}
           />
         ) : (
           <Card className="p-6 flex flex-col" key="traditional-viewer">

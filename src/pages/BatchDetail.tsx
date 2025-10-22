@@ -418,6 +418,7 @@ ${xmlDocs}
                 extractedText={selectedDocument.extracted_text || ''}
                 metadata={selectedDocument.extracted_metadata || {}}
                 projectFields={(batch.projects?.extraction_fields as Array<{ name: string; description: string }>) || []}
+                projectName={batch.projects?.name}
                 onValidate={async () => {
                   setSelectedDocument(null);
                 }}
