@@ -83,9 +83,9 @@ serve(async (req) => {
 
     // --- BUILD AI PROMPT ---
     // Create optimized prompts for the AI model to extract text, classify document,
-    // identify specific fields with bounding box coordinates, AND extract word-level coordinates
-    let systemPrompt = 'You are an advanced OCR, ICR, and document classification system. Extract all text from documents including printed text, handwritten text, cursive writing, and barcodes. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other). Be very careful to accurately recognize handwritten characters and barcode labels. For each extracted field, provide approximate bounding box coordinates (x, y, width, height) as percentages of the document dimensions (0-100). ADDITIONALLY, provide word-level bounding boxes for the full text to enable precise redaction and text highlighting.';
-    let userPrompt = 'Extract all text from this document, including any handwritten text. Classify the document type. Pay special attention to handwritten characters, cursive writing, and barcode labels. For each field value, estimate its location on the document as bounding box coordinates. IMPORTANT: Also provide word-level bounding boxes for every word in the document to enable automated redaction.';
+    // identify specific fields with bounding box coordinates
+    let systemPrompt = 'You are an advanced OCR, ICR, and document classification system. Extract all text from documents including printed text, handwritten text, cursive writing, and barcodes. Classify the document type (invoice, receipt, purchase_order, check, form, letter, other). Be very careful to accurately recognize handwritten characters and barcode labels. For each extracted field, provide approximate bounding box coordinates (x, y, width, height) as percentages of the document dimensions (0-100).';
+    let userPrompt = 'Extract all text from this document, including any handwritten text. Classify the document type. Pay special attention to handwritten characters, cursive writing, and barcode labels. For each field value, estimate its location on the document as bounding box coordinates.';
     
     // Add MICR-specific instructions if check scanning is enabled
     if (enableCheckScanning) {
@@ -111,7 +111,7 @@ serve(async (req) => {
       if (hasAccessioningField) {
         // SPECIALIZED PROMPT FOR BARCODE/ACCESSIONING NUMBER EXTRACTION
         // These numbers are critical for lab forms and must be extracted with high accuracy
-        const baseJson = `{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}, "words": [{"text": "word", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}]}`;
+        const baseJson = `{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}}`;
         const tableJson = hasTableExtraction 
           ? `, "lineItems": [{${tableExtractionFields.map((f: any) => `"${f.name}": "value"`).join(', ')}}]`
           : '';
@@ -142,7 +142,7 @@ RESPONSE REQUIREMENTS:
         userPrompt = `Extract from this ${isPdf ? 'PDF' : 'image'}: ${fieldNames.join(', ')}.${tableInstructions} Classify document type. RESPOND WITH ONLY THE JSON OBJECT - NO OTHER TEXT.`;
       } else {
         // STANDARD PROMPT FOR GENERAL FIELD EXTRACTION
-        const baseJson = `{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}, "words": [{"text": "word", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}]}`;
+        const baseJson = `{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}}`;
         const tableJson = hasTableExtraction 
           ? `, "lineItems": [{${tableExtractionFields.map((f: any) => `"${f.name}": "value"`).join(', ')}}]`
           : '';
@@ -169,7 +169,7 @@ RESPONSE REQUIREMENTS:
     } else {
       // NO CUSTOM FIELDS - JUST OCR AND CLASSIFICATION
       // Extract all text and classify the document without specific field extraction
-      const baseJson = '{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "words": [{"text": "word", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}]}';
+      const baseJson = '{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0}';
       const tableJson = hasTableExtraction 
         ? `, "lineItems": [{${tableExtractionFields.map((f: any) => `"${f.name}": "value"`).join(', ')}}]`
         : '';
@@ -285,7 +285,6 @@ RESPONSE REQUIREMENTS:
     let lineItems: any[] = [];
     let documentType = 'other';
     let confidence = 0;
-    let wordBoundingBoxes: Array<{ text: string; bbox: any }> = [];
     
     try {
       // Try to extract JSON from the response (AI may include extra text or markdown code blocks)
@@ -341,11 +340,6 @@ RESPONSE REQUIREMENTS:
         extractedText = parsed.fullText || responseText;
         documentType = parsed.documentType || 'other';
         confidence = parsed.confidence || 0;
-        
-        // Extract word-level bounding boxes for redaction
-        if (parsed.words && Array.isArray(parsed.words)) {
-          wordBoundingBoxes = parsed.words;
-        }
         
         // Extract field values and handle both old and new formats
         if (extractionFields && extractionFields.length > 0) {
@@ -540,8 +534,7 @@ RESPONSE REQUIREMENTS:
         lineItems: lineItems,             // Extracted table rows (if applicable)
         documentType: documentType,       // Classified document type
         confidence: confidence,           // OCR confidence score
-        boundingBoxes: fieldBoundingBoxes, // Field locations on document
-        wordBoundingBoxes: wordBoundingBoxes // Word-level bounding boxes for redaction
+        boundingBoxes: fieldBoundingBoxes // Field locations on document
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
