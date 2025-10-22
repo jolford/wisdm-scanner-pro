@@ -24,3 +24,6 @@ verify_jwt = false
 
 [functions.ocr-scan]
 verify_jwt = true
+
+[functions.detect-offensive-language]
+verify_jwt = true

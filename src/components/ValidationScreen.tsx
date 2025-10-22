@@ -32,6 +32,7 @@ interface ValidationScreenProps {
   extractedText: string;
   metadata: Record<string, string>;
   projectFields: Array<{ name: string; description: string }>;
+  projectName?: string; // Added to detect AB1466 project
   boundingBoxes?: Record<string, { x: number; y: number; width: number; height: number }>;
   wordBoundingBoxes?: Array<{ text: string; bbox: any }>;
   onValidate: (status: 'validated' | 'rejected', metadata: Record<string, string>) => void;
@@ -46,6 +47,7 @@ export const ValidationScreen = ({
   extractedText,
   metadata,
   projectFields,
+  projectName,
   boundingBoxes = {},
   wordBoundingBoxes = [],
   onValidate,
@@ -65,6 +67,14 @@ export const ValidationScreen = ({
   const [currentImageUrl, setCurrentImageUrl] = useState(imageUrl);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [useInteractiveViewer, setUseInteractiveViewer] = useState(true);
+  const [offensiveHighlights, setOffensiveHighlights] = useState<Array<{
+    text: string;
+    category: string;
+    severity: string;
+    reason: string;
+    boundingBox: { x: number; y: number; width: number; height: number } | null;
+  }>>([]);
+  const [isAnalyzingLanguage, setIsAnalyzingLanguage] = useState(false);
   const { toast } = useToast();
   const { isAdmin } = useAuth();
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
@@ -139,6 +149,44 @@ useEffect(() => {
   })();
 // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [showRedactionTool, previewUrl, displayUrl, currentImageUrl]);
+
+// Auto-detect offensive language for AB 1466 projects
+useEffect(() => {
+  const isAB1466 = projectName?.toLowerCase().includes('ab') && projectName?.toLowerCase().includes('1466');
+  if (!isAB1466 || !extractedText || isAnalyzingLanguage) return;
+  
+  const detectOffensiveLanguage = async () => {
+    setIsAnalyzingLanguage(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('detect-offensive-language', {
+        body: {
+          text: extractedText,
+          wordBoundingBoxes: resolvedWordBoxes,
+        },
+      });
+      
+      if (error) {
+        console.error('Failed to detect offensive language:', error);
+        return;
+      }
+      
+      if (data?.highlights && data.highlights.length > 0) {
+        setOffensiveHighlights(data.highlights);
+        toast({
+          title: 'Offensive Language Detected',
+          description: `Found ${data.highlights.length} potentially problematic phrase(s) highlighted in yellow`,
+        });
+      }
+    } catch (error) {
+      console.error('Error detecting offensive language:', error);
+    } finally {
+      setIsAnalyzingLanguage(false);
+    }
+  };
+  
+  detectOffensiveLanguage();
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [extractedText, projectName, resolvedWordBoxes]);
 
 // Client-side calculation verification (fallback for older docs)
 useEffect(() => {
