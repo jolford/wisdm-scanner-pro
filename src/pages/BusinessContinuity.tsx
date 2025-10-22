@@ -8,28 +8,22 @@ export default function BusinessContinuity() {
 
   return (
     <div className="min-h-screen bg-background p-8">
-      <Button
-        variant="ghost"
-        onClick={() => navigate(-1)}
-        className="mb-6"
-      >
+      <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6">
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back
       </Button>
 
       <Card className="max-w-4xl mx-auto p-8">
         <h1 className="text-3xl font-bold mb-6">Business Continuity & Disaster Recovery Plan</h1>
-        <p className="text-muted-foreground mb-8">
-          Effective Date: January 1, 2025 | Version 1.0
-        </p>
+        <p className="text-muted-foreground mb-8">Effective Date: January 1, 2025 | Version 1.0</p>
 
         <section className="space-y-6">
           <div>
             <h2 className="text-2xl font-semibold mb-3">1. Purpose and Scope</h2>
             <p className="mb-4">
-              This Business Continuity and Disaster Recovery Plan ensures WISDM Scanner Pro can maintain or
-              rapidly resume critical business operations following a disruption, including natural disasters,
-              cyberattacks, equipment failures, or other incidents.
+              This Business Continuity and Disaster Recovery Plan ensures WISDM Scanner Pro can maintain or rapidly
+              resume critical business operations following a disruption, including natural disasters, cyberattacks,
+              equipment failures, or other incidents.
             </p>
             <p>
               <strong>Objectives:</strong>
@@ -46,25 +40,47 @@ export default function BusinessContinuity() {
             <h2 className="text-2xl font-semibold mb-3">2. Critical Business Functions</h2>
             <h3 className="text-xl font-semibold mb-2">2.1 Priority 1 - Critical (RTO: 4 hours)</h3>
             <ul className="list-disc pl-6 mb-4 space-y-2">
-              <li><strong>Document Processing:</strong> Core OCR and document scanning functionality</li>
-              <li><strong>User Authentication:</strong> Secure access to the system</li>
-              <li><strong>Database Operations:</strong> Customer data access and storage</li>
-              <li><strong>API Services:</strong> Integration endpoints for customers</li>
+              <li>
+                <strong>Document Processing:</strong> Core OCR and document scanning functionality
+              </li>
+              <li>
+                <strong>User Authentication:</strong> Secure access to the system
+              </li>
+              <li>
+                <strong>Database Operations:</strong> Customer data access and storage
+              </li>
+              <li>
+                <strong>API Services:</strong> Integration endpoints for customers
+              </li>
             </ul>
 
             <h3 className="text-xl font-semibold mb-2">2.2 Priority 2 - Important (RTO: 24 hours)</h3>
             <ul className="list-disc pl-6 mb-4 space-y-2">
-              <li><strong>Batch Processing:</strong> Multi-document processing workflows</li>
-              <li><strong>Export Functions:</strong> Data export to external systems</li>
-              <li><strong>Administrative Tools:</strong> User and project management</li>
-              <li><strong>Reporting:</strong> Analytics and cost tracking</li>
+              <li>
+                <strong>Batch Processing:</strong> Multi-document processing workflows
+              </li>
+              <li>
+                <strong>Export Functions:</strong> Data export to external systems
+              </li>
+              <li>
+                <strong>Administrative Tools:</strong> User and project management
+              </li>
+              <li>
+                <strong>Reporting:</strong> Analytics and cost tracking
+              </li>
             </ul>
 
             <h3 className="text-xl font-semibold mb-2">2.3 Priority 3 - Standard (RTO: 72 hours)</h3>
             <ul className="list-disc pl-6 space-y-2">
-              <li><strong>Documentation:</strong> Help and support materials</li>
-              <li><strong>Marketing Pages:</strong> Public-facing content</li>
-              <li><strong>Non-critical Features:</strong> Enhancement features</li>
+              <li>
+                <strong>Documentation:</strong> Help and support materials
+              </li>
+              <li>
+                <strong>Marketing Pages:</strong> Public-facing content
+              </li>
+              <li>
+                <strong>Non-critical Features:</strong> Enhancement features
+              </li>
             </ul>
           </div>
 
@@ -72,10 +88,18 @@ export default function BusinessContinuity() {
             <h2 className="text-2xl font-semibold mb-3">3. Infrastructure and Architecture</h2>
             <h3 className="text-xl font-semibold mb-2">3.1 Production Environment</h3>
             <ul className="list-disc pl-6 mb-4 space-y-2">
-              <li><strong>Hosting:</strong> Lovable Cloud (Supabase infrastructure)</li>
-              <li><strong>Database:</strong> PostgreSQL with automated backups</li>
-              <li><strong>File Storage:</strong> Distributed storage with redundancy</li>
-              <li><strong>Geographic Distribution:</strong> Multi-region availability</li>
+              <li>
+                <strong>Hosting:</strong> Lovable Cloud (Supabase infrastructure)
+              </li>
+              <li>
+                <strong>Database:</strong> PostgreSQL with automated backups
+              </li>
+              <li>
+                <strong>File Storage:</strong> Distributed storage with redundancy
+              </li>
+              <li>
+                <strong>Geographic Distribution:</strong> Multi-region availability
+              </li>
             </ul>
 
             <h3 className="text-xl font-semibold mb-2">3.2 High Availability Features</h3>
@@ -91,33 +115,57 @@ export default function BusinessContinuity() {
             <h2 className="text-2xl font-semibold mb-3">4. Backup Strategy</h2>
             <h3 className="text-xl font-semibold mb-2">4.1 Database Backups</h3>
             <ul className="list-disc pl-6 mb-4 space-y-2">
-              <li><strong>Frequency:</strong> Continuous replication + hourly snapshots</li>
-              <li><strong>Retention:</strong> 30 days for point-in-time recovery</li>
-              <li><strong>Storage:</strong> Encrypted backups in separate availability zone</li>
-              <li><strong>Testing:</strong> Monthly restoration tests validate backup integrity</li>
+              <li>
+                <strong>Frequency:</strong> Continuous replication + hourly snapshots
+              </li>
+              <li>
+                <strong>Retention:</strong> 30 days for point-in-time recovery
+              </li>
+              <li>
+                <strong>Storage:</strong> Encrypted backups in separate availability zone
+              </li>
+              <li>
+                <strong>Testing:</strong> Monthly restoration tests validate backup integrity
+              </li>
             </ul>
 
             <h3 className="text-xl font-semibold mb-2">4.2 File Storage Backups</h3>
             <ul className="list-disc pl-6 mb-4 space-y-2">
-              <li><strong>Frequency:</strong> Real-time replication to multiple locations</li>
-              <li><strong>Retention:</strong> Active files maintained indefinitely; deleted files retained 90 days</li>
-              <li><strong>Versioning:</strong> File versions preserved for recovery</li>
+              <li>
+                <strong>Frequency:</strong> Real-time replication to multiple locations
+              </li>
+              <li>
+                <strong>Retention:</strong> Active files maintained indefinitely; deleted files retained 90 days
+              </li>
+              <li>
+                <strong>Versioning:</strong> File versions preserved for recovery
+              </li>
             </ul>
 
             <h3 className="text-xl font-semibold mb-2">4.3 Application Code</h3>
             <ul className="list-disc pl-6 space-y-2">
-              <li><strong>Version Control:</strong> Git repository with GitHub</li>
-              <li><strong>Deployment History:</strong> All deployments tagged and recoverable</li>
-              <li><strong>Infrastructure as Code:</strong> Configuration versioned</li>
+              <li>
+                <strong>Version Control:</strong> Git repository with GitHub
+              </li>
+              <li>
+                <strong>Deployment History:</strong> All deployments tagged and recoverable
+              </li>
+              <li>
+                <strong>Infrastructure as Code:</strong> Configuration versioned
+              </li>
             </ul>
           </div>
 
           <div>
             <h2 className="text-2xl font-semibold mb-3">5. Disaster Scenarios and Response</h2>
-            
+
             <h3 className="text-xl font-semibold mb-2">Scenario 1: Complete System Outage</h3>
-            <p className="mb-2"><strong>Causes:</strong> Cloud provider outage, DDoS attack, catastrophic failure</p>
-            <p className="mb-2"><strong>Response Procedures:</strong></p>
+            <p className="mb-2">
+              <strong>Causes:</strong> Cloud provider outage, DDoS attack, catastrophic failure
+            </p>
+            <p className="mb-2">
+              <strong>Response Procedures:</strong>
+            </p>
             <ol className="list-decimal pl-6 mb-4 space-y-2">
               <li>Activate Disaster Recovery Team</li>
               <li>Assess extent and expected duration of outage</li>
@@ -129,8 +177,12 @@ export default function BusinessContinuity() {
             </ol>
 
             <h3 className="text-xl font-semibold mb-2">Scenario 2: Database Corruption or Loss</h3>
-            <p className="mb-2"><strong>Causes:</strong> Software bug, malicious attack, hardware failure</p>
-            <p className="mb-2"><strong>Response Procedures:</strong></p>
+            <p className="mb-2">
+              <strong>Causes:</strong> Software bug, malicious attack, hardware failure
+            </p>
+            <p className="mb-2">
+              <strong>Response Procedures:</strong>
+            </p>
             <ol className="list-decimal pl-6 mb-4 space-y-2">
               <li>Immediately stop write operations to prevent further corruption</li>
               <li>Identify last known good state</li>
@@ -141,8 +193,12 @@ export default function BusinessContinuity() {
             </ol>
 
             <h3 className="text-xl font-semibold mb-2">Scenario 3: Ransomware Attack</h3>
-            <p className="mb-2"><strong>Causes:</strong> Malware infection, compromised credentials</p>
-            <p className="mb-2"><strong>Response Procedures:</strong></p>
+            <p className="mb-2">
+              <strong>Causes:</strong> Malware infection, compromised credentials
+            </p>
+            <p className="mb-2">
+              <strong>Response Procedures:</strong>
+            </p>
             <ol className="list-decimal pl-6 mb-4 space-y-2">
               <li>Immediately isolate affected systems</li>
               <li>Activate Incident Response Plan</li>
@@ -155,8 +211,12 @@ export default function BusinessContinuity() {
             </ol>
 
             <h3 className="text-xl font-semibold mb-2">Scenario 4: Key Personnel Unavailability</h3>
-            <p className="mb-2"><strong>Causes:</strong> Illness, departure, natural disaster</p>
-            <p className="mb-2"><strong>Response Procedures:</strong></p>
+            <p className="mb-2">
+              <strong>Causes:</strong> Illness, departure, natural disaster
+            </p>
+            <p className="mb-2">
+              <strong>Response Procedures:</strong>
+            </p>
             <ol className="list-decimal pl-6 space-y-2">
               <li>Refer to succession plan for critical roles</li>
               <li>Activate backup personnel or contractors</li>
@@ -170,14 +230,30 @@ export default function BusinessContinuity() {
             <h2 className="text-2xl font-semibold mb-3">6. Recovery Procedures</h2>
             <h3 className="text-xl font-semibold mb-2">6.1 System Recovery Steps</h3>
             <ol className="list-decimal pl-6 mb-4 space-y-2">
-              <li><strong>Assess Damage:</strong> Determine scope and severity of incident</li>
-              <li><strong>Secure Environment:</strong> Ensure threat is neutralized before recovery</li>
-              <li><strong>Restore Infrastructure:</strong> Rebuild or failover to backup systems</li>
-              <li><strong>Restore Data:</strong> Apply backups to restored infrastructure</li>
-              <li><strong>Validate Integrity:</strong> Verify data completeness and accuracy</li>
-              <li><strong>Test Functionality:</strong> Ensure all critical features operational</li>
-              <li><strong>Resume Service:</strong> Gradually restore customer access</li>
-              <li><strong>Monitor:</strong> Enhanced monitoring for 48 hours post-recovery</li>
+              <li>
+                <strong>Assess Damage:</strong> Determine scope and severity of incident
+              </li>
+              <li>
+                <strong>Secure Environment:</strong> Ensure threat is neutralized before recovery
+              </li>
+              <li>
+                <strong>Restore Infrastructure:</strong> Rebuild or failover to backup systems
+              </li>
+              <li>
+                <strong>Restore Data:</strong> Apply backups to restored infrastructure
+              </li>
+              <li>
+                <strong>Validate Integrity:</strong> Verify data completeness and accuracy
+              </li>
+              <li>
+                <strong>Test Functionality:</strong> Ensure all critical features operational
+              </li>
+              <li>
+                <strong>Resume Service:</strong> Gradually restore customer access
+              </li>
+              <li>
+                <strong>Monitor:</strong> Enhanced monitoring for 48 hours post-recovery
+              </li>
             </ol>
 
             <h3 className="text-xl font-semibold mb-2">6.2 Data Recovery Validation</h3>
@@ -194,10 +270,18 @@ export default function BusinessContinuity() {
             <h2 className="text-2xl font-semibold mb-3">7. Communication Plan</h2>
             <h3 className="text-xl font-semibold mb-2">7.1 Customer Communications</h3>
             <ul className="list-disc pl-6 mb-4 space-y-2">
-              <li><strong>Status Page:</strong> Real-time updates during outages</li>
-              <li><strong>Email Notifications:</strong> Sent to all affected customers</li>
-              <li><strong>Support Channel:</strong> Dedicated support for incident-related issues</li>
-              <li><strong>Post-Incident:</strong> Detailed report within 5 business days</li>
+              <li>
+                <strong>Status Page:</strong> Real-time updates during outages
+              </li>
+              <li>
+                <strong>Email Notifications:</strong> Sent to all affected customers
+              </li>
+              <li>
+                <strong>Support Channel:</strong> Dedicated support for incident-related issues
+              </li>
+              <li>
+                <strong>Post-Incident:</strong> Detailed report within 5 business days
+              </li>
             </ul>
 
             <h3 className="text-xl font-semibold mb-2">7.2 Internal Communications</h3>
@@ -212,12 +296,24 @@ export default function BusinessContinuity() {
           <div>
             <h2 className="text-2xl font-semibold mb-3">8. Disaster Recovery Team</h2>
             <ul className="list-disc pl-6 space-y-2">
-              <li><strong>DR Coordinator:</strong> Overall recovery coordination and decision-making</li>
-              <li><strong>Infrastructure Lead:</strong> System restoration and infrastructure recovery</li>
-              <li><strong>Database Administrator:</strong> Data recovery and validation</li>
-              <li><strong>Application Lead:</strong> Application functionality verification</li>
-              <li><strong>Communications Lead:</strong> Customer and stakeholder communications</li>
-              <li><strong>Security Lead:</strong> Security validation and threat assessment</li>
+              <li>
+                <strong>DR Coordinator:</strong> Overall recovery coordination and decision-making
+              </li>
+              <li>
+                <strong>Infrastructure Lead:</strong> System restoration and infrastructure recovery
+              </li>
+              <li>
+                <strong>Database Administrator:</strong> Data recovery and validation
+              </li>
+              <li>
+                <strong>Application Lead:</strong> Application functionality verification
+              </li>
+              <li>
+                <strong>Communications Lead:</strong> Customer and stakeholder communications
+              </li>
+              <li>
+                <strong>Security Lead:</strong> Security validation and threat assessment
+              </li>
             </ul>
           </div>
 
@@ -225,10 +321,18 @@ export default function BusinessContinuity() {
             <h2 className="text-2xl font-semibold mb-3">9. Testing and Maintenance</h2>
             <h3 className="text-xl font-semibold mb-2">9.1 Regular Testing Schedule</h3>
             <ul className="list-disc pl-6 mb-4 space-y-2">
-              <li><strong>Monthly:</strong> Backup restoration test of random sample</li>
-              <li><strong>Quarterly:</strong> Tabletop exercise of disaster scenarios</li>
-              <li><strong>Annually:</strong> Full disaster recovery exercise</li>
-              <li><strong>Continuous:</strong> Automated backup validation</li>
+              <li>
+                <strong>Monthly:</strong> Backup restoration test of random sample
+              </li>
+              <li>
+                <strong>Quarterly:</strong> Tabletop exercise of disaster scenarios
+              </li>
+              <li>
+                <strong>Annually:</strong> Full disaster recovery exercise
+              </li>
+              <li>
+                <strong>Continuous:</strong> Automated backup validation
+              </li>
             </ul>
 
             <h3 className="text-xl font-semibold mb-2">9.2 Plan Maintenance</h3>
@@ -244,9 +348,15 @@ export default function BusinessContinuity() {
             <h2 className="text-2xl font-semibold mb-3">10. Dependencies and Contacts</h2>
             <h3 className="text-xl font-semibold mb-2">10.1 Critical Vendors</h3>
             <ul className="list-disc pl-6 mb-4 space-y-2">
-              <li><strong>Cloud Provider:</strong> Lovable Cloud/Supabase support</li>
-              <li><strong>DNS Provider:</strong> Domain management and failover</li>
-              <li><strong>AI Services:</strong> OCR and processing capabilities</li>
+              <li>
+                <strong>Cloud Provider:</strong> Lovable Cloud/Supabase support
+              </li>
+              <li>
+                <strong>DNS Provider:</strong> Domain management and failover
+              </li>
+              <li>
+                <strong>AI Services:</strong> OCR and processing capabilities
+              </li>
             </ul>
 
             <h3 className="text-xl font-semibold mb-2">10.2 Emergency Contacts</h3>
@@ -261,8 +371,10 @@ export default function BusinessContinuity() {
           <div className="bg-muted p-6 rounded-lg mt-8">
             <p className="text-sm font-semibold mb-2">For Disaster Recovery Activation:</p>
             <p className="text-sm">
-              Contact DR Coordinator immediately: dr@wisdm.com<br />
-              Emergency Hotline: [Emergency Contact Number]<br />
+              Contact DR Coordinator immediately: support@westint.com
+              <br />
+              Emergency Hotline: [Emergency Contact Number]
+              <br />
               All team members must be familiar with this plan and their roles.
             </p>
           </div>
