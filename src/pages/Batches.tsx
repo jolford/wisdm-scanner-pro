@@ -226,6 +226,10 @@ const Batches = () => {
                 <HelpCircle className="h-4 w-4 mr-2" />
                 Help
               </Button>
+              <Button variant="outline" onClick={() => navigate('/settings')}>
+                <User className="h-4 w-4 mr-2" />
+                Settings
+              </Button>
               <Button variant="default" onClick={() => navigate('/?tab=export')}>
                 <Download className="h-4 w-4 mr-2" />
                 Export Queue

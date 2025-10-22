@@ -11,7 +11,7 @@ import { ProjectSelector } from '@/components/ProjectSelector';
 import { BatchSelector } from '@/components/BatchSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText, FolderOpen, Cloud, Database, HelpCircle } from 'lucide-react';
+import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText, FolderOpen, Cloud, Database, HelpCircle, User } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { LicenseWarning } from '@/components/LicenseWarning';
 import { useLicense } from '@/hooks/use-license';
@@ -915,6 +915,10 @@ const Queue = () => {
               <Button variant="outline" size="sm" onClick={() => navigate('/batches')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
                 <FolderOpen className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Batches</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/settings')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
+                <User className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Settings</span>
               </Button>
               <Button variant="outline" size="sm" onClick={signOut} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
                 <LogOut className="h-4 w-4 sm:mr-2" />
