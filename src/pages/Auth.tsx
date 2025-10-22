@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Check, X } from 'lucide-react';
+import { MFAChallenge } from '@/components/auth/MFAChallenge';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 
 const emailSchema = z.string().email('Invalid email address');
@@ -32,6 +33,8 @@ const AuthPage = () => {
   const [tosAccepted, setTosAccepted] = useState(false);
   const [currentTosVersion, setCurrentTosVersion] = useState<{ tos_version: string; privacy_policy_version: string } | null>(null);
   const [passwordFocused, setPasswordFocused] = useState(false);
+  const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
+  const [showMfaChallenge, setShowMfaChallenge] = useState(false);
 
   // Password strength checks
   const passwordChecks = {
@@ -263,12 +266,24 @@ const AuthPage = () => {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
+
+      // Check if MFA is enabled for this user
+      const { data: factorsData } = await supabase.auth.mfa.listFactors();
+      const hasMFA = factorsData?.totp && factorsData.totp.length > 0;
+
+      if (hasMFA && factorsData.totp[0]) {
+        // MFA is enabled, show challenge
+        setMfaFactorId(factorsData.totp[0].id);
+        setShowMfaChallenge(true);
+        setLoading(false);
+        return;
+      }
 
       toast({
         title: 'Welcome Back',
@@ -368,6 +383,30 @@ const AuthPage = () => {
       setLoading(false);
     }
   };
+
+  // Show MFA challenge if needed
+  if (showMfaChallenge && mfaFactorId) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-6">
+            <img src={wisdmLogo} alt="WISDM Logo" className="h-12 w-auto mx-auto mb-4" />
+          </div>
+          <MFAChallenge
+            factorId={mfaFactorId}
+            onSuccess={() => {
+              navigate('/');
+            }}
+            onCancel={() => {
+              setShowMfaChallenge(false);
+              setMfaFactorId(null);
+              supabase.auth.signOut();
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5 flex items-center justify-center p-4">
