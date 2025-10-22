@@ -82,7 +82,10 @@ export const RedactionTool = ({
    */
   useEffect(() => {
     if (ocrText && ocrText.length > 0) {
+      console.log('RedactionTool - OCR Text length:', ocrText.length);
+      console.log('RedactionTool - OCR Metadata:', ocrMetadata);
       const detected = detectKeywords(ocrText, ocrMetadata);
+      console.log('RedactionTool - Detected keywords:', detected);
       setDetectedKeywords(detected);
       setShowKeywordAlert(detected.length > 0);
     }
