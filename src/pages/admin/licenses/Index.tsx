@@ -145,12 +145,17 @@ const LicensesIndex = () => {
                         <p className="text-sm text-muted-foreground mb-2">
                           {license.customers?.contact_email}
                         </p>
-                        <Badge className={getStatusColor(license.status)}>
-                          <span className="flex items-center gap-1">
-                            {getStatusIcon(license.status)}
-                            {license.status}
-                          </span>
-                        </Badge>
+                        <div className="flex gap-2 flex-wrap">
+                          <Badge className={getStatusColor(license.status)}>
+                            <span className="flex items-center gap-1">
+                              {getStatusIcon(license.status)}
+                              {license.status}
+                            </span>
+                          </Badge>
+                          <Badge variant="outline" className="capitalize">
+                            {license.plan_type || 'professional'}
+                          </Badge>
+                        </div>
                       </div>
                     </div>
 

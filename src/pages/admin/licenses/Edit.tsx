@@ -27,6 +27,7 @@ const EditLicense = () => {
   const [totalDocuments, setTotalDocuments] = useState('');
   const [remainingDocuments, setRemainingDocuments] = useState('');
   const [status, setStatus] = useState<'active' | 'suspended' | 'expired' | 'exhausted'>('active');
+  const [planType, setPlanType] = useState<'starter' | 'professional' | 'business' | 'enterprise'>('professional');
   const [notes, setNotes] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -74,6 +75,7 @@ const EditLicense = () => {
       setTotalDocuments(license.total_documents.toString());
       setRemainingDocuments(license.remaining_documents.toString());
       setStatus(license.status as 'active' | 'suspended' | 'expired' | 'exhausted');
+      setPlanType((license.plan_type as 'starter' | 'professional' | 'business' | 'enterprise') || 'professional');
       setNotes(license.notes || '');
       setEndDate(new Date(license.end_date).toISOString().split('T')[0]);
     }
@@ -112,6 +114,7 @@ const EditLicense = () => {
           total_documents: totalDocsNum,
           remaining_documents: remainingDocsNum,
           status: status,
+          plan_type: planType,
           notes: notes.trim() || null,
           end_date: new Date(endDate).toISOString(),
         })
@@ -202,6 +205,13 @@ const EditLicense = () => {
               </div>
 
               <div className="bg-muted/50 rounded-lg p-3">
+                <div className="text-xs text-muted-foreground mb-1">License Tier</div>
+                <Badge variant="outline" className="capitalize">
+                  {license.plan_type || 'professional'}
+                </Badge>
+              </div>
+
+              <div className="bg-muted/50 rounded-lg p-3">
                 <div className="text-xs text-muted-foreground mb-1">Current Status</div>
                 <Badge className={
                   license.status === 'active' ? 'bg-green-500' :
@@ -265,6 +275,24 @@ const EditLicense = () => {
                   </Select>
                   <p className="text-xs text-muted-foreground mt-1">
                     Reassigning will move this license to a different customer
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="planType">License Tier *</Label>
+                  <Select value={planType} onValueChange={(value) => setPlanType(value as 'starter' | 'professional' | 'business' | 'enterprise')}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="starter">Starter</SelectItem>
+                      <SelectItem value="professional">Professional</SelectItem>
+                      <SelectItem value="business">Business</SelectItem>
+                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Pricing tier per price guide
                   </p>
                 </div>
 

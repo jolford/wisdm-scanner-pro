@@ -539,6 +539,7 @@ export type Database = {
           id: string
           license_key: string
           notes: string | null
+          plan_type: Database["public"]["Enums"]["license_tier"]
           remaining_documents: number
           start_date: string
           status: Database["public"]["Enums"]["license_status"]
@@ -552,6 +553,7 @@ export type Database = {
           id?: string
           license_key: string
           notes?: string | null
+          plan_type?: Database["public"]["Enums"]["license_tier"]
           remaining_documents: number
           start_date?: string
           status?: Database["public"]["Enums"]["license_status"]
@@ -565,6 +567,7 @@ export type Database = {
           id?: string
           license_key?: string
           notes?: string | null
+          plan_type?: Database["public"]["Enums"]["license_tier"]
           remaining_documents?: number
           start_date?: string
           status?: Database["public"]["Enums"]["license_status"]
@@ -1057,6 +1060,7 @@ export type Database = {
       job_priority: "low" | "normal" | "high" | "urgent"
       job_status: "pending" | "processing" | "completed" | "failed" | "retrying"
       license_status: "active" | "expired" | "suspended" | "exhausted"
+      license_tier: "starter" | "professional" | "business" | "enterprise"
       validation_status: "pending" | "validated" | "rejected" | "needs_review"
     }
     CompositeTypes: {
@@ -1207,6 +1211,7 @@ export const Constants = {
       job_priority: ["low", "normal", "high", "urgent"],
       job_status: ["pending", "processing", "completed", "failed", "retrying"],
       license_status: ["active", "expired", "suspended", "exhausted"],
+      license_tier: ["starter", "professional", "business", "enterprise"],
       validation_status: ["pending", "validated", "rejected", "needs_review"],
     },
   },

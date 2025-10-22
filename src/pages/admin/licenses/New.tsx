@@ -7,6 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowLeft, Save } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +28,7 @@ const NewLicense = () => {
   const [phone, setPhone] = useState('');
   const [totalDocuments, setTotalDocuments] = useState('10000');
   const [durationMonths, setDurationMonths] = useState('12');
+  const [planType, setPlanType] = useState<'starter' | 'professional' | 'business' | 'enterprise'>('professional');
   const [notes, setNotes] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -112,6 +114,7 @@ const NewLicense = () => {
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
           status: 'active',
+          plan_type: planType,
           notes: notes.trim() || null,
         }]);
 
@@ -219,6 +222,24 @@ const NewLicense = () => {
             <div className="space-y-4 pt-6 border-t">
               <h2 className="text-xl font-semibold">License Details</h2>
               
+              <div>
+                <Label htmlFor="planType">License Tier *</Label>
+                <Select value={planType} onValueChange={(value) => setPlanType(value as 'starter' | 'professional' | 'business' | 'enterprise')}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="starter">Starter</SelectItem>
+                    <SelectItem value="professional">Professional</SelectItem>
+                    <SelectItem value="business">Business</SelectItem>
+                    <SelectItem value="enterprise">Enterprise</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Select the pricing tier per your price guide
+                </p>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="totalDocuments">Annual Document Volume *</Label>
