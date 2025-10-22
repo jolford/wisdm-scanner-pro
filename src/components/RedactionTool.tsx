@@ -244,6 +244,15 @@ export const RedactionTool = ({
     // Generate redaction boxes from detected keywords
     const autoBoxes = generateRedactionBoxes(detectedKeywords, 15);
     
+    if (autoBoxes.length === 0) {
+      toast({
+        title: 'Cannot Auto-Redact',
+        description: `Found ${detectedKeywords.length} keyword(s), but no bounding box data available. Please draw redaction boxes manually over the detected terms.`,
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     // Merge overlapping boxes for cleaner redaction
     const mergedBoxes = mergeRedactionBoxes(autoBoxes, 30);
     
@@ -380,14 +389,14 @@ export const RedactionTool = ({
             <AlertDescription className="ml-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
-                  <p className="font-semibold mb-2">Sensitive Keywords Detected</p>
+                  <p className="font-semibold mb-2">⚠️ Sensitive Keywords Detected (AB 1466)</p>
                   <p className="text-sm mb-2">
-                    Found {detectedKeywords.length} keyword(s) that may require redaction for compliance with fair housing laws (e.g., CA AB 1466):
+                    Found {detectedKeywords.length} potentially discriminatory term(s) requiring redaction per California fair housing laws:
                   </p>
                   <div className="flex flex-wrap gap-1 mb-2">
                     {detectedKeywords.slice(0, 10).map((kw, idx) => (
                       <Badge key={idx} variant="outline" className="text-xs">
-                        {kw.term} ({kw.matches.length})
+                        {kw.term} ({kw.matches.length}x)
                       </Badge>
                     ))}
                     {detectedKeywords.length > 10 && (
@@ -396,6 +405,11 @@ export const RedactionTool = ({
                       </Badge>
                     )}
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    {detectedKeywords.some(kw => kw.matches.some(m => m.boundingBox)) 
+                      ? 'Click Auto-Redact to automatically cover these terms.' 
+                      : 'Draw redaction boxes manually over highlighted terms (automatic positioning unavailable).'}
+                  </p>
                 </div>
                 <Button
                   size="sm"

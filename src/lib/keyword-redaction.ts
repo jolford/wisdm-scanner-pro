@@ -79,6 +79,10 @@ export const detectKeywords = (
   const keywords = [...DEFAULT_REDACTION_KEYWORDS, ...customKeywords];
   const detected: DetectedKeyword[] = [];
   
+  if (!ocrText || ocrText.length === 0) {
+    return detected;
+  }
+  
   const searchText = ocrText.toLowerCase();
   
   for (const keyword of keywords) {
@@ -94,14 +98,16 @@ export const detectKeywords = (
       
       // Try to find bounding box from OCR metadata
       let boundingBox;
-      if (ocrMetadata?.fields) {
-        // Search through OCR metadata for this text
-        for (const field of Object.values(ocrMetadata.fields) as any[]) {
-          if (field.value && 
-              typeof field.value === 'string' && 
-              field.value.toLowerCase().includes(searchTerm) &&
-              field.boundingBox) {
-            boundingBox = field.boundingBox;
+      
+      // Check if we have boundingBoxes at the top level
+      if (ocrMetadata?.boundingBoxes) {
+        // Look through field bounding boxes to see if any field contains this keyword
+        for (const [fieldName, bbox] of Object.entries(ocrMetadata.boundingBoxes)) {
+          const fieldValue = ocrMetadata.fields?.[fieldName];
+          if (fieldValue && 
+              typeof fieldValue === 'string' && 
+              fieldValue.toLowerCase().includes(searchTerm)) {
+            boundingBox = bbox;
             break;
           }
         }
