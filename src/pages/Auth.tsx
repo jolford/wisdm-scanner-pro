@@ -63,11 +63,13 @@ const AuthPage = () => {
     const hasAccessToken = locationHash.includes('access_token=');
     const hashType = locationHash.match(/type=([^&]+)/)?.[1];
     const searchType = searchParams.get('type');
+    const codeFromSearch = searchParams.get('code');
     const isRecoveryParam = 
       hashType === 'recovery' || 
       searchType === 'recovery' ||
       locationHash.includes('recovery_token=') ||
-      locationHash.includes('type=recovery');
+      locationHash.includes('type=recovery') ||
+      !!codeFromSearch;
     const blockRedirect = isRecoveryParam || hasAccessToken;
 
     // Surface any auth errors from the recovery link
@@ -76,6 +78,7 @@ const AuthPage = () => {
       const authError = hashParams.get('error_description') || hashParams.get('error');
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
+      const codeParam = searchParams.get('code') || hashParams.get('code');
       if (authError) {
         toast({ 
           title: 'Recovery Link Error', 
@@ -84,7 +87,13 @@ const AuthPage = () => {
         });
       }
       // Ensure a valid session exists when arriving from the reset link
-      if (accessToken && refreshToken) {
+      if (codeParam) {
+        setTimeout(() => {
+          supabase.auth
+            .exchangeCodeForSession(codeParam)
+            .catch((e) => console.error('Failed to exchange code for session', e));
+        }, 0);
+      } else if (accessToken && refreshToken) {
         setTimeout(() => {
           supabase.auth
             .setSession({ access_token: accessToken, refresh_token: refreshToken })
