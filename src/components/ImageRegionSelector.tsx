@@ -276,15 +276,15 @@ export const ImageRegionSelector = ({
           </Button>
         </div>
       </div>
-      <div className="relative overflow-auto max-h-[500px] bg-muted/30 rounded-lg">
+      <div className="relative overflow-auto bg-muted/30 rounded-lg" style={{ maxHeight: 'min(70vh, 800px)' }}>
         <canvas
           ref={canvasRef}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={() => setIsSelecting(false)}
-          className="cursor-crosshair max-w-full h-auto"
-          style={{ display: 'block' }}
+          className="cursor-crosshair w-full h-auto"
+          style={{ display: 'block', maxWidth: '100%' }}
         />
         {isProcessing && (
           <div className="absolute inset-0 bg-background/80 flex items-center justify-center">

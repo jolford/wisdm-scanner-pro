@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/ui/status-badge';
 import { ArrowLeft, FileText, CheckCircle2, XCircle, AlertCircle, Calendar, User, FolderOpen, Download, FileJson, FileSpreadsheet, FileType, Eye } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -16,6 +17,11 @@ const BatchDetail = () => {
   const { toast } = useToast();
   const [exporting, setExporting] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
+
+  // Clear selected document when batch changes to prevent showing wrong image
+  useEffect(() => {
+    setSelectedDocument(null);
+  }, [id]);
 
   const { data: batch, isLoading } = useQuery({
     queryKey: ['batch-detail', id],
