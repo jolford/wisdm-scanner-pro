@@ -658,6 +658,45 @@ useEffect(() => {
             </Badge>
           )}
         </div>
+        
+        {/* Offensive Language Alerts */}
+        {offensiveHighlights.length > 0 && (
+          <div className="mb-4 p-4 bg-yellow-500/10 border-2 border-yellow-500/50 rounded-lg">
+            <div className="flex items-start gap-2 mb-3">
+              <Badge variant="destructive" className="bg-yellow-500 hover:bg-yellow-600 text-sm">
+                ⚠️ {offensiveHighlights.length} OFFENSIVE PHRASE(S) DETECTED
+              </Badge>
+            </div>
+            <div className="space-y-3 max-h-60 overflow-y-auto">
+              {offensiveHighlights.map((highlight, idx) => (
+                <div key={idx} className="p-3 bg-background/50 rounded border border-yellow-500/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="outline" className="text-xs border-yellow-500/50">
+                      {highlight.category.replace('_', ' ').toUpperCase()}
+                    </Badge>
+                    <Badge variant="outline" className="text-xs border-red-500/50">
+                      {highlight.severity.toUpperCase()} SEVERITY
+                    </Badge>
+                  </div>
+                  <p className="text-sm font-mono mb-2 text-yellow-600 dark:text-yellow-400">
+                    "{highlight.text}"
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {highlight.reason}
+                  </p>
+                  {!highlight.boundingBox && (
+                    <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-2">
+                      💡 Coordinates unavailable - locate manually in text
+                    </p>
+                  )}
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-sm font-medium text-yellow-700 dark:text-yellow-300">
+              ⚠️ Review and manually redact problematic content as required by law
+            </p>
+          </div>
+        )}
         <Textarea
           value={extractedText}
           readOnly
