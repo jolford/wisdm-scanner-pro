@@ -84,66 +84,84 @@ export const detectKeywords = (
   }
   
   const searchText = ocrText.toLowerCase();
-  
+
+  // Prepare word tokens for phrase-level matching (from OCR word boxes)
+  const wordTokens: Array<{ raw: string; norm: string; bbox: { x: number; y: number; width: number; height: number } | null }>
+    = Array.isArray(ocrMetadata?.wordBoundingBoxes)
+      ? ocrMetadata.wordBoundingBoxes.map((w: any) => ({
+          raw: String(w?.text ?? ''),
+          norm: normalizeText(String(w?.text ?? '')),
+          bbox: w?.bbox ?? null,
+        }))
+      : [];
+
   for (const keyword of keywords) {
     const searchTerm = keyword.caseSensitive ? keyword.term : keyword.term.toLowerCase();
-    const regex = new RegExp(`\\b${escapeRegex(searchTerm)}\\b`, 'gi');
-    
+    const searchNorm = normalizeText(searchTerm);
+    const parts = searchNorm.split(' ').filter(Boolean);
+
     const matches: Array<{ text: string; boundingBox?: any }> = [];
-    let match;
-    
-    // Find all matches in the text
-    while ((match = regex.exec(keyword.caseSensitive ? ocrText : searchText)) !== null) {
-      const matchedText = ocrText.substring(match.index, match.index + match[0].length);
-      
-      // Try to find bounding box from word-level OCR data
-      let boundingBox;
-      
-      // NEW: Check for word-level bounding boxes (most accurate)
-      if (ocrMetadata?.wordBoundingBoxes && Array.isArray(ocrMetadata.wordBoundingBoxes)) {
-        // Search through word-level bounding boxes
-        for (const wordData of ocrMetadata.wordBoundingBoxes) {
-          if (wordData.text && wordData.bbox &&
-              wordData.text.toLowerCase().includes(searchTerm)) {
-            // Convert percentage-based coordinates to pixel coordinates if needed
-            // Assuming the bbox is in format: {x: %, y: %, width: %, height: %}
-            boundingBox = wordData.bbox;
-            break;
-          }
-        }
-      }
-      
-      // FALLBACK: Check if we have field-level boundingBoxes
-      if (!boundingBox && ocrMetadata?.boundingBoxes) {
-        // Look through field bounding boxes to see if any field contains this keyword
-        for (const [fieldName, bbox] of Object.entries(ocrMetadata.boundingBoxes)) {
-          const fieldValue = ocrMetadata.fields?.[fieldName];
-          if (fieldValue && 
-              typeof fieldValue === 'string' && 
-              fieldValue.toLowerCase().includes(searchTerm)) {
-            boundingBox = bbox;
-            break;
-          }
-        }
-      }
-      
-      matches.push({
-        text: matchedText,
-        boundingBox
-      });
+
+    // 1) Fast textual scan to count occurrences (for UX info)
+    const regex = new RegExp(`\\b${escapeRegex(searchTerm)}\\b`, 'gi');
+    let textMatch;
+    while ((textMatch = regex.exec(keyword.caseSensitive ? ocrText : searchText)) !== null) {
+      matches.push({ text: ocrText.substring(textMatch.index, textMatch.index + textMatch[0].length) });
     }
-    
+
+    // 2) Try to locate geometry from words (handles single and multi-word phrases)
+    if (wordTokens.length > 0) {
+      if (parts.length === 1) {
+        // Single word: require equality on normalized token
+        for (const wt of wordTokens) {
+          if (wt.norm === parts[0] && wt.bbox) {
+            matches.push({ text: wt.raw, boundingBox: wt.bbox });
+          }
+        }
+      } else {
+        // Phrase: sliding window
+        for (let i = 0; i <= wordTokens.length - parts.length; i++) {
+          const window = wordTokens.slice(i, i + parts.length);
+          const joined = window.map(w => w.norm).join(' ');
+          if (joined === searchNorm) {
+            const rects = window.map(w => w.bbox).filter(Boolean) as Array<{ x: number; y: number; width: number; height: number }>;
+            if (rects.length) {
+              const x1 = Math.min(...rects.map(r => r.x));
+              const y1 = Math.min(...rects.map(r => r.y));
+              const x2 = Math.max(...rects.map(r => r.x + r.width));
+              const y2 = Math.max(...rects.map(r => r.y + r.height));
+              matches.push({ text: window.map(w => w.raw).join(' '), boundingBox: { x: x1, y: y1, width: x2 - x1, height: y2 - y1 } });
+            }
+          }
+        }
+      }
+    }
+
+    // 3) Fallback to field-level boxes when available
+    if (ocrMetadata?.boundingBoxes) {
+      for (const [fieldName, bbox] of Object.entries(ocrMetadata.boundingBoxes)) {
+        const fieldValue = (ocrMetadata.fields as any)?.[fieldName];
+        if (typeof fieldValue === 'string' && normalizeText(fieldValue).includes(searchNorm)) {
+          matches.push({ text: String(fieldValue), boundingBox: bbox });
+        }
+      }
+    }
+
     if (matches.length > 0) {
-      detected.push({
-        term: keyword.term,
-        category: keyword.category,
-        matches
-      });
+      detected.push({ term: keyword.term, category: keyword.category, matches });
     }
   }
   
   return detected;
 };
+
+// Normalize text for matching: lowercase, remove punctuation, collapse spaces
+const normalizeText = (str: string) => str
+  .toLowerCase()
+  .replace(/[^a-z0-9]+/gi, ' ')
+  .trim()
+  .replace(/\s+/g, ' ');
+
 
 /**
  * Generate redaction boxes from detected keywords
