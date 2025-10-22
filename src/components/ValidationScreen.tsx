@@ -68,10 +68,16 @@ export const ValidationScreen = ({
   const { toast } = useToast();
   const { isAdmin } = useAuth();
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
-const imageContainerRef = useRef<HTMLDivElement>(null);
-const { signedUrl: displayUrl } = useSignedUrl(currentImageUrl);
-const isPdf = fileName?.toLowerCase().endsWith('.pdf');
-const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const imageContainerRef = useRef<HTMLDivElement>(null);
+  const { signedUrl: displayUrl } = useSignedUrl(currentImageUrl);
+  const isPdf = fileName?.toLowerCase().endsWith('.pdf');
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  // Resolved OCR geometry for redaction (props or lazy-fetched)
+  const [resolvedBoundingBoxes, setResolvedBoundingBoxes] = useState(boundingBoxes);
+  const [resolvedWordBoxes, setResolvedWordBoxes] = useState<Array<{ text: string; bbox: any }>>(wordBoundingBoxes || []);
+
+  useEffect(() => { setResolvedBoundingBoxes(boundingBoxes); }, [boundingBoxes]);
+  useEffect(() => { setResolvedWordBoxes(wordBoundingBoxes || []); }, [wordBoundingBoxes]);
 
 useEffect(() => {
   const run = async () => {
@@ -102,6 +108,37 @@ useEffect(() => {
   };
   run();
 }, [displayUrl, isPdf]);
+
+// Lazy-fetch word-level boxes when opening Redaction Tool (for previously saved docs)
+useEffect(() => {
+  const shouldFetch = showRedactionTool && (!resolvedWordBoxes || resolvedWordBoxes.length === 0);
+  if (!shouldFetch) return;
+  const imgSrc = previewUrl || displayUrl || currentImageUrl;
+  if (!imgSrc) return;
+  toast({ title: 'Preparing Auto‑Redaction', description: 'Analyzing coordinates…' });
+  (async () => {
+    try {
+      const tableFields: any[] = [];
+      const { data, error } = await supabase.functions.invoke('ocr-scan', {
+        body: {
+          imageData: imgSrc,
+          isPdf: false,
+          extractionFields: projectFields || [],
+          tableExtractionFields: tableFields,
+          enableCheckScanning: false,
+        },
+      });
+      if (error) { console.error('Auto-redact OCR fetch failed', error); return; }
+      setResolvedWordBoxes(data?.wordBoundingBoxes || []);
+      if (!resolvedBoundingBoxes || Object.keys(resolvedBoundingBoxes || {}).length === 0) {
+        setResolvedBoundingBoxes(data?.boundingBoxes || {});
+      }
+    } catch (e) {
+      console.error('Failed fetching word boxes', e);
+    }
+  })();
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [showRedactionTool, previewUrl, displayUrl, currentImageUrl]);
 
 // Client-side calculation verification (fallback for older docs)
 useEffect(() => {
@@ -550,7 +587,7 @@ useEffect(() => {
                 imageUrl={currentImageUrl}
                 documentId={documentId}
                 ocrText={extractedText}
-                ocrMetadata={{ fields: metadata, boundingBoxes, wordBoundingBoxes }}
+                ocrMetadata={{ fields: metadata, boundingBoxes: resolvedBoundingBoxes, wordBoundingBoxes: resolvedWordBoxes }}
                 onRedactionSaved={handleRedactionSaved}
                 onCancel={() => setShowRedactionTool(false)}
               />
