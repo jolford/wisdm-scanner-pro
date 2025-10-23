@@ -425,6 +425,39 @@ export function ECMExportConfig({
           </div>
         </Card>
       )}
+
+      {selectedProjectId && ecmFields.length === 0 && (
+        <Card className="p-4 bg-muted/30">
+          <div className="flex items-center justify-between mb-3">
+            <Label className="text-sm font-medium">Field Mapping</Label>
+            {loadingFields && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">
+            No fields were returned from {type.toUpperCase()}. You can still map by typing the exact Variable names.
+          </p>
+          <div className="space-y-2">
+            {extractionFields.filter(f => f.name.trim()).map((field) => (
+              <div key={field.name} className="flex items-center gap-2 p-2 bg-background rounded-md border border-border/50">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium truncate">{field.name}</div>
+                  {field.description && (
+                    <div className="text-xs text-muted-foreground truncate">{field.description}</div>
+                  )}
+                </div>
+                <ArrowRight className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <Input
+                  placeholder="Enter DocMgt field (VariableName)"
+                  value={config.fieldMappings?.[field.name] || ''}
+                  onChange={(e) => handleFieldMapping(field.name, e.target.value)}
+                  disabled={disabled}
+                  className="flex-1"
+                />
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   );
 }
+

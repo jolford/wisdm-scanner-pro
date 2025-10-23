@@ -98,8 +98,9 @@ serve(async (req) => {
 
     if (batchError) throw batchError;
 
-    // Extract Docmgt credentials from project config
-    const docmgtConfig = batch.projects?.docmgt_config;
+    // Extract Docmgt credentials from project config (support legacy metadata path)
+    const projectMeta = batch.projects?.metadata || {};
+    const docmgtConfig = batch.projects?.docmgt_config || projectMeta?.export_config?.docmgt;
     if (!docmgtConfig?.enabled || !docmgtConfig?.url || !docmgtConfig?.username || !docmgtConfig?.password) {
       return new Response(
         JSON.stringify({ error: 'Docmgt is not configured for this project' }),
@@ -147,13 +148,15 @@ serve(async (req) => {
     const normalizedDocmgtUrl = docmgtUrl.replace(/\/+$/, '');
 
     // Prepare documents for Docmgt API (create records)
+    const fieldMappings: Record<string, string> = docmgtConfig.fieldMappings || {};
     const docmgtRecords = documents.map(doc => {
-      const metadata = doc.extracted_metadata || {};
+      const metadata = (doc.extracted_metadata || {}) as Record<string, any>;
       
-      // Build field values from extracted metadata
+      // Build field values from extracted metadata with mapping
       const fieldValues: Record<string, any> = {};
       Object.entries(metadata).forEach(([key, value]) => {
-        fieldValues[key] = value;
+        const target = fieldMappings[key] || key;
+        fieldValues[target] = value;
       });
 
       return {
