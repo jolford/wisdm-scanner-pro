@@ -147,53 +147,82 @@ serve(async (req) => {
     // Normalize URL (remove trailing slash)
     const normalizedDocmgtUrl = docmgtUrl.replace(/\/+$/, '');
 
-    // Prepare documents for Docmgt API (create records)
-    const fieldMappings: Record<string, string> = docmgtConfig.fieldMappings || {};
-    const docmgtRecords = documents.map(doc => {
-      const metadata = (doc.extracted_metadata || {}) as Record<string, any>;
-      
-      // Build field values from extracted metadata with mapping
-      const fieldValues: Record<string, any> = {};
-      Object.entries(metadata).forEach(([key, value]) => {
-        const target = fieldMappings[key] || key;
-        fieldValues[target] = value;
-      });
-
-      return {
-        RecordTypeName: project, // DocMgt uses RecordType as the project/form type
-        Fields: fieldValues,
-        DocumentPath: doc.file_url, // If we're uploading the actual file
-      };
-    });
-
     // Create Basic Auth header
     const authString = btoa(`${username}:${password}`);
-    
-    // Send records to Docmgt API (one by one or in batch depending on API support)
-    const exportResults = [];
-    for (const record of docmgtRecords) {
-      try {
-        const docmgtResponse = await fetch(`${normalizedDocmgtUrl}/rest/records`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Basic ${authString}`,
-          },
-          body: JSON.stringify(record),
-        });
 
-        if (!docmgtResponse.ok) {
-          const errorText = await docmgtResponse.text();
-          console.error('Docmgt API error:', errorText);
-          exportResults.push({ success: false, error: errorText });
-        } else {
-          const result = await docmgtResponse.json();
-          exportResults.push({ success: true, result });
-        }
-      } catch (error: any) {
-        console.error('Error exporting record:', error);
-        exportResults.push({ success: false, error: error.message });
+    // Resolve RecordType by name or ID
+    let recordTypeId: number | null = null;
+    try {
+      const rtResp = await fetch(`${normalizedDocmgtUrl}/rest/recordtypes`, {
+        method: 'GET',
+        headers: { 'Authorization': `Basic ${authString}`, 'Accept': 'application/json' },
+      });
+      const rtCT = rtResp.headers.get('content-type') || '';
+      if (rtResp.ok && rtCT.includes('application/json')) {
+        const rts = await rtResp.json();
+        const found = Array.isArray(rts)
+          ? rts.find((r: any) => String(r.ID) === String(project) || r.Name === project || r.name === project)
+          : null;
+        recordTypeId = found?.ID ?? null;
+        if (!recordTypeId && Array.isArray(rts) && rts.length) recordTypeId = rts[0].ID ?? null;
       }
+    } catch (e) {
+      console.warn('Could not resolve DocMgt RecordType list', e);
+    }
+
+    // Prepare documents for Docmgt API (create records)
+    const fieldMappings: Record<string, string> = docmgtConfig.fieldMappings || {};
+    const exportResults = [] as any[];
+
+    for (const doc of documents) {
+      const metadata = (doc.extracted_metadata || {}) as Record<string, any>;
+
+      // Build both objects array (Variables) and simple key map (Fields)
+      const variables = Object.entries(metadata).map(([key, value]) => ({
+        VariableName: fieldMappings[key] || key,
+        DataName: fieldMappings[key] || key,
+        DataValue: value,
+      }));
+      const fieldsMap: Record<string, any> = {};
+      variables.forEach(v => { fieldsMap[v.VariableName] = v.DataValue; });
+
+      const payloadCandidates = [
+        { RecordTypeID: recordTypeId, RecordTypeName: project, Variables: variables },
+        { RecordTypeID: recordTypeId, RecordTypeName: project, Fields: fieldsMap },
+        { RecordTypeName: project, Variables: variables },
+      ];
+
+      let lastError: string | null = null;
+      let success = false;
+      for (const body of payloadCandidates) {
+        try {
+          const resp = await fetch(`${normalizedDocmgtUrl}/rest/records`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Basic ${authString}`,
+            },
+            body: JSON.stringify(body),
+          });
+          const ct = resp.headers.get('content-type') || '';
+          const text = await resp.text();
+          if (resp.ok && (ct.includes('application/json') || text.startsWith('{'))) {
+            let json: any = null;
+            try { json = JSON.parse(text); } catch {}
+            exportResults.push({ success: true, request: body, response: json || text });
+            success = true;
+            break;
+          } else {
+            lastError = text || `HTTP ${resp.status}`;
+            console.error('Docmgt API error:', lastError);
+          }
+        } catch (err: any) {
+          lastError = err.message;
+          console.error('Docmgt request error:', err);
+        }
+      }
+
+      if (!success) exportResults.push({ success: false, error: lastError, tried: payloadCandidates });
     }
 
     const successCount = exportResults.filter(r => r.success).length;
