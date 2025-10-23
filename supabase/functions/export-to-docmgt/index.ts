@@ -147,27 +147,45 @@ serve(async (req) => {
     // Normalize URL (remove trailing slash)
     const normalizedDocmgtUrl = docmgtUrl.replace(/\/+$/, '');
 
+    // Try common base path variants (some DocMgt installs use /DocMgt or /api)
+    const baseCandidates = Array.from(new Set([
+      normalizedDocmgtUrl,
+      `${normalizedDocmgtUrl}/DocMgt`,
+      `${normalizedDocmgtUrl}/docmgt`,
+      `${normalizedDocmgtUrl}/api`,
+    ])).map(u => u.replace(/\/+$/, ''));
+
     // Create Basic Auth header
     const authString = btoa(`${username}:${password}`);
 
     // Resolve RecordType by name or ID
+    const recordTypeEndpoints = ['/rest/recordtypes','/rest/records/types','/api/recordtypes','/api/records/types'];
     let recordTypeId: number | null = null;
-    try {
-      const rtResp = await fetch(`${normalizedDocmgtUrl}/rest/recordtypes`, {
-        method: 'GET',
-        headers: { 'Authorization': `Basic ${authString}`, 'Accept': 'application/json' },
-      });
-      const rtCT = rtResp.headers.get('content-type') || '';
-      if (rtResp.ok && rtCT.includes('application/json')) {
-        const rts = await rtResp.json();
-        const found = Array.isArray(rts)
-          ? rts.find((r: any) => String(r.ID) === String(project) || r.Name === project || r.name === project)
-          : null;
-        recordTypeId = found?.ID ?? null;
-        if (!recordTypeId && Array.isArray(rts) && rts.length) recordTypeId = rts[0].ID ?? null;
+    for (const base of baseCandidates) {
+      for (const ep of recordTypeEndpoints) {
+        try {
+          const rtResp = await fetch(`${base}${ep}`, {
+            method: 'GET',
+            headers: { 'Authorization': `Basic ${authString}`, 'Accept': 'application/json' },
+          });
+          const rtCT = rtResp.headers.get('content-type') || '';
+          const preview = await rtResp.text();
+          if (rtResp.ok && (rtCT.includes('application/json') || preview.startsWith('[') || preview.startsWith('{'))) {
+            let rts: any = null; try { rts = JSON.parse(preview); } catch {}
+            const found = Array.isArray(rts)
+              ? rts.find((r: any) => String(r.ID) === String(project) || r.Name === project || r.name === project)
+              : null;
+            recordTypeId = found?.ID ?? (Array.isArray(rts) && rts.length ? rts[0].ID ?? null : null);
+            console.log('DocMgt record types resolved via', `${base}${ep}`, 'recordTypeId:', recordTypeId);
+            break;
+          } else {
+            console.warn('DocMgt recordtypes probe failed', { url: `${base}${ep}`, status: rtResp.status, ct: rtCT, preview: preview.slice(0,120) });
+          }
+        } catch (e) {
+          console.warn('Could not resolve DocMgt RecordType list at', `${base}${ep}`, e);
+        }
       }
-    } catch (e) {
-      console.warn('Could not resolve DocMgt RecordType list', e);
+      if (recordTypeId) break;
     }
 
     // Prepare documents for Docmgt API (create records)
@@ -253,48 +271,58 @@ serve(async (req) => {
       const recordCreateEndpoints = [
         '/rest/records',
         '/rest/record',
+        '/api/records',
+        '/api/record',
+        '/rest/records/add',
+        '/rest/record/add',
+        '/api/records/add',
+        '/api/record/create',
       ];
 
-      for (const endpoint of recordCreateEndpoints) {
-        for (const body of payloadCandidates) {
-          try {
-            const resp = await fetch(`${normalizedDocmgtUrl}${endpoint}`, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Authorization': `Basic ${authString}`,
-              },
-              body: JSON.stringify(body),
-            });
-            const ct = resp.headers.get('content-type') || '';
-            const text = await resp.text();
-            if (resp.ok && (ct.includes('application/json') || text.startsWith('{'))) {
-              let json: any = null;
-              try { json = JSON.parse(text); } catch {}
-              
-              // Extract record ID from response
-              recordId = json?.ID || json?.id || json?.RecordID || json?.RecordId;
-              
-              exportResults.push({ 
-                success: true, 
-                request: { endpoint, body }, 
-                response: json || text,
-                recordId 
+      for (const base of baseCandidates) {
+        for (const endpoint of recordCreateEndpoints) {
+          for (const body of payloadCandidates) {
+            try {
+              const resp = await fetch(`${base}${endpoint}`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json',
+                  'Authorization': `Basic ${authString}`,
+                },
+                body: JSON.stringify(body),
               });
-              success = true;
-              break;
-            } else {
-              lastError = text || `HTTP ${resp.status}`;
-              console.error('Docmgt API error:', lastError);
-              if (lastError?.toLowerCase().includes('no record type')) {
-                console.warn('DocMgt indicates the Record Type is not found or user lacks rights. Verify the selected Record Type and that the account has Create rights.');
+              const ct = resp.headers.get('content-type') || '';
+              const text = await resp.text();
+              if (resp.ok && (ct.includes('application/json') || text.startsWith('{'))) {
+                let json: any = null;
+                try { json = JSON.parse(text); } catch {}
+                
+                // Extract record ID from response
+                recordId = json?.ID || json?.id || json?.RecordID || json?.RecordId;
+                
+                exportResults.push({ 
+                  success: true, 
+                  request: { url: `${base}${endpoint}`, body }, 
+                  response: json || text,
+                  recordId 
+                });
+                success = true;
+                break;
+              } else {
+                lastError = text || `HTTP ${resp.status}`;
+                console.error('Docmgt API error:', { url: `${base}${endpoint}`, lastError });
+                if (lastError?.toLowerCase().includes('no record type')) {
+                  console.warn('DocMgt indicates the Record Type is not found or user lacks rights. Verify the selected Record Type and that the account has Create rights.');
+                }
               }
+            } catch (err: any) {
+              lastError = err.message;
+              console.error('Docmgt request error:', { url: `${base}${endpoint}`, err });
             }
-          } catch (err: any) {
-            lastError = err.message;
-            console.error('Docmgt request error:', err);
+            if (success) break;
           }
+          if (success) break;
         }
         if (success) break;
       }
