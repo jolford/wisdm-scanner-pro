@@ -72,6 +72,7 @@ const Queue = () => {
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
   const [validationQueue, setValidationQueue] = useState<any[]>([]);
   const [validatedDocs, setValidatedDocs] = useState<any[]>([]);
+  const [readyNotified, setReadyNotified] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [docToDelete, setDocToDelete] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
@@ -86,6 +87,8 @@ const Queue = () => {
       .filter((f) => !baseProjectFields.some((bf: any) => (bf?.name || '').toLowerCase() === f.toLowerCase()))
       .map((name) => ({ name, description: '' })),
   ];
+
+  const isReadyForExport = validationQueue.length === 0 && validatedDocs.length > 0;
 
   // Initialize active tab from URL parameter or default to 'scan'
   const initialTab = searchParams.get('tab') || 'scan';
@@ -119,10 +122,23 @@ const Queue = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedBatchId) {
-      loadQueueDocuments();
+    if (!selectedBatchId) return;
+    if (isReadyForExport && !readyNotified && selectedBatch?.status !== 'complete') {
+      (async () => {
+        try {
+          await supabase
+            .from('batches')
+            .update({ metadata: { ...(selectedBatch?.metadata || {}), ready_for_export: true } })
+            .eq('id', selectedBatchId);
+          toast({ title: 'Ready for Export', description: 'All documents validated. Batch is ready for export.' });
+        } catch (e) {
+          console.warn('Failed to set ready_for_export flag:', e);
+        } finally {
+          setReadyNotified(true);
+        }
+      })();
     }
-  }, [selectedBatchId]);
+  }, [isReadyForExport, readyNotified, selectedBatch?.status, selectedBatchId]);
 
   const loadQueueDocuments = async () => {
     if (!selectedBatchId) return;
@@ -729,7 +745,8 @@ const Queue = () => {
       if (data?.success) {
         toast({ title: 'Exported to Docmgt', description: `Exported ${validatedDocs.length} documents` });
       } else {
-        throw new Error(data?.error || 'Export failed');
+        const detail = data?.results?.find((r: any) => r?.error)?.error || data?.message || 'Export failed';
+        throw new Error(detail);
       }
     } catch (err: any) {
       console.error('Docmgt export error:', err);
@@ -1144,6 +1161,19 @@ const Queue = () => {
             
             <TabsContent value="validated" className="animate-fade-in">
               <div className="space-y-4">
+                {isReadyForExport && (
+                  <Card className="p-4 border-success/40 bg-success/5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-semibold text-success">Ready for Export</h4>
+                        <p className="text-sm text-muted-foreground">All documents are validated. You can export the batch now.</p>
+                      </div>
+                      <Button variant="outline" onClick={() => handleTabChange('export')} className="hover:border-success/50 hover:bg-success/10">
+                        Go to Export
+                      </Button>
+                    </div>
+                  </Card>
+                )}
                 {validatedDocs.length === 0 ? (
                   <Card className="p-12 text-center border-dashed border-2 bg-gradient-to-br from-success/5 to-accent/10">
                     <div className="animate-scale-in">
@@ -1214,6 +1244,11 @@ const Queue = () => {
                   <p className="text-muted-foreground">
                     Export all validated documents from this batch
                   </p>
+                  {isReadyForExport && (
+                    <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full border border-success/30 bg-success/10 text-success text-sm">
+                      Ready for Export
+                    </div>
+                  )}
                 </div>
                 
                 <div className="bg-muted/50 rounded-lg p-6 mb-6">
