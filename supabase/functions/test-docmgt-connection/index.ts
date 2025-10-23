@@ -69,7 +69,7 @@ serve(async (req) => {
     // Authorization check is sufficient for test endpoints
     // No database access needed, just testing external API connection
     
-    const { url, username, password } = await req.json();
+    const { url, username, password, projectId, projectName } = await req.json();
 
     if (!url || !username || !password) {
       return new Response(
@@ -132,19 +132,30 @@ serve(async (req) => {
     let projectFields: Record<string, any> = {};
     
     if (projectsData && Array.isArray(projectsData) && projectsData.length > 0) {
-      const firstProject = projectsData[0];
-      const fieldsResponse = await fetch(`${normalizedUrl}/rest/recordtypes/${firstProject.ID}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Basic ${authString}`,
-          'Accept': 'application/json',
-        },
-      });
-      if (fieldsResponse.ok) {
-        const fieldsData = await fieldsResponse.json();
-        // Extract fields array from record type response
-        // DocMgt returns Variables array containing field definitions
-        projectFields[firstProject.ID] = fieldsData.Variables || fieldsData.fields || [];
+      // Choose project: specific one if provided, else first
+      const selected = (projectId || projectName)
+        ? projectsData.find((p: any) =>
+            (projectId && (p.ID?.toString() === projectId || p.id?.toString() === projectId || p.ProjectId?.toString() === projectId)) ||
+            (projectName && (p.Name === projectName || p.name === projectName))
+          ) || projectsData[0]
+        : projectsData[0];
+
+      const selectedId = selected?.ID ?? selected?.id ?? selected?.ProjectId;
+      if (selectedId != null) {
+        const fieldsResponse = await fetch(`${normalizedUrl}/rest/recordtypes/${selectedId}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Basic ${authString}`,
+            'Accept': 'application/json',
+          },
+        });
+        const fieldsCT = fieldsResponse.headers.get('content-type') || '';
+        if (fieldsResponse.ok && fieldsCT.includes('application/json')) {
+          const fieldsData = await fieldsResponse.json();
+          // Extract fields array from record type response
+          // DocMgt returns Variables array containing field definitions
+          projectFields[String(selectedId)] = fieldsData.Variables || fieldsData.fields || [];
+        }
       }
     }
 

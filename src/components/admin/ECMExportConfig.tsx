@@ -125,9 +125,9 @@ export function ECMExportConfig({
         } else {
           // FileBound and DocMgt return projects
           projects = (data.projects || []).map((p: any) => ({
-            id: p.ProjectId?.toString() || p.id?.toString(),
-            name: p.Name || p.name,
-            description: p.Description || p.description
+            id: p.ProjectId?.toString() || p.id?.toString() || p.ID?.toString(),
+            name: p.Name || p.name || p.Title,
+            description: p.Description || p.description || p.Summary
           }));
         }
         
@@ -194,39 +194,46 @@ export function ECMExportConfig({
     // Otherwise, fetch fields for this specific project
     setLoadingFields(true);
     try {
-      const functionName = type === 'filebound' ? 'test-filebound-connection' : 'test-docmgt-connection';
-      
-      // Make a request to fetch just this project's fields
-      const url = config.url?.replace(/\/$/, '');
-      const fieldsUrl = type === 'filebound' 
-        ? `${url}/api/projects/${projectId}/fields`
-        : `${url}/api/v1/projects/${projectId}/fields`;
-      
-      // We'll need to call the edge function with a special parameter or create a new endpoint
-      // For now, let's use the connection test with the project ID
-      const response = await fetch(fieldsUrl, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Basic ${btoa(`${config.username}:${config.password}`)}`,
-          'Accept': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const fieldsData = await response.json();
-        const formattedFields = (Array.isArray(fieldsData) ? fieldsData : []).map((f: any) => ({
-          name: f.FieldName || f.name || f.Name,
-          type: f.FieldType || f.type || f.Type || 'text',
-          required: f.Required || f.required || false
+      if (type === 'docmgt') {
+        const { data, error } = await supabase.functions.invoke('test-docmgt-connection', {
+          body: {
+            url: config.url,
+            username: config.username,
+            password: config.password,
+            projectId,
+          },
+        });
+        if (error) throw error;
+        const fields = data?.projectFields?.[projectId] || [];
+        const formattedFields = (Array.isArray(fields) ? fields : []).map((f: any) => ({
+          name: f.VariableName || f.FieldName || f.name || f.Name || f.Title,
+          type: f.DataType || f.FieldType || f.type || f.Type || 'text',
+          required: f.Required || f.required || false,
         }));
-        
         setEcmFields(formattedFields);
-        setAllProjectFields(prev => ({
-          ...prev,
-          [projectId]: formattedFields
-        }));
+        setAllProjectFields(prev => ({ ...prev, [projectId]: formattedFields }));
       } else {
-        toast.error('Failed to fetch project fields');
+        const url = config.url?.replace(/\/$/, '');
+        const fieldsUrl = `${url}/api/projects/${projectId}/fields`;
+        const response = await fetch(fieldsUrl, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Basic ${btoa(`${config.username}:${config.password}`)}`,
+            'Accept': 'application/json',
+          },
+        });
+        if (response.ok) {
+          const fieldsData = await response.json();
+          const formattedFields = (Array.isArray(fieldsData) ? fieldsData : []).map((f: any) => ({
+            name: f.FieldName || f.name || f.Name,
+            type: f.FieldType || f.type || f.Type || 'text',
+            required: f.Required || f.required || false
+          }));
+          setEcmFields(formattedFields);
+          setAllProjectFields(prev => ({ ...prev, [projectId]: formattedFields }));
+        } else {
+          toast.error('Failed to fetch project fields');
+        }
       }
     } catch (error: any) {
       console.error('Error fetching project fields:', error);
