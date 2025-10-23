@@ -72,7 +72,7 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } }
     });
 
-    const { batchId, apiBase, recordTypeId: overrideRecordTypeId } = await req.json();
+    const { batchId, recordTypeId: overrideRecordTypeId } = await req.json();
 
     if (!batchId) {
       return new Response(
@@ -144,65 +144,19 @@ serve(async (req) => {
 
     console.log(`Exporting ${documents.length} documents to Docmgt at ${docmgtUrl}`);
 
-    // Normalize URL (remove trailing slash)
-    const normalizedDocmgtUrl = docmgtUrl.replace(/\/+$/, '');
-
-    // Try common base path variants (some DocMgt installs use /V4, /V4API, /DocMgt, or /api)
-    let baseCandidates = Array.from(new Set([
-      normalizedDocmgtUrl,
-      `${normalizedDocmgtUrl}/V4`,
-      `${normalizedDocmgtUrl}/v4`,
-      `${normalizedDocmgtUrl}/V4API`,
-      `${normalizedDocmgtUrl}/v4api`,
-      `${normalizedDocmgtUrl}/DocMgt`,
-      `${normalizedDocmgtUrl}/docmgt`,
-      `${normalizedDocmgtUrl}/api`,
-    ])).map(u => u.replace(/\/+$/, ''));
-
-    if (apiBase) {
-      baseCandidates = [apiBase.replace(/\/+$/, '')];
-      console.log('DocMgt override base', baseCandidates[0]);
-    }
+    // DocMgt REST API uses /rest/ prefix directly from base URL
+    const baseUrl = docmgtUrl.replace(/\/+$/, '');
+    console.log('DocMgt base URL:', baseUrl);
 
     // Create Basic Auth header
     const authString = btoa(`${username}:${password}`);
 
-    // Resolve RecordType by name or ID (allow override)
-    const recordTypeEndpoints = ['/recordtypes','/rest/recordtypes','/rest/records/types','/api/recordtypes','/api/records/types'];
+    // Use override RecordTypeID or parse from project config
     let recordTypeId: number | null = overrideRecordTypeId ? Number(overrideRecordTypeId) : null;
     if (!recordTypeId && project && !isNaN(Number(project))) {
       recordTypeId = Number(project);
     }
-    if (!recordTypeId) {
-      for (const base of baseCandidates) {
-        for (const ep of recordTypeEndpoints) {
-          try {
-            const rtResp = await fetch(`${base}${ep}`, {
-              method: 'GET',
-              headers: { 'Authorization': `Basic ${authString}`, 'Accept': 'application/json' },
-            });
-            const rtCT = rtResp.headers.get('content-type') || '';
-            const preview = await rtResp.text();
-            if (rtResp.ok && (rtCT.includes('application/json') || preview.startsWith('[') || preview.startsWith('{'))) {
-              let rts: any = null; try { rts = JSON.parse(preview); } catch {}
-              const found = Array.isArray(rts)
-                ? rts.find((r: any) => String(r.ID) === String(project) || r.Name === project || r.name === project)
-                : null;
-              recordTypeId = found?.ID ?? (Array.isArray(rts) && rts.length ? rts[0].ID ?? null : null);
-              console.log('DocMgt record types resolved via', `${base}${ep}`, 'recordTypeId:', recordTypeId);
-              break;
-            } else {
-              console.warn('DocMgt recordtypes probe failed', { url: `${base}${ep}`, status: rtResp.status, ct: rtCT, preview: preview.slice(0,120) });
-            }
-          } catch (e) {
-            console.warn('Could not resolve DocMgt RecordType list at', `${base}${ep}`, e);
-          }
-        }
-        if (recordTypeId) break;
-      }
-    } else {
-      console.log('DocMgt using override recordTypeId', recordTypeId);
-    }
+    console.log('DocMgt using RecordTypeID:', recordTypeId);
 
     // Prepare documents for Docmgt API (create records)
     const fieldMappings: Record<string, string> = docmgtConfig.fieldMappings || {};
@@ -237,111 +191,60 @@ serve(async (req) => {
         console.warn(`Error downloading file for doc ${doc.id}:`, err);
       }
 
-      // Build both objects array (Variables) and simple key map (Fields)
-      const variables = Object.entries(metadata).map(([key, value]) => ({
-        VariableName: fieldMappings[key] || key,
+      // DocMgt REST API expects a record object with Datas array
+      const datasArray = Object.entries(metadata).map(([key, value]) => ({
         DataName: fieldMappings[key] || key,
-        DataValue: value,
+        DataValue: String(value),
       }));
-      const fieldsMap: Record<string, any> = {};
-      variables.forEach(v => { fieldsMap[v.VariableName] = v.DataValue; });
 
-      // Ensure RecordType is explicitly provided for DocMgt APIs
-      if (project) {
-        // Add to map and variables if not already present
-        if (!fieldsMap.RecordType) fieldsMap.RecordType = project;
-        const hasRecordTypeVar = variables.some(v => v.VariableName === 'RecordType' || v.DataName === 'RecordType');
-        if (!hasRecordTypeVar) {
-          variables.push({ VariableName: 'RecordType', DataName: 'RecordType', DataValue: project });
-        }
-      }
-
-      // Also prepare a Field array format used by some DocMgt endpoints
-      const fieldArray = Object.entries(fieldsMap).map(([FieldName, FieldValue]) => ({ FieldName, FieldValue }));
-
-      const payloadCandidates = recordTypeId
-        ? [
-            { RecordTypeID: recordTypeId, Variables: variables },
-            { RecordTypeID: recordTypeId, Fields: fieldsMap },
-            { RecordTypeID: recordTypeId, Fields: fieldArray },
-          ]
-        : [
-            { RecordTypeName: project, Variables: variables },
-            { RecordTypeName: project, Fields: fieldsMap },
-            { RecordTypeName: project, Fields: fieldArray },
-            { Fields: fieldsMap },
-            { Fields: fieldArray },
-            { RecordType: project, Variables: variables },
-            { RecordType: project, Fields: fieldsMap },
-            { RecordType: project, Fields: fieldArray },
-          ];
+      const recordPayload = {
+        RecordTypeID: recordTypeId,
+        Datas: datasArray,
+      };
 
       let lastError: string | null = null;
       let success = false;
       let recordId: string | number | null = null;
       
-      // Step 1: Create the record with metadata
-      const recordCreateEndpoints = apiBase
-        ? ['/rest/record','/rest/records','/record','/records']
-        : [
-            '/records',
-            '/record',
-            '/rest/records',
-            '/rest/record',
-            '/api/records',
-            '/api/record',
-            '/rest/records/add',
-            '/rest/record/add',
-            '/api/records/add',
-            '/api/record/create',
-          ];
-
-      for (const base of baseCandidates) {
-        for (const endpoint of recordCreateEndpoints) {
-          for (const body of payloadCandidates) {
-            try {
-              const resp = await fetch(`${base}${endpoint}`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json',
-                  'Authorization': `Basic ${authString}`,
-                },
-                body: JSON.stringify(body),
-              });
-              const ct = resp.headers.get('content-type') || '';
-              const text = await resp.text();
-              if (resp.ok && (ct.includes('application/json') || text.startsWith('{'))) {
-                let json: any = null;
-                try { json = JSON.parse(text); } catch {}
-                
-                // Extract record ID from response
-                recordId = json?.ID || json?.id || json?.RecordID || json?.RecordId;
-                
-                exportResults.push({ 
-                  success: true, 
-                  request: { url: `${base}${endpoint}`, body }, 
-                  response: json || text,
-                  recordId 
-                });
-                success = true;
-                break;
-              } else {
-                lastError = text || `HTTP ${resp.status}`;
-                console.error('Docmgt API error:', { url: `${base}${endpoint}`, lastError });
-                if (lastError?.toLowerCase().includes('no record type')) {
-                  console.warn('DocMgt indicates the Record Type is not found or user lacks rights. Verify the selected Record Type and that the account has Create rights.');
-                }
-              }
-            } catch (err: any) {
-              lastError = err.message;
-              console.error('Docmgt request error:', { url: `${base}${endpoint}`, err });
-            }
-            if (success) break;
-          }
-          if (success) break;
+      // Step 1: Create the record using DocMgt REST API
+      try {
+        const createUrl = `${baseUrl}/rest/records`;
+        console.log('Creating DocMgt record at:', createUrl, 'with payload:', recordPayload);
+        
+        const resp = await fetch(createUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': `Basic ${authString}`,
+          },
+          body: JSON.stringify(recordPayload),
+        });
+        
+        const ct = resp.headers.get('content-type') || '';
+        const text = await resp.text();
+        
+        if (resp.ok && (ct.includes('application/json') || text.startsWith('{'))) {
+          let json: any = null;
+          try { json = JSON.parse(text); } catch {}
+          
+          recordId = json?.ID || json?.id || json?.RecordID || json?.RecordId;
+          
+          exportResults.push({ 
+            success: true, 
+            request: { url: createUrl, body: recordPayload }, 
+            response: json || text,
+            recordId 
+          });
+          success = true;
+          console.log('DocMgt record created successfully, ID:', recordId);
+        } else {
+          lastError = text || `HTTP ${resp.status}`;
+          console.error('Docmgt API error:', { url: createUrl, status: resp.status, lastError: lastError.slice(0, 500) });
         }
-        if (success) break;
+      } catch (err: any) {
+        lastError = err.message;
+        console.error('Docmgt request error:', err);
       }
 
       // Step 2: Upload document file if record was created and file exists
@@ -351,24 +254,15 @@ serve(async (req) => {
           formData.append('file', fileBlob, fileName);
           
           // Try multiple file upload endpoints
-           const uploadEndpoints = apiBase
-            ? [
-                `/rest/records/${recordId}/files`,
-                `/rest/records/${recordId}/attachments`,
-              ]
-            : [
-                `/records/${recordId}/files`,
-                `/records/${recordId}/attachments`,
-                `/files?recordId=${recordId}`,
-                `/rest/records/${recordId}/files`,
-                `/rest/records/${recordId}/attachments`,
-                `/rest/files?recordId=${recordId}`,
-              ];
+           const uploadEndpoints = [
+             `/rest/records/${recordId}/documents`,
+             `/rest/records/${recordId}/files`,
+           ];
           
           let fileUploaded = false;
           for (const endpoint of uploadEndpoints) {
             try {
-               const uploadResp = await fetch(`${(apiBase ? baseCandidates[0] : normalizedDocmgtUrl)}${endpoint}`, {
+               const uploadResp = await fetch(`${baseUrl}${endpoint}`, {
                  method: 'POST',
                  headers: {
                    'Authorization': `Basic ${authString}`,
@@ -400,7 +294,7 @@ serve(async (req) => {
         exportResults[exportResults.length - 1].fileUploadWarning = 'No file available to upload';
       }
 
-      if (!success) exportResults.push({ success: false, error: lastError, tried: payloadCandidates });
+      if (!success) exportResults.push({ success: false, error: lastError, recordPayload });
     }
 
     const successCount = exportResults.filter(r => r.success).length;
