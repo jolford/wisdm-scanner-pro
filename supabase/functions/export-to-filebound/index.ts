@@ -89,12 +89,11 @@ serve(async (req) => {
         projects (
           id,
           name,
-          extraction_fields,
-          filebound_config
+          metadata
         )
       `)
       .eq('id', batchId)
-      .single();
+      .maybeSingle();
 
     if (batchError) throw batchError;
 
