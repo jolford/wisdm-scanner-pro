@@ -189,9 +189,9 @@ const Batches = () => {
                 <User className="h-4 w-4 mr-2" />
                 Settings
               </Button>
-              <Button variant="default" onClick={() => navigate('/?tab=export')}>
+              <Button variant="default" onClick={() => navigate('/')}>
                 <Download className="h-4 w-4 mr-2" />
-                Export Queue
+                Go to Queue
               </Button>
               <Button variant="outline" onClick={() => navigate('/')}>
                 <ArrowLeft className="h-4 w-4 mr-2" />
