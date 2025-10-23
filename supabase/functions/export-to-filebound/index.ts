@@ -299,14 +299,34 @@ serve(async (req) => {
             if (idx !== undefined) fieldsArray[idx] = String(value);
           }
 
+          // Build multiple payload shapes since FileBound instances vary
+          const fieldsObj: Record<string, string> = {};
+          for (let i = 1; i <= 20; i++) {
+            const v = fieldsArray[i];
+            if (v) fieldsObj[`F${i}`] = v;
+          }
+          const fieldsSlice = fieldsArray.slice(1); // F1..F20 only
+          const indexArrayByNumber = Object.entries(fieldsObj).map(([k, v]) => ({ Index: parseInt(k.slice(1), 10), Value: v }));
+          const indexArrayByFieldNumber = Object.entries(fieldsObj).map(([k, v]) => ({ FieldNumber: parseInt(k.slice(1), 10), Value: v }));
+          const indexArrayByName = Object.entries(fieldsObj).map(([k, v]) => ({ Name: k, Value: v }));
+
           const fileBodies = [
             { field: fieldsArray, notes: doc.file_name || '', projectId },
             { Field: fieldsArray, Notes: doc.file_name || '', ProjectId: projectId },
+            { ProjectId: projectId, Fields: fieldsSlice, Notes: doc.file_name || '' },
+            { ProjectId: projectId, IndexFields: fieldsObj, Notes: doc.file_name || '' },
+            { ProjectId: projectId, IndexFields: indexArrayByNumber, Notes: doc.file_name || '' },
+            { ProjectId: projectId, IndexFields: indexArrayByFieldNumber, Notes: doc.file_name || '' },
+            { ProjectId: projectId, IndexFields: indexArrayByName, Notes: doc.file_name || '' },
+            { projectId, indexFields: fieldsObj, notes: doc.file_name || '' },
+            { projectId, field: fieldsSlice, notes: doc.file_name || '' },
           ];
 
           const createEndpoints = [
             { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'PUT' as const },
+            { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'POST' as const },
             { url: `${baseUrl}/api/files`, method: 'PUT' as const },
+            { url: `${baseUrl}/api/files`, method: 'POST' as const },
           ];
 
           for (const body of fileBodies) {
@@ -320,7 +340,7 @@ serve(async (req) => {
                 },
                 body: JSON.stringify(body)
               });
-              if (res.ok) {
+              if (res.ok || res.status === 201) {
                 let fid: string | undefined;
                 // Some instances return Location header
                 const loc = res.headers.get('Location') || res.headers.get('location');
@@ -329,14 +349,20 @@ serve(async (req) => {
                   if (m) fid = m[1];
                 }
                 if (!fid) {
-                  const j = await res.json().catch(() => ({}));
-                  fid = j.FileId ?? j.fileId ?? j.Id ?? j.id ?? j?.Data?.FileId ?? j?.Data?.fileId;
+                  const txt = await res.text();
+                  try {
+                    const j = JSON.parse(txt);
+                    fid = j.FileId ?? j.fileId ?? j.Id ?? j.id ?? j?.Data?.FileId ?? j?.Data?.fileId;
+                  } catch {
+                    const m2 = txt.match(/(FileId|Id)[^\d]*(\d+)/i);
+                    if (m2) fid = m2[2];
+                  }
                 }
                 if (fid) return String(fid);
-                // If we got 200 but no id, continue to try alternative payloads
+                console.warn('FileBound create file: success response without id', { endpoint: ep, status: res.status });
               } else {
                 const t = await res.text();
-                console.warn('FileBound create file failed', ep, (t || '').slice(0, 300));
+                console.warn('FileBound create file failed', { endpoint: ep, status: res.status, body: (t || '').slice(0, 500) });
               }
             }
           }
