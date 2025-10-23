@@ -7,7 +7,9 @@ All colors MUST be HSL.
 */
 
 @layer base {
+  /* Force light mode on all devices */
   :root {
+    color-scheme: light only;
     --background: 220 20% 97%;
     --foreground: 222 47% 11%;
 
