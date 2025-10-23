@@ -19,6 +19,7 @@ import { DocumentSeparationConfig, SeparationConfig } from '@/components/admin/D
 import { FolderPicker } from '@/components/admin/FolderPicker';
 import { ScheduledExportConfig } from '@/components/admin/ScheduledExportConfig';
 import { TableExtractionConfig, TableExtractionConfig as TableConfig } from '@/components/admin/TableExtractionConfig';
+import { ScannerAutoImportConfig } from '@/components/admin/ScannerAutoImportConfig';
 
 interface ExtractionField {
   name: string;
@@ -55,6 +56,7 @@ const EditProject = () => {
   const [projectDescription, setProjectDescription] = useState('');
   const [enableCheckScanning, setEnableCheckScanning] = useState(false);
   const [documentNamingPattern, setDocumentNamingPattern] = useState('');
+  const [customerId, setCustomerId] = useState<string | undefined>();
   const [fields, setFields] = useState<ExtractionField[]>([
     { name: '', description: '' }
   ]);
@@ -111,6 +113,7 @@ const EditProject = () => {
         setProjectName(data.name);
         setProjectDescription(data.description || '');
         setEnableCheckScanning(data.enable_check_scanning || false);
+        setCustomerId(data.customer_id || undefined);
         
         // Set extraction fields with proper type checking
         if (Array.isArray(data.extraction_fields)) {
@@ -695,6 +698,17 @@ const EditProject = () => {
               </Card>
               <p className="text-sm text-muted-foreground mt-2">
                 Configure automatic exports to run on a schedule. Batches with validated status will be exported automatically.
+              </p>
+            </div>
+
+            <div>
+              <Label className="mb-4 block">Scanner Auto-Import</Label>
+              <ScannerAutoImportConfig
+                projectId={id || ''}
+                customerId={customerId}
+              />
+              <p className="text-sm text-muted-foreground mt-2">
+                Enable automatic import from network scanners. Files saved to the designated folder will be processed every 5 minutes.
               </p>
             </div>
 
