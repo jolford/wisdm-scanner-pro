@@ -16,6 +16,7 @@ interface ExportConfig {
   password?: string;
   accessToken?: string; // For SharePoint OAuth
   project?: string;
+  recordTypeId?: string; // For DocMgt RecordTypeID (numeric)
   repository?: string; // For Documentum
   cabinet?: string; // For Documentum
   library?: string; // For SharePoint
@@ -183,6 +184,8 @@ export function ECMExportConfig({
     onConfigChange({
       ...config,
       project: selectedProject?.name || projectId,
+      // For DocMgt, also store the ID as recordTypeId if it's numeric
+      ...(type === 'docmgt' && !isNaN(Number(projectId)) ? { recordTypeId: projectId } : {}),
     });
 
     // Check if we already have fields for this project
@@ -363,23 +366,45 @@ export function ECMExportConfig({
       </div>
 
       {connectionStatus === 'success' && availableProjects.length > 0 && (
-        <div>
-          <Label htmlFor={`project-${type}`} className="text-xs mb-1">
-            {type === 'documentum' ? 'Select Repository' : type === 'sharepoint' ? 'Select Library' : 'Select Project'} *
-          </Label>
-          <Select value={selectedProjectId} onValueChange={handleProjectSelect} disabled={disabled}>
-            <SelectTrigger>
-              <SelectValue placeholder={`Choose a ${type === 'documentum' ? 'repository' : type === 'sharepoint' ? 'library' : 'project'}...`} />
-            </SelectTrigger>
-            <SelectContent>
-              {availableProjects.map((project) => (
-                <SelectItem key={project.id} value={project.id}>
-                  {project.name}
-                  {project.description && <span className="text-xs text-muted-foreground ml-2">({project.description})</span>}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="space-y-3">
+          <div>
+            <Label htmlFor={`project-${type}`} className="text-xs mb-1">
+              {type === 'documentum' ? 'Select Repository' : type === 'sharepoint' ? 'Select Library' : 'Select Project'} *
+            </Label>
+            <Select value={selectedProjectId} onValueChange={handleProjectSelect} disabled={disabled}>
+              <SelectTrigger>
+                <SelectValue placeholder={`Choose a ${type === 'documentum' ? 'repository' : type === 'sharepoint' ? 'library' : 'project'}...`} />
+              </SelectTrigger>
+              <SelectContent>
+                {availableProjects.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                    {project.description && <span className="text-xs text-muted-foreground ml-2">({project.description})</span>}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          
+          {type === 'docmgt' && (
+            <div>
+              <Label htmlFor="recordTypeId" className="text-xs mb-1">
+                RecordTypeID (Numeric) *
+              </Label>
+              <Input
+                id="recordTypeId"
+                type="number"
+                placeholder="e.g., 53"
+                value={config.recordTypeId || ''}
+                onChange={(e) => onConfigChange({ ...config, recordTypeId: e.target.value })}
+                disabled={disabled}
+                className="text-sm"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                The numeric RecordTypeID where documents will be filed in DocMgt
+              </p>
+            </div>
+          )}
         </div>
       )}
 

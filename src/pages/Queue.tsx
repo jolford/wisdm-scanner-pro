@@ -783,7 +783,7 @@ const Queue = () => {
       const { data, error } = await supabase.functions.invoke('export-to-docmgt', {
         body: {
           batchId: selectedBatchId,
-          recordTypeId: Number.isFinite(Number(dm.project)) ? Number(dm.project) : (dm.recordTypeId || undefined),
+          recordTypeId: dm.recordTypeId || (Number.isFinite(Number(dm.project)) ? Number(dm.project) : undefined),
         },
       });
       if (error) throw error;
