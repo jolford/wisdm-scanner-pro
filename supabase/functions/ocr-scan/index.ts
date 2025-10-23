@@ -31,7 +31,7 @@
  */
 
 // Import XHR polyfill for fetch API compatibility
-import "https://deno.land/x/xhr@0.1.0/mod.ts";
+
 // Import Deno standard library server
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
