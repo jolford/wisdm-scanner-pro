@@ -292,9 +292,8 @@ serve(async (req) => {
             return undefined;
           };
 
-          for (const [localField, ecmField] of Object.entries(indexFields)) {
-            if (!ecmField) continue;
-            const value = (doc.extracted_metadata || {})[localField];
+          for (const [ecmField, valueRaw] of Object.entries(indexFields)) {
+            const value = valueRaw as any;
             if (value === undefined || value === null || value === '') continue;
             const idx = getIndexFromName(String(ecmField));
             if (idx !== undefined) fieldsArray[idx] = String(value);
