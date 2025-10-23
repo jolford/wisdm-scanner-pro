@@ -782,7 +782,9 @@ const Queue = () => {
       toast({ title: 'Exporting to Docmgt', description: `Project: ${dm.project}` });
       const { data, error } = await supabase.functions.invoke('export-to-docmgt', {
         body: {
-          batchId: selectedBatchId
+          batchId: selectedBatchId,
+          apiBase: `${dm.url.replace(/\/+$/, '')}/V4API`,
+          recordTypeId: Number.isFinite(Number(dm.project)) ? Number(dm.project) : (dm.recordTypeId || undefined),
         },
       });
       if (error) throw error;
@@ -879,7 +881,11 @@ const Queue = () => {
         try {
           console.log('Auto-exporting to Docmgt...');
           const { data, error } = await supabase.functions.invoke('export-to-docmgt', {
-            body: { batchId: selectedBatchId }
+            body: {
+              batchId: selectedBatchId,
+              apiBase: `${exportConfig.docmgt.url.replace(/\/+$/, '')}/V4API`,
+              recordTypeId: Number.isFinite(Number(exportConfig.docmgt.project)) ? Number(exportConfig.docmgt.project) : (exportConfig.docmgt.recordTypeId || undefined),
+            }
           });
           if (error) throw error;
           autoExports.push('Docmgt');
