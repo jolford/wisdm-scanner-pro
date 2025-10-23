@@ -147,11 +147,13 @@ serve(async (req) => {
     // Normalize URL (remove trailing slash)
     const normalizedDocmgtUrl = docmgtUrl.replace(/\/+$/, '');
 
-    // Try common base path variants (some DocMgt installs use /V4, /DocMgt, or /api)
+    // Try common base path variants (some DocMgt installs use /V4, /V4API, /DocMgt, or /api)
     const baseCandidates = Array.from(new Set([
       normalizedDocmgtUrl,
       `${normalizedDocmgtUrl}/V4`,
       `${normalizedDocmgtUrl}/v4`,
+      `${normalizedDocmgtUrl}/V4API`,
+      `${normalizedDocmgtUrl}/v4api`,
       `${normalizedDocmgtUrl}/DocMgt`,
       `${normalizedDocmgtUrl}/docmgt`,
       `${normalizedDocmgtUrl}/api`,
@@ -161,7 +163,7 @@ serve(async (req) => {
     const authString = btoa(`${username}:${password}`);
 
     // Resolve RecordType by name or ID
-    const recordTypeEndpoints = ['/rest/recordtypes','/rest/records/types','/api/recordtypes','/api/records/types'];
+    const recordTypeEndpoints = ['/recordtypes','/rest/recordtypes','/rest/records/types','/api/recordtypes','/api/records/types'];
     let recordTypeId: number | null = null;
     for (const base of baseCandidates) {
       for (const ep of recordTypeEndpoints) {
@@ -271,6 +273,8 @@ serve(async (req) => {
       
       // Step 1: Create the record with metadata
       const recordCreateEndpoints = [
+        '/records',
+        '/record',
         '/rest/records',
         '/rest/record',
         '/api/records',
@@ -337,6 +341,9 @@ serve(async (req) => {
           
           // Try multiple file upload endpoints
           const uploadEndpoints = [
+            `/records/${recordId}/files`,
+            `/records/${recordId}/attachments`,
+            `/files?recordId=${recordId}`,
             `/rest/records/${recordId}/files`,
             `/rest/records/${recordId}/attachments`,
             `/rest/files?recordId=${recordId}`,
