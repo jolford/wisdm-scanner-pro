@@ -360,6 +360,7 @@ serve(async (req) => {
           failures.push({ id: doc.id, error: 'Upload failed', ...lastError });
         }
       } catch (e: any) {
+        console.warn('Export error for document', { id: doc.id, url: doc.redacted_file_url || doc.file_url, message: e?.message });
         failures.push({ id: doc.id, error: e?.message || String(e) });
       }
     }
