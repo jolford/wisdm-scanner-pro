@@ -787,6 +787,53 @@ const Queue = () => {
     if (!selectedBatchId) return;
 
     try {
+      setIsExporting(true);
+      
+      // Check if any ECM exports are configured
+      const exportConfig = getExportConfig();
+      const autoExports: string[] = [];
+
+      // Auto-export to Filebound if configured
+      if (exportConfig.filebound?.enabled) {
+        try {
+          console.log('Auto-exporting to Filebound...');
+          const { data, error } = await supabase.functions.invoke('export-to-filebound', {
+            body: { batchId: selectedBatchId }
+          });
+          if (error) throw error;
+          autoExports.push('Filebound');
+          console.log('Filebound export successful:', data);
+        } catch (err: any) {
+          console.error('Filebound auto-export failed:', err);
+          toast({
+            title: 'Filebound Export Failed',
+            description: err.message || 'Failed to export to Filebound',
+            variant: 'destructive',
+          });
+        }
+      }
+
+      // Auto-export to Docmgt if configured
+      if (exportConfig.docmgt?.enabled) {
+        try {
+          console.log('Auto-exporting to Docmgt...');
+          const { data, error } = await supabase.functions.invoke('export-to-docmgt', {
+            body: { batchId: selectedBatchId }
+          });
+          if (error) throw error;
+          autoExports.push('Docmgt');
+          console.log('Docmgt export successful:', data);
+        } catch (err: any) {
+          console.error('Docmgt auto-export failed:', err);
+          toast({
+            title: 'Docmgt Export Failed',
+            description: err.message || 'Failed to export to Docmgt',
+            variant: 'destructive',
+          });
+        }
+      }
+
+      // Mark batch as complete
       const { error } = await supabase
         .from('batches')
         .update({ 
@@ -797,9 +844,13 @@ const Queue = () => {
 
       if (error) throw error;
 
+      const exportMessage = autoExports.length > 0 
+        ? ` and exported to ${autoExports.join(', ')}`
+        : '';
+
       toast({
         title: 'Batch Completed',
-        description: 'Batch marked as complete',
+        description: `Batch marked as complete${exportMessage}`,
       });
 
       setSelectedBatch({ ...selectedBatch, status: 'complete' });
@@ -809,6 +860,8 @@ const Queue = () => {
         description: error.message,
         variant: 'destructive',
       });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -1284,13 +1337,21 @@ const Queue = () => {
                   <div className="pt-6 border-t">
                     <Button 
                       onClick={markBatchComplete} 
-                      disabled={validatedDocs.length === 0 || selectedBatch?.status === 'complete'}
+                      disabled={validatedDocs.length === 0 || selectedBatch?.status === 'complete' || isExporting}
                       className="w-full h-14 text-base gap-2 bg-gradient-to-r from-success to-success/80 hover:from-success/90 hover:to-success/70"
                       size="lg"
                     >
                       <CheckCircle className="h-5 w-5" />
-                      {selectedBatch?.status === 'complete' ? 'Batch Completed' : 'Mark Batch as Complete'}
+                      {isExporting ? 'Exporting & Completing...' : selectedBatch?.status === 'complete' ? 'Batch Completed' : 'Mark Batch as Complete'}
                     </Button>
+                    {(getExportConfig().filebound?.enabled || getExportConfig().docmgt?.enabled) && (
+                      <p className="text-xs text-center text-muted-foreground mt-2">
+                        Will automatically export to {[
+                          getExportConfig().filebound?.enabled && 'Filebound',
+                          getExportConfig().docmgt?.enabled && 'Docmgt'
+                        ].filter(Boolean).join(' and ')} when completed
+                      </p>
+                    )}
                   </div>
                 </div>
               </Card>
