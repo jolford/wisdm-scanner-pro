@@ -147,9 +147,11 @@ serve(async (req) => {
     // Normalize URL (remove trailing slash)
     const normalizedDocmgtUrl = docmgtUrl.replace(/\/+$/, '');
 
-    // Try common base path variants (some DocMgt installs use /DocMgt or /api)
+    // Try common base path variants (some DocMgt installs use /V4, /DocMgt, or /api)
     const baseCandidates = Array.from(new Set([
       normalizedDocmgtUrl,
+      `${normalizedDocmgtUrl}/V4`,
+      `${normalizedDocmgtUrl}/v4`,
       `${normalizedDocmgtUrl}/DocMgt`,
       `${normalizedDocmgtUrl}/docmgt`,
       `${normalizedDocmgtUrl}/api`,
