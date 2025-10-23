@@ -97,6 +97,13 @@ serve(async (req) => {
 
     if (batchError) throw batchError;
 
+    if (!batch) {
+      return new Response(
+        JSON.stringify({ error: 'Batch not found', success: false }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Extract Filebound credentials from project config (support multiple storage locations)
     const fileboundConfig = (batch.projects as any)?.filebound_config 
       || (batch.projects as any)?.metadata?.export_config?.filebound
@@ -177,7 +184,15 @@ serve(async (req) => {
     if (!fileboundResponse.ok) {
       const errorText = await fileboundResponse.text();
       console.error('Filebound API error:', errorText);
-      throw new Error(`Filebound API error: ${fileboundResponse.status}`);
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'FileBound API returned an error',
+          status: fileboundResponse.status,
+          details: (errorText || '').slice(0, 500)
+        }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const fileboundResult = await fileboundResponse.json();
