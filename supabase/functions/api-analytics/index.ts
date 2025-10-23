@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.0';
 
@@ -17,7 +16,6 @@ serve(async (req) => {
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Get auth token from header
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
@@ -26,7 +24,6 @@ serve(async (req) => {
       );
     }
 
-    // Verify user and check if admin
     const { data: { user }, error: authError } = await supabase.auth.getUser(
       authHeader.replace('Bearer ', '')
     );
@@ -38,7 +35,6 @@ serve(async (req) => {
       );
     }
 
-    // Check if user is admin
     const { data: isAdmin } = await supabase.rpc('is_system_admin', { _user_id: user.id });
     
     if (!isAdmin) {
@@ -65,7 +61,6 @@ serve(async (req) => {
       licenses,
       jobStats,
       costData,
-      dailyDocs,
       statusData,
       confidenceScores,
     ] = await Promise.all([
@@ -76,8 +71,7 @@ serve(async (req) => {
       supabase.from('customers').select('id', { count: 'exact', head: true }),
       supabase.from('licenses').select('id', { count: 'exact', head: true }).eq('status', 'active'),
       supabase.from('jobs').select('status, created_at, completed_at, started_at').gte('created_at', daysAgo.toISOString()),
-      supabase.from('tenant_usage').select('customer_id, total_cost_usd, documents_processed, customers!inner(company_name)').gte('period_start', daysAgo.toISOString()),
-      supabase.from('documents').select('created_at, validation_status').gte('created_at', daysAgo.toISOString()),
+      supabase.from('tenant_usage').select('customer_id, total_cost_usd, documents_processed').gte('period_start', daysAgo.toISOString()),
       supabase.from('documents').select('validation_status').gte('created_at', daysAgo.toISOString()),
       supabase.from('documents').select('confidence_score').gte('created_at', daysAgo.toISOString()).not('confidence_score', 'is', null),
     ]);
@@ -123,7 +117,7 @@ serve(async (req) => {
         total: docsTotal.count || 0,
         validated: docsValidated.count || 0,
         pending: docsPending.count || 0,
-        validationRate: docsTotal.count ? ((docsValidated.count || 0) / docsTotal.count * 100).toFixed(2) : '0'
+        validationRate: docsTotal.count ? (((docsValidated.count || 0) / docsTotal.count) * 100).toFixed(2) : '0'
       },
       jobs: {
         total: jobs.length,
@@ -149,7 +143,6 @@ serve(async (req) => {
       }
     };
 
-    // Return as CSV if requested
     if (format === 'csv') {
       const csv = [
         'Metric,Value',
@@ -187,7 +180,7 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('API Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
