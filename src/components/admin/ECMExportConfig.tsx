@@ -363,6 +363,7 @@ export function ECMExportConfig({
             )}
           </Button>
         </div>
+      </div>
 
       {type === 'docmgt' && (
         <div className="mt-3">
@@ -405,7 +406,9 @@ export function ECMExportConfig({
               </SelectContent>
             </Select>
           </div>
+        </div>
       )}
+
 
       {selectedProjectId && ecmFields.length > 0 && (
         <Card className="p-4 bg-muted/30">
