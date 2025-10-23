@@ -143,49 +143,57 @@ serve(async (req) => {
 
     console.log(`Exporting ${documents.length} documents to Docmgt at ${docmgtUrl}`);
 
-    // Prepare documents for Docmgt API
-    const docmgtDocuments = documents.map(doc => ({
-      fileName: doc.file_name,
-      fileType: doc.file_type,
-      fileUrl: doc.file_url,
-      metadata: doc.extracted_metadata || {},
-      fullText: doc.extracted_text || '',
-      page: doc.page_number,
-      confidence: doc.confidence_score,
-      validationStatus: doc.validation_status,
-      validatedAt: doc.validated_at,
-    }));
+    // Normalize URL (remove trailing slash)
+    const normalizedDocmgtUrl = docmgtUrl.replace(/\/+$/, '');
+
+    // Prepare documents for Docmgt API (create records)
+    const docmgtRecords = documents.map(doc => {
+      const metadata = doc.extracted_metadata || {};
+      
+      // Build field values from extracted metadata
+      const fieldValues: Record<string, any> = {};
+      Object.entries(metadata).forEach(([key, value]) => {
+        fieldValues[key] = value;
+      });
+
+      return {
+        RecordTypeName: project, // DocMgt uses RecordType as the project/form type
+        Fields: fieldValues,
+        DocumentPath: doc.file_url, // If we're uploading the actual file
+      };
+    });
 
     // Create Basic Auth header
     const authString = btoa(`${username}:${password}`);
     
-    // Send to Docmgt API
-    const docmgtResponse = await fetch(`${docmgtUrl}/api/v1/documents/batch`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${authString}`,
-      },
-      body: JSON.stringify({
-        project: project,
-        batch: {
-          name: batch.batch_name,
-          projectName: batch.projects?.name,
-          totalDocuments: batch.total_documents,
-          validatedDocuments: batch.validated_documents,
-          status: batch.status,
-        },
-        documents: docmgtDocuments,
-      }),
-    });
+    // Send records to Docmgt API (one by one or in batch depending on API support)
+    const exportResults = [];
+    for (const record of docmgtRecords) {
+      try {
+        const docmgtResponse = await fetch(`${normalizedDocmgtUrl}/rest/records`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${authString}`,
+          },
+          body: JSON.stringify(record),
+        });
 
-    if (!docmgtResponse.ok) {
-      const errorText = await docmgtResponse.text();
-      console.error('Docmgt API error:', errorText);
-      throw new Error(`Docmgt API error: ${docmgtResponse.status}`);
+        if (!docmgtResponse.ok) {
+          const errorText = await docmgtResponse.text();
+          console.error('Docmgt API error:', errorText);
+          exportResults.push({ success: false, error: errorText });
+        } else {
+          const result = await docmgtResponse.json();
+          exportResults.push({ success: true, result });
+        }
+      } catch (error: any) {
+        console.error('Error exporting record:', error);
+        exportResults.push({ success: false, error: error.message });
+      }
     }
 
-    const docmgtResult = await docmgtResponse.json();
+    const successCount = exportResults.filter(r => r.success).length;
 
     // Update batch metadata with export info
     await supabase
@@ -197,7 +205,8 @@ serve(async (req) => {
           docmgtExport: {
             exportedAt: new Date().toISOString(),
             documentsCount: documents.length,
-            docmgtResponse: docmgtResult,
+            successCount,
+            results: exportResults,
           }
         }
       })
@@ -205,9 +214,9 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
-        success: true, 
-        message: `Successfully exported ${documents.length} documents to Docmgt`,
-        docmgtResult,
+        success: successCount > 0, 
+        message: `Successfully exported ${successCount} of ${documents.length} documents to Docmgt`,
+        results: exportResults,
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

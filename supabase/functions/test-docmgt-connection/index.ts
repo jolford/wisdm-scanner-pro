@@ -99,8 +99,8 @@ serve(async (req) => {
     // Create Basic Auth header
     const authString = btoa(`${username}:${password}`);
     
-    // Attempt to authenticate and fetch projects list
-    const docmgtResponse = await fetch(`${normalizedUrl}/api/v1/projects`, {
+    // Attempt to authenticate and fetch record types list (DocMgt calls projects "record types")
+    const docmgtResponse = await fetch(`${normalizedUrl}/rest/recordtypes`, {
       method: 'GET',
       headers: {
         'Authorization': `Basic ${authString}`,
@@ -128,22 +128,21 @@ serve(async (req) => {
 
     const projectsData = await docmgtResponse.json();
     
-    // Fetch field definitions for each project (or just first one for testing)
+    // Fetch field definitions for each record type (project)
     let projectFields: Record<string, any> = {};
     
-    if (projectsData.projects && projectsData.projects.length > 0) {
-      const firstProject = projectsData.projects[0];
-      const fieldsResponse = await fetch(`${normalizedUrl}/api/v1/projects/${firstProject.id}/fields`, {
+    if (projectsData && Array.isArray(projectsData) && projectsData.length > 0) {
+      const firstProject = projectsData[0];
+      const fieldsResponse = await fetch(`${normalizedUrl}/rest/recordtypes/${firstProject.ID}`, {
         method: 'GET',
         headers: {
           'Authorization': `Basic ${authString}`,
           'Accept': 'application/json',
         },
       });
-      
       if (fieldsResponse.ok) {
         const fieldsData = await fieldsResponse.json();
-        projectFields[firstProject.id] = fieldsData.fields || [];
+        projectFields[firstProject.ID] = fieldsData;
       }
     }
 
@@ -151,7 +150,7 @@ serve(async (req) => {
       JSON.stringify({ 
         success: true, 
         message: 'Connection successful',
-        projects: projectsData.projects || [],
+        projects: projectsData || [],
         projectFields: projectFields,
       }),
       { 
