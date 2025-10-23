@@ -177,6 +177,7 @@ serve(async (req) => {
               fieldsJson?.variables,
               fieldsJson?.Fields,
               fieldsJson?.fields,
+              fieldsJson?.RecordTypeFields,
               Array.isArray(fieldsJson) ? fieldsJson : null,
             ].filter(Boolean)[0] || [];
             projectFields[String(selectedId)] = Array.isArray(candidates) ? candidates : [];
