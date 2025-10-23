@@ -342,20 +342,23 @@ serve(async (req) => {
               });
               if (res.ok || res.status === 201) {
                 let fid: string | undefined;
-                // Some instances return Location header
-                const loc = res.headers.get('Location') || res.headers.get('location');
-                if (loc) {
-                  const m = loc.match(/files\/(\d+|[a-f0-9-]+)$/i);
-                  if (m) fid = m[1];
+                // Some instances return identifiers via headers
+                const headerKeys = ['Location', 'Content-Location', 'X-Entity-Id', 'EntityId', 'X-Resource-Id'];
+                for (const hk of headerKeys) {
+                  const hv = res.headers.get(hk) || res.headers.get(hk.toLowerCase());
+                  if (hv && !fid) {
+                    const m = hv.match(/(?:files|documents)\/(\d+|[a-f0-9-]+)$/i) || hv.match(/(\d+|[a-f0-9-]+)$/i);
+                    if (m) fid = m[1];
+                  }
                 }
                 if (!fid) {
                   const txt = await res.text();
                   try {
                     const j = JSON.parse(txt);
-                    fid = j.FileId ?? j.fileId ?? j.Id ?? j.id ?? j?.Data?.FileId ?? j?.Data?.fileId;
+                    fid = j.FileId ?? j.fileId ?? j.Id ?? j.id ?? j?.Data?.FileId ?? j?.Data?.fileId ?? j?.Result?.FileId ?? j?.Result?.Id;
                   } catch {
-                    const m2 = txt.match(/(FileId|Id)[^\d]*(\d+)/i);
-                    if (m2) fid = m2[2];
+                    const m2 = (txt || '').match(/(?:FileId|Id)[^\d]*(\d+)/i);
+                    if (m2) fid = m2[1];
                   }
                 }
                 if (fid) return String(fid);
