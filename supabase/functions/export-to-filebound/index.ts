@@ -98,8 +98,11 @@ serve(async (req) => {
 
     if (batchError) throw batchError;
 
-    // Extract Filebound credentials from project config
-    const fileboundConfig = batch.projects?.filebound_config;
+    // Extract Filebound credentials from project config (support multiple storage locations)
+    const fileboundConfig = (batch.projects as any)?.filebound_config 
+      || (batch.projects as any)?.metadata?.export_config?.filebound
+      || (batch.projects as any)?.metadata?.exportConfig?.filebound;
+
     if (!fileboundConfig?.enabled || !fileboundConfig?.url || !fileboundConfig?.username || !fileboundConfig?.password) {
       return new Response(
         JSON.stringify({ error: 'Filebound is not configured for this project' }),

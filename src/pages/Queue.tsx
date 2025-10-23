@@ -670,7 +670,7 @@ const Queue = () => {
   // ECM export helpers
   const getExportConfig = () => {
     const metadata = selectedProject?.metadata as any;
-    return metadata?.exportConfig || {};
+    return metadata?.export_config || metadata?.exportConfig || {};
   };
 
   const exportToFilebound = async () => {
