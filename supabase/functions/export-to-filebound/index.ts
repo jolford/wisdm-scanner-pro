@@ -322,6 +322,38 @@ serve(async (req) => {
             { projectId, field: fieldsSlice, notes: doc.file_name || '' },
           ];
 
+          // Helper: find a file by index fields using FileBound filter syntax
+          const findFileByFields = async (): Promise<string | undefined> => {
+            // Build filters like: ProjectId_8,1_123,2_ABC
+            const fieldParts: string[] = [];
+            for (let i = 1; i <= 20; i++) {
+              const v = fieldsArray[i];
+              if (v) fieldParts.push(`${i}_${encodeURIComponent(String(v))}`);
+            }
+            const attempts = [
+              [`ProjectId_${projectId}`, ...fieldParts],
+              [`projectid_${projectId}`, ...fieldParts],
+              fieldParts,
+            ];
+            for (const parts of attempts) {
+              if (!parts.length) continue;
+              const url = `${baseUrl}/api/files?filter=${parts.join(',')}`;
+              const r = await fetch(url, {
+                method: 'GET',
+                headers: { 'Authorization': `Basic ${authString}`, 'Accept': 'application/json' }
+              });
+              if (!r.ok) continue;
+              const arr = await r.json().catch(() => []);
+              if (Array.isArray(arr) && arr.length) {
+                const f = arr[0];
+                const id = f?.FileId ?? f?.Id ?? f?.fileId ?? f?.id;
+                if (id) return String(id);
+              }
+            }
+            return undefined;
+          };
+
+
           const createEndpoints = [
             { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'PUT' as const },
             { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'POST' as const },
@@ -362,6 +394,9 @@ serve(async (req) => {
                   }
                 }
                 if (fid) return String(fid);
+                // Fallback: search for file by index fields if API didn't return id
+                const altId = await findFileByFields();
+                if (altId) return String(altId);
                 console.warn('FileBound create file: success response without id', { endpoint: ep, status: res.status });
               } else {
                 const t = await res.text();
