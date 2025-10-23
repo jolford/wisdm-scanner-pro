@@ -208,6 +208,10 @@ serve(async (req) => {
         { RecordTypeID: recordTypeId ?? undefined, RecordTypeName: project, Fields: fieldArray },
         { RecordTypeName: project, Fields: fieldArray },
         { Fields: fieldArray },
+        // Top-level RecordType variants (some DocMgt instances expect this)
+        { RecordType: project, Variables: variables },
+        { RecordType: project, Fields: fieldsMap },
+        { RecordType: project, Fields: fieldArray },
       ];
 
       let lastError: string | null = null;
