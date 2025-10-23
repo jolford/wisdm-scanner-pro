@@ -90,7 +90,7 @@ serve(async (req) => {
           id,
           name,
           extraction_fields,
-          docmgt_config
+          metadata
         )
       `)
       .eq('id', batchId)
