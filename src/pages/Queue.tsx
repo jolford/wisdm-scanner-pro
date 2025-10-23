@@ -121,6 +121,16 @@ const Queue = () => {
     }
   }, []);
 
+  // Load documents when batch is selected
+  useEffect(() => {
+    if (selectedBatchId) {
+      loadQueueDocuments();
+    } else {
+      setValidationQueue([]);
+      setValidatedDocs([]);
+    }
+  }, [selectedBatchId]);
+
   useEffect(() => {
     if (!selectedBatchId) return;
     if (isReadyForExport && !readyNotified && selectedBatch?.status !== 'complete') {
