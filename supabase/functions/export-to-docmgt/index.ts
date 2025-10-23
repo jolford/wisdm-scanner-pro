@@ -177,6 +177,32 @@ serve(async (req) => {
     for (const doc of documents) {
       const metadata = (doc.extracted_metadata || {}) as Record<string, any>;
 
+      // Download document file from Supabase storage
+      let fileBlob: Blob | null = null;
+      let fileName = doc.file_name || 'document';
+      try {
+        if (doc.file_url) {
+          // Extract storage path from URL
+          const urlParts = doc.file_url.split('/storage/v1/object/public/documents/');
+          const storagePath = urlParts[1];
+          
+          if (storagePath) {
+            const { data: fileData, error: downloadError } = await supabase.storage
+              .from('documents')
+              .download(storagePath);
+            
+            if (!downloadError && fileData) {
+              fileBlob = fileData;
+              console.log(`Downloaded file ${fileName} (${fileBlob.size} bytes)`);
+            } else {
+              console.warn(`Failed to download file for doc ${doc.id}:`, downloadError);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(`Error downloading file for doc ${doc.id}:`, err);
+      }
+
       // Build both objects array (Variables) and simple key map (Fields)
       const variables = Object.entries(metadata).map(([key, value]) => ({
         VariableName: fieldMappings[key] || key,
@@ -216,6 +242,9 @@ serve(async (req) => {
 
       let lastError: string | null = null;
       let success = false;
+      let recordId: string | number | null = null;
+      
+      // Step 1: Create the record with metadata
       for (const body of payloadCandidates) {
         try {
           const resp = await fetch(`${normalizedDocmgtUrl}/rest/records`, {
@@ -231,7 +260,16 @@ serve(async (req) => {
           if (resp.ok && (ct.includes('application/json') || text.startsWith('{'))) {
             let json: any = null;
             try { json = JSON.parse(text); } catch {}
-            exportResults.push({ success: true, request: body, response: json || text });
+            
+            // Extract record ID from response
+            recordId = json?.ID || json?.id || json?.RecordID;
+            
+            exportResults.push({ 
+              success: true, 
+              request: body, 
+              response: json || text,
+              recordId 
+            });
             success = true;
             break;
           } else {
@@ -242,6 +280,54 @@ serve(async (req) => {
           lastError = err.message;
           console.error('Docmgt request error:', err);
         }
+      }
+
+      // Step 2: Upload document file if record was created and file exists
+      if (success && recordId && fileBlob) {
+        try {
+          const formData = new FormData();
+          formData.append('file', fileBlob, fileName);
+          
+          // Try multiple file upload endpoints
+          const uploadEndpoints = [
+            `/rest/records/${recordId}/files`,
+            `/rest/records/${recordId}/attachments`,
+            `/rest/files?recordId=${recordId}`,
+          ];
+          
+          let fileUploaded = false;
+          for (const endpoint of uploadEndpoints) {
+            try {
+              const uploadResp = await fetch(`${normalizedDocmgtUrl}${endpoint}`, {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Basic ${authString}`,
+                },
+                body: formData,
+              });
+              
+              if (uploadResp.ok) {
+                console.log(`File uploaded successfully to ${endpoint} for record ${recordId}`);
+                exportResults[exportResults.length - 1].fileUploaded = true;
+                exportResults[exportResults.length - 1].fileName = fileName;
+                fileUploaded = true;
+                break;
+              }
+            } catch (uploadErr) {
+              console.warn(`Failed to upload file to ${endpoint}:`, uploadErr);
+            }
+          }
+          
+          if (!fileUploaded) {
+            console.warn(`File upload failed for record ${recordId} - tried all endpoints`);
+            exportResults[exportResults.length - 1].fileUploadWarning = 'File could not be uploaded to DocMgt';
+          }
+        } catch (fileErr: any) {
+          console.error(`Error uploading file for record ${recordId}:`, fileErr);
+          exportResults[exportResults.length - 1].fileUploadError = fileErr.message;
+        }
+      } else if (success && !fileBlob) {
+        exportResults[exportResults.length - 1].fileUploadWarning = 'No file available to upload';
       }
 
       if (!success) exportResults.push({ success: false, error: lastError, tried: payloadCandidates });
