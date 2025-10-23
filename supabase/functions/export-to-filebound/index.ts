@@ -152,50 +152,134 @@ serve(async (req) => {
 
     console.log(`Exporting ${documents.length} documents to Filebound at ${fileboundUrl}`);
 
-    // Prepare documents for Filebound API
-    const fileboundDocuments = documents.map(doc => ({
-      documentName: doc.file_name,
-      documentType: doc.file_type,
-      metadata: doc.extracted_metadata || {},
-      extractedText: doc.extracted_text || '',
-      fileUrl: doc.file_url,
-      pageNumber: doc.page_number,
-      confidenceScore: doc.confidence_score,
-    }));
-
-    // Create Basic Auth header
+    // Helper: resolve projectId (config may store name or id)
+    const baseUrl = fileboundUrl.replace(/\/$/, '');
     const authString = btoa(`${username}:${password}`);
-    
-    // Send to Filebound API
-    const fileboundResponse = await fetch(`${fileboundUrl}/api/documents/import`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${authString}`,
-      },
-      body: JSON.stringify({
-        project: project,
-        batchName: batch.batch_name,
-        projectName: batch.projects?.name,
-        documents: fileboundDocuments,
-      }),
-    });
 
-    if (!fileboundResponse.ok) {
-      const errorText = await fileboundResponse.text();
-      console.error('Filebound API error:', errorText);
+    const projectsResp = await fetch(`${baseUrl}/api/projects`, {
+      method: 'GET',
+      headers: { 'Authorization': `Basic ${authString}`, 'Accept': 'application/json' },
+    });
+    if (!projectsResp.ok) {
+      const errText = await projectsResp.text();
+      console.error('Filebound list projects error:', errText);
       return new Response(
-        JSON.stringify({
-          success: false,
-          error: 'FileBound API returned an error',
-          status: fileboundResponse.status,
-          details: (errorText || '').slice(0, 500)
-        }),
+        JSON.stringify({ success: false, error: 'Failed to list FileBound projects', status: projectsResp.status, details: (errText || '').slice(0, 500) }),
+        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    const projectsArr: any[] = await projectsResp.json();
+
+    const projectMatch = projectsArr.find((p: any) => {
+      const pid = String(p.ProjectId ?? p.Id ?? p.id ?? '');
+      const pname = String(p.ProjectName ?? p.Name ?? p.name ?? '');
+      return pid === String(project) || pname.toLowerCase() === String(project).toLowerCase();
+    });
+    const projectId = projectMatch?.ProjectId ?? projectMatch?.Id ?? projectMatch?.id;
+    if (!projectId) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Configured FileBound project not found', configured: project, available: projectsArr?.length ?? 0 }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Helper: build index fields per document using fieldMappings
+    const fieldMappings = (fileboundConfig.fieldMappings || {}) as Record<string, string>;
+    const buildIndexFields = (doc: any) => {
+      const out: Record<string, any> = {};
+      for (const [localField, ecmField] of Object.entries(fieldMappings)) {
+        if (!ecmField) continue;
+        const val = (doc.extracted_metadata || {})[localField];
+        if (val !== undefined && val !== null && val !== '') out[ecmField] = val;
+      }
+      return out;
+    };
+
+    // Helper: download file bytes
+    async function downloadBytes(url: string): Promise<{ bytes: Uint8Array; contentType: string }> {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to download document: ${res.status}`);
+      const ab = new Uint8Array(await res.arrayBuffer());
+      const ct = res.headers.get('content-type') || 'application/octet-stream';
+      return { bytes: ab, contentType: ct };
+    }
+
+    function toBase64(u8: Uint8Array): string {
+      // Convert Uint8Array to base64 in Deno
+      let binary = '';
+      const chunk = 0x8000;
+      for (let i = 0; i < u8.length; i += chunk) {
+        const sub = u8.subarray(i, i + chunk);
+        binary += String.fromCharCode.apply(null, Array.from(sub) as any);
+      }
+      return btoa(binary);
+    }
+
+    // Try uploading each document individually to maximize success
+    const successes: any[] = [];
+    const failures: any[] = [];
+
+    for (const doc of documents) {
+      try {
+        const { bytes, contentType } = await downloadBytes(doc.redacted_file_url || doc.file_url);
+        const indexFields = buildIndexFields(doc);
+
+        // Attempt 1: multipart upload to project-specific endpoint
+        const form = new FormData();
+        form.append('file', new Blob([bytes as unknown as BlobPart], { type: contentType }), doc.file_name);
+        form.append('fileName', doc.file_name);
+        form.append('projectId', String(projectId));
+        form.append('indexFields', JSON.stringify(indexFields));
+
+        let resp = await fetch(`${baseUrl}/api/projects/${projectId}/documents`, {
+          method: 'POST',
+          headers: { 'Authorization': `Basic ${authString}` },
+          body: form,
+        });
+
+        // Fallback 2: JSON import with base64 content
+        if (!resp.ok) {
+          const b64 = toBase64(bytes);
+          resp = await fetch(`${baseUrl}/api/documents/import`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Basic ${authString}`,
+            },
+            body: JSON.stringify({
+              projectId: projectId,
+              batch: { name: batch.batch_name, projectName: batch.projects?.name },
+              documents: [{
+                fileName: doc.file_name,
+                contentBase64: b64,
+                contentType,
+                indexFields,
+              }],
+            }),
+          });
+        }
+
+        if (!resp.ok) {
+          const errT = await resp.text();
+          failures.push({ id: doc.id, status: resp.status, error: (errT || '').slice(0, 500) });
+        } else {
+          const okJson = await resp.json().catch(() => ({}));
+          successes.push({ id: doc.id, result: okJson });
+        }
+      } catch (e: any) {
+        failures.push({ id: doc.id, error: e?.message || String(e) });
+      }
+    }
+
+    if (successes.length === 0) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'All FileBound uploads failed', failures }),
         { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const fileboundResult = await fileboundResponse.json();
+    // Partial success: still mark exported, include details
+    const fileboundResult = { successesCount: successes.length, failuresCount: failures.length, failures };
 
     // Update batch metadata with export info
     await supabase
@@ -207,7 +291,9 @@ serve(async (req) => {
           fileboundExport: {
             exportedAt: new Date().toISOString(),
             documentsCount: documents.length,
-            fileboundResponse: fileboundResult,
+            successesCount: successes.length,
+            failuresCount: failures.length,
+            failures,
           }
         }
       })
@@ -216,13 +302,10 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Successfully exported ${documents.length} documents to Filebound`,
-        fileboundResult,
+        message: `Exported ${successes.length} document(s) to FileBound${failures.length ? ' (some failed)' : ''}`,
+        result: fileboundResult,
       }),
-      { 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-      }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: failures.length ? 207 : 200 }
     );
   } catch (error: any) {
     console.error('Error exporting to Filebound:', error);
