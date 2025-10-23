@@ -324,55 +324,36 @@ serve(async (req) => {
 
           // Helper: find a file by index fields using FileBound filter syntax
           const findFileByFields = async (): Promise<string | undefined> => {
-            // Try multiple query styles to accommodate instance differences
-            const fieldPartsNum: string[] = [];
-            const fieldPartsF: string[] = [];
+            // Build a conservative filter: only 1 safe text field to avoid FileBound 500s
+            const valueAt = (i: number) => (fieldsArray[i] || '').toString();
+            const isSafeText = (s: string) => {
+              const v = s.trim();
+              if (!v) return false;
+              // Avoid numbers with thousand separators or decimals, and typical dates
+              if (/^\d{1,3}(,\d{3})*(\.\d+)?$/.test(v)) return false; // 93,169.80
+              if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return false; // 2025-06-01
+              if (/^\d{1,2}[\/.-]\d{1,2}[\/.-]\d{2,4}$/.test(v)) return false; // 4/29/2025
+              // Prefer strings with letters/dashes/underscores (invoice numbers, etc.)
+              return /[A-Za-z]/.test(v) || /[-_]/.test(v);
+            };
+
+            // Choose first safe field (prefer F1..F20 in order)
+            let chosenIndex: number | undefined;
             for (let i = 1; i <= 20; i++) {
-              const v = fieldsArray[i];
-              if (!v) continue;
-              const enc = encodeURIComponent(String(v));
-              fieldPartsNum.push(`${i}_${enc}`);
-              fieldPartsF.push(`F${i}_${enc}`);
+              if (isSafeText(valueAt(i))) { chosenIndex = i; break; }
             }
+            if (!chosenIndex) return undefined;
 
-            const baseFilters: string[][] = [];
-            if (fieldPartsF.length) baseFilters.push(fieldPartsF);
-            if (fieldPartsNum.length) baseFilters.push(fieldPartsNum);
+            const v = encodeURIComponent(valueAt(chosenIndex));
+            const pf = `ProjectId_${projectId}`;
 
-            const projectFilters = [`ProjectId_${projectId}`, `projectid_${projectId}`];
-            const candidateUrls: string[] = [];
+            const candidateUrls = [
+              `${baseUrl}/api/files?filter=${pf},F${chosenIndex}_${v}`,
+              `${baseUrl}/api/files?filter=${pf},${chosenIndex}_${v}`,
+              `${baseUrl}/api/files?filter=F${chosenIndex}_${v}`,
+              `${baseUrl}/api/files?filter=${chosenIndex}_${v}`,
+            ];
 
-            // files endpoint (lowercase) with filter param
-            for (const pf of projectFilters) {
-              for (const parts of baseFilters) {
-                candidateUrls.push(`${baseUrl}/api/files?filter=${[pf, ...parts].join(',')}`);
-              }
-            }
-            for (const parts of baseFilters) {
-              candidateUrls.push(`${baseUrl}/api/files?filter=${parts.join(',')}`);
-            }
-
-            // files endpoint (lowercase) with filters param (some instances use plural)
-            for (const pf of projectFilters) {
-              for (const parts of baseFilters) {
-                candidateUrls.push(`${baseUrl}/api/files?filters=${[pf, ...parts].join(',')}`);
-              }
-            }
-            for (const parts of baseFilters) {
-              candidateUrls.push(`${baseUrl}/api/files?filters=${parts.join(',')}`);
-            }
-
-            // Fallback: uppercase path variants
-            for (const pf of projectFilters) {
-              for (const parts of baseFilters) {
-                candidateUrls.push(`${baseUrl}/api/Files?filter=${[pf, ...parts].join(',')}`);
-              }
-            }
-            for (const parts of baseFilters) {
-              candidateUrls.push(`${baseUrl}/api/Files?filter=${parts.join(',')}`);
-            }
-
-            // Attempt all candidate URLs
             for (const url of candidateUrls) {
               try {
                 const r = await fetch(url, {
@@ -393,42 +374,6 @@ serve(async (req) => {
               } catch (err) {
                 console.warn('FileBound search error', { url, message: (err as any)?.message || String(err) });
               }
-            }
-
-            // Last resort: list project files and perform client-side match
-            try {
-              const listRes = await fetch(`${baseUrl}/api/projects/${projectId}/files`, {
-                method: 'GET',
-                headers: { 'Authorization': `Basic ${authString}`, 'Accept': 'application/json' }
-              });
-              if (listRes.ok) {
-                const items = await listRes.json().catch(() => []);
-                if (Array.isArray(items)) {
-                  const normalizedTarget = (i: number) => (fieldsArray[i] || '').toString().trim().toLowerCase();
-                  const match = items.find((it: any) => {
-                    for (let i = 1; i <= 20; i++) {
-                      const tv = normalizedTarget(i);
-                      if (!tv) continue; // only compare fields we provided
-                      const candidates = [
-                        it?.[`F${i}`], it?.[`f${i}`],
-                        it?.IndexFields?.[`F${i}`], it?.indexFields?.[`F${i}`],
-                        it?.[`F${i}_Value`], it?.[`f${i}_value`],
-                        it?.[`${i}_Value`]
-                      ];
-                      const found = candidates.some((cv: any) => typeof cv === 'string' && cv.toString().trim().toLowerCase() === tv);
-                      if (!found) return false;
-                    }
-                    return true;
-                  });
-                  const fid = match?.FileId ?? match?.Id ?? match?.fileId ?? match?.id;
-                  if (fid) return String(fid);
-                }
-              } else {
-                const t = await listRes.text();
-                console.warn('FileBound list project files not ok', { status: listRes.status, body: (t || '').slice(0, 300) });
-              }
-            } catch (err) {
-              console.warn('FileBound list project files error', { message: (err as any)?.message || String(err) });
             }
 
             return undefined;
