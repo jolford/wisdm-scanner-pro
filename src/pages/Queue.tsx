@@ -137,14 +137,27 @@ const Queue = () => {
     if (selectedProject && selectedProjectId) return;
     (async () => {
       try {
-        const { data, error } = await supabase
+        const { data: batchData, error: batchError } = await supabase
           .from('batches')
-          .select(`project_id, projects ( id, name, extraction_fields, metadata, export_types )`)
+          .select('project_id')
           .eq('id', selectedBatchId)
           .single();
-        if (!error && data) {
-          if (!selectedProjectId) setSelectedProjectId(data.project_id as string);
-          if ((data as any).projects) setSelectedProject((data as any).projects);
+        
+        if (batchError || !batchData) {
+          console.warn('Failed to load batch data', batchError);
+          return;
+        }
+        
+        // Load the full project with all metadata
+        const { data: projectData, error: projectError } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('id', batchData.project_id)
+          .single();
+        
+        if (!projectError && projectData) {
+          if (!selectedProjectId) setSelectedProjectId(projectData.id);
+          setSelectedProject(projectData);
         }
       } catch (e) {
         console.warn('Failed to load project for batch', e);

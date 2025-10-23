@@ -166,7 +166,7 @@ const BatchDetail = () => {
   // Export functions
   const getExportConfig = () => {
     const metadata = batch?.projects?.metadata as any;
-    return metadata?.exportConfig || {};
+    return metadata?.export_config || metadata?.exportConfig || {};
   };
 
   const getEnabledExportTypes = () => {
