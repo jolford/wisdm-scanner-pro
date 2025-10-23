@@ -238,6 +238,11 @@ serve(async (req) => {
         { RecordType: project, Variables: variables },
         { RecordType: project, Fields: fieldsMap },
         { RecordType: project, Fields: fieldArray },
+        // Minimal variants
+        { RecordTypeID: recordTypeId ?? undefined },
+        { ProjectId: recordTypeId ?? undefined },
+        { Project: project },
+        { ProjectName: project },
       ];
 
       let lastError: string | null = null;
@@ -245,41 +250,53 @@ serve(async (req) => {
       let recordId: string | number | null = null;
       
       // Step 1: Create the record with metadata
-      for (const body of payloadCandidates) {
-        try {
-          const resp = await fetch(`${normalizedDocmgtUrl}/rest/records`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Basic ${authString}`,
-            },
-            body: JSON.stringify(body),
-          });
-          const ct = resp.headers.get('content-type') || '';
-          const text = await resp.text();
-          if (resp.ok && (ct.includes('application/json') || text.startsWith('{'))) {
-            let json: any = null;
-            try { json = JSON.parse(text); } catch {}
-            
-            // Extract record ID from response
-            recordId = json?.ID || json?.id || json?.RecordID;
-            
-            exportResults.push({ 
-              success: true, 
-              request: body, 
-              response: json || text,
-              recordId 
+      const recordCreateEndpoints = [
+        '/rest/records',
+        '/rest/record',
+      ];
+
+      for (const endpoint of recordCreateEndpoints) {
+        for (const body of payloadCandidates) {
+          try {
+            const resp = await fetch(`${normalizedDocmgtUrl}${endpoint}`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Authorization': `Basic ${authString}`,
+              },
+              body: JSON.stringify(body),
             });
-            success = true;
-            break;
-          } else {
-            lastError = text || `HTTP ${resp.status}`;
-            console.error('Docmgt API error:', lastError);
+            const ct = resp.headers.get('content-type') || '';
+            const text = await resp.text();
+            if (resp.ok && (ct.includes('application/json') || text.startsWith('{'))) {
+              let json: any = null;
+              try { json = JSON.parse(text); } catch {}
+              
+              // Extract record ID from response
+              recordId = json?.ID || json?.id || json?.RecordID || json?.RecordId;
+              
+              exportResults.push({ 
+                success: true, 
+                request: { endpoint, body }, 
+                response: json || text,
+                recordId 
+              });
+              success = true;
+              break;
+            } else {
+              lastError = text || `HTTP ${resp.status}`;
+              console.error('Docmgt API error:', lastError);
+              if (lastError?.toLowerCase().includes('no record type')) {
+                console.warn('DocMgt indicates the Record Type is not found or user lacks rights. Verify the selected Record Type and that the account has Create rights.');
+              }
+            }
+          } catch (err: any) {
+            lastError = err.message;
+            console.error('Docmgt request error:', err);
           }
-        } catch (err: any) {
-          lastError = err.message;
-          console.error('Docmgt request error:', err);
         }
+        if (success) break;
       }
 
       // Step 2: Upload document file if record was created and file exists
