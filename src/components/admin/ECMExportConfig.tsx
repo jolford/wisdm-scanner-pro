@@ -204,8 +204,11 @@ export function ECMExportConfig({
           },
         });
         if (error) throw error;
-        const fields = data?.projectFields?.[projectId] || [];
-        const formattedFields = (Array.isArray(fields) ? fields : []).map((f: any) => ({
+        const fieldsObj = (data?.projectFields ?? {}) as Record<string, any>;
+        const keyCandidates = [projectId, String(projectId)];
+        const resolvedKey = keyCandidates.find(k => fieldsObj[k]) || Object.keys(fieldsObj)[0];
+        const rawFields = resolvedKey ? fieldsObj[resolvedKey] : [];
+        const formattedFields = (Array.isArray(rawFields) ? rawFields : []).map((f: any) => ({
           name: f.VariableName || f.FieldName || f.name || f.Name || f.Title,
           type: f.DataType || f.FieldType || f.type || f.Type || 'text',
           required: f.Required || f.required || false,
