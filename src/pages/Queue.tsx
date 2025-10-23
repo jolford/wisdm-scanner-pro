@@ -783,7 +783,6 @@ const Queue = () => {
       const { data, error } = await supabase.functions.invoke('export-to-docmgt', {
         body: {
           batchId: selectedBatchId,
-          apiBase: `${dm.url.replace(/\/+$/, '')}/V4API`,
           recordTypeId: Number.isFinite(Number(dm.project)) ? Number(dm.project) : (dm.recordTypeId || undefined),
         },
       });
@@ -883,7 +882,6 @@ const Queue = () => {
           const { data, error } = await supabase.functions.invoke('export-to-docmgt', {
             body: {
               batchId: selectedBatchId,
-              apiBase: `${exportConfig.docmgt.url.replace(/\/+$/, '')}/V4API`,
               recordTypeId: Number.isFinite(Number(exportConfig.docmgt.project)) ? Number(exportConfig.docmgt.project) : (exportConfig.docmgt.recordTypeId || undefined),
             }
           });
