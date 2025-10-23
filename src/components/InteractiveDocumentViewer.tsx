@@ -41,10 +41,10 @@ export const InteractiveDocumentViewer = ({
   const [imageRotation, setImageRotation] = useState(0);
   const [clickMode, setClickMode] = useState<'highlight' | 'extract'>('highlight');
   const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-
   // Load image and get dimensions
   useEffect(() => {
     const img = new Image();
@@ -52,6 +52,34 @@ export const InteractiveDocumentViewer = ({
       setImageDimensions({ width: img.width, height: img.height });
     };
     img.src = imageUrl;
+  }, [imageUrl]);
+
+  // Keep canvas in sync with image size (handles page/container resize)
+  useEffect(() => {
+    const imgEl = imageRef.current;
+    const canvas = canvasRef.current;
+    if (!imgEl || !canvas) return;
+
+    const updateSize = () => {
+      const w = imgEl.offsetWidth;
+      const h = imgEl.offsetHeight;
+      if (w && h) {
+        canvas.width = w;
+        canvas.height = h;
+        setCanvasSize({ width: w, height: h });
+      }
+    };
+
+    updateSize();
+
+    const ro = new ResizeObserver(() => updateSize());
+    ro.observe(imgEl);
+    window.addEventListener('resize', updateSize);
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', updateSize);
+    };
   }, [imageUrl]);
 
   // Draw highlights on canvas
@@ -120,7 +148,7 @@ export const InteractiveDocumentViewer = ({
       ctx.font = 'bold 11px sans-serif';
       ctx.fillText('⚠️ ' + highlight.category, x, y - 5);
     });
-  }, [boundingBoxes, highlightedField, imageZoom, offensiveHighlights]);
+  }, [boundingBoxes, highlightedField, imageZoom, offensiveHighlights, canvasSize]);
 
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!canvasRef.current || !onRegionClick) return;
@@ -266,8 +294,11 @@ export const InteractiveDocumentViewer = ({
                 // Trigger canvas redraw when image loads
                 if (canvasRef.current && imageRef.current) {
                   const canvas = canvasRef.current;
-                  canvas.width = imageRef.current.offsetWidth;
-                  canvas.height = imageRef.current.offsetHeight;
+                  const w = imageRef.current.offsetWidth;
+                  const h = imageRef.current.offsetHeight;
+                  canvas.width = w;
+                  canvas.height = h;
+                  setCanvasSize({ width: w, height: h });
                 }
               }}
             />
