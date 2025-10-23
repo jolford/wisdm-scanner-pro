@@ -30,9 +30,11 @@ import {
   FileText,
   Database,
   Cloud,
-  Shield
+  Shield,
+  Bot
 } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
+import { AIAssistant } from '@/components/AIAssistant';
 
 const Help = () => {
   const navigate = useNavigate();
@@ -313,7 +315,7 @@ const Help = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-8 h-12 bg-muted/50">
+          <TabsList className="grid w-full grid-cols-4 mb-8 h-12 bg-muted/50">
             <TabsTrigger value="guides" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <BookOpen className="h-4 w-4" />
               <span className="font-medium">Guides</span>
@@ -325,6 +327,10 @@ const Help = () => {
             <TabsTrigger value="troubleshooting" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
               <Wrench className="h-4 w-4" />
               <span className="font-medium">Troubleshooting</span>
+            </TabsTrigger>
+            <TabsTrigger value="ai-assistant" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Bot className="h-4 w-4" />
+              <span className="font-medium">AI Assistant</span>
             </TabsTrigger>
           </TabsList>
 
@@ -454,6 +460,55 @@ const Help = () => {
                 </Card>
               ))
             )}
+          </TabsContent>
+
+          {/* AI Assistant Tab */}
+          <TabsContent value="ai-assistant" className="space-y-6">
+            <Card className="border-primary/20">
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <Bot className="h-6 w-6 text-primary" />
+                  <div>
+                    <CardTitle>GPT-5 AI Assistant</CardTitle>
+                    <CardDescription>
+                      Get instant help with document processing, troubleshooting, and system questions
+                    </CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <AIAssistant 
+                  useCase="troubleshooting"
+                  placeholder="Ask me about scanning issues, validation problems, export configurations, or any other questions..."
+                />
+              </CardContent>
+            </Card>
+
+            <Card className="border-accent/20 bg-accent/5">
+              <CardHeader>
+                <CardTitle className="text-lg">AI Assistant Features</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-3 text-sm text-muted-foreground">
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span><strong>Instant answers</strong> - Get help without waiting for support</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span><strong>Context-aware</strong> - Understands WISDM Scanner Pro features and workflows</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span><strong>Troubleshooting help</strong> - Diagnose and resolve common issues</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <span><strong>Best practices</strong> - Learn tips for optimal document processing</span>
+                  </li>
+                </ul>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
 

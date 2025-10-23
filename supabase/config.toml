@@ -1,5 +1,8 @@
 project_id = "pbyerakkryuflamlmpvm"
 
+[functions.ai-assistant]
+verify_jwt = true
+
 # REST API Functions
 [functions.api-documents]
 verify_jwt = true
