@@ -195,13 +195,32 @@ serve(async (req) => {
       return out;
     };
 
-    // Helper: download file bytes
+    // Helper: download file bytes (supports private Supabase Storage URLs)
     async function downloadBytes(url: string): Promise<{ bytes: Uint8Array; contentType: string }> {
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Failed to download document: ${res.status}`);
-      const ab = new Uint8Array(await res.arrayBuffer());
-      const ct = res.headers.get('content-type') || 'application/octet-stream';
-      return { bytes: ab, contentType: ct };
+      try {
+        const storageUrl = Deno.env.get('SUPABASE_URL');
+        if (storageUrl && url.startsWith(storageUrl) && url.includes('/storage/v1/object/')) {
+          // Match /storage/v1/object/(sign|public|authenticated)/bucket/path
+          const match = url.match(/\/storage\/v1\/object\/(?:sign|public|authenticated)\/([^/]+)\/(.+?)(?:\?|$)/);
+          if (match) {
+            const bucket = match[1];
+            const objectPath = decodeURIComponent(match[2]);
+            const { data, error } = await supabase.storage.from(bucket).download(objectPath);
+            if (error) throw error;
+            const ab = new Uint8Array(await data.arrayBuffer());
+            const ct = data.type || 'application/octet-stream';
+            return { bytes: ab, contentType: ct };
+          }
+        }
+        // Fallback to direct fetch (for external URLs or non-storage patterns)
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`Failed to download document: ${res.status}`);
+        const ab = new Uint8Array(await res.arrayBuffer());
+        const ct = res.headers.get('content-type') || 'application/octet-stream';
+        return { bytes: ab, contentType: ct };
+      } catch (e) {
+        throw e;
+      }
     }
 
     function toBase64(u8: Uint8Array): string {
