@@ -105,13 +105,19 @@ serve(async (req) => {
       },
     });
 
-    if (!docmgtResponse.ok) {
+    // Check Content-Type header to ensure we got JSON
+    const contentType = docmgtResponse.headers.get('content-type');
+    
+    if (!docmgtResponse.ok || !contentType?.includes('application/json')) {
       const errorText = await docmgtResponse.text();
       console.error('Docmgt connection error:', errorText);
+      console.error('Response status:', docmgtResponse.status);
+      console.error('Content-Type:', contentType);
+      
       return new Response(
         JSON.stringify({ 
           success: false,
-          error: `Connection failed: ${docmgtResponse.status} ${docmgtResponse.statusText}` 
+          error: `Connection failed: ${docmgtResponse.status} ${docmgtResponse.statusText}. The server returned ${contentType || 'unknown content'} instead of JSON. Please verify the URL and credentials.` 
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
