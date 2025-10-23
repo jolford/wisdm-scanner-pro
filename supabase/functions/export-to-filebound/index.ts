@@ -324,20 +324,31 @@ serve(async (req) => {
 
           // Helper: find a file by index fields using FileBound filter syntax
           const findFileByFields = async (): Promise<string | undefined> => {
-            // Build filters like: ProjectId_8,1_123,2_ABC
-            const fieldParts: string[] = [];
+            // Build filters like: ProjectId_8,F1_Value,F2_Value and numeric: 1_Value
+            const fieldPartsNum: string[] = [];
+            const fieldPartsF: string[] = [];
             for (let i = 1; i <= 20; i++) {
               const v = fieldsArray[i];
-              if (v) fieldParts.push(`${i}_${encodeURIComponent(String(v))}`);
+              if (!v) continue;
+              const enc = encodeURIComponent(String(v));
+              fieldPartsNum.push(`${i}_${enc}`);
+              fieldPartsF.push(`F${i}_${enc}`);
             }
-            const attempts = [
-              [`ProjectId_${projectId}`, ...fieldParts],
-              [`projectid_${projectId}`, ...fieldParts],
-              fieldParts,
-            ];
-            for (const parts of attempts) {
-              if (!parts.length) continue;
-              const url = `${baseUrl}/api/files?filter=${parts.join(',')}`;
+            const baseFilters: string[][] = [];
+            if (fieldPartsF.length) baseFilters.push(fieldPartsF);
+            if (fieldPartsNum.length) baseFilters.push(fieldPartsNum);
+            const projectFilters = [`ProjectId_${projectId}`, `projectid_${projectId}`];
+            const urls: string[] = [];
+            for (const pf of projectFilters) {
+              for (const parts of baseFilters) {
+                urls.push(`${baseUrl}/api/Files?filter=${[pf, ...parts].join(',')}`);
+              }
+            }
+            // Also try without ProjectId (some instances infer within project route)
+            for (const parts of baseFilters) {
+              urls.push(`${baseUrl}/api/Files?filter=${parts.join(',')}`);
+            }
+            for (const url of urls) {
               const r = await fetch(url, {
                 method: 'GET',
                 headers: { 'Authorization': `Basic ${authString}`, 'Accept': 'application/json' }
