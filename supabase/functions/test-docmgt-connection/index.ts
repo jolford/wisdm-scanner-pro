@@ -150,11 +150,23 @@ serve(async (req) => {
           },
         });
         const fieldsCT = fieldsResponse.headers.get('content-type') || '';
-        if (fieldsResponse.ok && fieldsCT.includes('application/json')) {
-          const fieldsData = await fieldsResponse.json();
-          // Extract fields array from record type response
-          // DocMgt returns Variables array containing field definitions
-          projectFields[String(selectedId)] = fieldsData.Variables || fieldsData.fields || [];
+        try {
+          const raw = await fieldsResponse.text();
+          console.log('Docmgt fields response:', { status: fieldsResponse.status, contentType: fieldsCT, preview: raw.slice(0, 200) });
+          if (fieldsResponse.ok && fieldsCT.includes('application/json')) {
+            const fieldsJson = JSON.parse(raw);
+            // Try common shapes for field definitions
+            const candidates = [
+              fieldsJson?.Variables,
+              fieldsJson?.variables,
+              fieldsJson?.Fields,
+              fieldsJson?.fields,
+              Array.isArray(fieldsJson) ? fieldsJson : null,
+            ].filter(Boolean)[0] || [];
+            projectFields[String(selectedId)] = Array.isArray(candidates) ? candidates : [];
+          }
+        } catch (e) {
+          console.error('Failed to parse Docmgt fields JSON:', e);
         }
       }
     }
