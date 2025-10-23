@@ -324,7 +324,7 @@ serve(async (req) => {
 
           // Helper: find a file by index fields using FileBound filter syntax
           const findFileByFields = async (): Promise<string | undefined> => {
-            // Build filters like: ProjectId_8,F1_Value,F2_Value and numeric: 1_Value
+            // Try multiple query styles to accommodate instance differences
             const fieldPartsNum: string[] = [];
             const fieldPartsF: string[] = [];
             for (let i = 1; i <= 20; i++) {
@@ -334,36 +334,105 @@ serve(async (req) => {
               fieldPartsNum.push(`${i}_${enc}`);
               fieldPartsF.push(`F${i}_${enc}`);
             }
+
             const baseFilters: string[][] = [];
             if (fieldPartsF.length) baseFilters.push(fieldPartsF);
             if (fieldPartsNum.length) baseFilters.push(fieldPartsNum);
+
             const projectFilters = [`ProjectId_${projectId}`, `projectid_${projectId}`];
-            const urls: string[] = [];
+            const candidateUrls: string[] = [];
+
+            // files endpoint (lowercase) with filter param
             for (const pf of projectFilters) {
               for (const parts of baseFilters) {
-                urls.push(`${baseUrl}/api/Files?filter=${[pf, ...parts].join(',')}`);
+                candidateUrls.push(`${baseUrl}/api/files?filter=${[pf, ...parts].join(',')}`);
               }
             }
-            // Also try without ProjectId (some instances infer within project route)
             for (const parts of baseFilters) {
-              urls.push(`${baseUrl}/api/Files?filter=${parts.join(',')}`);
+              candidateUrls.push(`${baseUrl}/api/files?filter=${parts.join(',')}`);
             }
-            for (const url of urls) {
-              const r = await fetch(url, {
+
+            // files endpoint (lowercase) with filters param (some instances use plural)
+            for (const pf of projectFilters) {
+              for (const parts of baseFilters) {
+                candidateUrls.push(`${baseUrl}/api/files?filters=${[pf, ...parts].join(',')}`);
+              }
+            }
+            for (const parts of baseFilters) {
+              candidateUrls.push(`${baseUrl}/api/files?filters=${parts.join(',')}`);
+            }
+
+            // Fallback: uppercase path variants
+            for (const pf of projectFilters) {
+              for (const parts of baseFilters) {
+                candidateUrls.push(`${baseUrl}/api/Files?filter=${[pf, ...parts].join(',')}`);
+              }
+            }
+            for (const parts of baseFilters) {
+              candidateUrls.push(`${baseUrl}/api/Files?filter=${parts.join(',')}`);
+            }
+
+            // Attempt all candidate URLs
+            for (const url of candidateUrls) {
+              try {
+                const r = await fetch(url, {
+                  method: 'GET',
+                  headers: { 'Authorization': `Basic ${authString}`, 'Accept': 'application/json' }
+                });
+                if (!r.ok) {
+                  const t = await r.text();
+                  console.warn('FileBound search not ok', { url, status: r.status, body: (t || '').slice(0, 300) });
+                  continue;
+                }
+                const arr = await r.json().catch(() => []);
+                if (Array.isArray(arr) && arr.length) {
+                  const f = arr[0];
+                  const id = f?.FileId ?? f?.Id ?? f?.fileId ?? f?.id;
+                  if (id) return String(id);
+                }
+              } catch (err) {
+                console.warn('FileBound search error', { url, message: (err as any)?.message || String(err) });
+              }
+            }
+
+            // Last resort: list project files and perform client-side match
+            try {
+              const listRes = await fetch(`${baseUrl}/api/projects/${projectId}/files`, {
                 method: 'GET',
                 headers: { 'Authorization': `Basic ${authString}`, 'Accept': 'application/json' }
               });
-              if (!r.ok) continue;
-              const arr = await r.json().catch(() => []);
-              if (Array.isArray(arr) && arr.length) {
-                const f = arr[0];
-                const id = f?.FileId ?? f?.Id ?? f?.fileId ?? f?.id;
-                if (id) return String(id);
+              if (listRes.ok) {
+                const items = await listRes.json().catch(() => []);
+                if (Array.isArray(items)) {
+                  const normalizedTarget = (i: number) => (fieldsArray[i] || '').toString().trim().toLowerCase();
+                  const match = items.find((it: any) => {
+                    for (let i = 1; i <= 20; i++) {
+                      const tv = normalizedTarget(i);
+                      if (!tv) continue; // only compare fields we provided
+                      const candidates = [
+                        it?.[`F${i}`], it?.[`f${i}`],
+                        it?.IndexFields?.[`F${i}`], it?.indexFields?.[`F${i}`],
+                        it?.[`F${i}_Value`], it?.[`f${i}_value`],
+                        it?.[`${i}_Value`]
+                      ];
+                      const found = candidates.some((cv: any) => typeof cv === 'string' && cv.toString().trim().toLowerCase() === tv);
+                      if (!found) return false;
+                    }
+                    return true;
+                  });
+                  const fid = match?.FileId ?? match?.Id ?? match?.fileId ?? match?.id;
+                  if (fid) return String(fid);
+                }
+              } else {
+                const t = await listRes.text();
+                console.warn('FileBound list project files not ok', { status: listRes.status, body: (t || '').slice(0, 300) });
               }
+            } catch (err) {
+              console.warn('FileBound list project files error', { message: (err as any)?.message || String(err) });
             }
+
             return undefined;
           };
-
 
           const createEndpoints = [
             { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'PUT' as const },
