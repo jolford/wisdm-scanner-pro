@@ -4,6 +4,7 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.0';
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
 };
 
 // URL validation helper to prevent SSRF attacks
@@ -258,7 +259,9 @@ serve(async (req) => {
 
           const endpoints = [
             { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'PUT' },
+            { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'POST' },
             { url: `${baseUrl}/api/files`, method: 'PUT' },
+            { url: `${baseUrl}/api/files`, method: 'POST' },
           ];
 
           for (const body of payloads) {
@@ -267,7 +270,8 @@ serve(async (req) => {
                 method: ep.method,
                 headers: {
                   'Authorization': `Basic ${authString}`,
-                  'Content-Type': 'application/json'
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json'
                 },
                 body: JSON.stringify(body)
               });
@@ -368,7 +372,7 @@ serve(async (req) => {
     if (successes.length === 0) {
       return new Response(
         JSON.stringify({ success: false, error: 'All FileBound uploads failed', failures }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
