@@ -576,11 +576,26 @@ serve(async (req) => {
       })
       .eq('id', batchId);
 
+    // Auto-delete batch and documents after successful export
+    if (successes.length > 0) {
+      await supabase
+        .from('documents')
+        .delete()
+        .eq('batch_id', batchId);
+
+      await supabase
+        .from('batches')
+        .delete()
+        .eq('id', batchId);
+
+      console.log(`Auto-deleted batch ${batchId} and its ${documents.length} documents after successful export`);
+    }
+
     return new Response(
       JSON.stringify({ 
         success: true,
         partial: failures.length > 0,
-        message: `Exported ${successes.length}/${documents.length} document(s) to FileBound${failures.length ? ' (some failed)' : ''}`,
+        message: `Exported ${successes.length}/${documents.length} document(s) to FileBound and cleared batch${failures.length ? ' (some failed)' : ''}`,
         result: fileboundResult,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }

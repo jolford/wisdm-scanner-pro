@@ -201,10 +201,23 @@ serve(async (req) => {
       })
       .eq('id', batchId);
 
+    // Auto-delete batch and documents after successful export
+    await supabase
+      .from('documents')
+      .delete()
+      .eq('batch_id', batchId);
+
+    await supabase
+      .from('batches')
+      .delete()
+      .eq('id', batchId);
+
+    console.log(`Auto-deleted batch ${batchId} and its ${documents.length} documents after successful export`);
+
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: `Successfully exported ${documents.length} documents to Documentum`,
+        message: `Successfully exported ${documents.length} documents to Documentum and cleared batch`,
         documentumResult,
       }),
       { 

@@ -348,10 +348,27 @@ serve(async (req) => {
       })
       .eq('id', batchId);
 
+    // Auto-delete batch and documents after successful export
+    if (successCount > 0) {
+      // Delete all documents in the batch
+      await supabase
+        .from('documents')
+        .delete()
+        .eq('batch_id', batchId);
+
+      // Delete the batch itself
+      await supabase
+        .from('batches')
+        .delete()
+        .eq('id', batchId);
+
+      console.log(`Auto-deleted batch ${batchId} and its ${documents.length} documents after successful export`);
+    }
+
     return new Response(
       JSON.stringify({ 
         success: successCount > 0, 
-        message: `Successfully exported ${successCount} of ${documents.length} documents to Docmgt`,
+        message: `Successfully exported ${successCount} of ${documents.length} documents to Docmgt and cleared batch`,
         results: exportResults,
       }),
       { 
