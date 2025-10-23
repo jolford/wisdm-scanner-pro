@@ -91,13 +91,16 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Testing Docmgt connection to ${url}`);
+    // Normalize URL (remove trailing slash)
+    const normalizedUrl = url.replace(/\/+$/, '');
+    
+    console.log(`Testing Docmgt connection to ${normalizedUrl}`);
 
     // Create Basic Auth header
     const authString = btoa(`${username}:${password}`);
     
     // Attempt to authenticate and fetch projects list
-    const docmgtResponse = await fetch(`${url}/api/v1/projects`, {
+    const docmgtResponse = await fetch(`${normalizedUrl}/api/v1/projects`, {
       method: 'GET',
       headers: {
         'Authorization': `Basic ${authString}`,
@@ -130,7 +133,7 @@ serve(async (req) => {
     
     if (projectsData.projects && projectsData.projects.length > 0) {
       const firstProject = projectsData.projects[0];
-      const fieldsResponse = await fetch(`${url}/api/v1/projects/${firstProject.id}/fields`, {
+      const fieldsResponse = await fetch(`${normalizedUrl}/api/v1/projects/${firstProject.id}/fields`, {
         method: 'GET',
         headers: {
           'Authorization': `Basic ${authString}`,
