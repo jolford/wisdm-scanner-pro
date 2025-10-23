@@ -258,8 +258,7 @@ serve(async (req) => {
 
           const endpoints = [
             { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'PUT' },
-            { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'POST' },
-            { url: `${baseUrl}/api/files`, method: 'POST' },
+            { url: `${baseUrl}/api/files`, method: 'PUT' },
           ];
 
           for (const body of payloads) {
@@ -273,8 +272,17 @@ serve(async (req) => {
                 body: JSON.stringify(body)
               });
               if (res.ok) {
-                const j = await res.json().catch(() => ({}));
-                const fid = j.FileId ?? j.Id ?? j.fileId ?? j.id;
+                // Some instances return Location header instead of JSON body
+                let fid: string | undefined;
+                const loc = res.headers.get('Location') || res.headers.get('location');
+                if (loc) {
+                  const m = loc.match(/files\/(\d+|[a-f0-9-]+)$/i);
+                  if (m) fid = m[1];
+                }
+                if (!fid) {
+                  const j = await res.json().catch(() => ({}));
+                  fid = j.FileId ?? j.Id ?? j.fileId ?? j.id;
+                }
                 if (fid) return String(fid);
               } else {
                 const t = await res.text();
