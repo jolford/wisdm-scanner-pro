@@ -100,33 +100,49 @@ serve(async (req) => {
     const authString = btoa(`${username}:${password}`);
     
     // Attempt to authenticate and fetch record types list (DocMgt calls projects "record types")
-    const docmgtResponse = await fetch(`${normalizedUrl}/rest/recordtypes`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Basic ${authString}`,
-        'Accept': 'application/json',
-      },
-    });
+    const endpoints = [
+      '/rest/recordtypes',
+      '/rest/records/types',
+      '/rest/recordtypes/list',
+      '/rest/recordtypes/all'
+    ];
 
-    // Check Content-Type header to ensure we got JSON
-    const contentType = docmgtResponse.headers.get('content-type');
-    
-    if (!docmgtResponse.ok || !contentType?.includes('application/json')) {
-      const errorText = await docmgtResponse.text();
-      console.error('Docmgt connection error:', errorText);
-      console.error('Response status:', docmgtResponse.status);
-      console.error('Content-Type:', contentType);
-      
+    let projectsData: any = null;
+    let firstOkContentType = '';
+    for (const ep of endpoints) {
+      const resp = await fetch(`${normalizedUrl}${ep}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Basic ${authString}`,
+          'Accept': 'application/json',
+        },
+      });
+      const ct = resp.headers.get('content-type') || '';
+      if (resp.ok && ct.includes('application/json')) {
+        try {
+          projectsData = await resp.json();
+          firstOkContentType = ct;
+          console.log('Docmgt record types endpoint used:', ep);
+          break;
+        } catch (e) {
+          console.error('Failed parsing record types JSON from', ep, e);
+        }
+      } else {
+        const preview = await resp.text();
+        console.warn('Record types endpoint failed', { ep, status: resp.status, ct, preview: preview.slice(0, 120) });
+      }
+    }
+
+    if (!projectsData) {
       return new Response(
         JSON.stringify({ 
           success: false,
-          error: `Connection failed: ${docmgtResponse.status} ${docmgtResponse.statusText}. The server returned ${contentType || 'unknown content'} instead of JSON. Please verify the URL and credentials.` 
+          error: 'Authenticated but could not retrieve record types (non-JSON responses). Please verify API path for your DocMgt instance.',
+          diagnostics: { tried: endpoints }
         }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-
-    const projectsData = await docmgtResponse.json();
     
     // Fetch field definitions for each record type (project)
     let projectFields: Record<string, any> = {};
