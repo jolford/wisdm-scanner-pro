@@ -148,8 +148,12 @@ export function ECMExportConfig({
           } else if (data.projectFields) {
             Object.entries(data.projectFields).forEach(([projId, fields]) => {
               formattedFields[projId] = (fields as any[]).map((f: any) => ({
-                name: f.FieldName || f.name || f.Name,
-                type: f.FieldType || f.type || f.Type || 'text',
+                // Handle different property names from different ECM systems
+                // DocMgt uses: VariableName, DataType
+                // FileBound uses: FieldName, FieldType
+                // Others use: name, type
+                name: f.VariableName || f.FieldName || f.name || f.Name || f.Title,
+                type: f.DataType || f.FieldType || f.type || f.Type || 'text',
                 required: f.Required || f.required || false
               }));
             });

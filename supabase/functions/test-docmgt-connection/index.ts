@@ -142,7 +142,9 @@ serve(async (req) => {
       });
       if (fieldsResponse.ok) {
         const fieldsData = await fieldsResponse.json();
-        projectFields[firstProject.ID] = fieldsData;
+        // Extract fields array from record type response
+        // DocMgt returns Variables array containing field definitions
+        projectFields[firstProject.ID] = fieldsData.Variables || fieldsData.fields || [];
       }
     }
 
