@@ -3,6 +3,9 @@ project_id = "pbyerakkryuflamlmpvm"
 [functions.ai-assistant]
 verify_jwt = true
 
+[functions.process-scanner-imports]
+verify_jwt = false
+
 # REST API Functions
 [functions.api-documents]
 verify_jwt = true

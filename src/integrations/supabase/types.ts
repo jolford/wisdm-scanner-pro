@@ -664,6 +664,121 @@ export type Database = {
           },
         ]
       }
+      scanner_import_configs: {
+        Row: {
+          auto_create_batch: boolean | null
+          batch_name_template: string | null
+          created_at: string | null
+          created_by: string
+          customer_id: string | null
+          id: string
+          is_active: boolean | null
+          last_check_at: string | null
+          project_id: string
+          updated_at: string | null
+          watch_folder: string
+        }
+        Insert: {
+          auto_create_batch?: boolean | null
+          batch_name_template?: string | null
+          created_at?: string | null
+          created_by: string
+          customer_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_check_at?: string | null
+          project_id: string
+          updated_at?: string | null
+          watch_folder: string
+        }
+        Update: {
+          auto_create_batch?: boolean | null
+          batch_name_template?: string | null
+          created_at?: string | null
+          created_by?: string
+          customer_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_check_at?: string | null
+          project_id?: string
+          updated_at?: string | null
+          watch_folder?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scanner_import_configs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scanner_import_configs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scanner_import_logs: {
+        Row: {
+          batch_id: string | null
+          config_id: string | null
+          document_id: string | null
+          error_message: string | null
+          file_name: string
+          file_path: string
+          id: string
+          imported_at: string | null
+          status: string
+        }
+        Insert: {
+          batch_id?: string | null
+          config_id?: string | null
+          document_id?: string | null
+          error_message?: string | null
+          file_name: string
+          file_path: string
+          id?: string
+          imported_at?: string | null
+          status: string
+        }
+        Update: {
+          batch_id?: string | null
+          config_id?: string | null
+          document_id?: string | null
+          error_message?: string | null
+          file_name?: string
+          file_path?: string
+          id?: string
+          imported_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scanner_import_logs_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scanner_import_logs_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "scanner_import_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scanner_import_logs_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scheduled_exports: {
         Row: {
           created_at: string
