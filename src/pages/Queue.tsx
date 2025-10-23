@@ -131,6 +131,27 @@ const Queue = () => {
     }
   }, [selectedBatchId]);
 
+  // Ensure project config is loaded when batch is preselected
+  useEffect(() => {
+    if (!selectedBatchId) return;
+    if (selectedProject && selectedProjectId) return;
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from('batches')
+          .select(`project_id, projects ( id, name, extraction_fields, metadata, export_types )`)
+          .eq('id', selectedBatchId)
+          .single();
+        if (!error && data) {
+          if (!selectedProjectId) setSelectedProjectId(data.project_id as string);
+          if ((data as any).projects) setSelectedProject((data as any).projects);
+        }
+      } catch (e) {
+        console.warn('Failed to load project for batch', e);
+      }
+    })();
+  }, [selectedBatchId, selectedProjectId, selectedProject]);
+
   useEffect(() => {
     if (!selectedBatchId) return;
     if (isReadyForExport && !readyNotified && selectedBatch?.status !== 'complete') {
