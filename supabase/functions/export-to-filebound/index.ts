@@ -488,55 +488,107 @@ serve(async (req) => {
         const fileId = await ensureFile();
 
         // Upload the document content to the created file
-        const b64 = toBase64(bytes);
         const ext = getExtension(doc.file_name || '', contentType);
 
-        const uploadPayloads = [
-          {
-            Name: doc.file_name,
-            Extension: ext,
-            AllowSaveBinaryData: true,
-            BinaryData: b64,
-            ContentType: contentType,
-          },
-          {
-            name: doc.file_name,
-            extension: ext,
-            allowSaveBinaryData: true,
-            binaryData: b64,
-            contentType,
-          },
-        ];
-
+        // Try uploading as raw binary (most common method)
         const uploadEndpoints = [
-          { url: `${baseUrl}/api/documents/${fileId}`, method: 'PUT' },
-          { url: `${baseUrl}/api/files/${fileId}/documents`, method: 'POST' },
+          { url: `${baseUrl}/api/files/${fileId}/document`, method: 'POST' as const },
+          { url: `${baseUrl}/api/files/${fileId}/documents`, method: 'POST' as const },
+          { url: `${baseUrl}/api/documents/${fileId}`, method: 'PUT' as const },
         ];
 
         let uploaded = false;
         let lastError: any = null;
-        for (const body of uploadPayloads) {
-          for (const ep of uploadEndpoints) {
+        
+        // Convert bytes to standard array for Blob
+        const byteArray = Array.from(bytes);
+        
+        for (const ep of uploadEndpoints) {
+          try {
+            console.log(`Attempting binary upload to ${ep.url}`);
+            const blob = new Blob([new Uint8Array(byteArray)], { type: contentType || 'application/octet-stream' });
             const res = await fetch(ep.url, {
               method: ep.method,
               headers: {
                 'Authorization': `Basic ${authString}`,
-                'Content-Type': 'application/json',
+                'Content-Type': contentType || 'application/octet-stream',
+                'Content-Disposition': `attachment; filename="${doc.file_name}"`,
               },
-              body: JSON.stringify(body)
+              body: blob
             });
-            if (res.ok) {
-              const okJson = await res.json().catch(() => ({}));
+            
+            if (res.ok || res.status === 201) {
+              console.log(`Binary upload successful to ${ep.url}`);
+              const okJson = await res.json().catch(() => ({ success: true }));
               successes.push({ id: doc.id, result: okJson, fileId });
               uploaded = true;
               break;
             } else {
               const t = await res.text();
-              lastError = { status: res.status, details: (t || '').slice(0, 500) };
-              console.warn('FileBound document upload failed', ep, lastError);
+              lastError = { url: ep.url, status: res.status, details: (t || '').slice(0, 500) };
+              console.warn('FileBound binary upload failed', lastError);
             }
+          } catch (err: any) {
+            console.warn(`Binary upload error to ${ep.url}:`, err.message);
           }
-          if (uploaded) break;
+        }
+
+        // If binary upload failed, try JSON with base64
+        if (!uploaded) {
+          console.log('Binary uploads failed, trying JSON with base64');
+          const b64 = toBase64(bytes);
+          
+          const uploadPayloads = [
+            {
+              Name: doc.file_name,
+              Extension: ext,
+              AllowSaveBinaryData: true,
+              BinaryData: b64,
+              ContentType: contentType,
+            },
+            {
+              name: doc.file_name,
+              extension: ext,
+              allowSaveBinaryData: true,
+              binaryData: b64,
+              contentType,
+            },
+          ];
+
+          const jsonEndpoints = [
+            { url: `${baseUrl}/api/files/${fileId}/document`, method: 'PUT' as const },
+            { url: `${baseUrl}/api/files/${fileId}/documents`, method: 'POST' as const },
+            { url: `${baseUrl}/api/documents/${fileId}`, method: 'PUT' as const },
+          ];
+
+          for (const body of uploadPayloads) {
+            for (const ep of jsonEndpoints) {
+              try {
+                const res = await fetch(ep.url, {
+                  method: ep.method,
+                  headers: {
+                    'Authorization': `Basic ${authString}`,
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify(body)
+                });
+                if (res.ok || res.status === 201) {
+                  console.log(`JSON upload successful to ${ep.url}`);
+                  const okJson = await res.json().catch(() => ({ success: true }));
+                  successes.push({ id: doc.id, result: okJson, fileId });
+                  uploaded = true;
+                  break;
+                } else {
+                  const t = await res.text();
+                  lastError = { url: ep.url, status: res.status, details: (t || '').slice(0, 500) };
+                  console.warn('FileBound JSON upload failed', lastError);
+                }
+              } catch (err: any) {
+                console.warn(`JSON upload error to ${ep.url}:`, err.message);
+              }
+            }
+            if (uploaded) break;
+          }
         }
 
         if (!uploaded) {
