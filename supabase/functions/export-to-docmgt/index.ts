@@ -145,8 +145,11 @@ serve(async (req) => {
     console.log(`Exporting ${documents.length} documents to Docmgt at ${docmgtUrl}`);
 
     // DocMgt REST API uses /rest/ prefix directly from base URL
-    const baseUrl = docmgtUrl.replace(/\/+$/, '');
-    console.log('DocMgt base URL:', baseUrl);
+    const baseUrl = docmgtUrl
+      .replace(/\/+$/, '')
+      .replace(/\/(rest|v4api|api)$/i, '');
+    console.log('DocMgt base URL normalized:', baseUrl);
+
 
     // Create Basic Auth header
     const authString = btoa(`${username}:${password}`);
