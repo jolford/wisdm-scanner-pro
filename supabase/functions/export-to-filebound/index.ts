@@ -395,11 +395,12 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ 
-        success: true, 
-        message: `Exported ${successes.length} document(s) to FileBound${failures.length ? ' (some failed)' : ''}`,
+        success: true,
+        partial: failures.length > 0,
+        message: `Exported ${successes.length}/${documents.length} document(s) to FileBound${failures.length ? ' (some failed)' : ''}`,
         result: fileboundResult,
       }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: failures.length ? 207 : 200 }
+      { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
   } catch (error: any) {
     console.error('Error exporting to Filebound:', error);
