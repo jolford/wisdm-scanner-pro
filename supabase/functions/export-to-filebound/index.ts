@@ -246,26 +246,72 @@ serve(async (req) => {
 
         // Helper: create a File in FileBound for this project (or return existing)
         async function ensureFile(): Promise<string> {
-          // Try sending index fields as an object first
-          const payloads = [
-            { ProjectId: projectId, IndexFields: indexFields },
-            { projectId: projectId, indexFields: indexFields },
-            // Some FileBound instances expect an array of { Name, Value }
-            {
-              ProjectId: projectId,
-              IndexFields: Object.entries(indexFields).map(([Name, Value]) => ({ Name, Value }))
+          // Build 'File' payload using FileBound documented schema
+          // 1) Fetch project field definitions to map names -> ordinal indices
+          let projectFields: any[] = [];
+          try {
+            const fieldsRes = await fetch(`${baseUrl}/api/projects/${projectId}/fields`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Basic ${authString}`,
+                'Accept': 'application/json'
+              }
+            });
+            if (fieldsRes.ok) {
+              projectFields = await fieldsRes.json().catch(() => []);
             }
+          } catch (_) {}
+
+          // 2) Convert our indexFields object to FileBound "field" array (index 1..20)
+          const fieldsArray: string[] = new Array(21).fill("");
+          // Many instances ignore index 0
+          fieldsArray[0] = 'not used - ignore';
+
+          const getIndexFromName = (name: string): number | undefined => {
+            // Accept F1/F2/... direct mapping
+            const m = /^F(\d{1,2})$/i.exec(name.trim());
+            if (m) {
+              const idx = parseInt(m[1], 10);
+              if (!Number.isNaN(idx) && idx >= 1 && idx <= 20) return idx;
+            }
+            // Try to locate by field name in project fields metadata
+            const match = projectFields.find((f: any) => {
+              const candidates = [f?.Name, f?.name, f?.FieldName, f?.fieldName, f?.DisplayName, f?.displayName];
+              return candidates.some((n: any) => typeof n === 'string' && n.toLowerCase() === name.toLowerCase());
+            });
+            if (match) {
+              const possibleIdx = match?.FieldNumber ?? match?.fieldNumber ?? match?.Index ?? match?.index ?? match?.Number ?? match?.number;
+              if (typeof possibleIdx === 'number') return possibleIdx;
+              // Some APIs return F# as Key
+              const key = match?.Key ?? match?.key;
+              if (typeof key === 'string') {
+                const km = /^F(\d{1,2})$/i.exec(key);
+                if (km) return parseInt(km[1], 10);
+              }
+            }
+            return undefined;
+          };
+
+          for (const [localField, ecmField] of Object.entries(indexFields)) {
+            if (!ecmField) continue;
+            const value = (doc.extracted_metadata || {})[localField];
+            if (value === undefined || value === null || value === '') continue;
+            const idx = getIndexFromName(String(ecmField));
+            if (idx !== undefined) fieldsArray[idx] = String(value);
+          }
+
+          const fileBodies = [
+            { field: fieldsArray, notes: doc.file_name || '', projectId },
+            { Field: fieldsArray, Notes: doc.file_name || '', ProjectId: projectId },
           ];
 
-          const endpoints = [
-            { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'PUT' },
-            { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'POST' },
-            { url: `${baseUrl}/api/files`, method: 'PUT' },
-            { url: `${baseUrl}/api/files`, method: 'POST' },
+          const createEndpoints = [
+            { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'PUT' as const },
+            { url: `${baseUrl}/api/files`, method: 'PUT' as const },
           ];
 
-          for (const body of payloads) {
-            for (const ep of endpoints) {
+          for (const body of fileBodies) {
+            for (const ep of createEndpoints) {
               const res = await fetch(ep.url, {
                 method: ep.method,
                 headers: {
@@ -276,7 +322,51 @@ serve(async (req) => {
                 body: JSON.stringify(body)
               });
               if (res.ok) {
-                // Some instances return Location header instead of JSON body
+                let fid: string | undefined;
+                // Some instances return Location header
+                const loc = res.headers.get('Location') || res.headers.get('location');
+                if (loc) {
+                  const m = loc.match(/files\/(\d+|[a-f0-9-]+)$/i);
+                  if (m) fid = m[1];
+                }
+                if (!fid) {
+                  const j = await res.json().catch(() => ({}));
+                  fid = j.FileId ?? j.fileId ?? j.Id ?? j.id ?? j?.Data?.FileId ?? j?.Data?.fileId;
+                }
+                if (fid) return String(fid);
+                // If we got 200 but no id, continue to try alternative payloads
+              } else {
+                const t = await res.text();
+                console.warn('FileBound create file failed', ep, (t || '').slice(0, 300));
+              }
+            }
+          }
+
+          // Last resort: try legacy IndexFields contract if instance supports it
+          const legacyBodies = [
+            { ProjectId: projectId, IndexFields: indexFields },
+            { projectId: projectId, indexFields: indexFields },
+            {
+              ProjectId: projectId,
+              IndexFields: Object.entries(indexFields).map(([Name, Value]) => ({ Name, Value }))
+            }
+          ];
+          const legacyEndpoints = [
+            { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'PUT' as const },
+            { url: `${baseUrl}/api/files`, method: 'PUT' as const },
+          ];
+          for (const body of legacyBodies) {
+            for (const ep of legacyEndpoints) {
+              const res = await fetch(ep.url, {
+                method: ep.method,
+                headers: {
+                  'Authorization': `Basic ${authString}`,
+                  'Content-Type': 'application/json',
+                  'Accept': 'application/json'
+                },
+                body: JSON.stringify(body)
+              });
+              if (res.ok) {
                 let fid: string | undefined;
                 const loc = res.headers.get('Location') || res.headers.get('location');
                 if (loc) {
@@ -290,10 +380,11 @@ serve(async (req) => {
                 if (fid) return String(fid);
               } else {
                 const t = await res.text();
-                console.warn('FileBound create file failed', ep, (t || '').slice(0, 300));
+                console.warn('FileBound legacy create file failed', ep, (t || '').slice(0, 300));
               }
             }
           }
+
           throw new Error('Unable to create or locate FileBound file');
         }
 
