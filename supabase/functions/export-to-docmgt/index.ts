@@ -186,10 +186,28 @@ serve(async (req) => {
       const fieldsMap: Record<string, any> = {};
       variables.forEach(v => { fieldsMap[v.VariableName] = v.DataValue; });
 
+      // Ensure RecordType is explicitly provided for DocMgt APIs
+      if (project) {
+        // Add to map and variables if not already present
+        if (!fieldsMap.RecordType) fieldsMap.RecordType = project;
+        const hasRecordTypeVar = variables.some(v => v.VariableName === 'RecordType' || v.DataName === 'RecordType');
+        if (!hasRecordTypeVar) {
+          variables.push({ VariableName: 'RecordType', DataName: 'RecordType', DataValue: project });
+        }
+      }
+
+      // Also prepare a Field array format used by some DocMgt endpoints
+      const fieldArray = Object.entries(fieldsMap).map(([FieldName, FieldValue]) => ({ FieldName, FieldValue }));
+
       const payloadCandidates = [
-        { RecordTypeID: recordTypeId, RecordTypeName: project, Variables: variables },
-        { RecordTypeID: recordTypeId, RecordTypeName: project, Fields: fieldsMap },
+        { RecordTypeID: recordTypeId ?? undefined, RecordTypeName: project, Variables: variables },
+        { RecordTypeID: recordTypeId ?? undefined, RecordTypeName: project, Fields: fieldsMap },
         { RecordTypeName: project, Variables: variables },
+        { Fields: fieldsMap },
+        // Array-based fields
+        { RecordTypeID: recordTypeId ?? undefined, RecordTypeName: project, Fields: fieldArray },
+        { RecordTypeName: project, Fields: fieldArray },
+        { Fields: fieldArray },
       ];
 
       let lastError: string | null = null;
