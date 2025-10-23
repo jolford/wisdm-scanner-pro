@@ -363,7 +363,27 @@ export function ECMExportConfig({
             )}
           </Button>
         </div>
-      </div>
+
+      {type === 'docmgt' && (
+        <div className="mt-3">
+          <Label htmlFor="recordTypeId" className="text-xs mb-1">
+            RecordTypeID (Numeric) *
+          </Label>
+          <Input
+            id="recordTypeId"
+            type="number"
+            placeholder="e.g., 53"
+            value={config.recordTypeId || ''}
+            onChange={(e) => onConfigChange({ ...config, recordTypeId: e.target.value })}
+            disabled={disabled}
+            className="text-sm"
+          />
+          <p className="text-xs text-muted-foreground mt-1">
+            The numeric RecordTypeID where documents will be filed in DocMgt.
+          </p>
+        </div>
+      )}
+
 
       {connectionStatus === 'success' && availableProjects.length > 0 && (
         <div className="space-y-3">
@@ -385,27 +405,6 @@ export function ECMExportConfig({
               </SelectContent>
             </Select>
           </div>
-          
-          {type === 'docmgt' && (
-            <div>
-              <Label htmlFor="recordTypeId" className="text-xs mb-1">
-                RecordTypeID (Numeric) *
-              </Label>
-              <Input
-                id="recordTypeId"
-                type="number"
-                placeholder="e.g., 53"
-                value={config.recordTypeId || ''}
-                onChange={(e) => onConfigChange({ ...config, recordTypeId: e.target.value })}
-                disabled={disabled}
-                className="text-sm"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                The numeric RecordTypeID where documents will be filed in DocMgt
-              </p>
-            </div>
-          )}
-        </div>
       )}
 
       {selectedProjectId && ecmFields.length > 0 && (
