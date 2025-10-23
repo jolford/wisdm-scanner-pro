@@ -243,47 +243,113 @@ serve(async (req) => {
         const { bytes, contentType } = await downloadBytes(doc.redacted_file_url || doc.file_url);
         const indexFields = buildIndexFields(doc);
 
-        // Attempt 1: multipart upload to project-specific endpoint
-        const form = new FormData();
-        form.append('file', new Blob([bytes as unknown as BlobPart], { type: contentType }), doc.file_name);
-        form.append('fileName', doc.file_name);
-        form.append('projectId', String(projectId));
-        form.append('indexFields', JSON.stringify(indexFields));
+        // Helper: create a File in FileBound for this project (or return existing)
+        async function ensureFile(): Promise<string> {
+          // Try sending index fields as an object first
+          const payloads = [
+            { ProjectId: projectId, IndexFields: indexFields },
+            { projectId: projectId, indexFields: indexFields },
+            // Some FileBound instances expect an array of { Name, Value }
+            {
+              ProjectId: projectId,
+              IndexFields: Object.entries(indexFields).map(([Name, Value]) => ({ Name, Value }))
+            }
+          ];
 
-        let resp = await fetch(`${baseUrl}/api/projects/${projectId}/documents`, {
-          method: 'POST',
-          headers: { 'Authorization': `Basic ${authString}` },
-          body: form,
-        });
+          const endpoints = [
+            { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'PUT' },
+            { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'POST' },
+            { url: `${baseUrl}/api/files`, method: 'POST' },
+          ];
 
-        // Fallback 2: JSON import with base64 content
-        if (!resp.ok) {
-          const b64 = toBase64(bytes);
-          resp = await fetch(`${baseUrl}/api/documents/import`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Basic ${authString}`,
-            },
-            body: JSON.stringify({
-              projectId: projectId,
-              batch: { name: batch.batch_name, projectName: batch.projects?.name },
-              documents: [{
-                fileName: doc.file_name,
-                contentBase64: b64,
-                contentType,
-                indexFields,
-              }],
-            }),
-          });
+          for (const body of payloads) {
+            for (const ep of endpoints) {
+              const res = await fetch(ep.url, {
+                method: ep.method,
+                headers: {
+                  'Authorization': `Basic ${authString}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(body)
+              });
+              if (res.ok) {
+                const j = await res.json().catch(() => ({}));
+                const fid = j.FileId ?? j.Id ?? j.fileId ?? j.id;
+                if (fid) return String(fid);
+              } else {
+                const t = await res.text();
+                console.warn('FileBound create file failed', ep, (t || '').slice(0, 300));
+              }
+            }
+          }
+          throw new Error('Unable to create or locate FileBound file');
         }
 
-        if (!resp.ok) {
-          const errT = await resp.text();
-          failures.push({ id: doc.id, status: resp.status, error: (errT || '').slice(0, 500) });
-        } else {
-          const okJson = await resp.json().catch(() => ({}));
-          successes.push({ id: doc.id, result: okJson });
+        function getExtension(fileName: string, ct: string): string {
+          const fromName = (fileName?.split('.')?.pop() || '').toLowerCase();
+          if (fromName) return fromName;
+          if (ct === 'application/pdf') return 'pdf';
+          if (ct.includes('png')) return 'png';
+          if (ct.includes('jpeg') || ct.includes('jpg')) return 'jpg';
+          return 'bin';
+        }
+
+        const fileId = await ensureFile();
+
+        // Upload the document content to the created file
+        const b64 = toBase64(bytes);
+        const ext = getExtension(doc.file_name || '', contentType);
+
+        const uploadPayloads = [
+          {
+            Name: doc.file_name,
+            Extension: ext,
+            AllowSaveBinaryData: true,
+            BinaryData: b64,
+            ContentType: contentType,
+          },
+          {
+            name: doc.file_name,
+            extension: ext,
+            allowSaveBinaryData: true,
+            binaryData: b64,
+            contentType,
+          },
+        ];
+
+        const uploadEndpoints = [
+          { url: `${baseUrl}/api/documents/${fileId}`, method: 'PUT' },
+          { url: `${baseUrl}/api/files/${fileId}/documents`, method: 'POST' },
+        ];
+
+        let uploaded = false;
+        let lastError: any = null;
+        for (const body of uploadPayloads) {
+          for (const ep of uploadEndpoints) {
+            const res = await fetch(ep.url, {
+              method: ep.method,
+              headers: {
+                'Authorization': `Basic ${authString}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(body)
+            });
+            if (res.ok) {
+              const okJson = await res.json().catch(() => ({}));
+              successes.push({ id: doc.id, result: okJson, fileId });
+              uploaded = true;
+              break;
+            } else {
+              const t = await res.text();
+              lastError = { status: res.status, details: (t || '').slice(0, 500) };
+              console.warn('FileBound document upload failed', ep, lastError);
+            }
+          }
+          if (uploaded) break;
+        }
+
+        if (!uploaded) {
+          failures.push({ id: doc.id, error: 'Upload failed', ...lastError });
         }
       } catch (e: any) {
         failures.push({ id: doc.id, error: e?.message || String(e) });
