@@ -161,8 +161,6 @@ serve(async (req) => {
     }
     console.log('DocMgt using RecordTypeID:', recordTypeId);
 
-    // Prepare documents for Docmgt API (create records)
-    const fieldMappings: Record<string, string> = docmgtConfig.fieldMappings || {};
     const exportResults = [] as any[];
 
     for (const doc of documents) {
@@ -194,25 +192,23 @@ serve(async (req) => {
         console.warn(`Error downloading file for doc ${doc.id}:`, err);
       }
 
-      // DocMgt REST API expects a record object with Datas array
-      const datasArray = Object.entries(metadata).map(([key, value]) => ({
-        DataName: fieldMappings[key] || key,
-        DataValue: String(value),
-      }));
-
-      const recordPayload = {
-        RecordTypeID: recordTypeId,
-        Datas: datasArray,
+      // DocMgt uses /rest/documents endpoint (NOT /rest/records)
+      // Create document with RecordID pointing to the record type
+      const documentPayload = {
+        RecordID: recordTypeId,
+        Name: fileName,
+        FileName: fileName,
+        Status: 1,
       };
 
       let lastError: string | null = null;
       let success = false;
-      let recordId: string | number | null = null;
+      let documentId: string | number | null = null;
       
-      // Step 1: Create the record using DocMgt REST API
+      // Step 1: Create document using DocMgt /rest/documents endpoint
       try {
-        const createUrl = `${baseUrl}/rest/records`;
-        console.log('Creating DocMgt record at:', createUrl, 'with payload:', recordPayload);
+        const createUrl = `${baseUrl}/rest/documents`;
+        console.log('Creating DocMgt document at:', createUrl, 'with payload:', documentPayload);
         
         const resp = await fetch(createUrl, {
           method: 'POST',
@@ -221,83 +217,69 @@ serve(async (req) => {
             'Accept': 'application/json',
             'Authorization': `Basic ${authString}`,
           },
-          body: JSON.stringify(recordPayload),
+          body: JSON.stringify(documentPayload),
         });
         
-        const ct = resp.headers.get('content-type') || '';
         const text = await resp.text();
         
-        if (resp.ok && (ct.includes('application/json') || text.startsWith('{'))) {
+        if (resp.ok) {
           let json: any = null;
           try { json = JSON.parse(text); } catch {}
           
-          recordId = json?.ID || json?.id || json?.RecordID || json?.RecordId;
+          documentId = json?.ID || json?.id;
           
           exportResults.push({ 
             success: true, 
-            request: { url: createUrl, body: recordPayload }, 
+            request: { url: createUrl, body: documentPayload }, 
             response: json || text,
-            recordId 
+            documentId 
           });
           success = true;
-          console.log('DocMgt record created successfully, ID:', recordId);
+          console.log('DocMgt document created successfully, ID:', documentId);
         } else {
           lastError = text || `HTTP ${resp.status}`;
-          console.error('Docmgt API error:', { url: createUrl, status: resp.status, lastError: lastError.slice(0, 500) });
+          console.error('DocMgt API error:', { url: createUrl, status: resp.status, response: text.slice(0, 500) });
         }
       } catch (err: any) {
         lastError = err.message;
-        console.error('Docmgt request error:', err);
+        console.error('DocMgt request error:', err);
       }
 
-      // Step 2: Upload document file if record was created and file exists
-      if (success && recordId && fileBlob) {
+      // Step 2: Upload file binary if document was created
+      if (success && documentId && fileBlob) {
         try {
-          const formData = new FormData();
-          formData.append('file', fileBlob, fileName);
+          const uploadUrl = `${baseUrl}/rest/documents/${documentId}/binary`;
+          console.log(`Uploading file to ${uploadUrl}`);
           
-          // Try multiple file upload endpoints
-           const uploadEndpoints = [
-             `/rest/records/${recordId}/documents`,
-             `/rest/records/${recordId}/files`,
-           ];
+          const uploadResp = await fetch(uploadUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Basic ${authString}`,
+              'Content-Type': 'application/octet-stream',
+            },
+            body: fileBlob,
+          });
           
-          let fileUploaded = false;
-          for (const endpoint of uploadEndpoints) {
-            try {
-               const uploadResp = await fetch(`${baseUrl}${endpoint}`, {
-                 method: 'POST',
-                 headers: {
-                   'Authorization': `Basic ${authString}`,
-                 },
-                 body: formData,
-               });
-              
-              if (uploadResp.ok) {
-                console.log(`File uploaded successfully to ${endpoint} for record ${recordId}`);
-                exportResults[exportResults.length - 1].fileUploaded = true;
-                exportResults[exportResults.length - 1].fileName = fileName;
-                fileUploaded = true;
-                break;
-              }
-            } catch (uploadErr) {
-              console.warn(`Failed to upload file to ${endpoint}:`, uploadErr);
-            }
-          }
-          
-          if (!fileUploaded) {
-            console.warn(`File upload failed for record ${recordId} - tried all endpoints`);
-            exportResults[exportResults.length - 1].fileUploadWarning = 'File could not be uploaded to DocMgt';
+          if (uploadResp.ok) {
+            console.log(`File uploaded successfully for document ${documentId}`);
+            exportResults[exportResults.length - 1].fileUploaded = true;
+            exportResults[exportResults.length - 1].fileName = fileName;
+          } else {
+            const errorText = await uploadResp.text();
+            console.warn(`File upload failed for document ${documentId}:`, errorText);
+            exportResults[exportResults.length - 1].fileUploadWarning = `File upload failed: ${errorText.slice(0, 100)}`;
           }
         } catch (fileErr: any) {
-          console.error(`Error uploading file for record ${recordId}:`, fileErr);
+          console.error(`Error uploading file for document ${documentId}:`, fileErr);
           exportResults[exportResults.length - 1].fileUploadError = fileErr.message;
         }
       } else if (success && !fileBlob) {
         exportResults[exportResults.length - 1].fileUploadWarning = 'No file available to upload';
       }
 
-      if (!success) exportResults.push({ success: false, error: lastError, recordPayload });
+      if (!success) {
+        exportResults.push({ success: false, error: lastError });
+      }
     }
 
     const successCount = exportResults.filter(r => r.success).length;
