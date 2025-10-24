@@ -173,56 +173,68 @@ serve(async (req) => {
       recordTypeId = Number(project);
     }
     
-    // Validate RecordTypeID exists and user has access; attempt to resolve via list endpoints if not
+    console.log('DocMgt using RecordTypeID:', recordTypeId);
+    
+    // Validate RecordTypeID by fetching available record types first
     let availableRecordTypes: any[] = [];
+    let recordTypeValid = false;
+    
     if (recordTypeId) {
-      try {
-        const validateResp = await fetch(`${baseUrl}/rest/recordtypes/${recordTypeId}` , {
-          method: 'GET',
-          headers: {
-            'Authorization': `Basic ${authString}`,
-            'Accept': 'application/json',
-          },
-        });
-        if (!validateResp.ok) {
-          const endpoints = ['/rest/recordtypes','/rest/records/types','/rest/recordtypes/list','/rest/recordtypes/all'];
-          for (const ep of endpoints) {
-            const resp = await fetch(`${baseUrl}${ep}`, {
-              method: 'GET',
-              headers: {
-                'Authorization': `Basic ${authString}`,
-                'Accept': 'application/json',
-              },
-            });
-            const ct = resp.headers.get('content-type') || '';
-            if (resp.ok && ct.includes('application/json')) {
-              try {
-                availableRecordTypes = await resp.json();
-              } catch {}
-              break;
-            }
+      const endpoints = ['/rest/recordtypes', '/rest/records/types', '/rest/recordtypes/list', '/rest/recordtypes/all'];
+      for (const ep of endpoints) {
+        try {
+          const resp = await fetch(`${baseUrl}${ep}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Basic ${authString}`,
+              'Accept': 'application/json',
+            },
+          });
+          const ct = resp.headers.get('content-type') || '';
+          if (resp.ok && ct.includes('application/json')) {
+            availableRecordTypes = await resp.json();
+            console.log(`Fetched ${availableRecordTypes.length} available RecordTypes from ${ep}`);
+            break;
           }
-
-          // If a name is configured, try to find it in the list and use its ID
-          const nameCandidate = (docmgtConfig.recordTypeName || docmgtConfig.projectName || '').toString();
-          if (availableRecordTypes && nameCandidate) {
-            const match = availableRecordTypes.find((t: any) => {
-              const nm = (t.Name || t.name || t.RecordTypeName || '').toString();
-              return nm.toLowerCase() === nameCandidate.toLowerCase();
-            });
-            const resolved = match?.ID ?? match?.id ?? match?.RecordTypeId ?? match?.RecordTypeID;
-            if (resolved) {
-              console.log(`Resolved RecordType by name '${nameCandidate}' -> ${resolved}`);
-              recordTypeId = Number(resolved);
-            }
-          }
+        } catch (e) {
+          console.warn(`Failed to fetch record types from ${ep}:`, e);
         }
-      } catch (e) {
-        console.warn('RecordType validation failed:', e);
+      }
+      
+      // Check if the configured RecordTypeID is in the list of available types
+      if (availableRecordTypes.length > 0) {
+        const found = availableRecordTypes.find((rt: any) => {
+          const rtId = rt.ID ?? rt.id ?? rt.RecordTypeId ?? rt.RecordTypeID;
+          return rtId && Number(rtId) === recordTypeId;
+        });
+        
+        if (found) {
+          recordTypeValid = true;
+          console.log(`Validated RecordTypeID ${recordTypeId} - Name: ${found.Name || found.name || 'Unknown'}`);
+        } else {
+          // RecordTypeID not found - return helpful error with available options
+          const availableIds = availableRecordTypes.map((rt: any) => {
+            const id = rt.ID ?? rt.id ?? rt.RecordTypeId ?? rt.RecordTypeID;
+            const name = rt.Name || rt.name || rt.RecordTypeName || 'Unnamed';
+            return { id, name };
+          }).filter(rt => rt.id);
+          
+          console.error(`RecordTypeID ${recordTypeId} not found. Available RecordTypes:`, availableIds);
+          
+          return new Response(
+            JSON.stringify({ 
+              success: false,
+              error: `RecordTypeID ${recordTypeId} not found or you don't have access to it.`,
+              availableRecordTypes: availableIds,
+              message: availableIds.length > 0 
+                ? `Available RecordTypes: ${availableIds.map(rt => `${rt.name} (ID: ${rt.id})`).join(', ')}`
+                : 'No accessible RecordTypes found. Please verify your credentials have the correct permissions.'
+            }),
+            { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+          );
+        }
       }
     }
-
-    console.log('DocMgt using RecordTypeID:', recordTypeId);
     // Map WISDM metadata keys to DocMgt variable names if provided
     const fieldMappings: Record<string, string> = (docmgtConfig as any).fieldMappings || {};
 
