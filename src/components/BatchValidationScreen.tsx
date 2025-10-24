@@ -52,6 +52,12 @@ interface Document {
   extracted_metadata: Record<string, string>;
   validation_status: string;
   line_items?: Array<Record<string, any>>;
+  document_type?: string;
+  classification_confidence?: number;
+  classification_metadata?: {
+    reasoning?: string;
+    classified_at?: string;
+  };
 }
 
 /**
@@ -579,6 +585,21 @@ export const BatchValidationScreen = ({
                     {/* Document name and metadata badges */}
                     <div className="flex-1">
                       <h3 className="font-semibold">{doc.file_name}</h3>
+                      
+                      {/* Document Classification */}
+                      {doc.document_type && (
+                        <div className="flex flex-wrap gap-2 mt-1 mb-1">
+                          <Badge variant="secondary" className="text-xs">
+                            📄 {doc.document_type.replace(/_/g, ' ').toUpperCase()}
+                          </Badge>
+                          {doc.classification_confidence !== undefined && (
+                            <Badge variant="outline" className="text-xs">
+                              {Math.round(doc.classification_confidence * 100)}% confident
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+                      
                       {/* Show all extracted fields as badges */}
                       <div className="flex flex-wrap gap-2 mt-1">
                         {projectFields.map((field) => (

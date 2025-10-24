@@ -38,6 +38,11 @@ interface ValidationScreenProps {
   onValidate: (status: 'validated' | 'rejected', metadata: Record<string, string>) => void;
   onSkip: () => void;
   onSwitchToExport?: () => void;
+  classification?: {
+    document_type?: string;
+    confidence?: number;
+    reasoning?: string;
+  };
 }
 
 export const ValidationScreen = ({
@@ -53,6 +58,7 @@ export const ValidationScreen = ({
   onValidate,
   onSkip,
   onSwitchToExport,
+  classification,
 }: ValidationScreenProps) => {
   const [editedMetadata, setEditedMetadata] = useState(metadata);
   const [validationStatus, setValidationStatus] = useState<'pending' | 'validated' | 'rejected'>('pending');
@@ -712,6 +718,27 @@ useEffect(() => {
       {/* Right: Index Fields & Validation */}
       <Card className="p-6 flex flex-col">
         <h3 className="font-semibold mb-4">Index Fields</h3>
+        
+        {/* Document Classification */}
+        {classification?.document_type && (
+          <div className="mb-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+            <div className="flex items-start gap-2 mb-2">
+              <Badge variant="outline" className="text-sm">
+                📄 {classification.document_type.replace(/_/g, ' ').toUpperCase()}
+              </Badge>
+              {classification.confidence !== undefined && (
+                <Badge variant="secondary" className="text-xs">
+                  {Math.round(classification.confidence * 100)}% confident
+                </Badge>
+              )}
+            </div>
+            {classification.reasoning && (
+              <p className="text-xs text-muted-foreground mt-2">
+                {classification.reasoning}
+              </p>
+            )}
+          </div>
+        )}
         
         {/* Calculation Variance Warning */}
         {editedMetadata['_calculationMatch'] === 'false' && (
