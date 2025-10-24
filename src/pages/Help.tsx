@@ -4,7 +4,10 @@ import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
   Accordion,
   AccordionContent,
@@ -35,12 +38,55 @@ import {
 } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { AIAssistant } from '@/components/AIAssistant';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const Help = () => {
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('guides');
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
+  const [contactForm, setContactForm] = useState({
+    name: '',
+    email: user?.email || '',
+    subject: '',
+    message: ''
+  });
+  const [isSending, setIsSending] = useState(false);
+
+  const handleContactSupport = async () => {
+    if (!contactForm.name || !contactForm.email || !contactForm.subject || !contactForm.message) {
+      toast.error('Please fill in all fields');
+      return;
+    }
+
+    setIsSending(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('contact-support', {
+        body: {
+          ...contactForm,
+          userAgent: navigator.userAgent
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success('Support request sent successfully! We\'ll get back to you soon.');
+      setContactDialogOpen(false);
+      setContactForm({
+        name: '',
+        email: user?.email || '',
+        subject: '',
+        message: ''
+      });
+    } catch (error: any) {
+      console.error('Error sending support request:', error);
+      toast.error('Failed to send support request. Please try again.');
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   const guides = [
     {
@@ -526,7 +572,11 @@ const Help = () => {
               or reach out to our support team.
             </p>
             <div className="flex gap-2">
-              <Button variant="default" className="gap-2">
+              <Button 
+                variant="default" 
+                className="gap-2"
+                onClick={() => setContactDialogOpen(true)}
+              >
                 <Mail className="h-4 w-4" />
                 Contact Support
               </Button>
@@ -539,6 +589,73 @@ const Help = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Contact Support Dialog */}
+        <Dialog open={contactDialogOpen} onOpenChange={setContactDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Contact Support</DialogTitle>
+              <DialogDescription>
+                Fill out the form below and we'll get back to you as soon as possible.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  value={contactForm.name}
+                  onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                  placeholder="Your name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={contactForm.email}
+                  onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                  placeholder="your.email@example.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="subject">Subject</Label>
+                <Input
+                  id="subject"
+                  value={contactForm.subject}
+                  onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
+                  placeholder="What do you need help with?"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="message">Message</Label>
+                <Textarea
+                  id="message"
+                  value={contactForm.message}
+                  onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                  placeholder="Describe your issue or question in detail..."
+                  rows={6}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setContactDialogOpen(false)}
+                disabled={isSending}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleContactSupport}
+                disabled={isSending}
+              >
+                {isSending ? 'Sending...' : 'Send Message'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
