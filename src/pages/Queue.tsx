@@ -924,8 +924,23 @@ const [isExporting, setIsExporting] = useState(false);
             }
           });
           if (error) throw error;
-          autoExports.push('Docmgt');
-          console.log('Docmgt export successful:', data);
+          if (data?.success) {
+            autoExports.push('Docmgt');
+            console.log('Docmgt export successful:', data);
+          } else {
+            const available = Array.isArray((data as any)?.availableRecordTypes)
+              ? (data as any).availableRecordTypes.filter((rt: any) => rt?.id)
+              : [];
+            if (available.length) {
+              setDocmgtRtOptions(available);
+              setDocmgtSelectedRtId(String(available[0].id));
+              setDocmgtRtDialogOpen(true);
+              toast({ title: 'Select Docmgt RecordType', description: 'Choose a RecordType to retry export.' });
+            } else {
+              const detail = (data as any)?.message || (data as any)?.error || 'Export failed';
+              throw new Error(detail);
+            }
+          }
         } catch (err: any) {
           console.error('Docmgt auto-export failed:', err);
           toast({

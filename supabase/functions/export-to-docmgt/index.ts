@@ -250,6 +250,7 @@ serve(async (req) => {
     const fieldMappings: Record<string, string> = (docmgtConfig as any).fieldMappings || {};
 
     const exportResults = [] as any[];
+    let successDocCount = 0;
 
     for (const doc of documents) {
       const metadata = (doc.extracted_metadata || {}) as Record<string, any>;
@@ -393,18 +394,19 @@ serve(async (req) => {
             body: fileBlob,
           });
 
-          if (uploadResp.ok) {
-            exportResults.push({ step: 'upload', success: true, documentId, recordId, fileName });
+            if (uploadResp.ok) {
+              exportResults.push({ step: 'upload', success: true, documentId, recordId, fileName });
+              successDocCount++;
 
-            // Optional finalize call if supported
-            try {
-              const finalizeUrl = `${baseUrl}/rest/documents/${documentId}/uploadcomplete`;
-              const finalizeResp = await fetch(finalizeUrl, { headers: { 'Authorization': `Basic ${authString}` } });
-              if (finalizeResp.ok) {
-                exportResults.push({ step: 'finalize', success: true, documentId });
-              }
-            } catch {}
-          } else {
+              // Optional finalize call if supported
+              try {
+                const finalizeUrl = `${baseUrl}/rest/documents/${documentId}/uploadcomplete`;
+                const finalizeResp = await fetch(finalizeUrl, { headers: { 'Authorization': `Basic ${authString}` } });
+                if (finalizeResp.ok) {
+                  exportResults.push({ step: 'finalize', success: true, documentId });
+                }
+              } catch {}
+            } else {
             const errorText = await uploadResp.text();
             console.warn(`File upload failed for document ${documentId}:`, errorText);
             exportResults.push({ step: 'upload', success: false, documentId, error: errorText.slice(0, 200) });
@@ -423,7 +425,7 @@ serve(async (req) => {
 
     }
 
-    const successCount = exportResults.filter(r => r.success).length;
+    const successCount = successDocCount;
 
     // Update batch metadata with export info
     await supabase
@@ -442,8 +444,8 @@ serve(async (req) => {
       })
       .eq('id', batchId);
 
-    // Auto-delete batch and documents after successful export
-    if (successCount > 0) {
+    // Auto-delete batch and documents only if ALL documents exported successfully
+    if (successCount === documents.length && documents.length > 0) {
       // Delete all documents in the batch
       await supabase
         .from('documents')
@@ -459,10 +461,12 @@ serve(async (req) => {
       console.log(`Auto-deleted batch ${batchId} and its ${documents.length} documents after successful export`);
     }
 
+    const clearedText = successCount === documents.length && documents.length > 0 ? ' and cleared batch' : '';
+
     return new Response(
       JSON.stringify({ 
         success: successCount > 0, 
-        message: `Successfully exported ${successCount} of ${documents.length} documents to Docmgt and cleared batch`,
+        message: `Successfully exported ${successCount} of ${documents.length} documents to Docmgt${clearedText}`,
         results: exportResults,
         // Help UI surface choices if there was a RecordType-related failure
         availableRecordTypes: (Array.isArray(availableRecordTypes) ? availableRecordTypes.map((rt: any) => ({
