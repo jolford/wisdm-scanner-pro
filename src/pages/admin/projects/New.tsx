@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, ArrowLeft, ArrowUp, ArrowDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -17,6 +18,8 @@ import wisdmLogo from '@/assets/wisdm-logo.png';
 import { ECMExportConfig } from '@/components/admin/ECMExportConfig';
 import { DocumentSeparationConfig, SeparationConfig } from '@/components/admin/DocumentSeparationConfig';
 import { FolderPicker } from '@/components/admin/FolderPicker';
+import { TableExtractionConfig, TableExtractionConfig as TableConfig } from '@/components/admin/TableExtractionConfig';
+import { ValidationLookupConfig, ValidationLookupConfig as VLConfig } from '@/components/admin/ValidationLookupConfig';
 
 interface ExtractionField {
   name: string;
@@ -83,6 +86,21 @@ const NewProject = () => {
     barcodePatterns: ['SEPARATOR', 'DIVIDER'],
     blankPageThreshold: 95,
     pagesPerDocument: 1,
+  });
+
+  const [tableExtractionConfig, setTableExtractionConfig] = useState<TableConfig>({
+    enabled: false,
+    fields: [],
+  });
+
+  const [validationLookupConfig, setValidationLookupConfig] = useState<VLConfig>({
+    enabled: false,
+    system: 'none',
+    url: '',
+    username: '',
+    password: '',
+    project: '',
+    lookupFields: [],
   });
 
   const addField = () => {
@@ -154,7 +172,9 @@ const NewProject = () => {
         metadata: { 
           export_config: exportConfig,
           separation_config: separationConfig,
-          document_naming_pattern: documentNamingPattern 
+          document_naming_pattern: documentNamingPattern,
+          table_extraction_config: tableExtractionConfig,
+          validation_lookup_config: validationLookupConfig
         } as any,
       }]);
 
@@ -568,6 +588,42 @@ const NewProject = () => {
               </div>
               <p className="text-sm text-muted-foreground mt-2">
                 Configure which processing queues are active for this project's workflow.
+              </p>
+            </div>
+
+            <div>
+              <Label className="mb-4 block flex items-center gap-2">
+                Validation Lookups
+                <Badge variant="outline" className="text-xs">FileBound / DocMgt</Badge>
+              </Label>
+              <Card className="p-4 bg-muted/50">
+                <div className="flex items-center space-x-2 mb-4">
+                  <Checkbox
+                    id="enable-validation-lookup"
+                    checked={validationLookupConfig.enabled}
+                    onCheckedChange={(checked) => 
+                      setValidationLookupConfig(prev => ({ 
+                        ...prev, 
+                        enabled: checked === true 
+                      }))
+                    }
+                  />
+                  <Label htmlFor="enable-validation-lookup" className="text-sm font-medium cursor-pointer">
+                    Enable validation lookups from ECM systems
+                  </Label>
+                </div>
+                
+                {validationLookupConfig.enabled && (
+                  <ValidationLookupConfig
+                    config={validationLookupConfig}
+                    extractionFields={fields}
+                    onConfigChange={setValidationLookupConfig}
+                    disabled={!validationLookupConfig.enabled}
+                  />
+                )}
+              </Card>
+              <p className="text-sm text-muted-foreground mt-2">
+                Configure ECM system lookups for validation. Users can search and retrieve values from FileBound or DocMgt during document validation.
               </p>
             </div>
 
