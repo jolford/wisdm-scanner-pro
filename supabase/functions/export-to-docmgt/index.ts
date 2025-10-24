@@ -464,6 +464,11 @@ serve(async (req) => {
         success: successCount > 0, 
         message: `Successfully exported ${successCount} of ${documents.length} documents to Docmgt and cleared batch`,
         results: exportResults,
+        // Help UI surface choices if there was a RecordType-related failure
+        availableRecordTypes: (Array.isArray(availableRecordTypes) ? availableRecordTypes.map((rt: any) => ({
+          id: rt.ID ?? rt.id ?? rt.RecordTypeId ?? rt.RecordTypeID,
+          name: rt.Name || rt.name || rt.RecordTypeName || 'Unnamed'
+        })).filter((rt: any) => rt.id) : []),
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -475,8 +480,9 @@ serve(async (req) => {
     
     return new Response(
       JSON.stringify({ 
-        error: 'Failed to export to Docmgt. Please try again.',
-        success: false 
+        error: error.message || 'Failed to export to Docmgt. Please try again.',
+        success: false,
+        availableRecordTypes: [],
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

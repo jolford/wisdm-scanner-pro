@@ -790,8 +790,12 @@ const Queue = () => {
       if (data?.success) {
         toast({ title: 'Exported to Docmgt', description: `Exported ${validatedDocs.length} documents` });
       } else {
-        const detail = data?.results?.find((r: any) => r?.error)?.error || data?.message || 'Export failed';
-        throw new Error(detail);
+        const suggestions = Array.isArray((data as any)?.availableRecordTypes) && (data as any).availableRecordTypes.length
+          ? `Available RecordTypes: ${(data as any).availableRecordTypes.slice(0,5).map((rt: any) => `${rt.name} (ID: ${rt.id})`).join(', ')}`
+          : '';
+        const detail = (data as any)?.results?.find((r: any) => r?.error)?.error || (data as any)?.message || (data as any)?.error || 'Export failed';
+        toast({ title: 'Export failed', description: `${detail}${suggestions ? ` — ${suggestions}` : ''}`, variant: 'destructive' });
+        return;
       }
     } catch (err: any) {
       console.error('Docmgt export error:', err);
