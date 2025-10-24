@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Plus, Trash2, ArrowLeft, ArrowUp, ArrowDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -384,169 +385,168 @@ const EditProject = () => {
               </div>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <Label>Extraction Fields *</Label>
-                <Button type="button" size="sm" onClick={addField}>
-                  <Plus className="h-4 w-4 mr-1" />
-                  Add Field
-                </Button>
-              </div>
-
-              <div className="space-y-4">
-                {fields.map((field, index) => (
-                  <Card key={index} className="p-4 bg-muted/50">
-                    <div className="flex gap-3">
-                      <div className="flex flex-col gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          onClick={() => moveFieldUp(index)}
-                          disabled={index === 0}
-                          className="h-8 w-8"
-                        >
-                          <ArrowUp className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="icon"
-                          onClick={() => moveFieldDown(index)}
-                          disabled={index === fields.length - 1}
-                          className="h-8 w-8"
-                        >
-                          <ArrowDown className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="flex-1 space-y-3">
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <Label htmlFor={`field-name-${index}`} className="text-xs">
-                              Field Name
-                            </Label>
-                            <Input
-                              id={`field-name-${index}`}
-                              value={field.name}
-                              onChange={(e) => updateField(index, 'name', e.target.value)}
-                              placeholder="e.g., Invoice Number"
-                            />
-                          </div>
-                          <div>
-                            <Label htmlFor={`field-type-${index}`} className="text-xs">
-                              Field Type
-                            </Label>
-                            <Select
-                              value={field.type || 'text'}
-                              onValueChange={(value) => {
-                                const updated = [...fields];
-                                updated[index].type = value as 'text' | 'date' | 'currency' | 'number' | 'email';
-                                setFields(updated);
-                              }}
+            <Accordion type="multiple" defaultValue={["fields", "table", "naming", "export", "separation", "queues", "scheduled", "scanner", "validation"]} className="space-y-4">
+              <AccordionItem value="fields" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="font-semibold">Extraction Fields</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-4">
+                    {fields.map((field, index) => (
+                      <Card key={index} className="p-4 bg-muted/50">
+                        <div className="flex gap-3">
+                          <div className="flex flex-col gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => moveFieldUp(index)}
+                              disabled={index === 0}
+                              className="h-8 w-8"
                             >
-                              <SelectTrigger id={`field-type-${index}`}>
-                                <SelectValue placeholder="Select type" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-popover z-50">
-                                <SelectItem value="text">Text</SelectItem>
-                                <SelectItem value="date">Date</SelectItem>
-                                <SelectItem value="currency">Currency</SelectItem>
-                                <SelectItem value="number">Number</SelectItem>
-                                <SelectItem value="email">Email</SelectItem>
-                              </SelectContent>
-                            </Select>
+                              <ArrowUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              onClick={() => moveFieldDown(index)}
+                              disabled={index === fields.length - 1}
+                              className="h-8 w-8"
+                            >
+                              <ArrowDown className="h-4 w-4" />
+                            </Button>
                           </div>
+                          <div className="flex-1 space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label htmlFor={`field-name-${index}`} className="text-xs">
+                                  Field Name
+                                </Label>
+                                <Input
+                                  id={`field-name-${index}`}
+                                  value={field.name}
+                                  onChange={(e) => updateField(index, 'name', e.target.value)}
+                                  placeholder="e.g., Invoice Number"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`field-type-${index}`} className="text-xs">
+                                  Field Type
+                                </Label>
+                                <Select
+                                  value={field.type || 'text'}
+                                  onValueChange={(value) => {
+                                    const updated = [...fields];
+                                    updated[index].type = value as 'text' | 'date' | 'currency' | 'number' | 'email';
+                                    setFields(updated);
+                                  }}
+                                >
+                                  <SelectTrigger id={`field-type-${index}`}>
+                                    <SelectValue placeholder="Select type" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-popover z-50">
+                                    <SelectItem value="text">Text</SelectItem>
+                                    <SelectItem value="date">Date</SelectItem>
+                                    <SelectItem value="currency">Currency</SelectItem>
+                                    <SelectItem value="number">Number</SelectItem>
+                                    <SelectItem value="email">Email</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div>
+                              <Label htmlFor={`field-desc-${index}`} className="text-xs">
+                                Description
+                              </Label>
+                              <Input
+                                id={`field-desc-${index}`}
+                                value={field.description}
+                                onChange={(e) => updateField(index, 'description', e.target.value)}
+                                placeholder="e.g., The unique invoice identifier"
+                              />
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`field-required-${index}`}
+                                checked={field.required || false}
+                                onCheckedChange={(checked) => {
+                                  const updated = [...fields];
+                                  updated[index].required = checked === true;
+                                  setFields(updated);
+                                }}
+                              />
+                              <Label htmlFor={`field-required-${index}`} className="text-xs cursor-pointer">
+                                Required field
+                              </Label>
+                            </div>
+                          </div>
+                          {fields.length > 1 && (
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              onClick={() => removeField(index)}
+                              className="mt-auto"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
-                        <div>
-                          <Label htmlFor={`field-desc-${index}`} className="text-xs">
-                            Description
-                          </Label>
-                          <Input
-                            id={`field-desc-${index}`}
-                            value={field.description}
-                            onChange={(e) => updateField(index, 'description', e.target.value)}
-                            placeholder="e.g., The unique invoice identifier"
-                          />
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`field-required-${index}`}
-                            checked={field.required || false}
-                            onCheckedChange={(checked) => {
-                              const updated = [...fields];
-                              updated[index].required = checked === true;
-                              setFields(updated);
-                            }}
-                          />
-                          <Label htmlFor={`field-required-${index}`} className="text-xs cursor-pointer">
-                            Required field
-                          </Label>
-                        </div>
-                      </div>
-                      {fields.length > 1 && (
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          size="icon"
-                          onClick={() => removeField(index)}
-                          className="mt-auto"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
+                      </Card>
+                    ))}
+                    <Button type="button" size="sm" onClick={addField} variant="outline" className="w-full">
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Field
+                    </Button>
+                    <p className="text-sm text-muted-foreground">
+                      Define the specific data fields you want to extract from documents in this project.
+                    </p>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="table" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="font-semibold">Line Item Table Extraction</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <Card className="p-4 bg-muted/50">
+                    <TableExtractionConfig
+                      config={tableExtractionConfig}
+                      onConfigChange={setTableExtractionConfig}
+                    />
                   </Card>
-                ))}
-              </div>
-
-              <Button type="button" size="sm" onClick={addField} variant="outline" className="w-full mt-4">
-                <Plus className="h-4 w-4 mr-1" />
-                Add Field
-              </Button>
-
-              <p className="text-sm text-muted-foreground mt-2">
-                Define the specific data fields you want to extract from documents in this project.
-                For example: Invoice Number, Date, Amount, Vendor Name, etc.
-              </p>
-            </div>
-
-            <div>
-              <Label className="mb-4 block">Line Item Table Extraction</Label>
-              <Card className="p-4 bg-muted/50">
-                <TableExtractionConfig
-                  config={tableExtractionConfig}
-                  onConfigChange={setTableExtractionConfig}
-                />
-              </Card>
-              <p className="text-sm text-muted-foreground mt-2">
-                Extract line item tables from invoices and receipts. Configure which columns to extract (e.g., Product, Quantity, Price, Total).
-              </p>
-            </div>
-
-            <div>
-              <Label htmlFor="naming-pattern">Document Naming Pattern</Label>
-              <Input
-                id="naming-pattern"
-                value={documentNamingPattern}
-                onChange={(e) => setDocumentNamingPattern(e.target.value)}
-                placeholder="e.g., Invoice-{Invoice Number} or {Date}-{Vendor Name}"
-              />
-              <p className="text-sm text-muted-foreground mt-2">
-                Automatically rename documents using extracted metadata. Use {'{'}FieldName{'}'} placeholders.
-                Example: "Invoice-{'{'}Invoice Number{'}'}" will rename to "Invoice-12345.pdf"
-              </p>
-            </div>
-
-            <Card className="p-6">
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-lg font-medium">Export Configuration</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Configure file exports and ECM connectors
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Extract line item tables from invoices and receipts.
                   </p>
-                </div>
+                </AccordionContent>
+              </AccordionItem>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              <AccordionItem value="naming" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="font-semibold">Document Naming Pattern</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <Input
+                    id="naming-pattern"
+                    value={documentNamingPattern}
+                    onChange={(e) => setDocumentNamingPattern(e.target.value)}
+                    placeholder="e.g., Invoice-{Invoice Number}"
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Use {'{'}FieldName{'}'} placeholders to automatically rename documents.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="export" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="font-semibold">Export Configuration</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {['csv', 'json', 'xml', 'txt', 'sql', 'access', 'oracle', 'pdf', 'images'].map((type) => {
                     const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
                     return (
@@ -666,111 +666,134 @@ const EditProject = () => {
                         />
                       </Card>
                     ))}
+                  </div>
                 </div>
-              </div>
-            </Card>
+                </AccordionContent>
+              </AccordionItem>
 
-            <div>
+              <AccordionItem value="separation" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="font-semibold">Document Separation</span>
+                </AccordionTrigger>
+                <AccordionContent>
               <Label className="mb-4 block">Document Separation</Label>
-              <Card className="p-4 bg-muted/50">
-                <DocumentSeparationConfig
-                  config={separationConfig}
-                  onConfigChange={setSeparationConfig}
-                />
-              </Card>
-              <p className="text-sm text-muted-foreground mt-2">
-                Configure how multi-page PDFs are automatically split into individual documents during scanning.
-              </p>
-            </div>
+                  <Card className="p-4 bg-muted/50">
+                    <DocumentSeparationConfig
+                      config={separationConfig}
+                      onConfigChange={setSeparationConfig}
+                    />
+                  </Card>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Configure how multi-page PDFs are automatically split into individual documents.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
 
-            <div>
-              <Label className="mb-4 block">Processing Queues</Label>
-              <div className="space-y-3">
-                {queues.map((queue, index) => (
-                  <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                    <div className="flex items-center space-x-3">
+              <AccordionItem value="queues" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="font-semibold">Processing Queues</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-3">
+                    {queues.map((queue, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id={`queue-${index}`}
+                            checked={queue.enabled}
+                            onCheckedChange={(checked) => {
+                              const updated = [...queues];
+                              updated[index].enabled = checked === true;
+                              setQueues(updated);
+                            }}
+                          />
+                          <Label htmlFor={`queue-${index}`} className="text-sm font-medium cursor-pointer">
+                            {queue.name} Queue
+                          </Label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Configure which processing queues are active for this project's workflow.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="scheduled" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="font-semibold">Scheduled Exports</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <Card className="p-4 bg-muted/50">
+                    <ScheduledExportConfig
+                      projectId={id || ''}
+                      availableExportTypes={Object.keys(exportConfig).filter(
+                        type => !['filebound', 'docmgt'].includes(type)
+                      )}
+                    />
+                  </Card>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Configure automatic exports to run on a schedule.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="scanner" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="font-semibold">Scanner Auto-Import</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ScannerAutoImportConfig
+                    projectId={id || ''}
+                    customerId={customerId}
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Enable automatic import from network scanners.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="validation" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">Validation Lookups</span>
+                    <Badge variant="outline" className="text-xs">FileBound / DocMgt</Badge>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <Card className="p-4 bg-muted/50">
+                    <div className="flex items-center space-x-2 mb-4">
                       <Checkbox
-                        id={`queue-${index}`}
-                        checked={queue.enabled}
-                        onCheckedChange={(checked) => {
-                          const updated = [...queues];
-                          updated[index].enabled = checked === true;
-                          setQueues(updated);
-                        }}
+                        id="enable-validation-lookup"
+                        checked={validationLookupConfig.enabled}
+                        onCheckedChange={(checked) => 
+                          setValidationLookupConfig(prev => ({ 
+                            ...prev, 
+                            enabled: checked === true 
+                          }))
+                        }
                       />
-                      <Label htmlFor={`queue-${index}`} className="text-sm font-medium cursor-pointer">
-                        {queue.name} Queue
+                      <Label htmlFor="enable-validation-lookup" className="text-sm font-medium cursor-pointer">
+                        Enable validation lookups from ECM systems
                       </Label>
                     </div>
-                  </div>
-                ))}
-              </div>
-              <p className="text-sm text-muted-foreground mt-2">
-                Configure which processing queues are active for this project's workflow.
-              </p>
-            </div>
-
-            <div>
-              <Label className="mb-4 block">Scheduled Exports</Label>
-              <Card className="p-4 bg-muted/50">
-                <ScheduledExportConfig
-                  projectId={id || ''}
-                  availableExportTypes={Object.keys(exportConfig).filter(
-                    type => !['filebound', 'docmgt'].includes(type)
-                  )}
-                />
-              </Card>
-              <p className="text-sm text-muted-foreground mt-2">
-                Configure automatic exports to run on a schedule. Batches with validated status will be exported automatically.
-              </p>
-            </div>
-
-            <div>
-              <Label className="mb-4 block">Scanner Auto-Import</Label>
-              <ScannerAutoImportConfig
-                projectId={id || ''}
-                customerId={customerId}
-              />
-              <p className="text-sm text-muted-foreground mt-2">
-                Enable automatic import from network scanners. Files saved to the designated folder will be processed every 5 minutes.
-              </p>
-            </div>
-
-            <div>
-              <Label className="mb-4 block flex items-center gap-2">
-                Validation Lookups
-                <Badge variant="outline" className="text-xs">FileBound / DocMgt</Badge>
-              </Label>
-              <Card className="p-4 bg-muted/50">
-                <div className="flex items-center space-x-2 mb-4">
-                  <Checkbox
-                    id="enable-validation-lookup"
-                    checked={validationLookupConfig.enabled}
-                    onCheckedChange={(checked) => 
-                      setValidationLookupConfig(prev => ({ 
-                        ...prev, 
-                        enabled: checked === true 
-                      }))
-                    }
-                  />
-                  <Label htmlFor="enable-validation-lookup" className="text-sm font-medium cursor-pointer">
-                    Enable validation lookups from ECM systems
-                  </Label>
-                </div>
-                
-                {validationLookupConfig.enabled && (
-                  <ValidationLookupConfig
-                    config={validationLookupConfig}
-                    extractionFields={fields}
-                    onConfigChange={setValidationLookupConfig}
-                    disabled={!validationLookupConfig.enabled}
-                  />
-                )}
-              </Card>
-              <p className="text-sm text-muted-foreground mt-2">
-                Configure ECM system lookups for validation. Users can search and retrieve values from FileBound or DocMgt during document validation.
-              </p>
-            </div>
+                    
+                    {validationLookupConfig.enabled && (
+                      <ValidationLookupConfig
+                        config={validationLookupConfig}
+                        extractionFields={fields}
+                        onConfigChange={setValidationLookupConfig}
+                        disabled={!validationLookupConfig.enabled}
+                      />
+                    )}
+                  </Card>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Configure ECM system lookups for validation.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
 
             <div className="flex gap-3 pt-4">
               <Button type="submit" disabled={saving} className="bg-gradient-to-r from-primary to-accent">
