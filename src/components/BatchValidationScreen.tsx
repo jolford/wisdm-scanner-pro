@@ -109,8 +109,90 @@ export const BatchValidationScreen = ({
   // Track which documents have region selector active
   const [showRegionSelector, setShowRegionSelector] = useState<Set<string>>(new Set());
   
+  // Track offensive language detection results for each document
+  const [offensiveLanguageResults, setOffensiveLanguageResults] = useState<Record<string, { count: number; phrases: string[] }>>({});
+  const [isScanning, setIsScanning] = useState(false);
+  
   // Toast notifications for user feedback
   const { toast } = useToast();
+
+  /**
+   * Detect offensive language in all documents for AB1466 projects
+   */
+  useEffect(() => {
+    const detectOffensiveLanguageForBatch = async () => {
+      // Check if this is an AB1466 project by looking at first document's batch
+      if (documents.length === 0) return;
+      
+      // Get project info to check if it's AB1466
+      try {
+        const { data: batchData } = await supabase
+          .from('batches')
+          .select('project_id')
+          .eq('id', batchId)
+          .single();
+        
+        if (!batchData) return;
+        
+        const { data: projectData } = await supabase
+          .from('projects')
+          .select('name')
+          .eq('id', batchData.project_id)
+          .single();
+        
+        if (!projectData) return;
+        
+        const projectName = projectData.name.toLowerCase();
+        const isAB1466 = projectName.includes('ab') && projectName.includes('1466');
+        
+        if (!isAB1466) return;
+        
+        setIsScanning(true);
+        const results: Record<string, { count: number; phrases: string[] }> = {};
+        
+        // Scan each document for offensive language
+        for (const doc of documents) {
+          if (!doc.extracted_text) continue;
+          
+          try {
+            const { data, error } = await supabase.functions.invoke('detect-offensive-language', {
+              body: {
+                text: doc.extracted_text,
+                wordBoundingBoxes: [],
+              },
+            });
+            
+            if (!error && data?.highlights && data.highlights.length > 0) {
+              results[doc.id] = {
+                count: data.highlights.length,
+                phrases: data.highlights.map((h: any) => h.text).slice(0, 3), // First 3 phrases
+              };
+            }
+          } catch (e) {
+            console.error(`Failed to scan document ${doc.id}:`, e);
+          }
+        }
+        
+        setOffensiveLanguageResults(results);
+        
+        // Notify if any documents have sensitive language
+        const docsWithIssues = Object.keys(results).length;
+        if (docsWithIssues > 0) {
+          toast({
+            title: 'Sensitive Language Detected',
+            description: `${docsWithIssues} document(s) contain potentially problematic phrases`,
+            variant: 'destructive',
+          });
+        }
+      } catch (e) {
+        console.error('Failed to detect offensive language:', e);
+      } finally {
+        setIsScanning(false);
+      }
+    };
+    
+    detectOffensiveLanguageForBatch();
+  }, [documents, batchId]);
 
   /**
    * Reset all state when batchId changes to prevent showing wrong thumbnails/data
@@ -124,6 +206,7 @@ export const BatchValidationScreen = ({
     setDocumentZoom({});
     setDocumentRotation({});
     setShowRegionSelector(new Set());
+    setOffensiveLanguageResults({});
   }, [batchId]);
 
   /**
@@ -597,6 +680,15 @@ export const BatchValidationScreen = ({
                               {Math.round(doc.classification_confidence * 100)}% confident
                             </Badge>
                           )}
+                        </div>
+                      )}
+                      
+                      {/* Sensitive Language Warning Badge */}
+                      {offensiveLanguageResults[doc.id] && (
+                        <div className="flex flex-wrap gap-2 mt-1 mb-1">
+                          <Badge variant="destructive" className="text-xs">
+                            ⚠️ {offensiveLanguageResults[doc.id].count} Sensitive Phrase{offensiveLanguageResults[doc.id].count !== 1 ? 's' : ''}
+                          </Badge>
                         </div>
                       )}
                       
