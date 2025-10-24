@@ -156,6 +156,7 @@ serve(async (req) => {
       .replace(/\/+$/, '')
       .replace(/\/(rest|v4api|api)$/i, '');
     console.log('DocMgt base URL normalized:', baseUrl);
+    console.log('DocMgt auth user:', username);
 
 
     // Create Basic Auth header
@@ -172,8 +173,56 @@ serve(async (req) => {
       recordTypeId = Number(project);
     }
     
-    console.log('DocMgt using RecordTypeID:', recordTypeId);
+    // Validate RecordTypeID exists and user has access; attempt to resolve via list endpoints if not
+    let availableRecordTypes: any[] = [];
+    if (recordTypeId) {
+      try {
+        const validateResp = await fetch(`${baseUrl}/rest/recordtypes/${recordTypeId}` , {
+          method: 'GET',
+          headers: {
+            'Authorization': `Basic ${authString}`,
+            'Accept': 'application/json',
+          },
+        });
+        if (!validateResp.ok) {
+          const endpoints = ['/rest/recordtypes','/rest/records/types','/rest/recordtypes/list','/rest/recordtypes/all'];
+          for (const ep of endpoints) {
+            const resp = await fetch(`${baseUrl}${ep}`, {
+              method: 'GET',
+              headers: {
+                'Authorization': `Basic ${authString}`,
+                'Accept': 'application/json',
+              },
+            });
+            const ct = resp.headers.get('content-type') || '';
+            if (resp.ok && ct.includes('application/json')) {
+              try {
+                availableRecordTypes = await resp.json();
+              } catch {}
+              break;
+            }
+          }
 
+          // If a name is configured, try to find it in the list and use its ID
+          const nameCandidate = (docmgtConfig.recordTypeName || docmgtConfig.projectName || '').toString();
+          if (availableRecordTypes && nameCandidate) {
+            const match = availableRecordTypes.find((t: any) => {
+              const nm = (t.Name || t.name || t.RecordTypeName || '').toString();
+              return nm.toLowerCase() === nameCandidate.toLowerCase();
+            });
+            const resolved = match?.ID ?? match?.id ?? match?.RecordTypeId ?? match?.RecordTypeID;
+            if (resolved) {
+              console.log(`Resolved RecordType by name '${nameCandidate}' -> ${resolved}`);
+              recordTypeId = Number(resolved);
+            }
+          }
+        }
+      } catch (e) {
+        console.warn('RecordType validation failed:', e);
+      }
+    }
+
+    console.log('DocMgt using RecordTypeID:', recordTypeId);
     // Map WISDM metadata keys to DocMgt variable names if provided
     const fieldMappings: Record<string, string> = (docmgtConfig as any).fieldMappings || {};
 
