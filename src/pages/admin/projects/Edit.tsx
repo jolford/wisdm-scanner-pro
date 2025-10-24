@@ -415,7 +415,7 @@ const EditProject = () => {
             <Accordion type="multiple" defaultValue={[]} className="space-y-4">
               <AccordionItem value="fields" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
-                  <span className="font-semibold">Extraction Fields</span>
+                  <span className="font-medium text-base">Extraction Fields</span>
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-4">
@@ -536,7 +536,7 @@ const EditProject = () => {
               <AccordionItem value="table" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold">Line Item Table Extraction</span>
+                    <span className="font-medium text-base">Line Item Table Extraction</span>
                     {projectName.toLowerCase().includes('invoice') ? (
                       <Badge variant="outline" className="text-xs">Invoice Projects</Badge>
                     ) : (
@@ -568,7 +568,7 @@ const EditProject = () => {
 
               <AccordionItem value="naming" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
-                  <span className="font-semibold">Document Naming Pattern</span>
+                  <span className="font-medium text-base">Document Naming Pattern</span>
                 </AccordionTrigger>
                 <AccordionContent>
                   <Input
@@ -585,7 +585,7 @@ const EditProject = () => {
 
               <AccordionItem value="export" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
-                  <span className="font-semibold">Export Configuration</span>
+                  <span className="font-medium text-base">Export Configuration</span>
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-4">
@@ -716,7 +716,7 @@ const EditProject = () => {
 
               <AccordionItem value="separation" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
-                  <span className="font-semibold">Document Separation</span>
+                  <span className="font-medium text-base">Document Separation</span>
                 </AccordionTrigger>
                 <AccordionContent>
               <Label className="mb-4 block">Document Separation</Label>
@@ -734,7 +734,7 @@ const EditProject = () => {
 
               <AccordionItem value="queues" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
-                  <span className="font-semibold">Processing Queues</span>
+                  <span className="font-medium text-base">Processing Queues</span>
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-3">
@@ -765,7 +765,7 @@ const EditProject = () => {
 
               <AccordionItem value="scheduled" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
-                  <span className="font-semibold">Scheduled Exports</span>
+                  <span className="font-medium text-base">Scheduled Exports</span>
                 </AccordionTrigger>
                 <AccordionContent>
                   <Card className="p-4 bg-muted/50">
@@ -784,7 +784,7 @@ const EditProject = () => {
 
               <AccordionItem value="scanner" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
-                  <span className="font-semibold">Scanner Auto-Import</span>
+                  <span className="font-medium text-base">Scanner Auto-Import</span>
                 </AccordionTrigger>
                 <AccordionContent>
                   <ScannerAutoImportConfig
@@ -800,7 +800,7 @@ const EditProject = () => {
               <AccordionItem value="classification" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold">Document Classification</span>
+                    <span className="font-medium text-base">Document Classification</span>
                     {classificationConfig.enabled && (
                       <Badge variant="default" className="text-xs">Enabled</Badge>
                     )}
@@ -866,7 +866,7 @@ const EditProject = () => {
               <AccordionItem value="validation" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold">Validation Lookups</span>
+                    <span className="font-medium text-base">Validation Lookups</span>
                     <Badge variant="outline" className="text-xs">FileBound / DocMgt</Badge>
                   </div>
                 </AccordionTrigger>
