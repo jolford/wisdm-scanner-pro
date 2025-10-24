@@ -232,12 +232,12 @@ export const ScannerAutoImportConfig = ({ projectId, customerId }: ScannerAutoIm
         </div>
 
         <div className="flex gap-3 pt-4 border-t">
-          <Button onClick={saveConfig} disabled={saving} className="flex-1">
+          <Button type="button" onClick={saveConfig} disabled={saving} className="flex-1">
             {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Save Configuration
           </Button>
           {config && (
-            <Button onClick={testImport} variant="outline">
+            <Button type="button" onClick={testImport} variant="outline">
               <Upload className="h-4 w-4 mr-2" />
               Test Import Now
             </Button>
