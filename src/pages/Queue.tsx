@@ -596,7 +596,7 @@ const [isExporting, setIsExporting] = useState(false);
     }
   };
 
-  const exportBatch = async (format: 'csv' | 'json' | 'xml' | 'txt') => {
+  const exportBatch = async (format: 'csv' | 'json' | 'xml' | 'txt' | 'sql' | 'access' | 'oracle') => {
     if (!validatedDocs.length) {
       toast({
         title: 'No Documents',
@@ -714,6 +714,122 @@ const [isExporting, setIsExporting] = useState(false);
         });
         mimeType = 'text/plain';
         extension = 'txt';
+        break;
+
+      case 'sql':
+        // SQL INSERT statements
+        const tableName = (selectedBatch?.batch_name || 'documents').replace(/[^a-zA-Z0-9_]/g, '_');
+        content = `-- SQL Export for ${selectedBatch?.batch_name || 'export'}\n`;
+        content += `-- Generated on ${new Date().toISOString()}\n\n`;
+        content += `CREATE TABLE IF NOT EXISTS ${tableName} (\n`;
+        content += `  id INT PRIMARY KEY AUTO_INCREMENT,\n`;
+        content += `  file_name VARCHAR(255),\n`;
+        content += `  created_date DATETIME,\n`;
+        Object.keys(batchCustomFields).forEach(key => {
+          content += `  ${key.replace(/[^a-zA-Z0-9_]/g, '_')} TEXT,\n`;
+        });
+        metadataKeys.forEach(key => {
+          content += `  ${key.replace(/[^a-zA-Z0-9_]/g, '_')} TEXT,\n`;
+        });
+        content = content.slice(0, -2) + '\n);\n\n';
+        validatedDocs.forEach(doc => {
+          const values: string[] = [
+            `'${doc.file_name.replace(/'/g, "''")}'`,
+            `'${new Date(doc.created_at).toISOString()}'`,
+          ];
+          Object.keys(batchCustomFields).forEach(key => {
+            values.push(`'${String(batchCustomFields[key] || '').replace(/'/g, "''")}'`);
+          });
+          metadataKeys.forEach(key => {
+            const val = extractMetadataValue(doc.extracted_metadata?.[key]) || '';
+            values.push(`'${String(val).replace(/'/g, "''")}'`);
+          });
+          content += `INSERT INTO ${tableName} VALUES (NULL, ${values.join(', ')});\n`;
+        });
+        mimeType = 'text/plain';
+        extension = 'sql';
+        break;
+
+      case 'access':
+        // Microsoft Access-compatible SQL
+        const accessTableName = (selectedBatch?.batch_name || 'documents').replace(/[^a-zA-Z0-9_]/g, '_');
+        content = `-- Microsoft Access Export for ${selectedBatch?.batch_name || 'export'}\n`;
+        content += `-- Generated on ${new Date().toISOString()}\n\n`;
+        content += `CREATE TABLE [${accessTableName}] (\n`;
+        content += `  [ID] AUTOINCREMENT PRIMARY KEY,\n`;
+        content += `  [FileName] TEXT(255),\n`;
+        content += `  [CreatedDate] DATETIME,\n`;
+        Object.keys(batchCustomFields).forEach(key => {
+          content += `  [${key}] MEMO,\n`;
+        });
+        metadataKeys.forEach(key => {
+          content += `  [${key}] MEMO,\n`;
+        });
+        content = content.slice(0, -2) + '\n);\n\n';
+        validatedDocs.forEach(doc => {
+          const values: string[] = [
+            `'${doc.file_name.replace(/'/g, "''")}'`,
+            `#${new Date(doc.created_at).toLocaleDateString()}#`,
+          ];
+          Object.keys(batchCustomFields).forEach(key => {
+            values.push(`'${String(batchCustomFields[key] || '').replace(/'/g, "''")}'`);
+          });
+          metadataKeys.forEach(key => {
+            const val = extractMetadataValue(doc.extracted_metadata?.[key]) || '';
+            values.push(`'${String(val).replace(/'/g, "''")}'`);
+          });
+          content += `INSERT INTO [${accessTableName}] ([FileName], [CreatedDate]`;
+          Object.keys(batchCustomFields).forEach(key => {
+            content += `, [${key}]`;
+          });
+          metadataKeys.forEach(key => {
+            content += `, [${key}]`;
+          });
+          content += `) VALUES (${values.join(', ')});\n`;
+        });
+        mimeType = 'text/plain';
+        extension = 'sql';
+        break;
+
+      case 'oracle':
+        // Oracle SQL
+        const oracleTableName = (selectedBatch?.batch_name || 'documents').replace(/[^a-zA-Z0-9_]/g, '_').toUpperCase();
+        content = `-- Oracle SQL Export for ${selectedBatch?.batch_name || 'export'}\n`;
+        content += `-- Generated on ${new Date().toISOString()}\n\n`;
+        content += `CREATE TABLE ${oracleTableName} (\n`;
+        content += `  ID NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,\n`;
+        content += `  FILE_NAME VARCHAR2(255),\n`;
+        content += `  CREATED_DATE TIMESTAMP,\n`;
+        Object.keys(batchCustomFields).forEach(key => {
+          content += `  ${key.replace(/[^a-zA-Z0-9_]/g, '_').toUpperCase()} CLOB,\n`;
+        });
+        metadataKeys.forEach(key => {
+          content += `  ${key.replace(/[^a-zA-Z0-9_]/g, '_').toUpperCase()} CLOB,\n`;
+        });
+        content = content.slice(0, -2) + '\n);\n\n';
+        validatedDocs.forEach(doc => {
+          const values: string[] = [
+            `'${doc.file_name.replace(/'/g, "''")}'`,
+            `TO_TIMESTAMP('${new Date(doc.created_at).toISOString()}', 'YYYY-MM-DD"T"HH24:MI:SS.FF3"Z"')`,
+          ];
+          Object.keys(batchCustomFields).forEach(key => {
+            values.push(`'${String(batchCustomFields[key] || '').replace(/'/g, "''")}'`);
+          });
+          metadataKeys.forEach(key => {
+            const val = extractMetadataValue(doc.extracted_metadata?.[key]) || '';
+            values.push(`'${String(val).replace(/'/g, "''")}'`);
+          });
+          content += `INSERT INTO ${oracleTableName} (FILE_NAME, CREATED_DATE`;
+          Object.keys(batchCustomFields).forEach(key => {
+            content += `, ${key.replace(/[^a-zA-Z0-9_]/g, '_').toUpperCase()}`;
+          });
+          metadataKeys.forEach(key => {
+            content += `, ${key.replace(/[^a-zA-Z0-9_]/g, '_').toUpperCase()}`;
+          });
+          content += `) VALUES (${values.join(', ')});\n`;
+        });
+        mimeType = 'text/plain';
+        extension = 'sql';
         break;
     }
 
@@ -1415,6 +1531,39 @@ const [isExporting, setIsExporting] = useState(false);
                         >
                           <Download className="h-5 w-5" />
                           <span className="font-medium">TXT Format</span>
+                        </Button>
+                      )}
+                      {(selectedProject?.export_types?.includes('sql') || getExportConfig().sql?.enabled) && (
+                        <Button 
+                          onClick={() => exportBatch('sql')} 
+                          disabled={validatedDocs.length === 0 || isExporting} 
+                          variant="outline"
+                          className="h-20 flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
+                        >
+                          <Download className="h-5 w-5" />
+                          <span className="font-medium">SQL Format</span>
+                        </Button>
+                      )}
+                      {(selectedProject?.export_types?.includes('access') || getExportConfig().access?.enabled) && (
+                        <Button 
+                          onClick={() => exportBatch('access')} 
+                          disabled={validatedDocs.length === 0 || isExporting} 
+                          variant="outline"
+                          className="h-20 flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
+                        >
+                          <Download className="h-5 w-5" />
+                          <span className="font-medium">Access Format</span>
+                        </Button>
+                      )}
+                      {(selectedProject?.export_types?.includes('oracle') || getExportConfig().oracle?.enabled) && (
+                        <Button 
+                          onClick={() => exportBatch('oracle')} 
+                          disabled={validatedDocs.length === 0 || isExporting} 
+                          variant="outline"
+                          className="h-20 flex-col gap-2 hover:border-primary/50 hover:bg-primary/5"
+                        >
+                          <Download className="h-5 w-5" />
+                          <span className="font-medium">Oracle Format</span>
                         </Button>
                       )}
                     </div>
