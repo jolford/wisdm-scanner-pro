@@ -529,7 +529,7 @@ const EditProject = () => {
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {['csv', 'json', 'xml', 'txt', 'pdf', 'images'].map((type) => {
+                {['csv', 'json', 'xml', 'txt', 'sql', 'access', 'oracle', 'pdf', 'images'].map((type) => {
                     const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
                     return (
                       <div key={type} className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
