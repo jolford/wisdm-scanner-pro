@@ -6,7 +6,8 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { ArrowLeft, FolderOpen, Search, Calendar, User, FileText, Trash2, ArrowRight, Download, HelpCircle, LayoutGrid, List } from 'lucide-react';
+import { ArrowLeft, FolderOpen, Search, Calendar, User, FileText, Trash2, ArrowRight, Download, HelpCircle, LayoutGrid, List, CheckCircle2, Clock, AlertCircle, Package } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import wisdmLogo from '@/assets/wisdm-logo.png';
@@ -152,6 +153,39 @@ const Batches = () => {
     return colors[status as keyof typeof colors] || 'bg-gray-500';
   };
 
+  const getStatusIcon = (status: string) => {
+    const icons = {
+      new: Package,
+      scanning: Clock,
+      indexing: Clock,
+      validation: AlertCircle,
+      validated: CheckCircle2,
+      complete: CheckCircle2,
+      exported: CheckCircle2,
+      error: AlertCircle,
+    };
+    return icons[status as keyof typeof icons] || Package;
+  };
+
+  const getStatusBorderColor = (status: string) => {
+    const colors = {
+      new: 'border-l-blue-500',
+      scanning: 'border-l-purple-500',
+      indexing: 'border-l-yellow-500',
+      validation: 'border-l-orange-500',
+      validated: 'border-l-teal-500',
+      complete: 'border-l-green-500',
+      exported: 'border-l-gray-500',
+      error: 'border-l-red-500',
+    };
+    return colors[status as keyof typeof colors] || 'border-l-gray-500';
+  };
+
+  const getProgressPercentage = (batch: Batch) => {
+    if (batch.total_documents === 0) return 0;
+    return Math.round((batch.validated_documents / batch.total_documents) * 100);
+  };
+
   const filteredBatches = batches.filter(batch =>
     batch.batch_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     batch.projects?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -238,134 +272,184 @@ const Batches = () => {
           </Card>
         ) : viewMode === 'grid' ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredBatches.map((batch) => (
-              <Card 
-                key={batch.id} 
-                className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)] hover:shadow-lg transition-shadow cursor-pointer"
-                onClick={() => navigate(`/batches/${batch.id}`)}
-              >
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold mb-2 flex items-center gap-2">
-                      <FolderOpen className="h-5 w-5 text-primary" />
-                      {batch.batch_name}
-                    </h3>
-                    {batch.status !== 'new' && (
-                      <Badge className={getStatusColor(batch.status)}>
-                        {batch.status}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      onClick={(e) => openBatchQueue(e, batch)}
-                      title="Open batch in queue"
-                    >
-                      <ArrowRight className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="destructive"
-                      onClick={(e) => deleteBatch(e, batch.id)}
-                      title="Delete batch"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+            {filteredBatches.map((batch) => {
+              const StatusIcon = getStatusIcon(batch.status);
+              const progressPercent = getProgressPercentage(batch);
+              
+              return (
+                <Card 
+                  key={batch.id} 
+                  className={`group relative overflow-hidden border-l-4 ${getStatusBorderColor(batch.status)} bg-gradient-to-br from-card via-card to-card/80 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-1`}
+                  onClick={() => navigate(`/batches/${batch.id}`)}
+                >
+                  <div className="p-6">
+                    {/* Header */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="flex-1 pr-2">
+                        <h3 className="text-lg font-bold mb-2 flex items-center gap-2 group-hover:text-primary transition-colors">
+                          <FolderOpen className="h-5 w-5 text-primary" />
+                          <span className="line-clamp-2">{batch.batch_name}</span>
+                        </h3>
+                        <Badge className={`${getStatusColor(batch.status)} text-white`}>
+                          <StatusIcon className="h-3 w-3 mr-1" />
+                          {batch.status}
+                        </Badge>
+                      </div>
+                      <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="hover:bg-primary hover:text-primary-foreground"
+                          onClick={(e) => openBatchQueue(e, batch)}
+                          title="Open batch in queue"
+                        >
+                          <ArrowRight className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="hover:bg-destructive hover:text-destructive-foreground"
+                          onClick={(e) => deleteBatch(e, batch.id)}
+                          title="Delete batch"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
 
-                <div className="space-y-3 text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <FileText className="h-4 w-4" />
-                    <span>Project: {batch.projects?.name || 'N/A'}</span>
-                  </div>
+                    {/* Info Section */}
+                    <div className="space-y-2.5 mb-4">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <FileText className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{batch.projects?.name || 'N/A'}</span>
+                      </div>
 
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    <span>{new Date(batch.created_at).toLocaleString()}</span>
-                  </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-3.5 w-3.5 shrink-0" />
+                        <span>{new Date(batch.created_at).toLocaleDateString()}</span>
+                      </div>
 
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <User className="h-4 w-4" />
-                    <span>{batch.profiles?.full_name || batch.profiles?.email || 'Unknown'}</span>
-                  </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <User className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{batch.profiles?.full_name || batch.profiles?.email || 'Unknown'}</span>
+                      </div>
+                    </div>
 
-                  <div className="pt-3 border-t flex justify-between text-xs">
-                    <span className="text-muted-foreground">
-                      {batch.total_documents} documents
-                    </span>
-                    <span className="text-primary font-medium">
-                      {batch.validated_documents} validated
-                    </span>
+                    {/* Stats */}
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="bg-muted/50 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-foreground">{batch.total_documents}</div>
+                        <div className="text-xs text-muted-foreground">Total Docs</div>
+                      </div>
+                      <div className="bg-primary/10 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-primary">{batch.validated_documents}</div>
+                        <div className="text-xs text-muted-foreground">Validated</div>
+                      </div>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="text-muted-foreground">Progress</span>
+                        <span className="font-semibold text-primary">{progressPercent}%</span>
+                      </div>
+                      <Progress value={progressPercent} className="h-2" />
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredBatches.map((batch) => (
-              <Card 
-                key={batch.id} 
-                className="p-4 bg-gradient-to-r from-card to-card/80 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
-                onClick={() => navigate(`/batches/${batch.id}`)}
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-4 flex-1">
-                    <FolderOpen className="h-5 w-5 text-primary shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold truncate">{batch.batch_name}</h3>
-                      <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1">
-                        <span className="flex items-center gap-1">
-                          <FileText className="h-3 w-3" />
-                          {batch.projects?.name || 'N/A'}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          {new Date(batch.created_at).toLocaleString()}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          {batch.profiles?.full_name || batch.profiles?.email || 'Unknown'}
-                        </span>
+            {filteredBatches.map((batch) => {
+              const StatusIcon = getStatusIcon(batch.status);
+              const progressPercent = getProgressPercentage(batch);
+              
+              return (
+                <Card 
+                  key={batch.id} 
+                  className={`group border-l-4 ${getStatusBorderColor(batch.status)} bg-gradient-to-r from-card via-card to-card/80 shadow-sm hover:shadow-lg transition-all cursor-pointer`}
+                  onClick={() => navigate(`/batches/${batch.id}`)}
+                >
+                  <div className="p-4">
+                    <div className="flex items-center justify-between gap-6">
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <FolderOpen className="h-5 w-5 text-primary shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3 mb-1">
+                            <h3 className="font-bold truncate group-hover:text-primary transition-colors">{batch.batch_name}</h3>
+                            <Badge className={`${getStatusColor(batch.status)} text-white shrink-0`}>
+                              <StatusIcon className="h-3 w-3 mr-1" />
+                              {batch.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1 truncate">
+                              <FileText className="h-3 w-3 shrink-0" />
+                              {batch.projects?.name || 'N/A'}
+                            </span>
+                            <span className="flex items-center gap-1 shrink-0">
+                              <Calendar className="h-3 w-3" />
+                              {new Date(batch.created_at).toLocaleDateString()}
+                            </span>
+                            <span className="flex items-center gap-1 truncate">
+                              <User className="h-3 w-3 shrink-0" />
+                              {batch.profiles?.full_name || batch.profiles?.email || 'Unknown'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-6 shrink-0">
+                        {/* Progress */}
+                        <div className="w-32">
+                          <div className="flex justify-between text-xs mb-1">
+                            <span className="text-muted-foreground">Progress</span>
+                            <span className="font-semibold text-primary">{progressPercent}%</span>
+                          </div>
+                          <Progress value={progressPercent} className="h-1.5" />
+                        </div>
+                        
+                        {/* Stats */}
+                        <div className="flex gap-4 text-sm">
+                          <div className="text-right">
+                            <div className="font-bold text-foreground">{batch.total_documents}</div>
+                            <div className="text-xs text-muted-foreground">Total</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-primary">{batch.validated_documents}</div>
+                            <div className="text-xs text-muted-foreground">Validated</div>
+                          </div>
+                        </div>
+                        
+                        {/* Actions */}
+                        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="hover:bg-primary hover:text-primary-foreground"
+                            onClick={(e) => openBatchQueue(e, batch)}
+                            title="Open batch in queue"
+                          >
+                            <ArrowRight className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="hover:bg-destructive hover:text-destructive-foreground"
+                            onClick={(e) => deleteBatch(e, batch.id)}
+                            title="Delete batch"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center gap-4 shrink-0">
-                    <div className="text-sm text-right">
-                      <div className="text-muted-foreground">{batch.total_documents} docs</div>
-                      <div className="text-primary font-medium">{batch.validated_documents} validated</div>
-                    </div>
-                    {batch.status !== 'new' && (
-                      <Badge className={getStatusColor(batch.status)}>
-                        {batch.status}
-                      </Badge>
-                    )}
-                    <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                      <Button
-                        size="icon"
-                        variant="outline"
-                        onClick={(e) => openBatchQueue(e, batch)}
-                        title="Open batch in queue"
-                      >
-                        <ArrowRight className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="destructive"
-                        onClick={(e) => deleteBatch(e, batch.id)}
-                        title="Delete batch"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
+                </Card>
+              );
+            })}
           </div>
         )}
       </main>
