@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { Resend } from "npm:resend@4.0.0";
+import { Resend } from "https://esm.sh/resend@2.0.0";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -41,7 +41,7 @@ const handler = async (req: Request): Promise<Response> => {
     const supportEmailResponse = await resend.emails.send({
       from: "WISDM Support <onboarding@resend.dev>",
       to: ["support@wisdm.com"], // Replace with actual support email
-      replyTo: email,
+      reply_to: email,
       subject: `Support Request: ${subject}`,
       html: `
         <h2>New Support Request</h2>
