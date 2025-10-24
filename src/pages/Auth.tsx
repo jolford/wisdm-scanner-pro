@@ -273,18 +273,30 @@ const AuthPage = () => {
 
       if (error) throw error;
 
-      // Check if MFA is enabled for this user
-      const { data: factorsData } = await supabase.auth.mfa.listFactors();
-      const hasMFA = factorsData?.totp && factorsData.totp.length > 0;
+      // After successful password auth, check for MFA requirement
+      // Supabase will return an incomplete session if MFA is enabled
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // List all factors to check for MFA
+      const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors();
+      
+      if (factorsError) {
+        console.error('Error checking MFA factors:', factorsError);
+      }
 
-      if (hasMFA && factorsData.totp[0]) {
-        // MFA is enabled, show challenge
-        setMfaFactorId(factorsData.totp[0].id);
+      // Check if user has verified TOTP factors
+      const verifiedFactor = factorsData?.totp?.find((factor: any) => factor.status === 'verified');
+
+      if (verifiedFactor) {
+        // MFA is enabled and verified - show challenge
+        console.log('MFA detected, showing challenge for factor:', verifiedFactor.id);
+        setMfaFactorId(verifiedFactor.id);
         setShowMfaChallenge(true);
         setLoading(false);
         return;
       }
 
+      // No MFA or not verified - normal sign in
       toast({
         title: 'Welcome Back',
         description: 'You have successfully signed in.',
