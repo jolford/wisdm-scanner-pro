@@ -1134,6 +1134,17 @@ export type Database = {
           }
       generate_license_key: { Args: never; Returns: string }
       get_next_job: { Args: never; Returns: string }
+      get_project_safe: {
+        Args: { project_id: string }
+        Returns: {
+          created_at: string
+          customer_id: string
+          id: string
+          metadata: Json
+          name: string
+          updated_at: string
+        }[]
+      }
       has_customer: {
         Args: { _customer_id: string; _user_id: string }
         Returns: boolean

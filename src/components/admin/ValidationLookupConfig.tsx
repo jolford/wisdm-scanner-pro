@@ -170,15 +170,26 @@ export function ValidationLookupConfig({
       } else {
         const url = config.url?.replace(/\/$/, '');
         const fieldsUrl = `${url}/api/projects/${projectId}/fields`;
-        const response = await fetch(fieldsUrl, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Basic ${btoa(`${config.username}:${config.password}`)}`,
-            'Accept': 'application/json',
+        
+        // Use safe-fetch edge function to prevent SSRF attacks
+        const { data: safeData, error: safeError } = await supabase.functions.invoke('safe-fetch', {
+          body: {
+            url: fieldsUrl,
+            method: 'GET',
+            headers: {
+              'Authorization': `Basic ${btoa(`${config.username}:${config.password}`)}`,
+              'Accept': 'application/json',
+            },
           },
         });
-        if (response.ok) {
-          const fieldsData = await response.json();
+
+        if (safeError) throw safeError;
+        if (!safeData || safeData.error) {
+          throw new Error(safeData?.error || 'Failed to fetch from external API');
+        }
+
+        if (safeData.status >= 200 && safeData.status < 300) {
+          const fieldsData = JSON.parse(safeData.body);
           const formattedFields = (Array.isArray(fieldsData) ? fieldsData : []).map((f: any) => ({
             name: f.FieldName || f.name || f.Name,
             type: f.FieldType || f.type || f.Type || 'text',
