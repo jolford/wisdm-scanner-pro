@@ -385,7 +385,7 @@ const EditProject = () => {
               </div>
             </div>
 
-            <Accordion type="multiple" defaultValue={["fields", "table", "naming", "export", "separation", "queues", "scheduled", "scanner", "validation"]} className="space-y-4">
+            <Accordion type="multiple" defaultValue={[]} className="space-y-4">
               <AccordionItem value="fields" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
                   <span className="font-semibold">Extraction Fields</span>
