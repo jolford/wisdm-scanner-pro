@@ -289,7 +289,11 @@ serve(async (req) => {
 
       // Step 1: Create Record
       try {
-        const recordPayload = { RecordTypeID: recordTypeId, Datas: datasArray } as any;
+        const recordPayload = { 
+          RecordTypeID: recordTypeId, 
+          RecordTypeId: recordTypeId, // compatibility: some instances expect camel-case Id
+          Datas: datasArray 
+        } as any;
         const createRecordUrl = `${baseUrl}/rest/records`;
         console.log('Creating DocMgt record at:', createRecordUrl, 'payload:', recordPayload);
 
