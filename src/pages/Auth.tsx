@@ -117,7 +117,8 @@ const AuthPage = () => {
         return;
       }
       
-      if (session && !blockRedirect && !isUpdatingPassword) {
+      // Don't auto-redirect if we're showing MFA challenge
+      if (session && !blockRedirect && !isUpdatingPassword && !showMfaChallenge) {
         navigate('/');
       }
     });
@@ -149,7 +150,7 @@ const AuthPage = () => {
       });
 
     return () => subscription.unsubscribe();
-  }, [navigate, isUpdatingPassword]);
+  }, [navigate, isUpdatingPassword, showMfaChallenge]);
 
   const recordTosAcceptance = async (userId: string) => {
     if (!currentTosVersion) return;
