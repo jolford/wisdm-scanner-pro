@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,11 +21,23 @@ export function MFAChallenge({ factorId, onSuccess, onCancel }: MFAChallengeProp
   const [recoveryCode, setRecoveryCode] = useState('');
   const [loading, setLoading] = useState(false);
   const [challengeId, setChallengeId] = useState<string | null>(null);
+  const createdRef = useRef(false);
 
-  // Create challenge when component mounts
+  // Create challenge when component mounts (only once)
   useEffect(() => {
-    const createChallenge = async () => {
+    const init = async () => {
+      if (createdRef.current) return;
+      createdRef.current = true;
       try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          toast({
+            title: 'Authentication Error',
+            description: 'Your session expired. Please sign in again.',
+            variant: 'destructive',
+          });
+          return;
+        }
         const { data, error } = await supabase.auth.mfa.challenge({ factorId });
         if (error) throw error;
         setChallengeId(data.id);
@@ -38,7 +50,7 @@ export function MFAChallenge({ factorId, onSuccess, onCancel }: MFAChallengeProp
         });
       }
     };
-    createChallenge();
+    init();
   }, [factorId, toast]);
 
   const handleVerifyCode = async () => {
@@ -55,6 +67,16 @@ export function MFAChallenge({ factorId, onSuccess, onCancel }: MFAChallengeProp
       toast({
         title: 'Authentication Error',
         description: 'Challenge not ready. Please try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    // Ensure a valid session before verifying
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      toast({
+        title: 'Authentication Error',
+        description: 'Your session expired. Please sign in again.',
         variant: 'destructive',
       });
       return;
@@ -79,9 +101,12 @@ export function MFAChallenge({ factorId, onSuccess, onCancel }: MFAChallengeProp
         onSuccess();
       }
     } catch (error: any) {
+      const msg = String(error?.message || '');
       toast({
         title: 'Verification Failed',
-        description: error.message || 'Invalid verification code',
+        description: msg.includes('sub') || msg.includes('bad_jwt')
+          ? 'Your session is no longer valid. Please sign in again and retry.'
+          : (msg || 'Invalid verification code'),
         variant: 'destructive',
       });
     } finally {
