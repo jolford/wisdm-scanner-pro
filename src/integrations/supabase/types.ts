@@ -244,9 +244,12 @@ export type Database = {
       documents: {
         Row: {
           batch_id: string | null
+          classification_confidence: number | null
+          classification_metadata: Json | null
           confidence_score: number | null
           created_at: string | null
           document_class_id: string | null
+          document_type: Database["public"]["Enums"]["document_type"] | null
           extracted_metadata: Json | null
           extracted_text: string | null
           file_name: string
@@ -269,9 +272,12 @@ export type Database = {
         }
         Insert: {
           batch_id?: string | null
+          classification_confidence?: number | null
+          classification_metadata?: Json | null
           confidence_score?: number | null
           created_at?: string | null
           document_class_id?: string | null
+          document_type?: Database["public"]["Enums"]["document_type"] | null
           extracted_metadata?: Json | null
           extracted_text?: string | null
           file_name: string
@@ -294,9 +300,12 @@ export type Database = {
         }
         Update: {
           batch_id?: string | null
+          classification_confidence?: number | null
+          classification_metadata?: Json | null
           confidence_score?: number | null
           created_at?: string | null
           document_class_id?: string | null
+          document_type?: Database["public"]["Enums"]["document_type"] | null
           extracted_metadata?: Json | null
           extracted_text?: string | null
           file_name?: string
@@ -1204,6 +1213,16 @@ export type Database = {
         | "id_card"
         | "check"
         | "other"
+      document_type:
+        | "check"
+        | "invoice"
+        | "purchase_order"
+        | "receipt"
+        | "contract"
+        | "legal_document"
+        | "form"
+        | "letter"
+        | "other"
       job_priority: "low" | "normal" | "high" | "urgent"
       job_status: "pending" | "processing" | "completed" | "failed" | "retrying"
       license_status: "active" | "expired" | "suspended" | "exhausted"
@@ -1353,6 +1372,17 @@ export const Constants = {
         "contract",
         "id_card",
         "check",
+        "other",
+      ],
+      document_type: [
+        "check",
+        "invoice",
+        "purchase_order",
+        "receipt",
+        "contract",
+        "legal_document",
+        "form",
+        "letter",
         "other",
       ],
       job_priority: ["low", "normal", "high", "urgent"],

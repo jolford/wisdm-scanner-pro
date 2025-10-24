@@ -99,6 +99,14 @@ const EditProject = () => {
     fields: [],
   });
 
+  const [classificationConfig, setClassificationConfig] = useState<{
+    enabled: boolean;
+    auto_classify: boolean;
+  }>({
+    enabled: false,
+    auto_classify: false,
+  });
+
   const [validationLookupConfig, setValidationLookupConfig] = useState<VLConfig>({
     enabled: false,
     system: 'none',
@@ -211,6 +219,11 @@ const EditProject = () => {
         if (projectData.metadata?.validation_lookup_config) {
           setValidationLookupConfig(projectData.metadata.validation_lookup_config);
         }
+
+        // Set classification config from metadata
+        if (projectData.metadata?.classification) {
+          setClassificationConfig(projectData.metadata.classification);
+        }
       }
     } catch (error) {
       console.error('Error loading project:', error);
@@ -303,7 +316,8 @@ const EditProject = () => {
               separation_config: separationConfig,
               document_naming_pattern: documentNamingPattern,
               table_extraction_config: tableExtractionConfig,
-              validation_lookup_config: validationLookupConfig
+              validation_lookup_config: validationLookupConfig,
+              classification: classificationConfig
             } 
           } as any)
           .eq('id', id);
@@ -779,6 +793,72 @@ const EditProject = () => {
                   />
                   <p className="text-sm text-muted-foreground mt-2">
                     Enable automatic import from network scanners.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="classification" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <span className="font-semibold">Document Classification</span>
+                    {classificationConfig.enabled && (
+                      <Badge variant="default" className="text-xs">Enabled</Badge>
+                    )}
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <Card className="p-4 bg-muted/50 space-y-4">
+                    <div className="flex items-center space-x-3">
+                      <Checkbox
+                        id="classification-enabled"
+                        checked={classificationConfig.enabled}
+                        onCheckedChange={(checked) => 
+                          setClassificationConfig(prev => ({ ...prev, enabled: checked === true }))
+                        }
+                      />
+                      <div className="flex-1">
+                        <Label htmlFor="classification-enabled" className="text-sm font-medium cursor-pointer">
+                          Enable AI Document Classification
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Automatically classify documents into types like Invoice, Check, Receipt, Contract, etc.
+                        </p>
+                      </div>
+                    </div>
+
+                    {classificationConfig.enabled && (
+                      <div className="pl-7 space-y-3 border-l-2 border-primary/20">
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id="auto-classify"
+                            checked={classificationConfig.auto_classify}
+                            onCheckedChange={(checked) =>
+                              setClassificationConfig(prev => ({ ...prev, auto_classify: checked === true }))
+                            }
+                          />
+                          <Label htmlFor="auto-classify" className="text-sm cursor-pointer">
+                            Automatically classify on OCR
+                          </Label>
+                        </div>
+
+                        <div className="text-xs text-muted-foreground bg-muted/30 p-3 rounded">
+                          <strong>Available Classifications:</strong>
+                          <div className="grid grid-cols-2 gap-1 mt-2">
+                            <span>• Check</span>
+                            <span>• Invoice</span>
+                            <span>• Purchase Order</span>
+                            <span>• Receipt</span>
+                            <span>• Contract</span>
+                            <span>• Legal Document</span>
+                            <span>• Form</span>
+                            <span>• Letter</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Uses AI to automatically identify document types for better organization and routing.
                   </p>
                 </AccordionContent>
               </AccordionItem>
