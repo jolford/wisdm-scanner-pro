@@ -909,16 +909,23 @@ export const BatchValidationScreen = ({
                                   </div>
                                 </div>
                                 <div className="relative border rounded-lg overflow-hidden bg-background">
-                                  <FullImageWithSignedUrl
-                                    url={doc.file_url}
+                                  <img
+                                    src={doc.file_url}
                                     alt={doc.file_name}
-                                    fileType={(doc as any).file_type}
-                                    zoom={1}
-                                    rotation={0}
+                                    className="w-full h-auto"
+                                    onLoad={(e) => {
+                                      const img = e.currentTarget;
+                                      const container = img.parentElement;
+                                      if (container) {
+                                        container.setAttribute('data-img-width', img.naturalWidth.toString());
+                                        container.setAttribute('data-img-height', img.naturalHeight.toString());
+                                      }
+                                    }}
                                   />
                                   <svg 
                                     className="absolute top-0 left-0 w-full h-full pointer-events-none"
-                                    style={{ position: 'absolute', top: 0, left: 0 }}
+                                    preserveAspectRatio="none"
+                                    viewBox={`0 0 ${(doc as any).image_width || 1000} ${(doc as any).image_height || 1000}`}
                                   >
                                     {offensiveLanguageResults[doc.id].highlights.map((highlight: any, idx: number) => {
                                       if (!highlight.boundingBox) return null;
@@ -926,10 +933,10 @@ export const BatchValidationScreen = ({
                                       return (
                                         <rect
                                           key={idx}
-                                          x={`${box.left}%`}
-                                          y={`${box.top}%`}
-                                          width={`${box.width}%`}
-                                          height={`${box.height}%`}
+                                          x={box.x}
+                                          y={box.y}
+                                          width={box.width}
+                                          height={box.height}
                                           fill="rgba(239, 68, 68, 0.3)"
                                           stroke="rgb(239, 68, 68)"
                                           strokeWidth="2"
