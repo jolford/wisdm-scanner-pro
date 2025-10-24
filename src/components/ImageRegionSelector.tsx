@@ -25,6 +25,7 @@ export const ImageRegionSelector = ({
   const [isProcessing, setIsProcessing] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
+  const moveRafRef = useRef<number | null>(null);
   const { toast } = useToast();
 
   // Calculate responsive canvas dimensions
@@ -126,6 +127,22 @@ export const ImageRegionSelector = ({
     }
   }, [image, canvasDimensions, startPoint, endPoint]);
 
+  // Handle window resize to recalc canvas size
+  useEffect(() => {
+    if (!image) return;
+    const handleResize = () => updateCanvasDimensions(image);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [image]);
+
+  // Observe container size changes (e.g., panel resize)
+  useEffect(() => {
+    if (!containerRef.current || !image) return;
+    const ro = new ResizeObserver(() => updateCanvasDimensions(image));
+    ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, [image]);
+
   const getCanvasCoordinates = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
@@ -150,7 +167,11 @@ export const ImageRegionSelector = ({
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isSelecting) return;
     const coords = getCanvasCoordinates(e);
-    setEndPoint(coords);
+    if (moveRafRef.current) return;
+    moveRafRef.current = requestAnimationFrame(() => {
+      setEndPoint(coords);
+      moveRafRef.current = null;
+    });
   };
 
   const handleMouseUp = async () => {
@@ -161,10 +182,10 @@ export const ImageRegionSelector = ({
     if (!canvas) return;
 
     // Calculate crop dimensions
-    const x = Math.min(startPoint.x, endPoint.x);
-    const y = Math.min(startPoint.y, endPoint.y);
-    const width = Math.abs(endPoint.x - startPoint.x);
-    const height = Math.abs(endPoint.y - startPoint.y);
+    const x = Math.round(Math.min(startPoint.x, endPoint.x));
+    const y = Math.round(Math.min(startPoint.y, endPoint.y));
+    const width = Math.round(Math.abs(endPoint.x - startPoint.x));
+    const height = Math.round(Math.abs(endPoint.y - startPoint.y));
 
     if (width < 10 || height < 10) {
       toast({
@@ -249,15 +270,42 @@ export const ImageRegionSelector = ({
             Click and drag to select an area for OCR correction
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleReset}
-          disabled={!startPoint && !endPoint && zoom === 1}
-        >
-          <RotateCcw className="h-3 w-3 mr-1" />
-          Reset
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 border rounded-md">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setZoom((prev) => Math.max(prev - 0.25, 0.5))}
+              disabled={zoom <= 0.5}
+              className="h-8 px-2"
+              title="Zoom Out"
+            >
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+            <span className="text-xs font-medium px-2 min-w-[3rem] text-center">
+              {Math.round(zoom * 100)}%
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setZoom((prev) => Math.min(prev + 0.25, 3))}
+              disabled={zoom >= 3}
+              className="h-8 px-2"
+              title="Zoom In"
+            >
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleReset}
+            disabled={!startPoint && !endPoint && zoom === 1}
+          >
+            <RotateCcw className="h-3 w-3 mr-1" />
+            Reset
+          </Button>
+        </div>
       </div>
       <div 
         ref={containerRef}
