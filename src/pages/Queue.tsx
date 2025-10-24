@@ -441,7 +441,9 @@ const [isExporting, setIsExporting] = useState(false);
                   canvas.height = Math.ceil(viewport.height);
                   if (!ctx) throw new Error('Canvas context not available');
                   await page.render({ canvasContext: ctx as any, viewport }).promise;
-                  const dataUrl = canvas.toDataURL('image/png');
+                  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                  // Prefer JPEG and downscale before sending to OCR to avoid payload limits
+                  let payloadImageData = await downscaleDataUrl(dataUrl, 1600, 0.85);
 
                   const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
                     ? selectedProject?.metadata?.table_extraction_config?.fields || []
@@ -449,7 +451,7 @@ const [isExporting, setIsExporting] = useState(false);
 
           const { data, error } = await supabase.functions.invoke('ocr-scan', {
             body: { 
-              imageData: dataUrl,
+              imageData: payloadImageData,
               isPdf: false,
               extractionFields,
               tableExtractionFields: tableFields,
