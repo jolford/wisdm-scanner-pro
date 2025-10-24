@@ -2,12 +2,14 @@ import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, UserPlus, Settings, Pencil, Trash2 } from 'lucide-react';
+import { ArrowLeft, UserPlus, Settings, Pencil, Trash2, Shield } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { Input } from '@/components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RoleManager } from '@/components/admin/RoleManager';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -384,19 +386,29 @@ const UsersIndex = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
-        <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold mb-1">All Users</h2>
-              <p className="text-sm text-muted-foreground">
-                Manage user access to customer licenses
-              </p>
-            </div>
-            <Button onClick={() => navigate("/admin/users/new")}>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Create New User
-            </Button>
-          </div>
+        <Tabs defaultValue="users" className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="users">User Management</TabsTrigger>
+            <TabsTrigger value="roles" className="gap-2">
+              <Shield className="h-4 w-4" />
+              JWT Roles
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="users">
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold mb-1">All Users</h2>
+                  <p className="text-sm text-muted-foreground">
+                    Manage user access to customer licenses and database roles
+                  </p>
+                </div>
+                <Button onClick={() => navigate("/admin/users/new")}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Create New User
+                </Button>
+              </div>
 
           <Table>
             <TableHeader>
@@ -574,7 +586,6 @@ const UsersIndex = () => {
               No users found
             </div>
           )}
-        </Card>
 
         {/* Edit User Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -704,6 +715,13 @@ const UsersIndex = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        </Card>
+          </TabsContent>
+
+          <TabsContent value="roles">
+            <RoleManager />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
