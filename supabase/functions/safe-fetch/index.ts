@@ -6,10 +6,12 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const ALLOWED_HOSTS = new Set([
-  "example.com",
-  "api.example.com",
-  // add your allowed domains here
+// Empty allowlist = allow all hosts (rely on IP-based blocking only)
+// If you need to restrict to specific domains, add them here
+const ALLOWED_HOSTS = new Set<string>([
+  // Add specific ECM system domains if needed, e.g.:
+  // "your-filebound-server.com",
+  // "your-docmgt-server.com",
 ]);
 
 // if you truly must allow many domains, keep this block list too
@@ -78,8 +80,8 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "only https allowed" }), { status: 400, headers: corsHeaders });
     }
 
-    // 2) Allowlists win. If you can, lock to a curated set.
-    if (ALLOWED_HOSTS.size && !ALLOWED_HOSTS.has(u.hostname)) {
+    // 2) Allowlist check (only if configured)
+    if (ALLOWED_HOSTS.size > 0 && !ALLOWED_HOSTS.has(u.hostname)) {
       return new Response(JSON.stringify({ error: "host not allowed" }), { status: 403, headers: corsHeaders });
     }
 
