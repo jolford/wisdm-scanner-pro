@@ -161,11 +161,17 @@ serve(async (req) => {
     // Create Basic Auth header
     const authString = btoa(`${username}:${password}`);
 
-    // Use override RecordTypeID or parse from project config
-    let recordTypeId: number | null = overrideRecordTypeId ? Number(overrideRecordTypeId) : null;
-    if (!recordTypeId && project && !isNaN(Number(project))) {
+    // Use override RecordTypeID or get from config (recordTypeId field takes precedence over project field)
+    let recordTypeId: number | null = null;
+    
+    if (overrideRecordTypeId) {
+      recordTypeId = Number(overrideRecordTypeId);
+    } else if (docmgtConfig.recordTypeId) {
+      recordTypeId = Number(docmgtConfig.recordTypeId);
+    } else if (project && !isNaN(Number(project))) {
       recordTypeId = Number(project);
     }
+    
     console.log('DocMgt using RecordTypeID:', recordTypeId);
 
     // Map WISDM metadata keys to DocMgt variable names if provided
