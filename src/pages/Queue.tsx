@@ -162,10 +162,7 @@ const [isExporting, setIsExporting] = useState(false);
     if (storedBatchId && storedProjectId) {
       setSelectedProjectId(storedProjectId);
       setSelectedBatchId(storedBatchId);
-      
-      // Clear from sessionStorage after using
-      sessionStorage.removeItem('selectedBatchId');
-      sessionStorage.removeItem('selectedProjectId');
+      // Keep these in sessionStorage to persist across refreshes
     }
   }, []);
 
@@ -1298,8 +1295,10 @@ const [isExporting, setIsExporting] = useState(false);
             onProjectSelect={(id, project) => {
               setSelectedProjectId(id);
               setSelectedProject(project);
+              sessionStorage.setItem('selectedProjectId', id);
               setSelectedBatchId(null);
               setSelectedBatch(null);
+              sessionStorage.removeItem('selectedBatchId');
             }}
           />
           
@@ -1309,6 +1308,7 @@ const [isExporting, setIsExporting] = useState(false);
               onBatchSelect={(id, batch) => {
                 setSelectedBatchId(id);
                 setSelectedBatch(batch);
+                sessionStorage.setItem('selectedBatchId', id);
               }}
               projectId={selectedProjectId}
             />
