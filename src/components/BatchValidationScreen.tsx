@@ -302,23 +302,81 @@ export const BatchValidationScreen = ({
   /**
    * Handle print for a document
    */
-  const handlePrint = (docId: string, fileUrl: string) => {
-    const printWindow = window.open('', '_blank');
-    if (printWindow) {
+  const handlePrint = async (docId: string, fileUrl: string) => {
+    try {
+      toast({
+        title: "Preparing to print...",
+        description: "Loading document for printing",
+      });
+
+      // Fetch the file (handles signed URLs if needed)
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const isPdf = blob.type === 'application/pdf' || fileUrl.toLowerCase().includes('.pdf');
+      
+      let imageDataUrl: string;
+      
+      if (isPdf) {
+        // Convert PDF first page to image for printing
+        const arrayBuffer = await blob.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 2 });
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Could not create canvas context');
+        canvas.width = Math.round(viewport.width);
+        canvas.height = Math.round(viewport.height);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        imageDataUrl = canvas.toDataURL('image/png');
+      } else {
+        // For images, create data URL
+        imageDataUrl = URL.createObjectURL(blob);
+      }
+
+      // Open print window with the image
+      const printWindow = window.open('', '_blank');
+      if (!printWindow) {
+        toast({
+          title: "Print Failed",
+          description: "Please allow popups to print documents",
+          variant: "destructive",
+        });
+        return;
+      }
+
       printWindow.document.write(`
         <html>
           <head>
             <title>Print Document</title>
             <style>
+              @media print {
+                body { margin: 0; }
+                img { max-width: 100%; height: auto; page-break-after: avoid; }
+              }
               body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
               img { max-width: 100%; height: auto; }
             </style>
           </head>
           <body>
-            <img src="${fileUrl}" onload="window.print(); window.close();" />
+            <img src="${imageDataUrl}" onload="window.print();" />
           </body>
         </html>
       `);
+      printWindow.document.close();
+      
+      // Clean up blob URL after a delay
+      if (!isPdf) {
+        setTimeout(() => URL.revokeObjectURL(imageDataUrl), 1000);
+      }
+    } catch (error) {
+      console.error('Print failed:', error);
+      toast({
+        title: "Print Failed",
+        description: "Could not prepare document for printing",
+        variant: "destructive",
+      });
     }
   };
 
