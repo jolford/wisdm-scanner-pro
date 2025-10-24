@@ -48,10 +48,8 @@ export const logError = async (
   componentName?: string,
   metadata?: Record<string, any>
 ) => {
-  // Always log to console in development
-  if (import.meta.env.DEV) {
-    console.error(`[${componentName || 'Unknown'}]`, error, metadata);
-  }
+  // Always log to console for visibility
+  console.error(`[${componentName || 'Unknown'}]`, error, metadata);
 
   try {
     const { data: { user } } = await supabase.auth.getUser();
@@ -59,7 +57,7 @@ export const logError = async (
     const { error: insertError } = await supabase.from('error_logs').insert({
       user_id: user?.id || null,
       error_message: sanitizeErrorMessage(error.message),
-      error_stack: import.meta.env.PROD ? null : error.stack, // Strip stack traces in production
+      error_stack: error.stack?.substring(0, 2000) || null, // Keep stack traces but limit size
       component_name: componentName,
       user_agent: navigator.userAgent,
       url: sanitizeUrl(window.location.href),
@@ -68,10 +66,22 @@ export const logError = async (
 
     if (insertError) {
       console.error('Failed to insert error log:', insertError);
+      // Show user-visible warning in dev
+      if (import.meta.env.DEV) {
+        console.warn('⚠️ Error logging to database failed. Check RLS policies.');
+      }
+    } else {
+      // Confirm successful logging in dev
+      if (import.meta.env.DEV) {
+        console.log('✓ Error logged to database:', error.message);
+      }
     }
   } catch (loggingError) {
-    // Silently fail - don't want error logging to break the app
-    console.error('Failed to log error to database:', loggingError);
+    // More visible logging failure
+    console.error('❌ Failed to log error to database:', loggingError);
+    if (import.meta.env.DEV) {
+      console.warn('Error logging is not working. Check database connection and RLS policies.');
+    }
   }
 };
 
