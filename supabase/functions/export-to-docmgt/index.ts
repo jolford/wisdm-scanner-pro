@@ -94,9 +94,16 @@ serve(async (req) => {
         )
       `)
       .eq('id', batchId)
-      .single();
+      .maybeSingle();
 
     if (batchError) throw batchError;
+    
+    if (!batch) {
+      return new Response(
+        JSON.stringify({ error: 'Batch not found or access denied' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Extract Docmgt credentials from project config (support legacy metadata path)
     const projectMeta = batch.projects?.metadata || {};
@@ -208,7 +215,7 @@ serve(async (req) => {
 
       // Step 1: Ensure we have a RecordTypeID
       if (!recordTypeId) {
-        lastError = 'DocMgt RecordTypeID not configured';
+        lastError = 'DocMgt RecordTypeID not configured. Please set the RecordTypeID in project settings or override in export request.';
         exportResults.push({ success: false, error: lastError, fileName });
         continue;
       }
@@ -239,6 +246,11 @@ serve(async (req) => {
         } else {
           lastError = text || `HTTP ${resp.status}`;
           console.error('DocMgt create record error:', { url: createRecordUrl, status: resp.status, response: text.slice(0, 500) });
+          
+          // Add specific error message for insufficient rights
+          if (text.includes('Insufficient Rights') || text.includes('No Record Type Found')) {
+            lastError = `DocMgt RecordTypeID ${recordTypeId} not found or insufficient permissions. Please verify the RecordTypeID in project settings.`;
+          }
         }
       } catch (err: any) {
         lastError = err.message;
