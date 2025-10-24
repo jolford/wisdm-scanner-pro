@@ -1138,11 +1138,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin_enhanced: { Args: never; Returns: boolean }
+      is_admin_jwt: { Args: never; Returns: boolean }
       is_system_admin: { Args: { _user_id: string }; Returns: boolean }
       is_tenant_admin: {
         Args: { _customer_id: string; _user_id: string }
         Returns: boolean
       }
+      jwt_claim: { Args: { path: string }; Returns: string }
       update_tenant_usage: {
         Args: {
           _cost_usd: number
