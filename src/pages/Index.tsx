@@ -6,7 +6,7 @@ import { ValidationScreen } from '@/components/ValidationScreen';
 import { ProjectSelector } from '@/components/ProjectSelector';
 import { BatchSelector } from '@/components/BatchSelector';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useContextualToast } from '@/lib/toast-helper';
 import { useAuth } from '@/hooks/use-auth';
 import { Sparkles, Upload, ScanLine, LogOut, FileText, Settings, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -41,7 +41,7 @@ const Index = () => {
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
-  const { toast } = useToast();
+  const { toast } = useContextualToast();
 
   useEffect(() => {
     if (!authLoading && !user) {

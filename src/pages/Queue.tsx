@@ -10,7 +10,7 @@ import { BatchValidationScreen } from '@/components/BatchValidationScreen';
 import { ProjectSelector } from '@/components/ProjectSelector';
 import { BatchSelector } from '@/components/BatchSelector';
 import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
+import { useContextualToast } from '@/lib/toast-helper';
 import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText, FolderOpen, Cloud, Database, HelpCircle, User } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { LicenseWarning } from '@/components/LicenseWarning';
@@ -56,7 +56,7 @@ const Queue = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
-  const { toast } = useToast();
+  const { toast } = useContextualToast();
   const { license, hasCapacity, consumeDocuments } = useLicense();
   const { permissions, loading: permissionsLoading } = usePermissions();
   

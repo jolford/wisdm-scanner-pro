@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
 import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
@@ -18,6 +19,7 @@ interface JobStats {
 }
 
 export const JobStatusMonitor = ({ customerId, showMetrics = true }: JobStatusMonitorProps) => {
+  const { user } = useAuth();
   const [stats, setStats] = useState<JobStats>({
     pending: 0,
     processing: 0,
@@ -28,6 +30,12 @@ export const JobStatusMonitor = ({ customerId, showMetrics = true }: JobStatusMo
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Only run polling if user is authenticated
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     loadStats();
     loadRecentJobs();
 
@@ -43,25 +51,41 @@ export const JobStatusMonitor = ({ customerId, showMetrics = true }: JobStatusMo
           filter: customerId ? `customer_id=eq.${customerId}` : undefined,
         },
         () => {
-          loadStats();
-          loadRecentJobs();
+          // Only update if user is still authenticated
+          supabase.auth.getUser().then(({ data }) => {
+            if (data.user) {
+              loadStats();
+              loadRecentJobs();
+            }
+          });
         }
       )
       .subscribe();
 
-    // Refresh every 30 seconds
+    // Refresh every 30 seconds, but check auth status first
     const interval = setInterval(() => {
-      loadStats();
-      loadRecentJobs();
+      supabase.auth.getUser().then(({ data }) => {
+        if (data.user) {
+          loadStats();
+          loadRecentJobs();
+        }
+      });
     }, 30000);
 
     return () => {
       supabase.removeChannel(channel);
       clearInterval(interval);
     };
-  }, [customerId]);
+  }, [customerId, user]);
 
   const loadStats = async () => {
+    // Check authentication before making request
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     let query = supabase
       .from('jobs')
       .select('status');
@@ -73,6 +97,11 @@ export const JobStatusMonitor = ({ customerId, showMetrics = true }: JobStatusMo
     const { data, error } = await query;
 
     if (error) {
+      // Silently fail if auth error
+      if (error.message?.includes('JWT') || error.message?.includes('auth')) {
+        setLoading(false);
+        return;
+      }
       console.error('Error loading job stats:', error);
       return;
     }
@@ -87,6 +116,10 @@ export const JobStatusMonitor = ({ customerId, showMetrics = true }: JobStatusMo
   };
 
   const loadRecentJobs = async () => {
+    // Check authentication before making request
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
     let query = supabase
       .from('jobs')
       .select('id, job_type, status, created_at, completed_at')
@@ -100,6 +133,10 @@ export const JobStatusMonitor = ({ customerId, showMetrics = true }: JobStatusMo
     const { data, error } = await query;
 
     if (error) {
+      // Silently fail if auth error
+      if (error.message?.includes('JWT') || error.message?.includes('auth')) {
+        return;
+      }
       console.error('Error loading recent jobs:', error);
       return;
     }
