@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 // Icon imports from lucide-react
 import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw } from 'lucide-react';
@@ -862,31 +864,37 @@ export const BatchValidationScreen = ({
 
                       {/* Right column: Editable metadata fields */}
                       <div className="space-y-4">
-                        <h4 className="font-semibold">Edit Fields</h4>
-                        {projectFields.map((field) => (
-                          <div key={field.name}>
-                            <Label htmlFor={`${doc.id}-${field.name}`} className="text-sm">
-                              {field.name}
-                              {field.description && (
-                                <span className="text-xs text-muted-foreground ml-2">
-                                  {field.description}
-                                </span>
-                              )}
-                            </Label>
-                            <Input
-                              id={`${doc.id}-${field.name}`}
-                              value={getMetadataValue(metadata, field.name)}
-                              onChange={(e) =>
-                                handleFieldChange(doc.id, field.name, e.target.value)
-                              }
-                              placeholder={`Enter ${field.name}`}
-                              className="mt-1"
-                            />
-                          </div>
-                        ))}
+                        <Tabs defaultValue="fields" className="w-full">
+                          <TabsList className="w-full">
+                            <TabsTrigger value="fields" className="flex-1">Edit Fields</TabsTrigger>
+                            <TabsTrigger value="text" className="flex-1">Extracted Text</TabsTrigger>
+                          </TabsList>
+                          
+                          <TabsContent value="fields" className="space-y-4 mt-4">
+                            {projectFields.map((field) => (
+                              <div key={field.name}>
+                                <Label htmlFor={`${doc.id}-${field.name}`} className="text-sm">
+                                  {field.name}
+                                  {field.description && (
+                                    <span className="text-xs text-muted-foreground ml-2">
+                                      {field.description}
+                                    </span>
+                                  )}
+                                </Label>
+                                <Input
+                                  id={`${doc.id}-${field.name}`}
+                                  value={getMetadataValue(metadata, field.name)}
+                                  onChange={(e) =>
+                                    handleFieldChange(doc.id, field.name, e.target.value)
+                                  }
+                                  placeholder={`Enter ${field.name}`}
+                                  className="mt-1"
+                                />
+                              </div>
+                            ))}
 
-                        {/* Line Items Table - Only show if table extraction is configured or line items exist */}
-                        {(() => {
+                            {/* Line Items Table - Only show if table extraction is configured or line items exist */}
+                            {(() => {
                           const hasLineItems = (doc.line_items && doc.line_items.length > 0) || editedLineItems[doc.id];
                           const tableConfig = (documents[0] as any)?.table_extraction_config;
                           const hasTableConfig = tableConfig?.fields && Array.isArray(tableConfig.fields) && tableConfig.fields.length > 0;
@@ -977,8 +985,21 @@ export const BatchValidationScreen = ({
                                 <p className="text-sm text-muted-foreground">No line items extracted. Click "Add Line Items" to manually add rows.</p>
                               </div>
                             );
-                          }
-                        })()}
+                            }
+                            })()}
+                          </TabsContent>
+                          
+                          <TabsContent value="text" className="mt-4">
+                            <div className="space-y-2">
+                              <Label className="text-sm">Raw Extracted Text</Label>
+                              <Textarea
+                                value={doc.extracted_text || 'No text extracted'}
+                                readOnly
+                                className="min-h-[400px] font-mono text-sm"
+                              />
+                            </div>
+                          </TabsContent>
+                        </Tabs>
                       </div>
                     </div>
                   </div>
