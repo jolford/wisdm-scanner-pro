@@ -176,10 +176,13 @@ const [isExporting, setIsExporting] = useState(false);
     }
   }, [selectedBatchId]);
 
-  // Ensure project config is loaded when batch is preselected
+  // CRITICAL: Always reload project when batch changes to ensure correct extraction fields
   useEffect(() => {
-    if (!selectedBatchId) return;
-    if (selectedProject && selectedProjectId) return;
+    if (!selectedBatchId) {
+      setSelectedProject(null);
+      return;
+    }
+    
     (async () => {
       try {
         const { data: batchData, error: batchError } = await supabase
@@ -193,20 +196,20 @@ const [isExporting, setIsExporting] = useState(false);
           return;
         }
         
-        // Load the full project with all metadata using secure function
+        // Always reload project when batch changes to get fresh extraction fields
         const { data: projectData, error: projectError } = await supabase
           .rpc('get_project_safe', { project_id: batchData.project_id })
           .single();
         
         if (!projectError && projectData) {
-          if (!selectedProjectId) setSelectedProjectId(projectData.id);
+          setSelectedProjectId(projectData.id);
           setSelectedProject(projectData);
         }
       } catch (e) {
         console.warn('Failed to load project for batch', e);
       }
     })();
-  }, [selectedBatchId, selectedProjectId, selectedProject]);
+  }, [selectedBatchId]); // Only depend on selectedBatchId to force reload
 
   useEffect(() => {
     if (!selectedBatchId) return;
@@ -432,7 +435,13 @@ const [isExporting, setIsExporting] = useState(false);
               customerId: selectedProject?.customer_id,
             },
           });
-                  if (error) throw error;
+                  if (error) {
+                    console.error('OCR Edge Function error:', error);
+                    throw new Error(`OCR service error: ${error.message || 'Failed to connect to processing service'}`);
+                  }
+                  if (!data) {
+                    throw new Error('OCR service returned no data');
+                  }
 
                   // Use the original PDF URL for the file_url, not the temporary dataUrl
                   await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || []);
@@ -458,8 +467,14 @@ const [isExporting, setIsExporting] = useState(false);
                   customerId: selectedProject?.customer_id,
                 },
               });
-              
-              if (error) throw error;
+
+              if (error) {
+                console.error('OCR Edge Function error:', error);
+                throw new Error(`OCR service error: ${error.message || 'Failed to connect to processing service'}`);
+              }
+              if (!data) {
+                throw new Error('OCR service returned no data');
+              }
               
               // Use the original PDF URL for the file_url
               await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || []);
@@ -588,9 +603,12 @@ const [isExporting, setIsExporting] = useState(false);
       });
 
       if (error) {
-        // Try to extract error message from the edge function response
-        const errorMessage = data?.error || error.message || 'Failed to process the image';
-        throw new Error(errorMessage);
+        console.error('OCR Edge Function error:', error);
+        throw new Error(`OCR service error: ${error.message || 'Failed to connect to processing service'}`);
+      }
+
+      if (!data) {
+        throw new Error('OCR service returned no data');
       }
 
       await saveDocument(fileName, 'image', imageUrl, data.text, data.metadata || {}, data.lineItems || []);

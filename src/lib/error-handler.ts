@@ -28,7 +28,7 @@ export const safeErrorMessage = (error: unknown): string => {
       return 'The requested resource was not found.';
     }
     
-    if (message.includes('network') || message.includes('fetch')) {
+    if (message.includes('network') || message.includes('fetch') || message.includes('edge function')) {
       return 'Network error. Please check your connection and try again.';
     }
     
