@@ -21,19 +21,28 @@ import { config } from 'dotenv';
 config();
 
 // Configuration
-const WATCH_FOLDER = process.env.WATCH_FOLDER || 'C:\\AutoImport';
+const WATCH_FOLDER = process.env.WATCH_FOLDER || 'C\\:\\\AutoImport';
 const BUCKET_NAME = 'scanner-import';
 const BUCKET_PATH = process.env.BUCKET_PATH || 'auto-import'; // This is your "watch folder" in the cloud
-const CHECK_INTERVAL = 5000; // 5 seconds
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY; // Optional
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY; // Optional (public)
+const SUPABASE_EMAIL = process.env.SUPABASE_EMAIL; // Optional if using anon login
+const SUPABASE_PASSWORD = process.env.SUPABASE_PASSWORD; // Optional if using anon login
 
 // Supported file types
 const SUPPORTED_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png', '.tif', '.tiff'];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
 
-// Initialize Supabase client
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+// Initialize Supabase client (service key preferred, else anon + login)
+let supabase;
+if (SUPABASE_SERVICE_KEY) {
+  supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+  console.log('Auth mode: service key');
+} else {
+  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  console.log('Auth mode: user login with anon key');
+}
 
 // Track uploaded files to avoid duplicates
 const uploadedFiles = new Set();
@@ -150,19 +159,23 @@ function startWatcher() {
  */
 async function healthCheck() {
   try {
-    const { data, error } = await supabase.storage.listBuckets();
-    if (error) throw error;
-    
-    const bucketExists = data.some(b => b.name === BUCKET_NAME);
-    if (!bucketExists) {
-      throw new Error(`Bucket '${BUCKET_NAME}' not found`);
+    if (SUPABASE_SERVICE_KEY) {
+      const { data, error } = await supabase.storage.listBuckets();
+      if (error) throw error;
+      const bucketExists = data.some(b => b.name === BUCKET_NAME);
+      if (!bucketExists) throw new Error(`Bucket '${BUCKET_NAME}' not found`);
+    } else {
+      // With user login, try listing the destination folder
+      const { data, error } = await supabase.storage
+        .from(BUCKET_NAME)
+        .list(BUCKET_PATH || '', { limit: 1 });
+      if (error) throw error;
     }
-    
-    console.log('✅ Connected to Supabase Storage\n');
+    console.log('✅ Connected to Storage and authorized\n');
     return true;
   } catch (error) {
     console.error('❌ Health check failed:', error.message);
-    console.error('Please check your Supabase credentials in .env file\n');
+    console.error('Please check your environment variables in .env file\n');
     return false;
   }
 }
@@ -171,6 +184,23 @@ async function healthCheck() {
  * Start the sync agent
  */
 async function start() {
+  // If not using service key, sign in with email/password
+  if (!SUPABASE_SERVICE_KEY) {
+    if (!SUPABASE_ANON_KEY || !SUPABASE_EMAIL || !SUPABASE_PASSWORD) {
+      console.error('❌ Missing SUPABASE_ANON_KEY, SUPABASE_EMAIL, or SUPABASE_PASSWORD in .env');
+      process.exit(1);
+    }
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: SUPABASE_EMAIL,
+      password: SUPABASE_PASSWORD,
+    });
+    if (error) {
+      console.error('❌ Login failed:', error.message);
+      process.exit(1);
+    }
+    console.log(`✅ Signed in as ${data.user?.email}`);
+  }
+
   const isHealthy = await healthCheck();
   if (!isHealthy) {
     process.exit(1);

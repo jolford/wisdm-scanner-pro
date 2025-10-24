@@ -59,15 +59,22 @@ npm install
 
 1. Rename `.env.scanner-sync` to `.env`
 
-2. Get your Supabase Service Role Key:
-   - Go to your backend (Storage section)
-   - Click Settings → API
-   - Copy the `service_role` key (NOT the anon key)
+2. Choose ONE of the following auth modes:
 
-3. Edit `.env` file:
+   A) Service Key mode (simple, requires service key)
    ```env
-   SUPABASE_URL=https://pbyerakkryuflamlmpvm.supabase.co
-   SUPABASE_SERVICE_KEY=your_actual_service_role_key_here
+   SUPABASE_URL=https://<your-project>.supabase.co
+   SUPABASE_SERVICE_KEY=your_service_role_key_here
+   WATCH_FOLDER=C:\Users\Jerem\OneDrive\Desktop\Auto Import
+   BUCKET_PATH=auto-import
+   ```
+
+   B) Login mode (no service key required)
+   ```env
+   SUPABASE_URL=https://<your-project>.supabase.co
+   SUPABASE_ANON_KEY=your_public_anon_key_here
+   SUPABASE_EMAIL=your_login_email
+   SUPABASE_PASSWORD=your_password
    WATCH_FOLDER=C:\Users\Jerem\OneDrive\Desktop\Auto Import
    BUCKET_PATH=auto-import
    ```
