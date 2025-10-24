@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
@@ -35,6 +35,7 @@ const AuthPage = () => {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
   const [showMfaChallenge, setShowMfaChallenge] = useState(false);
+  const authFlowRef = useRef(false); // Prevent redirects during MFA flow
 
   // Password strength checks
   const passwordChecks = {
@@ -117,8 +118,8 @@ const AuthPage = () => {
         return;
       }
       
-      // Don't auto-redirect if we're showing MFA challenge
-      if (session && !blockRedirect && !isUpdatingPassword && !showMfaChallenge) {
+      // Don't auto-redirect during MFA/auth flow or when showing MFA
+      if (session && !blockRedirect && !isUpdatingPassword && !showMfaChallenge && !authFlowRef.current) {
         navigate('/');
       }
     });
@@ -131,7 +132,7 @@ const AuthPage = () => {
     } else {
       // Otherwise, check for an existing session and redirect
       supabase.auth.getSession().then(({ data: { session } }) => {
-        if (session && !isUpdatingPassword) {
+        if (session && !isUpdatingPassword && !showMfaChallenge && !authFlowRef.current) {
           navigate('/');
         }
       });
@@ -267,6 +268,7 @@ const AuthPage = () => {
     setLoading(true);
 
     try {
+      authFlowRef.current = true; // Start auth flow
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -275,7 +277,6 @@ const AuthPage = () => {
       if (error) throw error;
 
       // After successful password auth, check for MFA requirement
-      // Supabase will return an incomplete session if MFA is enabled
       const { data: { session } } = await supabase.auth.getSession();
       
       // List all factors to check for MFA
@@ -294,14 +295,17 @@ const AuthPage = () => {
         setMfaFactorId(verifiedFactor.id);
         setShowMfaChallenge(true);
         setLoading(false);
+        // Keep authFlowRef.current = true to block redirects until challenge success
         return;
       }
 
-      // No MFA or not verified - normal sign in
+      // No MFA or not verified - proceed to app
+      authFlowRef.current = false;
       toast({
         title: 'Welcome Back',
         description: 'You have successfully signed in.',
       });
+      navigate('/');
     } catch (error: any) {
       toast({
         title: 'Sign In Failed',
