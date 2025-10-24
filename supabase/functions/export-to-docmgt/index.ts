@@ -72,7 +72,7 @@ serve(async (req) => {
       global: { headers: { Authorization: authHeader } }
     });
 
-    const { batchId, recordTypeId: overrideRecordTypeId } = await req.json();
+    const { batchId, recordTypeId: overrideRecordTypeId, docmgtUrl: bodyUrl, username: bodyUser, password: bodyPass, project: bodyProject } = await req.json();
 
     if (!batchId) {
       return new Response(
@@ -107,7 +107,18 @@ serve(async (req) => {
 
     // Extract Docmgt credentials from project config (support legacy metadata path)
     const projectMeta = batch.projects?.metadata || {};
-    const docmgtConfig = batch.projects?.docmgt_config || projectMeta?.export_config?.docmgt;
+    const baseDocmgtConfig = batch.projects?.docmgt_config || projectMeta?.export_config?.docmgt || {};
+    const inferredEnabled = baseDocmgtConfig?.enabled ?? Boolean(bodyUrl && (bodyUser || bodyPass));
+    const docmgtConfig = {
+      ...baseDocmgtConfig,
+      enabled: inferredEnabled,
+      url: bodyUrl || baseDocmgtConfig.url,
+      username: bodyUser || baseDocmgtConfig.username,
+      password: bodyPass || baseDocmgtConfig.password,
+      project: bodyProject || baseDocmgtConfig.project,
+      recordTypeId: overrideRecordTypeId ?? baseDocmgtConfig.recordTypeId,
+    } as any;
+
     if (!docmgtConfig?.enabled || !docmgtConfig?.url || !docmgtConfig?.username || !docmgtConfig?.password) {
       return new Response(
         JSON.stringify({ error: 'Docmgt is not configured for this project' }),
