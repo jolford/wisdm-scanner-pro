@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,26 @@ export function MFAChallenge({ factorId, onSuccess, onCancel }: MFAChallengeProp
   const [useRecovery, setUseRecovery] = useState(false);
   const [recoveryCode, setRecoveryCode] = useState('');
   const [loading, setLoading] = useState(false);
+  const [challengeId, setChallengeId] = useState<string | null>(null);
+
+  // Create challenge when component mounts
+  useEffect(() => {
+    const createChallenge = async () => {
+      try {
+        const { data, error } = await supabase.auth.mfa.challenge({ factorId });
+        if (error) throw error;
+        setChallengeId(data.id);
+      } catch (error: any) {
+        console.error('Challenge creation error:', error);
+        toast({
+          title: 'Authentication Error',
+          description: 'Failed to create MFA challenge. Please try signing in again.',
+          variant: 'destructive',
+        });
+      }
+    };
+    createChallenge();
+  }, [factorId, toast]);
 
   const handleVerifyCode = async () => {
     if (code.length !== 6) {
@@ -31,10 +51,20 @@ export function MFAChallenge({ factorId, onSuccess, onCancel }: MFAChallengeProp
       return;
     }
 
+    if (!challengeId) {
+      toast({
+        title: 'Authentication Error',
+        description: 'Challenge not ready. Please try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      const { data, error } = await supabase.auth.mfa.challengeAndVerify({
+      const { error } = await supabase.auth.mfa.verify({
         factorId,
+        challengeId,
         code,
       });
 
@@ -69,12 +99,20 @@ export function MFAChallenge({ factorId, onSuccess, onCancel }: MFAChallengeProp
       return;
     }
 
+    if (!challengeId) {
+      toast({
+        title: 'Authentication Error',
+        description: 'Challenge not ready. Please try again.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setLoading(true);
     try {
-      // Recovery codes would be validated against stored codes in the database
-      // This is a simplified implementation
-      const { data, error } = await supabase.auth.mfa.challengeAndVerify({
+      const { error } = await supabase.auth.mfa.verify({
         factorId,
+        challengeId,
         code: recoveryCode,
       });
 
@@ -179,10 +217,10 @@ export function MFAChallenge({ factorId, onSuccess, onCancel }: MFAChallengeProp
 
           <Button
             onClick={handleVerifyCode}
-            disabled={code.length !== 6 || loading}
+            disabled={code.length !== 6 || loading || !challengeId}
             className="w-full"
           >
-            {loading ? 'Verifying...' : 'Verify'}
+            {loading ? 'Verifying...' : !challengeId ? 'Preparing...' : 'Verify'}
           </Button>
 
         <div className="relative">
