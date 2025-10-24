@@ -291,6 +291,22 @@ const [isExporting, setIsExporting] = useState(false);
         }
       }
 
+      // Run document classification if enabled in project settings
+      const classificationEnabled = selectedProject?.metadata?.classification?.enabled;
+      if (classificationEnabled && data?.id) {
+        try {
+          await supabase.functions.invoke('classify-document', {
+            body: {
+              documentId: data.id,
+              extractedText: text,
+            },
+          });
+        } catch (classifyError) {
+          console.error('Classification failed:', classifyError);
+          // Don't fail the whole save if classification fails
+        }
+      }
+
       await loadQueueDocuments();
 
       if (selectedBatchId && selectedBatch) {
