@@ -30,6 +30,9 @@ import Analytics from "./pages/admin/Analytics";
 import SystemViability from "./pages/admin/SystemViability";
 import ErrorLogs from "./pages/admin/ErrorLogs";
 import DocumentReprocessing from "./pages/admin/DocumentReprocessing";
+import BusinessMetrics from "./pages/admin/BusinessMetrics";
+import WhiteLabel from "./pages/admin/WhiteLabel";
+import CustomerSuccess from "./pages/admin/CustomerSuccess";
 import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
 import ApiDocs from "./pages/ApiDocs";
@@ -113,6 +116,9 @@ const App = () => (
             <Route path="/admin/viability" element={<SystemViability />} />
             <Route path="/admin/error-logs" element={<ErrorLogs />} />
             <Route path="/admin/reprocess" element={<DocumentReprocessing />} />
+            <Route path="/admin/business-metrics" element={<BusinessMetrics />} />
+            <Route path="/admin/white-label" element={<WhiteLabel />} />
+            <Route path="/admin/customer-success" element={<CustomerSuccess />} />
             <Route path="/help" element={<Help />} />
             <Route path="/api-docs" element={<ApiDocs />} />
             <Route path="/settings" element={<UserSettings />} />

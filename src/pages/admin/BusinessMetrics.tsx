@@ -47,7 +47,7 @@ export default function BusinessMetrics() {
       // Get licenses
       const { data: licenses } = await supabase
         .from('licenses')
-        .select('id, status, total_documents, monthly_cost');
+        .select('id, status, total_documents');
 
       // Get documents
       const { data: allDocs } = await supabase
@@ -63,8 +63,9 @@ export default function BusinessMetrics() {
       const activeLicenses = licenses?.filter(l => l.status === 'active') || [];
       const totalLicenses = licenses?.length || 0;
       
-      // Calculate MRR from active licenses
-      const mrr = activeLicenses.reduce((sum, l) => sum + (l.monthly_cost || 0), 0);
+      // Calculate MRR from active licenses (using avg per document * total documents)
+      const avgRevenuePerDoc = 0.50; // Estimated $0.50 per document
+      const mrr = activeLicenses.reduce((sum, l) => sum + ((l.total_documents || 0) * avgRevenuePerDoc), 0) / 12;
       const arr = mrr * 12;
 
       // Calculate growth

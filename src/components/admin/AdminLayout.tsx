@@ -16,6 +16,9 @@ import {
   DollarSign,
   Target,
   RefreshCw,
+  TrendingUp,
+  Trophy,
+  Palette,
 } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { supabase } from '@/integrations/supabase/client';
@@ -49,6 +52,9 @@ const menuItems = [
   { title: 'Licenses', url: '/admin/licenses', icon: Key },
   { title: 'Cost Tracking', url: '/admin/cost-tracking', icon: DollarSign },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
+  { title: 'Business Metrics', url: '/admin/business-metrics', icon: TrendingUp },
+  { title: 'Customer Success', url: '/admin/customer-success', icon: Trophy },
+  { title: 'White-Label', url: '/admin/white-label', icon: Palette },
   { title: 'Error Logs', url: '/admin/error-logs', icon: AlertCircle },
   { title: 'Reprocess Docs', url: '/admin/reprocess', icon: RefreshCw },
 ];

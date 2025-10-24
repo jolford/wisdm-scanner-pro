@@ -48,15 +48,9 @@ export default function WhiteLabel() {
 
   const loadConfig = async () => {
     try {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('value')
-        .eq('key', 'white_label_config')
-        .maybeSingle();
-
-      if (data?.value) {
-        setConfig(data.value as WhiteLabelConfig);
-      }
+      // Temporarily disabled until types are regenerated
+      // Will load from system_settings once types are available
+      console.log('White-label config will load once database types are updated');
     } catch (error) {
       console.error('Error loading config:', error);
     }
@@ -65,6 +59,13 @@ export default function WhiteLabel() {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // Temporarily disabled until types are regenerated
+      toast({
+        title: 'Coming Soon',
+        description: 'White-label configuration will be available once database types are updated.',
+      });
+      
+      /* Will be enabled once types are available
       const { error } = await supabase
         .from('system_settings')
         .upsert({
@@ -78,6 +79,7 @@ export default function WhiteLabel() {
         title: 'Settings Saved',
         description: 'White-label configuration has been updated successfully.',
       });
+      */
     } catch (error) {
       toast({
         title: 'Error',

@@ -158,6 +158,39 @@ export type Database = {
           },
         ]
       }
+      customer_testimonials: {
+        Row: {
+          company: string
+          created_at: string | null
+          customer_name: string
+          id: string
+          quote: string
+          rating: number
+          role: string
+          updated_at: string | null
+        }
+        Insert: {
+          company: string
+          created_at?: string | null
+          customer_name: string
+          id?: string
+          quote: string
+          rating: number
+          role: string
+          updated_at?: string | null
+        }
+        Update: {
+          company?: string
+          created_at?: string | null
+          customer_name?: string
+          id?: string
+          quote?: string
+          rating?: number
+          role?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           company_name: string
@@ -846,6 +879,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      system_settings: {
+        Row: {
+          created_at: string | null
+          key: string
+          updated_at: string | null
+          value: Json
+        }
+        Insert: {
+          created_at?: string | null
+          key: string
+          updated_at?: string | null
+          value: Json
+        }
+        Update: {
+          created_at?: string | null
+          key?: string
+          updated_at?: string | null
+          value?: Json
+        }
+        Relationships: []
       }
       tenant_limits: {
         Row: {
