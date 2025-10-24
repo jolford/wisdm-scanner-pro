@@ -27,8 +27,31 @@ export function MFAEnrollment({ onEnrollmentComplete, onCancel }: MFAEnrollmentP
   const handleGenerateQR = async () => {
     setLoading(true);
     try {
+      // Check existing factors to avoid duplicates
+      const existing = await supabase.auth.mfa.listFactors();
+      if (existing.error) throw existing.error;
+
+      const existingTotp = existing.data?.totp || [];
+      const verifiedTotp = existingTotp.find((f: any) => f?.status === 'verified');
+      const unverifiedTotp = existingTotp.find((f: any) => f?.status !== 'verified');
+
+      if (verifiedTotp) {
+        toast({
+          title: 'MFA Already Enabled',
+          description: 'Two-factor authentication is already active on this account.',
+        });
+        onEnrollmentComplete?.();
+        return;
+      }
+
+      if (unverifiedTotp?.id) {
+        await supabase.auth.mfa.unenroll({ factorId: unverifiedTotp.id }).catch(() => {});
+      }
+
+      const friendlyName = `Authenticator-${Date.now()}`;
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: 'totp',
+        friendlyName,
       });
 
       if (error) throw error;
@@ -36,7 +59,7 @@ export function MFAEnrollment({ onEnrollmentComplete, onCancel }: MFAEnrollmentP
       if (data) {
         setQrCode(data.totp.qr_code);
         setSecret(data.totp.secret);
-        setFactorId(data.id); // Store the factor ID
+        setFactorId(data.id);
         setStep('verify');
       }
     } catch (error: any) {
