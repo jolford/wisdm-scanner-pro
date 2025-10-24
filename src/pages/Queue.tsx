@@ -124,6 +124,33 @@ const [isExporting, setIsExporting] = useState(false);
   useEffect(() => {
     if (!authLoading && !user) {
       navigate('/auth');
+      return;
+    }
+
+    // Check MFA enforcement - if user has MFA enrolled but hasn't completed it
+    const checkMFALevel = async () => {
+      if (!user) return;
+      
+      try {
+        const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        const { data: factorsData } = await supabase.auth.mfa.listFactors();
+        
+        const hasVerifiedFactor = factorsData?.totp?.some((f: any) => f.status === 'verified');
+        const currentLevel = aalData?.currentLevel;
+        
+        // If user has MFA enrolled but is only at AAL1, redirect to complete MFA
+        if (hasVerifiedFactor && currentLevel === 'aal1') {
+          console.log('MFA required but not completed - redirecting to auth');
+          await supabase.auth.signOut();
+          navigate('/auth');
+        }
+      } catch (error) {
+        console.error('Error checking MFA level:', error);
+      }
+    };
+
+    if (user) {
+      checkMFALevel();
     }
   }, [authLoading, user, navigate]);
 
