@@ -112,7 +112,7 @@ export const BatchValidationScreen = ({
   const [showRegionSelector, setShowRegionSelector] = useState<Set<string>>(new Set());
   
   // Track offensive language detection results for each document
-  const [offensiveLanguageResults, setOffensiveLanguageResults] = useState<Record<string, { count: number; phrases: string[] }>>({});
+  const [offensiveLanguageResults, setOffensiveLanguageResults] = useState<Record<string, { highlights: any[] }>>({});
   const [isScanning, setIsScanning] = useState(false);
   
   // Toast notifications for user feedback
@@ -150,7 +150,7 @@ export const BatchValidationScreen = ({
         if (!isAB1466) return;
         
         setIsScanning(true);
-        const results: Record<string, { count: number; phrases: string[] }> = {};
+        const results: Record<string, { highlights: any[] }> = {};
         
         // Scan each document for offensive language
         for (const doc of documents) {
@@ -166,8 +166,7 @@ export const BatchValidationScreen = ({
             
             if (!error && data?.highlights && data.highlights.length > 0) {
               results[doc.id] = {
-                count: data.highlights.length,
-                phrases: data.highlights.map((h: any) => h.text).slice(0, 3), // First 3 phrases
+                highlights: data.highlights,
               };
             }
           } catch (e) {
@@ -689,7 +688,7 @@ export const BatchValidationScreen = ({
                       {offensiveLanguageResults[doc.id] && (
                         <div className="flex flex-wrap gap-2 mt-1 mb-1">
                           <Badge variant="destructive" className="text-xs">
-                            ⚠️ {offensiveLanguageResults[doc.id].count} Sensitive Phrase{offensiveLanguageResults[doc.id].count !== 1 ? 's' : ''}
+                            ⚠️ {offensiveLanguageResults[doc.id].highlights.length} Sensitive Phrase{offensiveLanguageResults[doc.id].highlights.length !== 1 ? 's' : ''}
                           </Badge>
                         </div>
                       )}
@@ -865,9 +864,10 @@ export const BatchValidationScreen = ({
                       {/* Right column: Editable metadata fields */}
                       <div className="space-y-4">
                         <Tabs defaultValue="fields" className="w-full">
-                          <TabsList className="w-full">
-                            <TabsTrigger value="fields" className="flex-1">Edit Fields</TabsTrigger>
-                            <TabsTrigger value="text" className="flex-1">Extracted Text</TabsTrigger>
+                          <TabsList className="w-full grid grid-cols-3">
+                            <TabsTrigger value="fields">Edit Fields</TabsTrigger>
+                            <TabsTrigger value="image">Sensitive Areas</TabsTrigger>
+                            <TabsTrigger value="text">Extracted Text</TabsTrigger>
                           </TabsList>
                           
                           <TabsContent value="fields" className="space-y-4 mt-4">
@@ -892,6 +892,59 @@ export const BatchValidationScreen = ({
                                 />
                               </div>
                             ))}
+                          
+                          <TabsContent value="image" className="mt-4">
+                            {offensiveLanguageResults[doc.id]?.highlights && offensiveLanguageResults[doc.id].highlights.length > 0 ? (
+                              <div className="space-y-4">
+                                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                                  <p className="text-sm font-medium text-destructive mb-2">
+                                    ⚠️ {offensiveLanguageResults[doc.id].highlights.length} Sensitive Phrase(s) Detected
+                                  </p>
+                                  <div className="space-y-1">
+                                    {offensiveLanguageResults[doc.id].highlights.map((highlight: any, idx: number) => (
+                                      <div key={idx} className="text-xs text-muted-foreground">
+                                        • "{highlight.text}" - {highlight.category} ({highlight.severity})
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="relative border rounded-lg overflow-hidden bg-background">
+                                  <FullImageWithSignedUrl
+                                    url={doc.file_url}
+                                    alt={doc.file_name}
+                                    fileType={(doc as any).file_type}
+                                    zoom={1}
+                                    rotation={0}
+                                  />
+                                  <svg 
+                                    className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                                    style={{ position: 'absolute', top: 0, left: 0 }}
+                                  >
+                                    {offensiveLanguageResults[doc.id].highlights.map((highlight: any, idx: number) => {
+                                      if (!highlight.boundingBox) return null;
+                                      const box = highlight.boundingBox;
+                                      return (
+                                        <rect
+                                          key={idx}
+                                          x={`${box.left}%`}
+                                          y={`${box.top}%`}
+                                          width={`${box.width}%`}
+                                          height={`${box.height}%`}
+                                          fill="rgba(239, 68, 68, 0.3)"
+                                          stroke="rgb(239, 68, 68)"
+                                          strokeWidth="2"
+                                        />
+                                      );
+                                    })}
+                                  </svg>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-center text-muted-foreground py-8">
+                                No sensitive language detected in this document
+                              </div>
+                            )}
+                          </TabsContent>
 
                             {/* Line Items Table - Only show if table extraction is configured or line items exist */}
                             {(() => {
