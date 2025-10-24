@@ -23,26 +23,31 @@ export function MFAChallenge({ factorId, onSuccess, onCancel }: MFAChallengeProp
   const [challengeId, setChallengeId] = useState<string | null>(null);
   const createdRef = useRef(false);
 
+  // Create or recreate a challenge
+  const ensureChallenge = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('no_session');
+      }
+      const { data, error } = await supabase.auth.mfa.challenge({ factorId });
+      if (error) throw error;
+      setChallengeId(data.id);
+      return true;
+    } catch (error) {
+      console.error('Challenge creation error:', error);
+      setChallengeId(null);
+      return false;
+    }
+  };
+
   // Create challenge when component mounts (only once)
   useEffect(() => {
     const init = async () => {
       if (createdRef.current) return;
       createdRef.current = true;
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          toast({
-            title: 'Authentication Error',
-            description: 'Your session expired. Please sign in again.',
-            variant: 'destructive',
-          });
-          return;
-        }
-        const { data, error } = await supabase.auth.mfa.challenge({ factorId });
-        if (error) throw error;
-        setChallengeId(data.id);
-      } catch (error: any) {
-        console.error('Challenge creation error:', error);
+      const ok = await ensureChallenge();
+      if (!ok) {
         toast({
           title: 'Authentication Error',
           description: 'Failed to create MFA challenge. Please try signing in again.',
@@ -64,12 +69,15 @@ export function MFAChallenge({ factorId, onSuccess, onCancel }: MFAChallengeProp
     }
 
     if (!challengeId) {
-      toast({
-        title: 'Authentication Error',
-        description: 'Challenge not ready. Please try again.',
-        variant: 'destructive',
-      });
-      return;
+      const ok = await ensureChallenge();
+      if (!ok) {
+        toast({
+          title: 'Authentication Error',
+          description: 'Challenge not ready. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
     // Ensure a valid session before verifying
     const { data: { session } } = await supabase.auth.getSession();
@@ -125,12 +133,15 @@ export function MFAChallenge({ factorId, onSuccess, onCancel }: MFAChallengeProp
     }
 
     if (!challengeId) {
-      toast({
-        title: 'Authentication Error',
-        description: 'Challenge not ready. Please try again.',
-        variant: 'destructive',
-      });
-      return;
+      const ok = await ensureChallenge();
+      if (!ok) {
+        toast({
+          title: 'Authentication Error',
+          description: 'Challenge not ready. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     setLoading(true);
@@ -246,6 +257,15 @@ export function MFAChallenge({ factorId, onSuccess, onCancel }: MFAChallengeProp
             className="w-full"
           >
             {loading ? 'Verifying...' : !challengeId ? 'Preparing...' : 'Verify'}
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={ensureChallenge}
+            disabled={loading}
+            className="w-full"
+          >
+            Retry challenge
           </Button>
 
         <div className="relative">
