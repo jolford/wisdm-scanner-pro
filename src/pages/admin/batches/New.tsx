@@ -29,14 +29,24 @@ const NewBatch = () => {
   const { data: projects } = useQuery({
     queryKey: ['projects'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: allProjects, error: projectsError } = await supabase
         .from('projects')
-        .select('*')
+        .select('id')
         .eq('is_active', true)
         .order('name');
       
-      if (error) throw error;
-      return data;
+      if (projectsError) throw projectsError;
+      
+      // Use get_project_safe to fetch full project data securely
+      if (!allProjects || allProjects.length === 0) return [];
+      
+      const projectPromises = allProjects.map(p => 
+        supabase.rpc('get_project_safe', { project_id: p.id }).single()
+      );
+      const results = await Promise.all(projectPromises);
+      return results
+        .filter(r => !r.error && r.data)
+        .map(r => r.data);
     },
   });
 

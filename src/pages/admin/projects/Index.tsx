@@ -29,13 +29,26 @@ const Projects = () => {
 
   const loadProjects = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: allProjects, error: projectsError } = await supabase
         .from('projects')
-        .select('*')
+        .select('id, created_at')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setProjects(data || []);
+      if (projectsError) throw projectsError;
+
+      // Use get_project_safe to fetch full project data securely
+      if (allProjects && allProjects.length > 0) {
+        const projectPromises = allProjects.map(p => 
+          supabase.rpc('get_project_safe', { project_id: p.id }).single()
+        );
+        const results = await Promise.all(projectPromises);
+        const projects = results
+          .filter(r => !r.error && r.data)
+          .map(r => r.data as Project);
+        setProjects(projects);
+      } else {
+        setProjects([]);
+      }
     } catch (error) {
       console.error('Error loading projects:', error);
     } finally {

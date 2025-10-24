@@ -152,11 +152,9 @@ const [isExporting, setIsExporting] = useState(false);
           return;
         }
         
-        // Load the full project with all metadata
+        // Load the full project with all metadata using secure function
         const { data: projectData, error: projectError } = await supabase
-          .from('projects')
-          .select('*')
-          .eq('id', batchData.project_id)
+          .rpc('get_project_safe', { project_id: batchData.project_id })
           .single();
         
         if (!projectError && projectData) {

@@ -117,10 +117,9 @@ const EditProject = () => {
 
   const loadProject = async () => {
     try {
+      // Use get_project_safe to securely fetch project data
       const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('id', id)
+        .rpc('get_project_safe', { project_id: id })
         .single();
 
       if (error) throw error;
