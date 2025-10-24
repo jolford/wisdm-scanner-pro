@@ -44,7 +44,7 @@ const Projects = () => {
         const results = await Promise.all(projectPromises);
         const projects = results
           .filter(r => !r.error && r.data)
-          .map(r => r.data as Project);
+          .map(r => r.data as any as Project);
         setProjects(projects);
       } else {
         setProjects([]);

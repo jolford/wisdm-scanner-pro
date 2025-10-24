@@ -125,29 +125,29 @@ const EditProject = () => {
       if (error) throw error;
 
       if (data) {
-        setProjectName(data.name);
-        setProjectDescription(data.description || '');
-        setEnableCheckScanning(data.enable_check_scanning || false);
-        setCustomerId(data.customer_id || undefined);
+        const projectData = data as any; // Type assertion for function return
+        setProjectName(projectData.name);
+        setProjectDescription(projectData.description || '');
+        setEnableCheckScanning(projectData.enable_check_scanning || false);
+        setCustomerId(projectData.customer_id || undefined);
         
         // Set extraction fields with proper type checking
-        if (Array.isArray(data.extraction_fields)) {
-          setFields(data.extraction_fields as unknown as ExtractionField[]);
+        if (Array.isArray(projectData.extraction_fields)) {
+          setFields(projectData.extraction_fields as unknown as ExtractionField[]);
         } else {
           setFields([{ name: '', description: '' }]);
         }
         
         // Set export configuration and document naming from metadata if available
-        const projectData = data as any;
         if (projectData.metadata?.document_naming_pattern) {
           setDocumentNamingPattern(projectData.metadata.document_naming_pattern);
         }
         
         if (projectData.metadata?.export_config) {
           setExportConfig(projectData.metadata.export_config);
-        } else if (data.export_types && Array.isArray(data.export_types)) {
+        } else if (projectData.export_types && Array.isArray(projectData.export_types)) {
           // Fallback for old projects without export_config
-          const types = data.export_types as string[];
+          const types = projectData.export_types as string[];
           const defaultDestinations: Record<string, string> = {
             csv: '/exports/data/',
             json: '/exports/data/',
@@ -175,8 +175,8 @@ const EditProject = () => {
         }
 
         // Set queues with proper type checking and migration from "Validated" to "Quality Control"
-        if (data.queues && Array.isArray(data.queues)) {
-          const migratedQueues = (data.queues as unknown as Queue[]).map(queue => ({
+        if (projectData.queues && Array.isArray(projectData.queues)) {
+          const migratedQueues = (projectData.queues as unknown as Queue[]).map(queue => ({
             ...queue,
             name: queue.name === 'Validated' ? 'Quality Control' : queue.name
           }));

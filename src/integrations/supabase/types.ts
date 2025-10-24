@@ -1138,10 +1138,17 @@ export type Database = {
         Args: { project_id: string }
         Returns: {
           created_at: string
+          created_by: string
           customer_id: string
+          description: string
+          enable_check_scanning: boolean
+          export_types: string[]
+          extraction_fields: Json
           id: string
+          is_active: boolean
           metadata: Json
           name: string
+          queues: Json
           updated_at: string
         }[]
       }

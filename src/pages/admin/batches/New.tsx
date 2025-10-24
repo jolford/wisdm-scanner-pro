@@ -46,7 +46,7 @@ const NewBatch = () => {
       const results = await Promise.all(projectPromises);
       return results
         .filter(r => !r.error && r.data)
-        .map(r => r.data);
+        .map(r => r.data as any);
     },
   });
 
