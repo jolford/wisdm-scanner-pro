@@ -21,6 +21,7 @@ import { Badge } from '@/components/ui/badge';
 import { getSignedUrl } from '@/hooks/use-signed-url';
 import { analyzePdfSeparation, getDocumentName, SeparationConfig } from '@/lib/pdf-separator';
 import { applyDocumentNamingPattern } from '@/lib/document-naming';
+import { safeErrorMessage, logError } from '@/lib/error-handler';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,6 +65,27 @@ const Queue = () => {
     if (typeof value === 'string') return value;
     if (value && typeof value === 'object' && 'value' in value) return value.value;
     return String(value || '');
+  };
+  
+  // Downscale a data URL to JPEG with max dimension to avoid Edge Function payload limits
+  const downscaleDataUrl = async (dataUrl: string, maxDim = 1600, quality = 0.85): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(dataUrl);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        // Use JPEG to greatly reduce size
+        const compressed = canvas.toDataURL('image/jpeg', quality);
+        resolve(compressed);
+      };
+      img.onerror = () => resolve(dataUrl);
+      img.src = dataUrl;
+    });
   };
   
   const [processingBatches, setProcessingBatches] = useState<Set<string>>(new Set());
@@ -591,9 +613,19 @@ const [isExporting, setIsExporting] = useState(false);
         ? selectedProject?.metadata?.table_extraction_config?.fields || []
         : [];
       
+      // Downscale large inline images to avoid request size limits
+      let payloadImageData = imageUrl;
+      if (typeof payloadImageData === 'string' && payloadImageData.startsWith('data:')) {
+        try {
+          payloadImageData = await downscaleDataUrl(payloadImageData, 1600, 0.85);
+        } catch (e) {
+          console.warn('Image downscale failed, sending original');
+        }
+      }
+      
       const { data, error } = await supabase.functions.invoke('ocr-scan', {
         body: { 
-          imageData: imageUrl,
+          imageData: payloadImageData,
           isPdf: false,
           extractionFields,
           tableExtractionFields: tableFields,
@@ -624,9 +656,10 @@ const [isExporting, setIsExporting] = useState(false);
       setTimeout(() => handleTabChange('validation'), 0);
     } catch (error: any) {
       console.error('Error processing scan:', error);
+      logError('Queue.handleScanComplete', error);
       toast({
         title: 'Scan Failed',
-        description: error.message || 'Failed to process the image. Please try again.',
+        description: safeErrorMessage(error),
         variant: 'destructive',
       });
     } finally {
