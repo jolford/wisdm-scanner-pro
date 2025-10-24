@@ -125,7 +125,21 @@ const EditProject = () => {
       if (error) throw error;
 
       if (data) {
-        const projectData = data as any; // Type assertion for function return
+        // Type assertion: RPC function returns all fields but types haven't regenerated yet
+        const projectData = data as unknown as {
+          id: string;
+          name: string;
+          description: string;
+          customer_id: string;
+          extraction_fields: any;
+          queues: any;
+          metadata: any;
+          enable_check_scanning: boolean;
+          export_types: string[];
+          created_at: string;
+          updated_at: string;
+        };
+        
         setProjectName(projectData.name);
         setProjectDescription(projectData.description || '');
         setEnableCheckScanning(projectData.enable_check_scanning || false);

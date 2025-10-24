@@ -42,7 +42,7 @@ export const ProjectSelector = ({ selectedProjectId, onProjectSelect }: ProjectS
         const results = await Promise.all(projectPromises);
         const projects = results
           .filter(r => !r.error && r.data)
-          .map(r => r.data as any as Project);
+          .map(r => r.data as unknown as Project);
         setProjects(projects);
       } else {
         setProjects([]);
