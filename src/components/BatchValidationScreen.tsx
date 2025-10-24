@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 
 // Icon imports from lucide-react
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut } from 'lucide-react';
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw } from 'lucide-react';
 
 // Backend and utility imports
 import { supabase } from '@/integrations/supabase/client';
@@ -97,6 +97,9 @@ export const BatchValidationScreen = ({
   // Track zoom levels for each document
   const [documentZoom, setDocumentZoom] = useState<Record<string, number>>({});
   
+  // Track rotation for each document (in degrees)
+  const [documentRotation, setDocumentRotation] = useState<Record<string, number>>({});
+  
   // Track which documents have region selector active
   const [showRegionSelector, setShowRegionSelector] = useState<Set<string>>(new Set());
   
@@ -113,6 +116,7 @@ export const BatchValidationScreen = ({
     setEditedLineItems({});
     setValidatingDocs(new Set());
     setDocumentZoom({});
+    setDocumentRotation({});
     setShowRegionSelector(new Set());
   }, [batchId]);
 
@@ -269,6 +273,78 @@ export const BatchValidationScreen = ({
       ...prev,
       [docId]: Math.max((prev[docId] || 1) - 0.25, 0.5)
     }));
+  };
+
+  /**
+   * Handle rotate for a document
+   */
+  const handleRotate = (docId: string) => {
+    setDocumentRotation(prev => ({
+      ...prev,
+      [docId]: ((prev[docId] || 0) + 90) % 360
+    }));
+  };
+
+  /**
+   * Handle reset zoom and rotation for a document
+   */
+  const handleReset = (docId: string) => {
+    setDocumentZoom(prev => ({
+      ...prev,
+      [docId]: 1
+    }));
+    setDocumentRotation(prev => ({
+      ...prev,
+      [docId]: 0
+    }));
+  };
+
+  /**
+   * Handle print for a document
+   */
+  const handlePrint = (docId: string, fileUrl: string) => {
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Print Document</title>
+            <style>
+              body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+              img { max-width: 100%; height: auto; }
+            </style>
+          </head>
+          <body>
+            <img src="${fileUrl}" onload="window.print(); window.close();" />
+          </body>
+        </html>
+      `);
+    }
+  };
+
+  /**
+   * Handle download for a document
+   */
+  const handleDownload = async (fileUrl: string, fileName: string) => {
+    try {
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download failed:', error);
+      toast({
+        title: "Download Failed",
+        description: "Could not download the file.",
+        variant: "destructive",
+      });
+    }
   };
 
   /**
@@ -497,43 +573,89 @@ export const BatchValidationScreen = ({
                 <CollapsibleContent>
                   <div className="p-4 space-y-4 border-t">
                      <div className="grid grid-cols-2 gap-4">
-                      {/* Left column: Image with zoom controls */}
+                      {/* Left column: Image with controls */}
                       <div className="space-y-3">
-                        {/* Zoom Controls */}
-                        <div className="flex items-center justify-between">
+                        {/* Document Controls */}
+                        <div className="flex items-center justify-between gap-2">
                           <h4 className="font-semibold text-sm">Document Preview</h4>
-                          <div className="flex items-center gap-1 border rounded-md">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleZoomOut(doc.id)}
-                              disabled={(documentZoom[doc.id] || 1) <= 0.5}
-                              className="h-8 px-2"
-                            >
-                              <ZoomOut className="h-4 w-4" />
-                            </Button>
-                            <span className="text-xs font-medium px-2 min-w-[3rem] text-center">
-                              {Math.round((documentZoom[doc.id] || 1) * 100)}%
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleZoomIn(doc.id)}
-                              disabled={(documentZoom[doc.id] || 1) >= 3}
-                              className="h-8 px-2"
-                            >
-                              <ZoomIn className="h-4 w-4" />
-                            </Button>
+                          <div className="flex items-center gap-2">
+                            {/* Zoom Controls */}
+                            <div className="flex items-center gap-1 border rounded-md">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleZoomOut(doc.id)}
+                                disabled={(documentZoom[doc.id] || 1) <= 0.5}
+                                className="h-8 px-2"
+                                title="Zoom Out"
+                              >
+                                <ZoomOut className="h-4 w-4" />
+                              </Button>
+                              <span className="text-xs font-medium px-2 min-w-[3rem] text-center">
+                                {Math.round((documentZoom[doc.id] || 1) * 100)}%
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleZoomIn(doc.id)}
+                                disabled={(documentZoom[doc.id] || 1) >= 3}
+                                className="h-8 px-2"
+                                title="Zoom In"
+                              >
+                                <ZoomIn className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            
+                            {/* Additional Controls */}
+                            <div className="flex items-center gap-1 border rounded-md">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleRotate(doc.id)}
+                                className="h-8 px-2"
+                                title="Rotate 90°"
+                              >
+                                <RotateCw className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleReset(doc.id)}
+                                className="h-8 px-2"
+                                title="Reset View"
+                              >
+                                <RefreshCw className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handlePrint(doc.id, doc.file_url)}
+                                className="h-8 px-2"
+                                title="Print"
+                              >
+                                <Printer className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDownload(doc.file_url, doc.file_name)}
+                                className="h-8 px-2"
+                                title="Download"
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
                         
-                        {/* Image Preview with Zoom */}
+                        {/* Image Preview with Zoom and Rotation */}
                         <div className="overflow-auto max-h-[400px] bg-muted/30 rounded-lg p-4">
                           <FullImageWithSignedUrl
                             url={doc.file_url}
                             alt={doc.file_name}
                             fileType={(doc as any).file_type}
                             zoom={documentZoom[doc.id] || 1}
+                            rotation={documentRotation[doc.id] || 0}
                           />
                         </div>
 
@@ -711,11 +833,13 @@ const FullImageWithSignedUrl = ({
   alt,
   fileType,
   zoom = 1,
+  rotation = 0,
 }: {
   url: string;
   alt: string;
   fileType?: string;
   zoom?: number;
+  rotation?: number;
 }) => {
   // Get signed URL for secure access to the file
   const { signedUrl, loading } = useSignedUrl(url);
@@ -801,15 +925,15 @@ const FullImageWithSignedUrl = ({
     );
   }
 
-  // Render image with zoom
+  // Render image with zoom and rotation
   return (
     <img
       src={displayUrl}
       alt={alt}
       className="w-full h-auto object-contain transition-transform"
       style={{
-        transform: `scale(${zoom})`,
-        transformOrigin: 'top left'
+        transform: `scale(${zoom}) rotate(${rotation}deg)`,
+        transformOrigin: 'center'
       }}
       onError={(e) => {
         console.error('Image failed to load');
