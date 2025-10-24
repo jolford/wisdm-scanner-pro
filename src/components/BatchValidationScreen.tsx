@@ -60,6 +60,9 @@ interface Document {
     reasoning?: string;
     classified_at?: string;
   };
+  // Optional OCR geometry stored with the document (if available)
+  word_bounding_boxes?: Array<{ text: string; bbox: { x: number; y: number; width: number; height: number } }>; 
+  bounding_boxes?: Record<string, { x: number; y: number; width: number; height: number }>;
 }
 
 /**
@@ -160,7 +163,7 @@ export const BatchValidationScreen = ({
             const { data, error } = await supabase.functions.invoke('detect-offensive-language', {
               body: {
                 text: doc.extracted_text,
-                wordBoundingBoxes: [],
+                wordBoundingBoxes: (doc as any).word_bounding_boxes || [],
               },
             });
             
@@ -909,41 +912,40 @@ export const BatchValidationScreen = ({
                                   </div>
                                 </div>
                                 <div className="relative border rounded-lg overflow-hidden bg-background">
-                                  <img
-                                    src={doc.file_url}
+                                  <FullImageWithSignedUrl
+                                    url={doc.file_url}
                                     alt={doc.file_name}
-                                    className="w-full h-auto"
-                                    onLoad={(e) => {
-                                      const img = e.currentTarget;
-                                      const container = img.parentElement;
-                                      if (container) {
-                                        container.setAttribute('data-img-width', img.naturalWidth.toString());
-                                        container.setAttribute('data-img-height', img.naturalHeight.toString());
-                                      }
-                                    }}
+                                    fileType={(doc as any).file_type}
+                                    zoom={1}
+                                    rotation={0}
                                   />
-                                  <svg 
-                                    className="absolute top-0 left-0 w-full h-full pointer-events-none"
-                                    preserveAspectRatio="none"
-                                    viewBox={`0 0 ${(doc as any).image_width || 1000} ${(doc as any).image_height || 1000}`}
-                                  >
-                                    {offensiveLanguageResults[doc.id].highlights.map((highlight: any, idx: number) => {
-                                      if (!highlight.boundingBox) return null;
-                                      const box = highlight.boundingBox;
-                                      return (
-                                        <rect
-                                          key={idx}
-                                          x={box.x}
-                                          y={box.y}
-                                          width={box.width}
-                                          height={box.height}
-                                          fill="rgba(239, 68, 68, 0.3)"
-                                          stroke="rgb(239, 68, 68)"
-                                          strokeWidth="2"
-                                        />
-                                      );
-                                    })}
-                                  </svg>
+                                  {(() => {
+                                    const boxes = offensiveLanguageResults[doc.id].highlights
+                                      .map((h: any) => h.boundingBox)
+                                      .filter(Boolean);
+                                    const viewW = boxes.length ? Math.max(...boxes.map((b: any) => b.x + b.width)) : 1000;
+                                    const viewH = boxes.length ? Math.max(...boxes.map((b: any) => b.y + b.height)) : 1000;
+                                    return (
+                                      <svg 
+                                        className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                                        preserveAspectRatio="none"
+                                        viewBox={`0 0 ${viewW} ${viewH}`}
+                                      >
+                                        {boxes.map((box: any, idx: number) => (
+                                          <rect
+                                            key={idx}
+                                            x={box.x}
+                                            y={box.y}
+                                            width={box.width}
+                                            height={box.height}
+                                            fill="rgba(239, 68, 68, 0.3)"
+                                            stroke="rgb(239, 68, 68)"
+                                            strokeWidth="2"
+                                          />
+                                        ))}
+                                      </svg>
+                                    );
+                                  })()}
                                 </div>
                               </div>
                             ) : (
