@@ -1,5 +1,11 @@
 // supabase/functions/safe-fetch/index.ts
 // deno deploy: supabase functions deploy safe-fetch
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
 const ALLOWED_HOSTS = new Set([
   "example.com",
   "api.example.com",
@@ -56,20 +62,25 @@ function isBlockedIP(ip: string) {
 }
 
 Deno.serve(async (req) => {
+  // Handle CORS preflight requests
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
   try {
-    const { url } = await req.json().catch(() => ({}));
-    if (!url) return new Response(JSON.stringify({ error: "url required" }), { status: 400 });
+    const { url, method = 'GET', headers: customHeaders = {} } = await req.json().catch(() => ({}));
+    if (!url) return new Response(JSON.stringify({ error: "url required" }), { status: 400, headers: corsHeaders });
 
     const u = new URL(url);
 
     // 1) Require HTTPS (prevents Host header shenanigans + cert mismatch games)
     if (u.protocol !== "https:") {
-      return new Response(JSON.stringify({ error: "only https allowed" }), { status: 400 });
+      return new Response(JSON.stringify({ error: "only https allowed" }), { status: 400, headers: corsHeaders });
     }
 
     // 2) Allowlists win. If you can, lock to a curated set.
     if (ALLOWED_HOSTS.size && !ALLOWED_HOSTS.has(u.hostname)) {
-      return new Response(JSON.stringify({ error: "host not allowed" }), { status: 403 });
+      return new Response(JSON.stringify({ error: "host not allowed" }), { status: 403, headers: corsHeaders });
     }
 
     // 3) DNS resolve the host and block private/loopback/metadata IPs
@@ -78,30 +89,32 @@ Deno.serve(async (req) => {
       ...(await Deno.resolveDns(u.hostname, "AAAA").catch(() => [] as string[])),
     ];
     if (addrs.length === 0) {
-      return new Response(JSON.stringify({ error: "host could not be resolved" }), { status: 400 });
+      return new Response(JSON.stringify({ error: "host could not be resolved" }), { status: 400, headers: corsHeaders });
     }
     if (addrs.some(isBlockedIP)) {
-      return new Response(JSON.stringify({ error: "resolved to a blocked IP range" }), { status: 403 });
+      return new Response(JSON.stringify({ error: "resolved to a blocked IP range" }), { status: 403, headers: corsHeaders });
     }
 
-    // 4) Safe fetch options
+    // 4) Safe fetch options - merge custom headers with defaults
     const ac = new AbortController();
     const timeout = setTimeout(() => ac.abort(), 5000); // 5s timeout
+    const mergedHeaders = {
+      "User-Agent": "WISDMScanBot/1.0",
+      "Accept": "text/html,application/json;q=0.9,*/*;q=0.1",
+      ...customHeaders, // Allow caller to override/add headers like Authorization
+    };
+    
     const resp = await fetch(u.toString(), {
-      method: "GET",
+      method: method.toUpperCase(),
       redirect: "manual",     // don't follow redirects (could hop to internal IP)
       signal: ac.signal,
-      headers: {
-        // do NOT forward your Authorization/cookies; set a minimal UA
-        "User-Agent": "WISDMScanBot/1.0",
-        "Accept": "text/html,application/json;q=0.9,*/*;q=0.1",
-      },
+      headers: mergedHeaders,
     }).finally(() => clearTimeout(timeout));
 
     // 5) Enforce content-type allowlist if you only expect JSON, etc.
     const ctype = resp.headers.get("content-type") || "";
     if (!/(^application\/json)|(^text\/html)/i.test(ctype)) {
-      return new Response(JSON.stringify({ error: "content-type not allowed" }), { status: 415 });
+      return new Response(JSON.stringify({ error: "content-type not allowed" }), { status: 415, headers: corsHeaders });
     }
 
     // 6) Limit body size to prevent memory bombs
@@ -114,18 +127,18 @@ Deno.serve(async (req) => {
         const { value, done } = await reader.read();
         if (done) break;
         total += value!.byteLength;
-        if (total > MAX) return new Response(JSON.stringify({ error: "response too large" }), { status: 413 });
+        if (total > MAX) return new Response(JSON.stringify({ error: "response too large" }), { status: 413, headers: corsHeaders });
         chunks.push(value!);
       }
     }
     const body = new TextDecoder().decode(chunks.length ? concat(chunks) : new Uint8Array());
     return new Response(JSON.stringify({ status: resp.status, headers: Object.fromEntries(resp.headers), body }), {
       status: 200,
-      headers: { "content-type": "application/json; charset=utf-8" },
+      headers: { ...corsHeaders, "content-type": "application/json; charset=utf-8" },
     });
   } catch (e) {
     const errorMessage = e instanceof Error ? e.message : String(e);
-    return new Response(JSON.stringify({ error: errorMessage }), { status: 500 });
+    return new Response(JSON.stringify({ error: errorMessage }), { status: 500, headers: corsHeaders });
   }
 });
 

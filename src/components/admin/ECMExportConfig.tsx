@@ -221,15 +221,25 @@ export function ECMExportConfig({
       } else {
         const url = config.url?.replace(/\/$/, '');
         const fieldsUrl = `${url}/api/projects/${projectId}/fields`;
-        const response = await fetch(fieldsUrl, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Basic ${btoa(`${config.username}:${config.password}`)}`,
-            'Accept': 'application/json',
+        
+        // Use safe-fetch edge function to prevent SSRF attacks
+        const { data: fetchResult, error: fetchError } = await supabase.functions.invoke('safe-fetch', {
+          body: {
+            url: fieldsUrl,
+            method: 'GET',
+            headers: {
+              'Authorization': `Basic ${btoa(`${config.username}:${config.password}`)}`,
+              'Accept': 'application/json',
+            },
           },
         });
-        if (response.ok) {
-          const fieldsData = await response.json();
+        
+        if (fetchError) throw fetchError;
+        
+        if (fetchResult?.status === 200 && fetchResult?.body) {
+          const fieldsData = typeof fetchResult.body === 'string' 
+            ? JSON.parse(fetchResult.body) 
+            : fetchResult.body;
           const formattedFields = (Array.isArray(fieldsData) ? fieldsData : []).map((f: any) => ({
             name: f.FieldName || f.name || f.Name,
             type: f.FieldType || f.type || f.Type || 'text',
