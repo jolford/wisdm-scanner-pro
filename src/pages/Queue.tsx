@@ -66,11 +66,28 @@ const Queue = () => {
     return String(value || '');
   };
   
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingBatches, setProcessingBatches] = useState<Set<string>>(new Set());
   const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null);
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
+  
+  // Helper to check if current batch is processing
+  const isProcessing = selectedBatchId ? processingBatches.has(selectedBatchId) : false;
+  
+  // Helper to set processing state for current batch
+  const setProcessing = (processing: boolean) => {
+    if (!selectedBatchId) return;
+    setProcessingBatches(prev => {
+      const newSet = new Set(prev);
+      if (processing) {
+        newSet.add(selectedBatchId);
+      } else {
+        newSet.delete(selectedBatchId);
+      }
+      return newSet;
+    });
+  };
   const [validationQueue, setValidationQueue] = useState<any[]>([]);
   const [validatedDocs, setValidatedDocs] = useState<any[]>([]);
   const [readyNotified, setReadyNotified] = useState(false);
@@ -276,7 +293,7 @@ const [isExporting, setIsExporting] = useState(false);
       return;
     }
 
-    setIsProcessing(true);
+    setProcessing(true);
     
     try {
       // First, upload the original PDF file to storage
@@ -438,7 +455,7 @@ const [isExporting, setIsExporting] = useState(false);
         variant: 'destructive',
       });
     } finally {
-      setIsProcessing(false);
+      setProcessing(false);
     }
   };
 
@@ -457,7 +474,7 @@ const [isExporting, setIsExporting] = useState(false);
       description: `Processing ${files.length} files...`,
     });
 
-    setIsProcessing(true);
+    setProcessing(true);
     
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -491,7 +508,7 @@ const [isExporting, setIsExporting] = useState(false);
       }
     }
     
-    setIsProcessing(false);
+    setProcessing(false);
     toast({
       title: 'Batch Complete',
       description: `Successfully processed ${files.length} files`,
@@ -512,10 +529,10 @@ const [isExporting, setIsExporting] = useState(false);
       return;
     }
 
-    setIsProcessing(true);
+    setProcessing(true);
 
     try {
-      const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
+      const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled
         ? selectedProject?.metadata?.table_extraction_config?.fields || []
         : [];
       
@@ -555,7 +572,7 @@ const [isExporting, setIsExporting] = useState(false);
         variant: 'destructive',
       });
     } finally {
-      setIsProcessing(false);
+      setProcessing(false);
     }
   };
 

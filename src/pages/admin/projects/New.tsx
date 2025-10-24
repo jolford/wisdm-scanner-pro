@@ -564,6 +564,22 @@ const NewProject = () => {
               </p>
             </div>
 
+            {/* Line Item Extraction - only for invoice projects */}
+            {projectName.toLowerCase().includes('invoice') && (
+              <div>
+                <Label className="mb-4 block">Line Item Table Extraction</Label>
+                <Card className="p-4 bg-muted/50">
+                  <TableExtractionConfig
+                    config={tableExtractionConfig}
+                    onConfigChange={setTableExtractionConfig}
+                  />
+                </Card>
+                <p className="text-sm text-muted-foreground mt-2">
+                  Extract line item tables from invoices with columns like Description, Quantity, Unit Price, Total.
+                </p>
+              </div>
+            )}
+
             <div>
               <Label className="mb-4 block">Processing Queues</Label>
               <div className="space-y-3">

@@ -18,6 +18,7 @@ export function MFAEnrollment({ onEnrollmentComplete, onCancel }: MFAEnrollmentP
   const [step, setStep] = useState<'generate' | 'verify'>('generate');
   const [qrCode, setQrCode] = useState('');
   const [secret, setSecret] = useState('');
+  const [factorId, setFactorId] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -35,6 +36,7 @@ export function MFAEnrollment({ onEnrollmentComplete, onCancel }: MFAEnrollmentP
       if (data) {
         setQrCode(data.totp.qr_code);
         setSecret(data.totp.secret);
+        setFactorId(data.id); // Store the factor ID
         setStep('verify');
       }
     } catch (error: any) {
@@ -60,16 +62,12 @@ export function MFAEnrollment({ onEnrollmentComplete, onCancel }: MFAEnrollmentP
 
     setLoading(true);
     try {
-      const factors = await supabase.auth.mfa.listFactors();
-      if (factors.error) throw factors.error;
-
-      const totpFactor = factors.data?.totp?.[0];
-      if (!totpFactor) {
-        throw new Error('No TOTP factor found');
+      if (!factorId) {
+        throw new Error('MFA setup incomplete. Please try again.');
       }
 
       const { data, error } = await supabase.auth.mfa.challengeAndVerify({
-        factorId: totpFactor.id,
+        factorId: factorId,
         code: verificationCode,
       });
 
