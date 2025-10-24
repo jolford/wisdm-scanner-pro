@@ -1086,6 +1086,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_assign_role: {
+        Args: {
+          new_role: Database["public"]["Enums"]["app_role"]
+          target_user_id: string
+        }
+        Returns: Json
+      }
+      admin_bulk_delete_batches: {
+        Args: { batch_ids: string[] }
+        Returns: Json
+      }
       calculate_ai_cost: {
         Args: {
           _input_tokens: number
