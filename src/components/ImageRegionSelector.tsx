@@ -17,13 +17,29 @@ export const ImageRegionSelector = ({
   extractionFields 
 }: ImageRegionSelectorProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
   const [endPoint, setEndPoint] = useState<{ x: number; y: number } | null>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [zoom, setZoom] = useState(1);
+  const [canvasDimensions, setCanvasDimensions] = useState({ width: 0, height: 0 });
   const { toast } = useToast();
+
+  // Calculate responsive canvas dimensions
+  const updateCanvasDimensions = (img: HTMLImageElement) => {
+    if (!containerRef.current) return;
+    
+    const containerWidth = containerRef.current.clientWidth;
+    const maxWidth = Math.min(containerWidth - 32, 1200); // 32px for padding
+    const scale = Math.min(1, maxWidth / img.width);
+    
+    setCanvasDimensions({
+      width: img.width * scale,
+      height: img.height * scale
+    });
+  };
 
   useEffect(() => {
     const loadImage = async () => {
@@ -36,16 +52,7 @@ export const ImageRegionSelector = ({
         const img = new Image();
         img.onload = () => {
           setImage(img);
-          if (canvasRef.current) {
-            const canvas = canvasRef.current;
-            // Set reasonable max dimensions
-            const maxWidth = 1200;
-            const scale = Math.min(1, maxWidth / img.width);
-            canvas.width = img.width * scale;
-            canvas.height = img.height * scale;
-            
-            redrawCanvasWithZoom(canvas, img, zoom);
-          }
+          updateCanvasDimensions(img);
           // Clean up blob URL
           URL.revokeObjectURL(objectUrl);
         };
@@ -74,18 +81,37 @@ export const ImageRegionSelector = ({
     loadImage();
   }, [imageUrl, toast]);
 
-  const redrawCanvasWithZoom = (canvas: HTMLCanvasElement, img: HTMLImageElement, zoomLevel: number) => {
+  // Handle window resize
+  useEffect(() => {
+    if (!image) return;
+
+    const handleResize = () => {
+      updateCanvasDimensions(image);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [image]);
+
+  // Draw canvas content
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !image || canvasDimensions.width === 0) return;
+
+    // Update canvas dimensions
+    canvas.width = canvasDimensions.width;
+    canvas.height = canvasDimensions.height;
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear and redraw image with zoom
+    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
-    ctx.scale(zoomLevel, zoomLevel);
-    ctx.drawImage(img, 0, 0, canvas.width / zoomLevel, canvas.height / zoomLevel);
-    ctx.restore();
+    
+    // Draw image scaled to fit canvas
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-    // Draw selection rectangle
+    // Draw selection rectangle if exists
     if (startPoint && endPoint) {
       ctx.strokeStyle = '#3b82f6';
       ctx.lineWidth = 2;
@@ -98,16 +124,7 @@ export const ImageRegionSelector = ({
       ctx.fillStyle = 'rgba(59, 130, 246, 0.1)';
       ctx.fillRect(startPoint.x, startPoint.y, width, height);
     }
-  };
-
-  const redrawCanvas = () => {
-    if (!canvasRef.current || !image) return;
-    redrawCanvasWithZoom(canvasRef.current, image, zoom);
-  };
-
-  useEffect(() => {
-    redrawCanvas();
-  }, [startPoint, endPoint, image, zoom]);
+  }, [image, canvasDimensions, startPoint, endPoint]);
 
   const getCanvasCoordinates = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -199,10 +216,9 @@ export const ImageRegionSelector = ({
 
       onRegionSelected(data.metadata || {});
 
-      // Reset selection
+      // Reset selection (canvas will redraw automatically)
       setStartPoint(null);
       setEndPoint(null);
-      redrawCanvas();
     } catch (error: any) {
       console.error('Error processing region:', error);
       toast({
@@ -218,15 +234,7 @@ export const ImageRegionSelector = ({
   const handleReset = () => {
     setStartPoint(null);
     setEndPoint(null);
-    redrawCanvas();
-  };
-
-  const handleZoomIn = () => {
-    setZoom((prev) => Math.min(prev + 0.25, 3));
-  };
-
-  const handleZoomOut = () => {
-    setZoom((prev) => Math.max(prev - 0.25, 0.5));
+    setZoom(1);
   };
 
   return (
@@ -241,51 +249,38 @@ export const ImageRegionSelector = ({
             Click and drag to select an area for OCR correction
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 border rounded-md">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleZoomOut}
-              disabled={zoom <= 0.5}
-              className="h-8 px-2"
-            >
-              <ZoomOut className="h-4 w-4" />
-            </Button>
-            <span className="text-xs font-medium px-2 min-w-[3rem] text-center">
-              {Math.round(zoom * 100)}%
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleZoomIn}
-              disabled={zoom >= 3}
-              className="h-8 px-2"
-            >
-              <ZoomIn className="h-4 w-4" />
-            </Button>
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleReset}
-            disabled={!startPoint && !endPoint}
-          >
-            <RotateCcw className="h-3 w-3 mr-1" />
-            Reset
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleReset}
+          disabled={!startPoint && !endPoint && zoom === 1}
+        >
+          <RotateCcw className="h-3 w-3 mr-1" />
+          Reset
+        </Button>
       </div>
-      <div className="relative overflow-auto bg-muted/30 rounded-lg" style={{ maxHeight: 'min(70vh, 800px)' }}>
-        <canvas
-          ref={canvasRef}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={() => setIsSelecting(false)}
-          className="cursor-crosshair w-full h-auto"
-          style={{ display: 'block', maxWidth: '100%' }}
-        />
+      <div 
+        ref={containerRef}
+        className="relative bg-muted/30 rounded-lg p-4" 
+        style={{ maxHeight: 'min(70vh, 800px)', overflow: 'auto' }}
+      >
+        <div style={{ 
+          transform: `scale(${zoom})`, 
+          transformOrigin: 'top left',
+          transition: 'transform 0.2s ease-out',
+          width: `${canvasDimensions.width}px`,
+          height: `${canvasDimensions.height}px`
+        }}>
+          <canvas
+            ref={canvasRef}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={() => setIsSelecting(false)}
+            className="cursor-crosshair"
+            style={{ display: 'block', width: '100%', height: '100%' }}
+          />
+        </div>
         {isProcessing && (
           <div className="absolute inset-0 bg-background/80 flex items-center justify-center">
             <div className="text-center">
