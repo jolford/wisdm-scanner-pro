@@ -31,6 +31,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import jsPDF from 'jspdf';
 import { isTiffFile, convertTiffToPngDataUrl } from '@/lib/image-utils';
 
@@ -75,7 +76,10 @@ const Queue = () => {
   const [readyNotified, setReadyNotified] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [docToDelete, setDocToDelete] = useState<string | null>(null);
-  const [isExporting, setIsExporting] = useState(false);
+const [isExporting, setIsExporting] = useState(false);
+  const [docmgtRtDialogOpen, setDocmgtRtDialogOpen] = useState(false);
+  const [docmgtRtOptions, setDocmgtRtOptions] = useState<Array<{ id: string | number; name: string }>>([]);
+  const [docmgtSelectedRtId, setDocmgtSelectedRtId] = useState<string>('');
   
   // MICR support: derive flag and ensure MICR fields are included in extraction when enabled
   const enableMICR = Boolean((selectedProject as any)?.enable_check_scanning || (selectedProject as any)?.metadata?.enable_check_scanning?.enabled);
@@ -790,15 +794,45 @@ const Queue = () => {
       if (data?.success) {
         toast({ title: 'Exported to Docmgt', description: `Exported ${validatedDocs.length} documents` });
       } else {
-        const suggestions = Array.isArray((data as any)?.availableRecordTypes) && (data as any).availableRecordTypes.length
-          ? `Available RecordTypes: ${(data as any).availableRecordTypes.slice(0,5).map((rt: any) => `${rt.name} (ID: ${rt.id})`).join(', ')}`
-          : '';
+        const available = Array.isArray((data as any)?.availableRecordTypes)
+          ? (data as any).availableRecordTypes.filter((rt: any) => rt?.id)
+          : [];
+        if (available.length) {
+          setDocmgtRtOptions(available);
+          setDocmgtSelectedRtId(String(available[0].id));
+          setDocmgtRtDialogOpen(true);
+          toast({ title: 'Select Docmgt RecordType', description: 'Choose a RecordType to retry export.' });
+          return;
+        }
         const detail = (data as any)?.results?.find((r: any) => r?.error)?.error || (data as any)?.message || (data as any)?.error || 'Export failed';
-        toast({ title: 'Export failed', description: `${detail}${suggestions ? ` — ${suggestions}` : ''}`, variant: 'destructive' });
+        toast({ title: 'Export failed', description: detail, variant: 'destructive' });
         return;
       }
     } catch (err: any) {
       console.error('Docmgt export error:', err);
+      toast({ title: 'Export failed', description: err.message || 'Failed to export to Docmgt', variant: 'destructive' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const retryDocmgtExportWithRecordType = async () => {
+    if (!docmgtSelectedRtId) return;
+    try {
+      setIsExporting(true);
+      const { data, error } = await supabase.functions.invoke('export-to-docmgt', {
+        body: { batchId: selectedBatchId, recordTypeId: Number(docmgtSelectedRtId) },
+      });
+      if (error) throw error;
+      if (data?.success) {
+        toast({ title: 'Exported to Docmgt', description: `Exported ${validatedDocs.length} documents` });
+        setDocmgtRtDialogOpen(false);
+      } else {
+        const detail = (data as any)?.message || (data as any)?.error || 'Export failed';
+        toast({ title: 'Export failed', description: detail, variant: 'destructive' });
+      }
+    } catch (err: any) {
+      console.error('Docmgt export retry error:', err);
       toast({ title: 'Export failed', description: err.message || 'Failed to export to Docmgt', variant: 'destructive' });
     } finally {
       setIsExporting(false);
@@ -1446,7 +1480,38 @@ const Queue = () => {
             </TabsContent>
           </Tabs>
         )}
-      </main>
+</main>
+
+      <AlertDialog open={docmgtRtDialogOpen} onOpenChange={setDocmgtRtDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Select Docmgt RecordType</AlertDialogTitle>
+            <AlertDialogDescription>
+              Choose a RecordType to retry the export.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="py-2">
+            <Select value={docmgtSelectedRtId} onValueChange={setDocmgtSelectedRtId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select RecordType" />
+              </SelectTrigger>
+              <SelectContent>
+                {docmgtRtOptions.map((rt) => (
+                  <SelectItem key={String(rt.id)} value={String(rt.id)}>
+                    {rt.name} (ID: {String(rt.id)})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={retryDocmgtExportWithRecordType} disabled={!docmgtSelectedRtId || isExporting}>
+              {isExporting ? 'Exporting...' : 'Retry Export'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
