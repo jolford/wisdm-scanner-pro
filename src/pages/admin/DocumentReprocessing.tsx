@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,6 +40,7 @@ interface Document {
 }
 
 const DocumentReprocessing = () => {
+  const navigate = useNavigate();
   const { loading: authLoading, isAdmin } = useRequireAuth(true);
   const { toast } = useToast();
   const [documents, setDocuments] = useState<Document[]>([]);
@@ -204,8 +206,27 @@ const DocumentReprocessing = () => {
       description: `Successfully reprocessed ${successCount} documents. Failed: ${failCount}`,
     });
 
-    // Reload the list
-    loadBadDocuments();
+    // Check if all processed docs belong to the same batch
+    const batchIds = [...new Set(docsToProcess.map(d => d.batch_id).filter(Boolean))];
+    
+    if (batchIds.length === 1 && successCount > 0) {
+      // All docs from same batch, navigate to batch validation
+      const batch = docsToProcess[0]?.batch;
+      const batchId = batchIds[0];
+      
+      // Store batch info in session storage
+      if (batch) {
+        sessionStorage.setItem('selectedBatch', JSON.stringify({
+          id: batchId,
+          name: batch.batch_name
+        }));
+      }
+      
+      navigate(`/queue?tab=validation`);
+    } else {
+      // Mixed batches or no batch, just reload the list
+      loadBadDocuments();
+    }
   };
 
   if (authLoading || loading) {
