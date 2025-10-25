@@ -10,6 +10,7 @@ import { ArrowLeft, FolderOpen, Search, Calendar, User, FileText, Trash2, ArrowR
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useUserPreferences } from '@/hooks/use-user-preferences';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
@@ -36,10 +37,18 @@ const Batches = () => {
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { preferences } = useUserPreferences();
   const [batches, setBatches] = useState<Batch[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(preferences?.default_batch_view || 'grid');
+
+  // Update view mode when preferences load
+  useEffect(() => {
+    if (preferences?.default_batch_view) {
+      setViewMode(preferences.default_batch_view);
+    }
+  }, [preferences?.default_batch_view]);
 
   useEffect(() => {
     if (!authLoading) {

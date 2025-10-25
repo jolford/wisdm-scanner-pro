@@ -1123,6 +1123,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_preferences: {
+        Row: {
+          auto_navigate_validation: boolean | null
+          created_at: string | null
+          default_batch_view: string | null
+          default_starting_page: string | null
+          id: string
+          notifications_enabled: boolean | null
+          show_tooltips: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          auto_navigate_validation?: boolean | null
+          created_at?: string | null
+          default_batch_view?: string | null
+          default_starting_page?: string | null
+          id?: string
+          notifications_enabled?: boolean | null
+          show_tooltips?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          auto_navigate_validation?: boolean | null
+          created_at?: string | null
+          default_batch_view?: string | null
+          default_starting_page?: string | null
+          id?: string
+          notifications_enabled?: boolean | null
+          show_tooltips?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null

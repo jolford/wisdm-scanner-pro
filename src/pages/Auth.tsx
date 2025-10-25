@@ -12,6 +12,24 @@ import { Check, X, Sparkles } from 'lucide-react';
 import { MFAChallenge } from '@/components/auth/MFAChallenge';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 
+// Helper function to get user's preferred starting page
+const getUserStartingPage = async (): Promise<string> => {
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return '/';
+
+    const { data } = await supabase
+      .from('user_preferences')
+      .select('default_starting_page')
+      .eq('user_id', user.id)
+      .single();
+
+    return data?.default_starting_page || '/';
+  } catch {
+    return '/';
+  }
+};
+
 const emailSchema = z.string().email('Invalid email address');
 const passwordSchema = z.string()
   .min(8, 'Password must be at least 8 characters')
@@ -120,7 +138,7 @@ const AuthPage = () => {
       
       // Don't auto-redirect during MFA/auth flow or when showing MFA
       if (session && !blockRedirect && !isUpdatingPassword && !showMfaChallenge && !authFlowRef.current) {
-        navigate('/');
+        getUserStartingPage().then(page => navigate(page));
       }
     });
 
@@ -133,7 +151,7 @@ const AuthPage = () => {
       // Otherwise, check for an existing session and redirect
       supabase.auth.getSession().then(({ data: { session } }) => {
         if (session && !isUpdatingPassword && !showMfaChallenge && !authFlowRef.current) {
-          navigate('/');
+          getUserStartingPage().then(page => navigate(page));
         }
       });
     }
@@ -305,7 +323,8 @@ const AuthPage = () => {
         title: 'Welcome Back',
         description: 'You have successfully signed in.',
       });
-      navigate('/');
+      const startingPage = await getUserStartingPage();
+      navigate(startingPage);
     } catch (error: any) {
       toast({
         title: 'Sign In Failed',
@@ -389,7 +408,8 @@ const AuthPage = () => {
       });
 
       setIsUpdatingPassword(false);
-      navigate('/');
+      const startingPage = await getUserStartingPage();
+      navigate(startingPage);
     } catch (error: any) {
       toast({
         title: 'Update Failed',
@@ -411,8 +431,9 @@ const AuthPage = () => {
           </div>
           <MFAChallenge
             factorId={mfaFactorId}
-            onSuccess={() => {
-              navigate('/');
+            onSuccess={async () => {
+              const startingPage = await getUserStartingPage();
+              navigate(startingPage);
             }}
             onCancel={() => {
               setShowMfaChallenge(false);

@@ -6,10 +6,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { MFAEnrollment } from '@/components/auth/MFAEnrollment';
-import { ArrowLeft, Shield, ShieldOff, User, Mail } from 'lucide-react';
+import { ArrowLeft, Shield, ShieldOff, User, Mail, Settings2, Home, FolderOpen } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import wisdmLogo from '@/assets/wisdm-logo.png';
+import { useUserPreferences } from '@/hooks/use-user-preferences';
 
 const UserSettings = () => {
   const navigate = useNavigate();
@@ -18,6 +22,7 @@ const UserSettings = () => {
   const [mfaEnabled, setMfaEnabled] = useState(false);
   const [showMfaEnrollment, setShowMfaEnrollment] = useState(false);
   const [loading, setLoading] = useState(false);
+  const { preferences, updatePreferences, loading: preferencesLoading } = useUserPreferences();
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -103,10 +108,14 @@ const UserSettings = () => {
       <main className="container mx-auto px-4 py-12">
         <div className="max-w-4xl mx-auto">
           <Tabs defaultValue="profile" className="space-y-6">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="profile">
                 <User className="h-4 w-4 mr-2" />
                 Profile
+              </TabsTrigger>
+              <TabsTrigger value="preferences">
+                <Settings2 className="h-4 w-4 mr-2" />
+                Preferences
               </TabsTrigger>
               <TabsTrigger value="security">
                 <Shield className="h-4 w-4 mr-2" />
@@ -138,6 +147,153 @@ const UserSettings = () => {
                     </div>
                     <p className="text-xs font-mono text-muted-foreground">{user?.id}</p>
                   </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Preferences Tab */}
+            <TabsContent value="preferences" className="space-y-4">
+              <Card className="card-elevated">
+                <CardHeader>
+                  <CardTitle>Application Preferences</CardTitle>
+                  <CardDescription>
+                    Customize your experience and default settings
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {preferencesLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <div className="animate-spin h-6 w-6 border-4 border-primary border-t-transparent rounded-full" />
+                    </div>
+                  ) : (
+                    <>
+                      {/* Default Starting Page */}
+                      <div className="space-y-3">
+                        <Label htmlFor="starting-page" className="flex items-center gap-2">
+                          <Home className="h-4 w-4" />
+                          Default Starting Page
+                        </Label>
+                        <Select
+                          value={preferences?.default_starting_page || '/'}
+                          onValueChange={async (value) => {
+                            const success = await updatePreferences({ default_starting_page: value });
+                            if (success) {
+                              toast({
+                                title: 'Preference Updated',
+                                description: 'Your default starting page has been updated.',
+                              });
+                            } else {
+                              toast({
+                                title: 'Update Failed',
+                                description: 'Could not update preference. Please try again.',
+                                variant: 'destructive',
+                              });
+                            }
+                          }}
+                        >
+                          <SelectTrigger id="starting-page">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="/">Queue (Document Processing)</SelectItem>
+                            <SelectItem value="/batches">Batch List</SelectItem>
+                            <SelectItem value="/admin">Admin Dashboard</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-sm text-muted-foreground">
+                          Choose which page to load when you sign in
+                        </p>
+                      </div>
+
+                      {/* Default Batch View */}
+                      <div className="space-y-3">
+                        <Label htmlFor="batch-view" className="flex items-center gap-2">
+                          <FolderOpen className="h-4 w-4" />
+                          Default Batch View
+                        </Label>
+                        <Select
+                          value={preferences?.default_batch_view || 'grid'}
+                          onValueChange={async (value: string) => {
+                            const success = await updatePreferences({ default_batch_view: value as 'grid' | 'list' });
+                            if (success) {
+                              toast({
+                                title: 'Preference Updated',
+                                description: 'Your default batch view has been updated.',
+                              });
+                            }
+                          }}
+                        >
+                          <SelectTrigger id="batch-view">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="grid">Grid View</SelectItem>
+                            <SelectItem value="list">List View</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-sm text-muted-foreground">
+                          Choose how batches are displayed by default
+                        </p>
+                      </div>
+
+                      {/* Show Tooltips */}
+                      <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="show-tooltips" className="cursor-pointer">
+                            Show Tooltips
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            Display helpful tooltips throughout the app
+                          </p>
+                        </div>
+                        <Switch
+                          id="show-tooltips"
+                          checked={preferences?.show_tooltips ?? true}
+                          onCheckedChange={async (checked) => {
+                            await updatePreferences({ show_tooltips: checked });
+                          }}
+                        />
+                      </div>
+
+                      {/* Notifications */}
+                      <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="notifications" className="cursor-pointer">
+                            Enable Notifications
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            Receive notifications for important events
+                          </p>
+                        </div>
+                        <Switch
+                          id="notifications"
+                          checked={preferences?.notifications_enabled ?? true}
+                          onCheckedChange={async (checked) => {
+                            await updatePreferences({ notifications_enabled: checked });
+                          }}
+                        />
+                      </div>
+
+                      {/* Auto Navigate to Validation */}
+                      <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="auto-validation" className="cursor-pointer">
+                            Auto-navigate to Validation
+                          </Label>
+                          <p className="text-sm text-muted-foreground">
+                            Automatically switch to validation tab after scanning
+                          </p>
+                        </div>
+                        <Switch
+                          id="auto-validation"
+                          checked={preferences?.auto_navigate_validation ?? false}
+                          onCheckedChange={async (checked) => {
+                            await updatePreferences({ auto_navigate_validation: checked });
+                          }}
+                        />
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
