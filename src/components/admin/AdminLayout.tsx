@@ -34,7 +34,16 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
 } from '@/components/ui/sidebar';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import { ChevronDown } from 'lucide-react';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -52,11 +61,14 @@ const menuItems = [
   { title: 'Licenses', url: '/admin/licenses', icon: Key },
   { title: 'Cost Tracking', url: '/admin/cost-tracking', icon: DollarSign },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
+  { title: 'Error Logs', url: '/admin/error-logs', icon: AlertCircle },
+  { title: 'Reprocess Docs', url: '/admin/reprocess', icon: RefreshCw },
+];
+
+const salesToolsItems = [
   { title: 'Business Metrics', url: '/admin/business-metrics', icon: TrendingUp },
   { title: 'Customer Success', url: '/admin/customer-success', icon: Trophy },
   { title: 'White-Label', url: '/admin/white-label', icon: Palette },
-  { title: 'Error Logs', url: '/admin/error-logs', icon: AlertCircle },
-  { title: 'Reprocess Docs', url: '/admin/reprocess', icon: RefreshCw },
 ];
 
 export function AdminLayout({ children, title, description }: AdminLayoutProps) {
@@ -110,6 +122,37 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
+                  
+                  <Collapsible defaultOpen={salesToolsItems.some((item) => isActive(item.url))}>
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton className="hover:bg-muted/50">
+                          <Target className="h-4 w-4 mr-2" />
+                          <span>Sales Tools</span>
+                          <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {salesToolsItems.map((item) => (
+                            <SidebarMenuSubItem key={item.title}>
+                              <SidebarMenuSubButton
+                                onClick={() => navigate(item.url)}
+                                className={
+                                  isActive(item.url)
+                                    ? 'bg-primary/10 text-primary font-medium'
+                                    : 'hover:bg-muted/50'
+                                }
+                              >
+                                <item.icon className="h-4 w-4 mr-2" />
+                                <span>{item.title}</span>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
