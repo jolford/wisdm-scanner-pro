@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import {
   LayoutDashboard,
   FolderOpen,
@@ -126,7 +127,7 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
                   <Collapsible defaultOpen={salesToolsItems.some((item) => isActive(item.url))}>
                     <SidebarMenuItem>
                       <CollapsibleTrigger asChild>
-                        <SidebarMenuButton className="hover:bg-muted/50">
+                        <SidebarMenuButton className="hover:bg-muted/50 cursor-pointer">
                           <Target className="h-4 w-4 mr-2" />
                           <span>Sales Tools</span>
                           <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]:rotate-180" />
@@ -138,11 +139,12 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
                             <SidebarMenuSubItem key={item.title}>
                               <SidebarMenuSubButton
                                 onClick={() => navigate(item.url)}
-                                className={
+                                className={cn(
+                                  "cursor-pointer",
                                   isActive(item.url)
                                     ? 'bg-primary/10 text-primary font-medium'
                                     : 'hover:bg-muted/50'
-                                }
+                                )}
                               >
                                 <item.icon className="h-4 w-4 mr-2" />
                                 <span>{item.title}</span>
