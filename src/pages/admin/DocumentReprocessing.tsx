@@ -209,17 +209,28 @@ const DocumentReprocessing = () => {
     // Check if all processed docs belong to the same batch
     const batchIds = [...new Set(docsToProcess.map(d => d.batch_id).filter(Boolean))];
     
-    if (batchIds.length === 1 && successCount > 0) {
+    if (batchIds.length === 1 && successCount > 0 && batchIds[0]) {
       // All docs from same batch, navigate to batch validation
-      const batch = docsToProcess[0]?.batch;
+      const firstDoc = docsToProcess[0];
       const batchId = batchIds[0];
       
       // Store batch info in session storage
-      if (batch) {
-        sessionStorage.setItem('selectedBatch', JSON.stringify({
-          id: batchId,
-          name: batch.batch_name
-        }));
+      sessionStorage.setItem('selectedBatch', JSON.stringify({
+        id: batchId,
+        name: firstDoc?.batch?.batch_name || 'Unknown Batch'
+      }));
+      
+      // Also store project info if available
+      if (firstDoc?.project_id) {
+        const { data: projectData } = await supabase
+          .from('projects')
+          .select('id, name')
+          .eq('id', firstDoc.project_id)
+          .single();
+        
+        if (projectData) {
+          sessionStorage.setItem('selectedProject', JSON.stringify(projectData));
+        }
       }
       
       navigate(`/queue?tab=validation`);
