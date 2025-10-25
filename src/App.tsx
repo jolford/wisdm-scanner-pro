@@ -38,7 +38,6 @@ import NotFound from "./pages/NotFound";
 import ApiDocs from "./pages/ApiDocs";
 import UserSettings from "./pages/UserSettings";
 import Presentation from "./pages/Presentation";
-import PowerPointDownload from "./pages/PowerPointDownload";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import CookiePolicy from "./pages/CookiePolicy";
@@ -123,7 +122,6 @@ const App = () => (
             <Route path="/api-docs" element={<ApiDocs />} />
             <Route path="/settings" element={<UserSettings />} />
             <Route path="/presentation" element={<Presentation />} />
-            <Route path="/download/presentation" element={<PowerPointDownload />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
             <Route path="/cookie-policy" element={<CookiePolicy />} />

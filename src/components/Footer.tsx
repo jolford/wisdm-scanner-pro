@@ -11,7 +11,6 @@ export const Footer = () => {
             <Link to="/help" className="hover:underline">Help Center</Link>
             <Link to="/api-docs" className="hover:underline">API Docs</Link>
             <Link to="/compliance" className="hover:underline font-semibold">Compliance Hub</Link>
-            <Link to="/download/presentation" className="hover:underline font-medium">Download PowerPoint</Link>
           </div>
           <div className="flex items-center gap-4 flex-wrap justify-center text-xs">
             <Link to="/privacy-policy" className="hover:underline">Privacy</Link>
