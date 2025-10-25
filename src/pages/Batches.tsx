@@ -215,7 +215,13 @@ const Batches = () => {
               </div>
             </div>
             <div className="flex gap-2">
-              <Button variant="outline" onClick={() => navigate('/help')}>
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  console.log('Help button clicked - navigating to /help');
+                  navigate('/help');
+                }}
+              >
                 <HelpCircle className="h-4 w-4 mr-2" />
                 Help
               </Button>

@@ -1312,7 +1312,15 @@ const [isExporting, setIsExporting] = useState(false);
               </div>
             </div>
             <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-              <Button variant="outline" size="sm" onClick={() => navigate('/help')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  console.log('Help button clicked - navigating to /help');
+                  navigate('/help');
+                }} 
+                className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3"
+              >
                 <HelpCircle className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Help</span>
               </Button>
