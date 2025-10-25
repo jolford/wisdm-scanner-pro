@@ -60,7 +60,6 @@ const menuItems = [
   { title: 'Customers', url: '/admin/customers', icon: Building2 },
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Licenses', url: '/admin/licenses', icon: Key },
-  { title: 'Cost Tracking', url: '/admin/cost-tracking', icon: DollarSign },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
   { title: 'Error Logs', url: '/admin/error-logs', icon: AlertCircle },
   { title: 'Reprocess Docs', url: '/admin/reprocess', icon: RefreshCw },
@@ -70,6 +69,7 @@ const salesToolsItems = [
   { title: 'Business Metrics', url: '/admin/business-metrics', icon: TrendingUp },
   { title: 'Customer Success', url: '/admin/customer-success', icon: Trophy },
   { title: 'White-Label', url: '/admin/white-label', icon: Palette },
+  { title: 'Cost Tracking', url: '/admin/cost-tracking', icon: DollarSign },
 ];
 
 export function AdminLayout({ children, title, description }: AdminLayoutProps) {
