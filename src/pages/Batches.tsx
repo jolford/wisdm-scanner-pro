@@ -106,6 +106,15 @@ const Batches = () => {
     }
 
     try {
+      // First, delete any scanner import logs that reference this batch
+      const { error: logsError } = await supabase
+        .from('scanner_import_logs')
+        .delete()
+        .eq('batch_id', batchId);
+
+      if (logsError) throw logsError;
+
+      // Then delete the batch
       const { error } = await supabase.from('batches').delete().eq('id', batchId);
       if (error) throw error;
 

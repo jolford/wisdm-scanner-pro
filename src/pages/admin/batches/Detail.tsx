@@ -104,7 +104,15 @@ const BatchDetail = () => {
 
   const deleteBatchMutation = useMutation({
     mutationFn: async () => {
-      // First delete all documents in the batch
+      // First delete scanner import logs
+      const { error: logsError } = await supabase
+        .from('scanner_import_logs')
+        .delete()
+        .eq('batch_id', id);
+
+      if (logsError) throw logsError;
+
+      // Then delete all documents in the batch
       const { error: docsError } = await supabase
         .from('documents')
         .delete()
@@ -112,7 +120,7 @@ const BatchDetail = () => {
 
       if (docsError) throw docsError;
 
-      // Then delete the batch
+      // Finally delete the batch
       const { error: batchError } = await supabase
         .from('batches')
         .delete()
