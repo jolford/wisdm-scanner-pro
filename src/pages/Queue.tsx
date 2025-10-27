@@ -568,6 +568,25 @@ const [isExporting, setIsExporting] = useState(false);
       return;
     }
 
+    // Validate batch still exists before processing
+    const { data: batchCheck, error: batchError } = await supabase
+      .from('batches')
+      .select('id')
+      .eq('id', selectedBatchId)
+      .single();
+    
+    if (batchError || !batchCheck) {
+      toast({
+        title: 'Invalid Batch',
+        description: 'The selected batch no longer exists. Please select a valid batch.',
+        variant: 'destructive',
+      });
+      setSelectedBatchId(null);
+      setSelectedBatch(null);
+      sessionStorage.removeItem('selectedBatchId');
+      return;
+    }
+
     const total = files.length;
     toast({ title: 'Processing Multiple Files', description: `Processing ${total} files...` });
     setProcessing(true);
@@ -639,6 +658,26 @@ const [isExporting, setIsExporting] = useState(false);
         description: 'Please select both a project and batch before scanning',
         variant: 'destructive',
       });
+      return;
+    }
+
+    // Validate batch still exists
+    const { data: batchCheck, error: batchError } = await supabase
+      .from('batches')
+      .select('id')
+      .eq('id', selectedBatchId)
+      .single();
+    
+    if (batchError || !batchCheck) {
+      toast({
+        title: 'Invalid Batch',
+        description: 'The selected batch no longer exists. Please select a valid batch.',
+        variant: 'destructive',
+      });
+      setSelectedBatchId(null);
+      setSelectedBatch(null);
+      sessionStorage.removeItem('selectedBatchId');
+      setProcessing(false);
       return;
     }
 
