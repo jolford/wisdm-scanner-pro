@@ -9,6 +9,7 @@ interface EmailImportConfig {
   id: string;
   project_id: string;
   customer_id: string;
+  created_by: string;
   email_host: string;
   email_port: number;
   email_username: string;
@@ -18,6 +19,21 @@ interface EmailImportConfig {
   batch_name_template: string;
   delete_after_import: boolean;
   mark_as_read: boolean;
+}
+
+interface EmailAttachment {
+  filename: string;
+  size: number;
+  data: Uint8Array;
+  contentType: string;
+}
+
+interface Email {
+  id: string;
+  subject: string;
+  from: string;
+  date: string;
+  attachments: EmailAttachment[];
 }
 
 Deno.serve(async (req) => {
@@ -228,7 +244,7 @@ async function processEmailConfig(supabase: any, config: EmailImportConfig) {
 }
 
 // Placeholder function - in production, use a proper IMAP library
-async function fetchEmails(config: EmailImportConfig) {
+async function fetchEmails(config: EmailImportConfig): Promise<Email[]> {
   // This would connect to the email server using IMAP
   // and fetch unread emails with attachments
   // For now, return empty array

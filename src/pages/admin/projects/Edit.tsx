@@ -22,6 +22,7 @@ import { FolderPicker } from '@/components/admin/FolderPicker';
 import { ScheduledExportConfig } from '@/components/admin/ScheduledExportConfig';
 import { TableExtractionConfig, TableExtractionConfig as TableConfig } from '@/components/admin/TableExtractionConfig';
 import { ScannerAutoImportConfig } from '@/components/admin/ScannerAutoImportConfig';
+import { EmailImportConfig } from '@/components/admin/EmailImportConfig';
 import { ValidationLookupConfig, ValidationLookupConfig as VLConfig } from '@/components/admin/ValidationLookupConfig';
 
 interface ExtractionField {
@@ -793,6 +794,21 @@ const EditProject = () => {
                   />
                   <p className="text-sm text-muted-foreground mt-2">
                     Enable automatic import from network scanners.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="email" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="font-medium text-base">Email Import</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <EmailImportConfig
+                    projectId={id || ''}
+                    customerId={customerId}
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Monitor an email inbox for automatic document import.
                   </p>
                 </AccordionContent>
               </AccordionItem>
