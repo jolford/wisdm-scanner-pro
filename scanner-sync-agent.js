@@ -131,23 +131,20 @@ async function uploadFile(filePath) {
  * Initialize file watcher
  */
 function startWatcher() {
-  const watcher = chokidar.watch(WATCH_FOLDER, {
+  const normalized = WATCH_FOLDER.replace(/\\/g, '/');
+  const patterns = SUPPORTED_EXTENSIONS.map((ext) => `${normalized}/**/*${ext}`);
+
+  const watcher = chokidar.watch(patterns, {
     ignored: [
       /(^|[\/\\])\../, // Ignore dotfiles
       '**/node_modules/**', // Ignore node_modules
-      '**/*.js', // Ignore JavaScript files
-      '**/*.json', // Ignore JSON files
-      '**/*.md', // Ignore markdown files
-      '**/*.ts', // Ignore TypeScript files
-      '**/*.txt', // Ignore text files
-      '**/*.d.ts', // Ignore type definitions
     ],
     persistent: true,
     ignoreInitial: false,
     awaitWriteFinish: {
       stabilityThreshold: 2000, // Wait 2s after file stops changing
-      pollInterval: 100
-    }
+      pollInterval: 100,
+    },
   });
 
   watcher
