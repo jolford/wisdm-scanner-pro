@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Circle, Download, Play, Settings } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface HotFolderSetupWizardProps {
   projectId: string;
@@ -26,6 +27,7 @@ export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotF
   const [isActive, setIsActive] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+  const [nextAction, setNextAction] = useState<"cloud" | "local" | "test" | null>(null);
 
   const steps = [
     { id: 1, title: "Choose Setup Type", icon: Settings },
@@ -88,28 +90,45 @@ export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotF
     }
   };
 
+  const downloadFile = async (filename: string) => {
+    const response = await fetch(`/downloads/${filename}`);
+    if (!response.ok) throw new Error('File not found');
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  };
+
   const handleDownload = async (e: React.MouseEvent, filename: string) => {
     e.preventDefault();
     e.stopPropagation();
-    
     try {
-      const response = await fetch(`/downloads/${filename}`);
-      if (!response.ok) throw new Error('File not found');
-      
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
-      
+      await downloadFile(filename);
       toast.success(`Downloaded ${filename}`);
     } catch (error) {
       console.error('Download error:', error);
       toast.error(`Failed to download ${filename}`);
+    }
+  };
+
+  const handleDownloadBundle = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await downloadFile('scanner-sync-agent.js');
+      await new Promise((r) => setTimeout(r, 150));
+      await downloadFile('.env.scanner-sync');
+      await new Promise((r) => setTimeout(r, 150));
+      await downloadFile('package.json');
+      toast.success('Downloaded agent files');
+    } catch (err) {
+      console.error('Bundle download error:', err);
+      toast.error('Failed to download agent files');
     }
   };
 
@@ -376,51 +395,53 @@ export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotF
               <div className="p-4 border rounded-lg space-y-3">
                 <h4 className="font-semibold">Next Steps</h4>
                 
-                <div className="space-y-2 text-sm">
-                  <div className="flex items-start gap-2">
-                    <Circle className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">For Cloud Storage:</p>
+                <RadioGroup value={nextAction ?? ''} onValueChange={(v) => setNextAction(v as any)} className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <RadioGroupItem value="cloud" id="ns-cloud" className="mt-1.5" />
+                    <div className="flex-1">
+                      <Label htmlFor="ns-cloud" className="font-medium">For Cloud Storage</Label>
                       <p className="text-muted-foreground">Upload test files to the storage bucket at path: <code className="text-xs bg-muted px-1 py-0.5 rounded">{watchFolder}</code></p>
                     </div>
                   </div>
-                  
-                  <div className="flex items-start gap-2">
-                    <Circle className="h-4 w-4 mt-0.5 text-muted-foreground" />
+
+                  <div className="flex items-start gap-3">
+                    <RadioGroupItem value="local" id="ns-local" className="mt-1.5" />
                     <div className="flex-1">
-                      <p className="font-medium">For Local Scanner:</p>
+                      <Label htmlFor="ns-local" className="font-medium">For Local Scanner</Label>
                       <p className="text-muted-foreground mb-2">Download and configure the sync agent</p>
-                      <div className="flex flex-wrap gap-2">
-                        <Button 
-                          type="button"
-                          size="sm" 
-                          variant="outline"
-                          onClick={(e) => handleDownload(e, 'scanner-sync-agent.js')}
-                        >
-                          <Download className="h-3 w-3 mr-1" />
-                          Agent Files
-                        </Button>
-                        <Button 
-                          type="button"
-                          size="sm" 
-                          variant="outline"
-                          onClick={(e) => handleDownload(e, 'SCANNER_SYNC_SETUP.md')}
-                        >
-                          <Download className="h-3 w-3 mr-1" />
-                          Setup Guide
-                        </Button>
-                      </div>
+                      {nextAction === 'local' && (
+                        <div className="flex flex-wrap gap-2">
+                          <Button 
+                            type="button"
+                            size="sm" 
+                            variant="outline"
+                            onClick={(e) => handleDownloadBundle(e)}
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            Agent Files
+                          </Button>
+                          <Button 
+                            type="button"
+                            size="sm" 
+                            variant="outline"
+                            onClick={(e) => handleDownload(e, 'SCANNER_SYNC_SETUP.md')}
+                          >
+                            <Download className="h-3 w-3 mr-1" />
+                            Setup Guide
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  <div className="flex items-start gap-2">
-                    <Circle className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">Test Now:</p>
+                  <div className="flex items-start gap-3">
+                    <RadioGroupItem value="test" id="ns-test" className="mt-1.5" />
+                    <div className="flex-1">
+                      <Label htmlFor="ns-test" className="font-medium">Test Now</Label>
                       <p className="text-muted-foreground">Place a test file and click "Test Import" to verify</p>
                     </div>
                   </div>
-                </div>
+                </RadioGroup>
               </div>
 
               <Button
@@ -433,6 +454,7 @@ export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotF
               </Button>
             </div>
           </div>
+        )}
         )}
       </Card>
 
