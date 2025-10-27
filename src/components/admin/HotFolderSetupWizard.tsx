@@ -88,13 +88,16 @@ export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotF
     }
   };
 
-  const handleDownload = (filename: string) => {
+  const handleDownload = (e: React.MouseEvent, filename: string) => {
+    e.preventDefault();
+    e.stopPropagation();
     const link = document.createElement('a');
     link.href = `/downloads/${filename}`;
     link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    toast.success(`Downloading ${filename}`);
   };
 
   const handleNext = async () => {
@@ -206,36 +209,40 @@ export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotF
                     <p className="font-medium">📦 Download Sync Agent Files:</p>
                     <div className="grid gap-2">
                       <Button
+                        type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDownload('scanner-sync-agent.js')}
+                        onClick={(e) => handleDownload(e, 'scanner-sync-agent.js')}
                         className="justify-start h-auto py-2"
                       >
                         <Download className="h-4 w-4 mr-2" />
                         scanner-sync-agent.js
                       </Button>
                       <Button
+                        type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDownload('.env.scanner-sync')}
+                        onClick={(e) => handleDownload(e, '.env.scanner-sync')}
                         className="justify-start h-auto py-2"
                       >
                         <Download className="h-4 w-4 mr-2" />
                         .env.scanner-sync (configuration template)
                       </Button>
                       <Button
+                        type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDownload('package.json')}
+                        onClick={(e) => handleDownload(e, 'package.json')}
                         className="justify-start h-auto py-2"
                       >
                         <Download className="h-4 w-4 mr-2" />
                         package.json
                       </Button>
                       <Button
+                        type="button"
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDownload('SCANNER_SYNC_SETUP.md')}
+                        onClick={(e) => handleDownload(e, 'SCANNER_SYNC_SETUP.md')}
                         className="justify-start h-auto py-2"
                       >
                         <Download className="h-4 w-4 mr-2" />
@@ -345,7 +352,9 @@ export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotF
                   <p className="font-medium">✓ Configuration saved successfully!</p>
                   <p className="text-sm">Watch Folder: <code className="text-xs bg-muted px-1 py-0.5 rounded">{watchFolder}</code></p>
                   <p className="text-sm">Batch Template: <code className="text-xs bg-muted px-1 py-0.5 rounded">{batchTemplate}</code></p>
-                  <p className="text-sm">Status: <Badge variant={isActive ? "default" : "secondary"}>{isActive ? "Active" : "Inactive"}</Badge></p>
+                  <div className="text-sm">
+                    Status: <Badge variant={isActive ? "default" : "secondary"}>{isActive ? "Active" : "Inactive"}</Badge>
+                  </div>
                 </div>
               </AlertDescription>
             </Alert>
@@ -370,17 +379,19 @@ export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotF
                       <p className="text-muted-foreground mb-2">Download and configure the sync agent</p>
                       <div className="flex flex-wrap gap-2">
                         <Button 
+                          type="button"
                           size="sm" 
                           variant="outline"
-                          onClick={() => handleDownload('scanner-sync-agent.js')}
+                          onClick={(e) => handleDownload(e, 'scanner-sync-agent.js')}
                         >
                           <Download className="h-3 w-3 mr-1" />
                           Agent Files
                         </Button>
                         <Button 
+                          type="button"
                           size="sm" 
                           variant="outline"
-                          onClick={() => handleDownload('SCANNER_SYNC_SETUP.md')}
+                          onClick={(e) => handleDownload(e, 'SCANNER_SYNC_SETUP.md')}
                         >
                           <Download className="h-3 w-3 mr-1" />
                           Setup Guide
