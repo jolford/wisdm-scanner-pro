@@ -592,128 +592,216 @@ const EditProject = () => {
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {['csv', 'json', 'xml', 'txt', 'sql', 'access', 'oracle', 'pdf', 'images'].map((type) => {
-                    const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
-                    return (
-                      <div key={type} className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
-                        <Checkbox
-                          id={`export-${type}`}
-                          checked={config.enabled}
-                          onCheckedChange={(checked) => 
-                            setExportConfig(prev => ({ 
-                              ...prev, 
-                              [type]: { ...prev[type], enabled: checked === true }
-                            }))
-                          }
-                        />
-                        <Label htmlFor={`export-${type}`} className="text-sm font-medium cursor-pointer uppercase">
-                          {type}
-                        </Label>
+                    {/* Data Formats Group */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Data Formats</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {['csv', 'json', 'xml', 'txt', 'sql'].map((type) => {
+                          const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
+                          return (
+                            <div key={type} className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
+                              <Checkbox
+                                id={`export-${type}`}
+                                checked={config.enabled}
+                                onCheckedChange={(checked) => 
+                                  setExportConfig(prev => ({ 
+                                    ...prev, 
+                                    [type]: { ...prev[type], enabled: checked === true }
+                                  }))
+                                }
+                              />
+                              <Label htmlFor={`export-${type}`} className="text-xs cursor-pointer uppercase">
+                                {type}
+                              </Label>
+                            </div>
+                          );
+                        })}
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
 
-                {Object.entries(exportConfig)
-                  .filter(([type]) => !['filebound', 'docmgt', 'documentum', 'sharepoint'].includes(type) && exportConfig[type].enabled)
-                  .map(([type, config]) => (
-                    <Card key={type} className="p-4 bg-muted/50">
-                      <h4 className="text-sm font-medium mb-3 uppercase">{type} Settings</h4>
-                      <div className="space-y-3">
-                        <div>
-                          <Label htmlFor={`dest-${type}`} className="text-xs mb-1">
-                            Export Destination
-                          </Label>
-                          <FolderPicker
-                            value={config.destination}
-                            onChange={(path) => 
+                    {/* Documents & Images Group */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Documents & Images</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {['pdf', 'images'].map((type) => {
+                          const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
+                          return (
+                            <div key={type} className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
+                              <Checkbox
+                                id={`export-${type}`}
+                                checked={config.enabled}
+                                onCheckedChange={(checked) => 
+                                  setExportConfig(prev => ({ 
+                                    ...prev, 
+                                    [type]: { ...prev[type], enabled: checked === true }
+                                  }))
+                                }
+                              />
+                              <Label htmlFor={`export-${type}`} className="text-xs cursor-pointer uppercase">
+                                {type}
+                              </Label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Databases Group */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Database Systems</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {['access', 'oracle'].map((type) => {
+                          const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
+                          return (
+                            <div key={type} className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
+                              <Checkbox
+                                id={`export-${type}`}
+                                checked={config.enabled}
+                                onCheckedChange={(checked) => 
+                                  setExportConfig(prev => ({ 
+                                    ...prev, 
+                                    [type]: { ...prev[type], enabled: checked === true }
+                                  }))
+                                }
+                              />
+                              <Label htmlFor={`export-${type}`} className="text-xs cursor-pointer uppercase">
+                                {type}
+                              </Label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* ECM Systems Group */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">ECM Systems</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {['filebound', 'docmgt', 'documentum', 'sharepoint'].map((type) => {
+                          const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
+                          return (
+                            <div key={type} className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
+                              <Checkbox
+                                id={`export-${type}`}
+                                checked={config.enabled}
+                                onCheckedChange={(checked) => 
+                                  setExportConfig(prev => ({ 
+                                    ...prev, 
+                                    [type]: { ...prev[type], enabled: checked === true }
+                                  }))
+                                }
+                              />
+                              <Label htmlFor={`export-${type}`} className="text-xs cursor-pointer uppercase">
+                                {type}
+                              </Label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Accounting Systems Group */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium text-muted-foreground">Accounting Systems</Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {['quickbooks', 'greatplains'].map((type) => {
+                          const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
+                          return (
+                            <div key={type} className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
+                              <Checkbox
+                                id={`export-${type}`}
+                                checked={config.enabled}
+                                onCheckedChange={(checked) => 
+                                  setExportConfig(prev => ({ 
+                                    ...prev, 
+                                    [type]: { ...prev[type], enabled: checked === true }
+                                  }))
+                                }
+                              />
+                              <Label htmlFor={`export-${type}`} className="text-xs cursor-pointer uppercase">
+                                {type}
+                              </Label>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Configuration sections for enabled exports */}
+                    {Object.entries(exportConfig)
+                      .filter(([type]) => !['filebound', 'docmgt', 'documentum', 'sharepoint', 'quickbooks', 'greatplains'].includes(type) && exportConfig[type].enabled)
+                      .map(([type, config]) => (
+                        <Card key={type} className="p-4 bg-muted/50 mt-4">
+                          <h4 className="text-sm font-medium mb-3 uppercase">{type} Settings</h4>
+                          <div className="space-y-3">
+                            <div>
+                              <Label htmlFor={`dest-${type}`} className="text-xs mb-1">
+                                Export Destination
+                              </Label>
+                              <FolderPicker
+                                value={config.destination}
+                                onChange={(path) => 
+                                  setExportConfig(prev => ({ 
+                                    ...prev, 
+                                    [type]: { ...prev[type], destination: path }
+                                  }))
+                                }
+                                disabled={!config.enabled}
+                              />
+                            </div>
+                            
+                            {(type === 'pdf' || type === 'images') && (
+                              <div>
+                                <Label htmlFor={`convert-${type}`} className="text-xs mb-1">
+                                  Convert Format on Export
+                                </Label>
+                                <Select
+                                  value={config.convertFormat || 'none'}
+                                  onValueChange={(value) => 
+                                    setExportConfig(prev => ({ 
+                                      ...prev, 
+                                      [type]: { ...prev[type], convertFormat: value as 'none' | 'pdf' | 'jpg' | 'tiff' }
+                                    }))
+                                  }
+                                  disabled={!config.enabled}
+                                >
+                                  <SelectTrigger id={`convert-${type}`}>
+                                    <SelectValue placeholder="Select format" />
+                                  </SelectTrigger>
+                                  <SelectContent className="bg-popover z-50">
+                                    <SelectItem value="none">No Conversion</SelectItem>
+                                    <SelectItem value="pdf">Convert to PDF</SelectItem>
+                                    <SelectItem value="jpg">Convert to JPG</SelectItem>
+                                    <SelectItem value="tiff">Convert to TIFF</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            )}
+                          </div>
+                        </Card>
+                      ))}
+
+                    {/* ECM & Accounting Configuration */}
+                    {Object.entries(exportConfig)
+                      .filter(([type]) => ['filebound', 'docmgt', 'documentum', 'sharepoint', 'quickbooks', 'greatplains'].includes(type) && exportConfig[type].enabled)
+                      .map(([type, config]) => (
+                        <Card key={type} className="p-4 bg-muted/50 mt-4">
+                          <h4 className="text-sm font-medium mb-3 uppercase">{type} Configuration</h4>
+                          <ECMExportConfig
+                            type={type as 'filebound' | 'docmgt' | 'documentum' | 'sharepoint' | 'quickbooks' | 'greatplains'}
+                            config={config}
+                            extractionFields={fields}
+                            onConfigChange={(newConfig) => 
                               setExportConfig(prev => ({ 
                                 ...prev, 
-                                [type]: { ...prev[type], destination: path }
+                                [type]: newConfig 
                               }))
                             }
                             disabled={!config.enabled}
                           />
-                        </div>
-                        
-                        {(type === 'pdf' || type === 'images') && (
-                          <div>
-                            <Label htmlFor={`convert-${type}`} className="text-xs mb-1">
-                              Convert Format on Export
-                            </Label>
-                            <Select
-                              value={config.convertFormat || 'none'}
-                              onValueChange={(value) => 
-                                setExportConfig(prev => ({ 
-                                  ...prev, 
-                                  [type]: { ...prev[type], convertFormat: value as 'none' | 'pdf' | 'jpg' | 'tiff' }
-                                }))
-                              }
-                              disabled={!config.enabled}
-                            >
-                              <SelectTrigger id={`convert-${type}`}>
-                                <SelectValue placeholder="Select format" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-popover z-50">
-                                <SelectItem value="none">No Conversion</SelectItem>
-                                <SelectItem value="pdf">Convert to PDF</SelectItem>
-                                <SelectItem value="jpg">Convert to JPG</SelectItem>
-                                <SelectItem value="tiff">Convert to TIFF</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                      </div>
-                    </Card>
-                  ))}
-
-                <div className="border-t pt-4">
-                  <h4 className="text-sm font-medium mb-3">ECM & Accounting Connectors</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                  {['filebound', 'docmgt', 'documentum', 'sharepoint', 'quickbooks', 'greatplains'].map((type) => {
-                      const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
-                      return (
-                        <div key={type} className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
-                          <Checkbox
-                            id={`export-${type}`}
-                            checked={config.enabled}
-                            onCheckedChange={(checked) => 
-                              setExportConfig(prev => ({ 
-                                ...prev, 
-                                [type]: { ...prev[type], enabled: checked === true }
-                              }))
-                            }
-                          />
-                          <Label htmlFor={`export-${type}`} className="text-sm font-medium cursor-pointer uppercase">
-                            {type}
-                          </Label>
-                        </div>
-                      );
-                    })}
+                        </Card>
+                      ))}
                   </div>
-
-                  {Object.entries(exportConfig)
-                    .filter(([type]) => ['filebound', 'docmgt', 'documentum', 'sharepoint', 'quickbooks', 'greatplains'].includes(type) && exportConfig[type].enabled)
-                    .map(([type, config]) => (
-                      <Card key={type} className="p-4 bg-muted/50 mt-3">
-                        <h4 className="text-sm font-medium mb-3 uppercase">{type} Configuration</h4>
-                        <ECMExportConfig
-                          type={type as 'filebound' | 'docmgt' | 'documentum' | 'sharepoint' | 'quickbooks' | 'greatplains'}
-                          config={config}
-                          extractionFields={fields}
-                          onConfigChange={(newConfig) => 
-                            setExportConfig(prev => ({ 
-                              ...prev, 
-                              [type]: newConfig 
-                            }))
-                          }
-                          disabled={!config.enabled}
-                        />
-                      </Card>
-                    ))}
-                  </div>
-                </div>
                 </AccordionContent>
               </AccordionItem>
 
