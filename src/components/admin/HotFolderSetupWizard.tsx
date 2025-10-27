@@ -88,6 +88,15 @@ export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotF
     }
   };
 
+  const handleDownload = (filename: string) => {
+    const link = document.createElement('a');
+    link.href = `/downloads/${filename}`;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const handleNext = async () => {
     if (currentStep === 2) {
       const success = await handleSaveConfig();
@@ -196,38 +205,42 @@ export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotF
                   <div className="space-y-4">
                     <p className="font-medium">📦 Download Sync Agent Files:</p>
                     <div className="grid gap-2">
-                      <a
-                        href="/downloads/scanner-sync-agent.js"
-                        download
-                        className="flex items-center gap-2 text-sm text-primary hover:underline"
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDownload('scanner-sync-agent.js')}
+                        className="justify-start h-auto py-2"
                       >
-                        <Download className="h-4 w-4" />
+                        <Download className="h-4 w-4 mr-2" />
                         scanner-sync-agent.js
-                      </a>
-                      <a
-                        href="/downloads/.env.scanner-sync"
-                        download
-                        className="flex items-center gap-2 text-sm text-primary hover:underline"
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDownload('.env.scanner-sync')}
+                        className="justify-start h-auto py-2"
                       >
-                        <Download className="h-4 w-4" />
+                        <Download className="h-4 w-4 mr-2" />
                         .env.scanner-sync (configuration template)
-                      </a>
-                      <a
-                        href="/downloads/package.json"
-                        download
-                        className="flex items-center gap-2 text-sm text-primary hover:underline"
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDownload('package.json')}
+                        className="justify-start h-auto py-2"
                       >
-                        <Download className="h-4 w-4" />
+                        <Download className="h-4 w-4 mr-2" />
                         package.json
-                      </a>
-                      <a
-                        href="/downloads/SCANNER_SYNC_SETUP.md"
-                        download
-                        className="flex items-center gap-2 text-sm text-primary hover:underline"
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDownload('SCANNER_SYNC_SETUP.md')}
+                        className="justify-start h-auto py-2"
                       >
-                        <Download className="h-4 w-4" />
+                        <Download className="h-4 w-4 mr-2" />
                         SCANNER_SYNC_SETUP.md (full instructions)
-                      </a>
+                      </Button>
                     </div>
                   </div>
                 </AlertDescription>
@@ -352,25 +365,27 @@ export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotF
                   
                   <div className="flex items-start gap-2">
                     <Circle className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                    <div>
+                    <div className="flex-1">
                       <p className="font-medium">For Local Scanner:</p>
                       <p className="text-muted-foreground mb-2">Download and configure the sync agent</p>
-                      {setupType === "local" && (
-                        <div className="flex flex-wrap gap-2">
-                          <a href="/downloads/scanner-sync-agent.js" download>
-                            <Button size="sm" variant="outline">
-                              <Download className="h-3 w-3 mr-1" />
-                              Download Agent
-                            </Button>
-                          </a>
-                          <a href="/downloads/SCANNER_SYNC_SETUP.md" download>
-                            <Button size="sm" variant="outline">
-                              <Download className="h-3 w-3 mr-1" />
-                              Setup Guide
-                            </Button>
-                          </a>
-                        </div>
-                      )}
+                      <div className="flex flex-wrap gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDownload('scanner-sync-agent.js')}
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          Agent Files
+                        </Button>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleDownload('SCANNER_SYNC_SETUP.md')}
+                        >
+                          <Download className="h-3 w-3 mr-1" />
+                          Setup Guide
+                        </Button>
+                      </div>
                     </div>
                   </div>
 
