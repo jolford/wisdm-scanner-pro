@@ -48,8 +48,7 @@ Deno.serve(async (req) => {
     // Pause/resume all scanner import configs
     const { error: updErr } = await admin
       .from('scanner_import_configs')
-      .update({ is_active: active, updated_at: new Date().toISOString() })
-      .neq('id', null);
+      .update({ is_active: active, updated_at: new Date().toISOString() });
 
     if (updErr) {
       console.error('Update scanner_import_configs failed', updErr);
@@ -62,8 +61,7 @@ Deno.serve(async (req) => {
     // Optionally also pause email imports to be safe (no-op if none)
     const { error: updEmailErr } = await admin
       .from('email_import_configs')
-      .update({ is_active: active, updated_at: new Date().toISOString() })
-      .neq('id', null);
+      .update({ is_active: active, updated_at: new Date().toISOString() });
     if (updEmailErr) {
       console.error('Update email_import_configs failed', updEmailErr);
     }
