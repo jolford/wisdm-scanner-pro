@@ -118,10 +118,9 @@ async function uploadFile(filePath) {
     console.log(`✅ Uploaded ${fileName} successfully`);
     uploadedFiles.add(fileName);
 
-    // Optional: Delete local file after successful upload
-    // Uncomment the line below if you want to auto-delete after upload
-    // unlinkSync(filePath);
-    // console.log(`🗑️  Deleted local file ${fileName}`);
+    // Auto-delete local file after successful upload
+    unlinkSync(filePath);
+    console.log(`🗑️  Deleted local file ${fileName}`);
 
   } catch (error) {
     console.error(`❌ Error processing ${basename(filePath)}:`, error.message);
