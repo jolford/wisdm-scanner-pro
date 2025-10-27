@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { safeInvokeEdgeFunction } from '@/lib/edge-function-helper';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -28,12 +29,18 @@ export function RoleManager() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase.functions.invoke('admin-list-users');
+      const { data, error } = await safeInvokeEdgeFunction('admin-list-users');
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching users:', error);
+        toast.error(error.message || 'Failed to fetch users');
+        return;
+      }
       
-      setUsers(data.users || []);
-      toast.success(`Loaded ${data.total} users`);
+      if (data) {
+        setUsers(data.users || []);
+        toast.success(`Loaded ${data.total} users`);
+      }
     } catch (error: any) {
       console.error('Error fetching users:', error);
       toast.error(error.message || 'Failed to fetch users');
@@ -46,11 +53,15 @@ export function RoleManager() {
     try {
       setUpdating(userId);
       
-      const { data, error } = await supabase.functions.invoke('admin-set-role-metadata', {
+      const { data, error } = await safeInvokeEdgeFunction('admin-set-role-metadata', {
         body: { targetUserId: userId, role }
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating role:', error);
+        toast.error(error.message || 'Failed to update role');
+        return;
+      }
       
       toast.success(`Role updated to "${role}" for user`);
       
