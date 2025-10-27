@@ -181,10 +181,30 @@ const [isExporting, setIsExporting] = useState(false);
     const storedBatchId = sessionStorage.getItem('selectedBatchId');
     const storedProjectId = sessionStorage.getItem('selectedProjectId');
     
-    if (storedBatchId && storedProjectId) {
-      setSelectedProjectId(storedProjectId);
-      setSelectedBatchId(storedBatchId);
-      // Keep these in sessionStorage to persist across refreshes
+    if (storedBatchId && storedProjectId && storedBatchId !== 'null' && storedProjectId !== 'null') {
+      // Validate that the batch still exists before using it
+      (async () => {
+        try {
+          const { data, error } = await supabase
+            .from('batches')
+            .select('id')
+            .eq('id', storedBatchId)
+            .single();
+          
+          if (!error && data) {
+            setSelectedProjectId(storedProjectId);
+            setSelectedBatchId(storedBatchId);
+          } else {
+            // Batch no longer exists, clear sessionStorage
+            sessionStorage.removeItem('selectedBatchId');
+            sessionStorage.removeItem('selectedProjectId');
+          }
+        } catch (e) {
+          console.warn('Failed to validate stored batch:', e);
+          sessionStorage.removeItem('selectedBatchId');
+          sessionStorage.removeItem('selectedProjectId');
+        }
+      })();
     }
   }, []);
 
@@ -1369,7 +1389,11 @@ const [isExporting, setIsExporting] = useState(false);
               onBatchSelect={(id, batch) => {
                 setSelectedBatchId(id);
                 setSelectedBatch(batch);
-                sessionStorage.setItem('selectedBatchId', id);
+                if (id) {
+                  sessionStorage.setItem('selectedBatchId', id);
+                } else {
+                  sessionStorage.removeItem('selectedBatchId');
+                }
               }}
               projectId={selectedProjectId}
             />
