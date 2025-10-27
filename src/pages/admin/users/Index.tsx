@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, UserPlus, Settings, Pencil, Trash2, Shield } from 'lucide-react';
+import { ArrowLeft, UserPlus, Settings, Pencil, Trash2, Shield, FolderOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -65,6 +65,15 @@ interface Customer {
   company_name: string;
 }
 
+interface Project {
+  id: string;
+  name: string;
+  customer_id: string;
+  customers?: {
+    company_name: string;
+  };
+}
+
 const UsersIndex = () => {
   const { loading, isAdmin } = useRequireAuth(true);
   const navigate = useNavigate();
@@ -78,6 +87,9 @@ const UsersIndex = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<{ id: string; full_name: string; email: string } | null>(null);
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [isProjectsDialogOpen, setIsProjectsDialogOpen] = useState(false);
+  const [userProjects, setUserProjects] = useState<Project[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
 
   useEffect(() => {
     if (!loading && isAdmin) {
@@ -356,6 +368,45 @@ const UsersIndex = () => {
     }
   };
 
+  const handleViewProjects = async (userId: string) => {
+    setSelectedUser(userId);
+    setIsProjectsDialogOpen(true);
+    setLoadingProjects(true);
+    
+    try {
+      // Get user's customers
+      const { data: userCustomers, error: custError } = await supabase
+        .from('user_customers')
+        .select('customer_id')
+        .eq('user_id', userId);
+
+      if (custError) throw custError;
+
+      if (!userCustomers || userCustomers.length === 0) {
+        setUserProjects([]);
+        setLoadingProjects(false);
+        return;
+      }
+
+      // Get projects for those customers
+      const customerIds = userCustomers.map(uc => uc.customer_id);
+      const { data: projects, error: projError } = await supabase
+        .from('projects')
+        .select('id, name, customer_id, customers(company_name)')
+        .in('customer_id', customerIds)
+        .order('name');
+
+      if (projError) throw projError;
+
+      setUserProjects(projects || []);
+    } catch (error: any) {
+      toast.error('Failed to load projects: ' + error.message);
+      setUserProjects([]);
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -418,6 +469,7 @@ const UsersIndex = () => {
                 <TableHead>Role</TableHead>
                 <TableHead>Permissions</TableHead>
                 <TableHead>Assigned Customers</TableHead>
+                <TableHead>Projects</TableHead>
                 <TableHead>Joined</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
@@ -490,6 +542,17 @@ const UsersIndex = () => {
                         <span className="text-muted-foreground text-sm">None</span>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleViewProjects(user.id)}
+                      disabled={user.customers.length === 0}
+                    >
+                      <FolderOpen className="h-4 w-4 mr-2" />
+                      View
+                    </Button>
                   </TableCell>
                   <TableCell>
                     {new Date(user.created_at).toLocaleDateString()}
@@ -715,6 +778,54 @@ const UsersIndex = () => {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Projects Dialog */}
+        <Dialog open={isProjectsDialogOpen} onOpenChange={setIsProjectsDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>User's Accessible Projects</DialogTitle>
+              <DialogDescription>
+                Projects available through assigned customer licenses
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              {loadingProjects ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+                </div>
+              ) : userProjects.length > 0 ? (
+                <div className="space-y-2">
+                  {userProjects.map((project) => (
+                    <div
+                      key={project.id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-accent/5 transition-colors"
+                    >
+                      <div>
+                        <p className="font-medium">{project.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {project.customers?.company_name}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => navigate(`/admin/projects/${project.id}/edit`)}
+                      >
+                        View Project
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FolderOpen className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>No projects available</p>
+                  <p className="text-sm">Assign this user to a customer to grant project access</p>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
         </Card>
           </TabsContent>
 
