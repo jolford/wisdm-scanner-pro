@@ -599,7 +599,210 @@ const EditProject = () => {
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem value="export" className="border rounded-lg px-4 bg-muted/20">
+              <AccordionItem value="separation" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="font-medium text-base">Document Separation</span>
+                </AccordionTrigger>
+                <AccordionContent>
+              <Label className="mb-4 block">Document Separation</Label>
+                  <Card className="p-4 bg-muted/50">
+                    <DocumentSeparationConfig
+                      config={separationConfig}
+                      onConfigChange={setSeparationConfig}
+                    />
+                  </Card>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Configure how multi-page PDFs are automatically split into individual documents.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="queues" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="font-medium text-base">Processing Queues</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-3">
+                    {queues.map((queue, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id={`queue-${index}`}
+                            checked={queue.enabled}
+                            onCheckedChange={(checked) => {
+                              const updated = [...queues];
+                              updated[index].enabled = checked === true;
+                              setQueues(updated);
+                            }}
+                          />
+                          <Label htmlFor={`queue-${index}`} className="text-sm font-medium cursor-pointer">
+                            {queue.name} Queue
+                          </Label>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Configure which processing queues are active for this project's workflow.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+            </TabsContent>
+
+            {/* Import & Capture Tab */}
+            <TabsContent value="import" className="space-y-4">
+              <Accordion type="multiple" defaultValue={[]} className="space-y-4">
+                <AccordionItem value="hot-folder-wizard" className="border rounded-lg px-4 bg-muted/20">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="font-medium text-base">🚀 Hot Folder Setup Wizard</span>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <HotFolderSetupWizard
+                      projectId={id || ''}
+                      customerId={customerId}
+                    />
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Step-by-step wizard to set up automatic document imports from scanners.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
+
+              <AccordionItem value="scanner" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="font-medium text-base">Scanner Auto-Import (Advanced)</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ScannerAutoImportConfig
+                    projectId={id || ''}
+                    customerId={customerId}
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Advanced configuration for automatic import from network scanners.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="email" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="font-medium text-base">Email Import</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <EmailImportConfig
+                    projectId={id || ''}
+                    customerId={customerId}
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Monitor an email inbox for automatic document import.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+            </TabsContent>
+
+            {/* Processing & AI Tab */}
+            <TabsContent value="processing" className="space-y-4">
+              <Accordion type="multiple" defaultValue={[]} className="space-y-4">
+                <AccordionItem value="barcode" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="font-medium text-base">Barcode Recognition</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <BarcodeConfig projectId={id || ''} />
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="classification" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-base">Document Classification</span>
+                    {classificationConfig.enabled && (
+                      <Badge variant="default" className="text-xs">Enabled</Badge>
+                    )}
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <Card className="p-4 bg-muted/50 space-y-4">
+                    <div className="flex items-center space-x-3">
+                      <Checkbox
+                        id="classification-enabled"
+                        checked={classificationConfig.enabled}
+                        onCheckedChange={(checked) => 
+                          setClassificationConfig(prev => ({ ...prev, enabled: checked === true }))
+                        }
+                      />
+                      <div className="flex-1">
+                        <Label htmlFor="classification-enabled" className="text-sm font-medium cursor-pointer">
+                          Enable AI Document Classification
+                        </Label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Automatically classify documents into types like Invoice, Check, Receipt, Contract, etc.
+                        </p>
+                      </div>
+                    </div>
+
+                    {classificationConfig.enabled && (
+                      <div className="pl-7 space-y-3 border-l-2 border-primary/20">
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id="auto-classify"
+                            checked={classificationConfig.auto_classify}
+                            onCheckedChange={(checked) =>
+                              setClassificationConfig(prev => ({ ...prev, auto_classify: checked === true }))
+                            }
+                          />
+                          <Label htmlFor="auto-classify" className="text-sm cursor-pointer">
+                            Automatically classify on OCR
+                          </Label>
+                        </div>
+
+                        <div className="text-xs text-muted-foreground bg-muted/30 p-3 rounded">
+                          <strong>Available Classifications:</strong>
+                          <div className="grid grid-cols-2 gap-1 mt-2">
+                            <span>• Check</span>
+                            <span>• Invoice</span>
+                            <span>• Purchase Order</span>
+                            <span>• Receipt</span>
+                            <span>• Contract</span>
+                            <span>• Legal Document</span>
+                            <span>• Form</span>
+                            <span>• Letter</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </Card>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Uses AI to automatically identify document types for better organization and routing.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+            </TabsContent>
+
+            {/* Export & Integration Tab */}
+            <TabsContent value="export" className="space-y-4">
+              <Accordion type="multiple" defaultValue={[]} className="space-y-4">
+                <AccordionItem value="scheduled" className="border rounded-lg px-4 bg-muted/20">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="font-medium text-base">Scheduled Exports</span>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <Card className="p-4 bg-muted/50">
+                      <ScheduledExportConfig
+                        projectId={id || ''}
+                        availableExportTypes={Object.keys(exportConfig).filter(
+                          type => !['filebound', 'docmgt'].includes(type)
+                        )}
+                      />
+                    </Card>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Configure automatic exports to run on a schedule.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="export-config" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
                   <span className="font-medium text-base">Export Configuration</span>
                 </AccordionTrigger>
@@ -815,209 +1018,6 @@ const EditProject = () => {
                         </Card>
                       ))}
                   </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="separation" className="border rounded-lg px-4 bg-muted/20">
-                <AccordionTrigger className="hover:no-underline">
-                  <span className="font-medium text-base">Document Separation</span>
-                </AccordionTrigger>
-                <AccordionContent>
-              <Label className="mb-4 block">Document Separation</Label>
-                  <Card className="p-4 bg-muted/50">
-                    <DocumentSeparationConfig
-                      config={separationConfig}
-                      onConfigChange={setSeparationConfig}
-                    />
-                  </Card>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Configure how multi-page PDFs are automatically split into individual documents.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="queues" className="border rounded-lg px-4 bg-muted/20">
-                <AccordionTrigger className="hover:no-underline">
-                  <span className="font-medium text-base">Processing Queues</span>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-3">
-                    {queues.map((queue, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                        <div className="flex items-center space-x-3">
-                          <Checkbox
-                            id={`queue-${index}`}
-                            checked={queue.enabled}
-                            onCheckedChange={(checked) => {
-                              const updated = [...queues];
-                              updated[index].enabled = checked === true;
-                              setQueues(updated);
-                            }}
-                          />
-                          <Label htmlFor={`queue-${index}`} className="text-sm font-medium cursor-pointer">
-                            {queue.name} Queue
-                          </Label>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Configure which processing queues are active for this project's workflow.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-            </TabsContent>
-
-            {/* Import & Capture Tab */}
-            <TabsContent value="import" className="space-y-4">
-              <Accordion type="multiple" defaultValue={[]} className="space-y-4">
-                <AccordionItem value="hot-folder-wizard" className="border rounded-lg px-4 bg-muted/20">
-                  <AccordionTrigger className="hover:no-underline">
-                    <span className="font-medium text-base">🚀 Hot Folder Setup Wizard</span>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <HotFolderSetupWizard
-                      projectId={id || ''}
-                      customerId={customerId}
-                    />
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Step-by-step wizard to set up automatic document imports from scanners.
-                    </p>
-                  </AccordionContent>
-                </AccordionItem>
-
-              <AccordionItem value="scanner" className="border rounded-lg px-4 bg-muted/20">
-                <AccordionTrigger className="hover:no-underline">
-                  <span className="font-medium text-base">Scanner Auto-Import (Advanced)</span>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <ScannerAutoImportConfig
-                    projectId={id || ''}
-                    customerId={customerId}
-                  />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Advanced configuration for automatic import from network scanners.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="email" className="border rounded-lg px-4 bg-muted/20">
-                <AccordionTrigger className="hover:no-underline">
-                  <span className="font-medium text-base">Email Import</span>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <EmailImportConfig
-                    projectId={id || ''}
-                    customerId={customerId}
-                  />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Monitor an email inbox for automatic document import.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-            </TabsContent>
-
-            {/* Processing & AI Tab */}
-            <TabsContent value="processing" className="space-y-4">
-              <Accordion type="multiple" defaultValue={[]} className="space-y-4">
-                <AccordionItem value="barcode" className="border rounded-lg px-4 bg-muted/20">
-                <AccordionTrigger className="hover:no-underline">
-                  <span className="font-medium text-base">Barcode Recognition</span>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <BarcodeConfig projectId={id || ''} />
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="classification" className="border rounded-lg px-4 bg-muted/20">
-                <AccordionTrigger className="hover:no-underline">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium text-base">Document Classification</span>
-                    {classificationConfig.enabled && (
-                      <Badge variant="default" className="text-xs">Enabled</Badge>
-                    )}
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <Card className="p-4 bg-muted/50 space-y-4">
-                    <div className="flex items-center space-x-3">
-                      <Checkbox
-                        id="classification-enabled"
-                        checked={classificationConfig.enabled}
-                        onCheckedChange={(checked) => 
-                          setClassificationConfig(prev => ({ ...prev, enabled: checked === true }))
-                        }
-                      />
-                      <div className="flex-1">
-                        <Label htmlFor="classification-enabled" className="text-sm font-medium cursor-pointer">
-                          Enable AI Document Classification
-                        </Label>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Automatically classify documents into types like Invoice, Check, Receipt, Contract, etc.
-                        </p>
-                      </div>
-                    </div>
-
-                    {classificationConfig.enabled && (
-                      <div className="pl-7 space-y-3 border-l-2 border-primary/20">
-                        <div className="flex items-center space-x-3">
-                          <Checkbox
-                            id="auto-classify"
-                            checked={classificationConfig.auto_classify}
-                            onCheckedChange={(checked) =>
-                              setClassificationConfig(prev => ({ ...prev, auto_classify: checked === true }))
-                            }
-                          />
-                          <Label htmlFor="auto-classify" className="text-sm cursor-pointer">
-                            Automatically classify on OCR
-                          </Label>
-                        </div>
-
-                        <div className="text-xs text-muted-foreground bg-muted/30 p-3 rounded">
-                          <strong>Available Classifications:</strong>
-                          <div className="grid grid-cols-2 gap-1 mt-2">
-                            <span>• Check</span>
-                            <span>• Invoice</span>
-                            <span>• Purchase Order</span>
-                            <span>• Receipt</span>
-                            <span>• Contract</span>
-                            <span>• Legal Document</span>
-                            <span>• Form</span>
-                            <span>• Letter</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                  </Card>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Uses AI to automatically identify document types for better organization and routing.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-            </TabsContent>
-
-            {/* Export & Integration Tab */}
-            <TabsContent value="export" className="space-y-4">
-              <Accordion type="multiple" defaultValue={[]} className="space-y-4">
-                <AccordionItem value="scheduled" className="border rounded-lg px-4 bg-muted/20">
-                  <AccordionTrigger className="hover:no-underline">
-                    <span className="font-medium text-base">Scheduled Exports</span>
-                  </AccordionTrigger>
-                  <AccordionContent>
-                    <Card className="p-4 bg-muted/50">
-                      <ScheduledExportConfig
-                        projectId={id || ''}
-                        availableExportTypes={Object.keys(exportConfig).filter(
-                          type => !['filebound', 'docmgt'].includes(type)
-                        )}
-                      />
-                    </Card>
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Configure automatic exports to run on a schedule.
-                    </p>
                 </AccordionContent>
               </AccordionItem>
               
