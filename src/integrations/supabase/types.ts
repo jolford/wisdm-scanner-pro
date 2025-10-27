@@ -421,6 +421,7 @@ export type Database = {
           validation_status:
             | Database["public"]["Enums"]["validation_status"]
             | null
+          word_bounding_boxes: Json | null
         }
         Insert: {
           batch_id?: string | null
@@ -449,6 +450,7 @@ export type Database = {
           validation_status?:
             | Database["public"]["Enums"]["validation_status"]
             | null
+          word_bounding_boxes?: Json | null
         }
         Update: {
           batch_id?: string | null
@@ -477,6 +479,7 @@ export type Database = {
           validation_status?:
             | Database["public"]["Enums"]["validation_status"]
             | null
+          word_bounding_boxes?: Json | null
         }
         Relationships: [
           {
