@@ -455,7 +455,6 @@ export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotF
             </div>
           </div>
         )}
-        )}
       </Card>
 
       {/* Navigation */}
