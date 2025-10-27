@@ -504,6 +504,127 @@ RESPONSE REQUIREMENTS:
 
     console.log('OCR completed - Document Type:', documentType, 'Confidence:', confidence, 'Metadata:', metadata, 'Line Items:', lineItems.length);
 
+    // --- TWO-PASS VALIDATION FOR LOW CONFIDENCE ---
+    // If confidence is below threshold, run a second validation pass
+    const CONFIDENCE_THRESHOLD = 0.85;
+    let validationApplied = false;
+    
+    if (confidence < CONFIDENCE_THRESHOLD && confidence > 0) {
+      console.log(`Low confidence detected (${confidence}). Running validation pass...`);
+      
+      try {
+        // Build validation prompt with extracted data
+        const validationSystemPrompt = `You are an OCR validation expert. Your job is to:
+1. Compare the extracted text against the original image
+2. Fix common OCR errors (O vs 0, l vs 1, S vs 5, etc.)
+3. Validate field formats (dates should be dates, amounts should be numbers)
+4. Ensure extracted values match what's visible in the image
+5. Return corrected JSON with same structure
+
+CRITICAL: Return ONLY valid JSON, no explanations.`;
+
+        const fieldsJson = extractionFields && extractionFields.length > 0
+          ? JSON.stringify(metadata, null, 2)
+          : null;
+        
+        const validationUserPrompt = fieldsJson
+          ? `Original extraction (confidence: ${confidence}):
+${fieldsJson}
+
+Line items: ${lineItems.length > 0 ? JSON.stringify(lineItems, null, 2) : 'none'}
+
+Review the image and correct any OCR errors. Common issues:
+- "O" misread as "0" or vice versa
+- "l" (lowercase L) vs "1" (one) vs "I" (capital i)
+- "S" vs "5"
+- Dates in wrong format
+- Missing decimal points in amounts
+- Transposed digits
+
+Return corrected JSON in EXACT same structure.`
+          : `Full text extraction (confidence: ${confidence}):
+${extractedText}
+
+Review the image and provide corrected text with any OCR errors fixed.`;
+
+        const validationResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash', // Faster model for validation
+            messages: [
+              {
+                role: 'system',
+                content: validationSystemPrompt
+              },
+              {
+                role: 'user',
+                content: textData
+                  ? [{ type: 'text', text: validationUserPrompt }]
+                  : [
+                      { type: 'text', text: validationUserPrompt },
+                      { type: 'image_url', image_url: { url: imageData } }
+                    ]
+              }
+            ],
+            temperature: 0.1,
+          }),
+        });
+
+        if (validationResponse.ok) {
+          const validationData = await validationResponse.json();
+          const validationText = validationData.choices[0].message.content;
+          
+          // Try to parse validation response
+          try {
+            let validationJson = validationText;
+            if (validationText.includes('```')) {
+              const match = validationText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+              if (match) validationJson = match[1].trim();
+            }
+            
+            const jsonMatch = validationJson.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              const validated = JSON.parse(jsonMatch[0]);
+              
+              // Update metadata with validated values
+              if (validated.fields) {
+                Object.keys(validated.fields).forEach(key => {
+                  const val = validated.fields[key];
+                  metadata[key] = typeof val === 'string' ? val : (val?.value || val);
+                });
+              }
+              
+              // Update line items if provided
+              if (validated.lineItems && Array.isArray(validated.lineItems)) {
+                lineItems = validated.lineItems;
+              }
+              
+              // Update full text if provided
+              if (validated.fullText) {
+                extractedText = validated.fullText;
+              }
+              
+              // Boost confidence after validation
+              confidence = Math.min(confidence + 0.15, 0.99);
+              validationApplied = true;
+              
+              console.log('Validation pass completed successfully. New confidence:', confidence);
+            }
+          } catch (parseError) {
+            console.error('Failed to parse validation response:', parseError);
+            // Continue with original extraction
+          }
+        }
+      } catch (validationError) {
+        console.error('Validation pass failed:', validationError);
+        // Continue with original extraction
+      }
+    }
+
     // --- TRACK COST AND USAGE ---
     // Always track document usage when we know the customer
     if (customerId) {
@@ -642,7 +763,8 @@ RESPONSE REQUIREMENTS:
         metadata: metadata,               // Extracted field values
         lineItems: lineItems,             // Extracted table rows (if applicable)
         documentType: documentType,       // Classified document type
-        confidence: confidence,           // OCR confidence score
+        confidence: confidence,           // OCR confidence score (boosted if validation applied)
+        validationApplied: validationApplied, // Whether two-pass validation was used
         boundingBoxes: fieldBoundingBoxes, // Field locations on document
         wordBoundingBoxes: wordBoundingBoxes // Word-level coordinates for highlighting
       }),
