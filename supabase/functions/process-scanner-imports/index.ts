@@ -156,7 +156,7 @@ Deno.serve(async (req) => {
 
             if (docError) throw docError;
 
-            // Create OCR job for this document
+            // Create OCR job for this document (payload uses camelCase keys expected by processor)
             const { error: jobError } = await supabaseAdmin
               .from('jobs')
               .insert({
@@ -165,10 +165,11 @@ Deno.serve(async (req) => {
                 customer_id: config.customer_id,
                 priority: 'normal',
                 payload: {
-                  document_id: document.id,
-                  file_url: publicUrl,
-                  project_id: config.project_id,
-                  batch_id: currentBatchId
+                  documentId: document.id,
+                  fileUrl: publicUrl,
+                  projectId: config.project_id,
+                  batchId: currentBatchId,
+                  isPdf: false
                 },
                 status: 'pending'
               });

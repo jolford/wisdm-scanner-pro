@@ -66,14 +66,28 @@ Deno.serve(async (req) => {
     console.log('Job processor starting...');
     
     // Get next job using fair-share scheduling
-    const { data: jobId, error: jobError } = await supabase.rpc('get_next_job');
+    let { data: jobId, error: jobError } = await supabase.rpc('get_next_job');
     
     if (jobError) {
-      console.error('Error getting next job:', jobError);
-      return new Response(JSON.stringify({ error: jobError.message }), {
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
+      console.error('Error getting next job via RPC:', jobError);
+      jobId = null;
+    }
+
+    // Fallback: direct query for any pending job if RPC returned nothing
+    if (!jobId) {
+      const { data: anyPending, error: pendingErr } = await supabase
+        .from('jobs')
+        .select('id')
+        .eq('status', 'pending')
+        .lte('scheduled_for', new Date().toISOString())
+        .order('priority', { ascending: false })
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (pendingErr) {
+        console.error('Fallback pending job query failed:', pendingErr);
+      }
+      jobId = anyPending?.id ?? null;
     }
 
     if (!jobId) {
@@ -153,16 +167,35 @@ Deno.serve(async (req) => {
 });
 
 async function processOcrDocument(job: Job, supabase: any) {
-  const { imageData, extractionFields, projectId, batchId, documentId, isPdf, textData } = job.payload;
+  const { imageData, extractionFields, projectId, batchId, documentId, isPdf, textData, fileUrl, file_url } = job.payload;
 
   try {
+    // If no image/text data but a file URL is provided, download and convert to data URL
+    let finalImageData = imageData;
+    let finalTextData = textData;
+
+    const effectiveFileUrl = fileUrl || file_url; // support both keys
+    if (!finalImageData && !finalTextData && effectiveFileUrl) {
+      const resp = await fetch(effectiveFileUrl);
+      if (!resp.ok) throw new Error(`Failed to download file: ${resp.status}`);
+      const buf = await resp.arrayBuffer();
+      const contentType = resp.headers.get('content-type') || 'application/octet-stream';
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      // Assume non-PDF is image; for PDFs, keep as fileUrl and let OCR handle text-only path if needed
+      if (contentType.includes('pdf')) {
+        // For PDFs, we can't generate textData here; pass isPdf true and leave imageData null
+      } else {
+        finalImageData = `data:${contentType};base64,${base64}`;
+      }
+    }
+
     // Call ocr-scan edge function
     const { data: ocrResult, error: ocrError } = await supabase.functions.invoke('ocr-scan', {
       body: {
-        imageData,
+        imageData: finalImageData,
         isPdf,
         extractionFields,
-        textData
+        textData: finalTextData,
       }
     });
 
