@@ -508,21 +508,14 @@ const [isExporting, setIsExporting] = useState(false);
                 ? selectedProject?.metadata?.table_extraction_config?.fields || []
                 : [];
               
-              const { data, error } = await supabase.functions.invoke('ocr-scan', {
-                body: { 
-                  textData: extractedPdfText,
-                  isPdf: true,
-                  extractionFields,
-                  tableExtractionFields: tableFields,
-                  enableCheckScanning: enableMICR,
-                  customerId: selectedProject?.customer_id,
-                },
+              const data = await invokeOcr({ 
+                textData: extractedPdfText,
+                isPdf: true,
+                extractionFields,
+                tableExtractionFields: tableFields,
+                enableCheckScanning: enableMICR,
+                customerId: selectedProject?.customer_id,
               });
-
-              if (error) {
-                console.error('OCR Edge Function error:', error);
-                throw new Error(`OCR service error: ${error.message || 'Failed to connect to processing service'}`);
-              }
               if (!data) {
                 throw new Error('OCR service returned no data');
               }
@@ -666,21 +659,14 @@ const [isExporting, setIsExporting] = useState(false);
         }
       }
       
-      const { data, error } = await supabase.functions.invoke('ocr-scan', {
-        body: { 
-          imageData: payloadImageData,
-          isPdf: false,
-          extractionFields,
-          tableExtractionFields: tableFields,
-          enableCheckScanning: enableMICR,
-          customerId: selectedProject?.customer_id,
-        },
+      const data = await invokeOcr({ 
+        imageData: payloadImageData,
+        isPdf: false,
+        extractionFields,
+        tableExtractionFields: tableFields,
+        enableCheckScanning: enableMICR,
+        customerId: selectedProject?.customer_id,
       });
-
-      if (error) {
-        console.error('OCR Edge Function error:', error);
-        throw new Error(`OCR service error: ${error.message || 'Failed to connect to processing service'}`);
-      }
 
       if (!data) {
         throw new Error('OCR service returned no data');
