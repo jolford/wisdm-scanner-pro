@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
+import { useKeyboardShortcuts, GLOBAL_SHORTCUTS } from '@/hooks/use-keyboard-shortcuts';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -42,6 +43,21 @@ const Batches = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(preferences?.default_batch_view || 'grid');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Page-specific keyboard shortcuts
+  useKeyboardShortcuts({
+    shortcuts: [
+      {
+        ...GLOBAL_SHORTCUTS.SEARCH,
+        handler: () => searchInputRef.current?.focus(),
+      },
+      {
+        ...GLOBAL_SHORTCUTS.NEW,
+        handler: () => navigate('/admin/batches/new'),
+      },
+    ],
+  });
 
   // Update view mode when preferences load
   useEffect(() => {
@@ -269,7 +285,8 @@ const Batches = () => {
           <div className="relative flex-1 max-w-md">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search batches, projects, or users..."
+              ref={searchInputRef}
+              placeholder="Search batches... (Press / to focus)"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"

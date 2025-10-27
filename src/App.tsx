@@ -1,8 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { useKeyboardShortcuts, GLOBAL_SHORTCUTS } from "@/hooks/use-keyboard-shortcuts";
+import { KeyboardShortcutsDialog } from "@/components/KeyboardShortcutsDialog";
+import { BrowserRouter, Routes, Route, useLocation, Navigate, useNavigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Queue from "./pages/Queue";
 import Auth from "./pages/Auth";
@@ -78,14 +80,50 @@ const RecoveryRedirect: React.FC = () => {
   return null;
 };
 
-const App = () => (
-  <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light">{/* Force light mode only */}
-        <div className="flex flex-col min-h-screen">
-          <Toaster />
-          <Sonner />
-        <BrowserRouter>
+function GlobalKeyboardShortcuts({ onShowShortcuts }: { onShowShortcuts: () => void }) {
+  const navigate = useNavigate();
+  
+  useKeyboardShortcuts({
+    shortcuts: [
+      {
+        ...GLOBAL_SHORTCUTS.HELP,
+        handler: onShowShortcuts,
+      },
+      {
+        ...GLOBAL_SHORTCUTS.GO_BATCHES,
+        handler: () => navigate('/batches'),
+      },
+      {
+        ...GLOBAL_SHORTCUTS.GO_QUEUE,
+        handler: () => navigate('/queue'),
+      },
+      {
+        ...GLOBAL_SHORTCUTS.GO_ADMIN,
+        handler: () => navigate('/admin/dashboard'),
+      },
+      {
+        ...GLOBAL_SHORTCUTS.GO_HOME,
+        handler: () => navigate('/'),
+      },
+    ],
+  });
+
+  return null;
+}
+
+const App = () => {
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light">{/* Force light mode only */}
+          <div className="flex flex-col min-h-screen">
+            <Toaster />
+            <Sonner />
+            <KeyboardShortcutsDialog open={showShortcuts} onOpenChange={setShowShortcuts} />
+          <BrowserRouter>
+            <GlobalKeyboardShortcuts onShowShortcuts={() => setShowShortcuts(true)} />
           <RecoveryRedirect />
           <div className="flex-1">
           <Routes>
@@ -142,6 +180,7 @@ const App = () => (
       </ThemeProvider>
     </QueryClientProvider>
   </ErrorBoundary>
-);
+  );
+};
 
 export default App;
