@@ -37,7 +37,7 @@ interface ECMField {
 }
 
 interface ECMExportConfigProps {
-  type: 'filebound' | 'docmgt' | 'documentum' | 'sharepoint';
+  type: 'filebound' | 'docmgt' | 'documentum' | 'sharepoint' | 'quickbooks' | 'greatplains';
   config: ExportConfig;
   extractionFields: Array<{ name: string; description: string }>;
   onConfigChange: (config: ExportConfig) => void;
@@ -88,6 +88,8 @@ export function ECMExportConfig({
         'docmgt': 'test-docmgt-connection',
         'documentum': 'test-documentum-connection',
         'sharepoint': 'test-sharepoint-connection',
+        'quickbooks': 'test-quickbooks-connection',
+        'greatplains': 'test-greatplains-connection',
       };
       
       const functionName = functionMap[type];

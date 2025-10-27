@@ -79,6 +79,8 @@ const EditProject = () => {
     docmgt: { enabled: false, destination: '', url: '', username: '', password: '', project: '', convertFormat: 'none' },
     documentum: { enabled: false, destination: '', url: '', username: '', password: '', project: '', convertFormat: 'none' },
     sharepoint: { enabled: false, destination: '', url: '', password: '', project: '', convertFormat: 'none' },
+    quickbooks: { enabled: false, destination: '', url: '', username: '', password: '', project: '', convertFormat: 'none' },
+    greatplains: { enabled: false, destination: '', url: '', username: '', password: '', project: '', convertFormat: 'none' },
   });
 
   const [queues, setQueues] = useState<Queue[]>([
@@ -667,9 +669,9 @@ const EditProject = () => {
                   ))}
 
                 <div className="border-t pt-4">
-                  <h4 className="text-sm font-medium mb-3">ECM Connectors</h4>
+                  <h4 className="text-sm font-medium mb-3">ECM & Accounting Connectors</h4>
                   <div className="grid grid-cols-2 gap-3">
-                  {['filebound', 'docmgt', 'documentum', 'sharepoint'].map((type) => {
+                  {['filebound', 'docmgt', 'documentum', 'sharepoint', 'quickbooks', 'greatplains'].map((type) => {
                       const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
                       return (
                         <div key={type} className="flex items-center space-x-2 p-3 bg-muted/30 rounded-lg">
@@ -692,12 +694,12 @@ const EditProject = () => {
                   </div>
 
                   {Object.entries(exportConfig)
-                    .filter(([type]) => ['filebound', 'docmgt', 'documentum', 'sharepoint'].includes(type) && exportConfig[type].enabled)
+                    .filter(([type]) => ['filebound', 'docmgt', 'documentum', 'sharepoint', 'quickbooks', 'greatplains'].includes(type) && exportConfig[type].enabled)
                     .map(([type, config]) => (
                       <Card key={type} className="p-4 bg-muted/50 mt-3">
                         <h4 className="text-sm font-medium mb-3 uppercase">{type} Configuration</h4>
                         <ECMExportConfig
-                          type={type as 'filebound' | 'docmgt' | 'documentum' | 'sharepoint'}
+                          type={type as 'filebound' | 'docmgt' | 'documentum' | 'sharepoint' | 'quickbooks' | 'greatplains'}
                           config={config}
                           extractionFields={fields}
                           onConfigChange={(newConfig) => 

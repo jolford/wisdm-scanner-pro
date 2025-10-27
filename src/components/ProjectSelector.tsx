@@ -26,30 +26,53 @@ export const ProjectSelector = ({ selectedProjectId, onProjectSelect }: ProjectS
 
   const loadProjects = async () => {
     try {
-      // 1) Find the customers this user has access to
-      const { data: myCustomers, error: custErr } = await supabase
-        .from('user_customers')
-        .select('customer_id');
+      // Check if user is system admin
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', (await supabase.auth.getUser()).data.user?.id)
+        .in('role', ['system_admin', 'admin']);
+      
+      const isSystemAdmin = roles?.some(r => r.role === 'system_admin');
+      
+      let allProjects;
+      
+      if (isSystemAdmin) {
+        // System admins see ALL projects
+        const { data, error: projectsError } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('is_active', true)
+          .order('name');
+        
+        if (projectsError) throw projectsError;
+        allProjects = data;
+      } else {
+        // Regular users see only their customer projects
+        const { data: myCustomers, error: custErr } = await supabase
+          .from('user_customers')
+          .select('customer_id');
 
-      if (custErr) throw custErr;
+        if (custErr) throw custErr;
 
-      const customerIds = (myCustomers || []).map((c: any) => c.customer_id);
-      if (!customerIds.length) {
-        setProjects([]);
-        return;
+        const customerIds = (myCustomers || []).map((c: any) => c.customer_id);
+        if (!customerIds.length) {
+          setProjects([]);
+          return;
+        }
+
+        const { data, error: projectsError } = await supabase
+          .from('projects')
+          .select('id')
+          .eq('is_active', true)
+          .in('customer_id', customerIds)
+          .order('name');
+
+        if (projectsError) throw projectsError;
+        allProjects = data;
       }
 
-      // 2) Get active projects for those customers
-      const { data: allProjects, error: projectsError } = await supabase
-        .from('projects')
-        .select('id')
-        .eq('is_active', true)
-        .in('customer_id', customerIds)
-        .order('name');
-
-      if (projectsError) throw projectsError;
-
-      // 3) Use get_project_safe to fetch full project data securely
+      // Use get_project_safe to fetch full project data securely
       if (allProjects && allProjects.length > 0) {
         const projectPromises = allProjects.map(p => 
           supabase.rpc('get_project_safe', { project_id: p.id }).single()
