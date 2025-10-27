@@ -895,65 +895,6 @@ export const BatchValidationScreen = ({
                                 />
                               </div>
                             ))}
-                          
-                          <TabsContent value="image" className="mt-4">
-                            {offensiveLanguageResults[doc.id]?.highlights && offensiveLanguageResults[doc.id].highlights.length > 0 ? (
-                              <div className="space-y-4">
-                                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
-                                  <p className="text-sm font-medium text-destructive mb-2">
-                                    ⚠️ {offensiveLanguageResults[doc.id].highlights.length} Sensitive Phrase(s) Detected
-                                  </p>
-                                  <div className="space-y-1">
-                                    {offensiveLanguageResults[doc.id].highlights.map((highlight: any, idx: number) => (
-                                      <div key={idx} className="text-xs text-muted-foreground">
-                                        • "{highlight.text}" - {highlight.category} ({highlight.severity})
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                                <div className="relative border rounded-lg overflow-hidden bg-background">
-                                  <FullImageWithSignedUrl
-                                    url={doc.file_url}
-                                    alt={doc.file_name}
-                                    fileType={(doc as any).file_type}
-                                    zoom={1}
-                                    rotation={0}
-                                  />
-                                  {(() => {
-                                    const boxes = offensiveLanguageResults[doc.id].highlights
-                                      .map((h: any) => h.boundingBox)
-                                      .filter(Boolean);
-                                    const viewW = boxes.length ? Math.max(...boxes.map((b: any) => b.x + b.width)) : 1000;
-                                    const viewH = boxes.length ? Math.max(...boxes.map((b: any) => b.y + b.height)) : 1000;
-                                    return (
-                                      <svg 
-                                        className="absolute top-0 left-0 w-full h-full pointer-events-none"
-                                        preserveAspectRatio="none"
-                                        viewBox={`0 0 ${viewW} ${viewH}`}
-                                      >
-                                        {boxes.map((box: any, idx: number) => (
-                                          <rect
-                                            key={idx}
-                                            x={box.x}
-                                            y={box.y}
-                                            width={box.width}
-                                            height={box.height}
-                                            fill="rgba(239, 68, 68, 0.3)"
-                                            stroke="rgb(239, 68, 68)"
-                                            strokeWidth="2"
-                                          />
-                                        ))}
-                                      </svg>
-                                    );
-                                  })()}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="text-center text-muted-foreground py-8">
-                                No sensitive language detected in this document
-                              </div>
-                            )}
-                          </TabsContent>
 
                             {/* Line Items Table - Only show if table extraction is configured or line items exist */}
                             {(() => {
@@ -1049,6 +990,65 @@ export const BatchValidationScreen = ({
                             );
                             }
                             })()}
+                          </TabsContent>
+                          
+                          <TabsContent value="image" className="mt-4">
+                            {offensiveLanguageResults[doc.id]?.highlights && offensiveLanguageResults[doc.id].highlights.length > 0 ? (
+                              <div className="space-y-4">
+                                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3">
+                                  <p className="text-sm font-medium text-destructive mb-2">
+                                    ⚠️ {offensiveLanguageResults[doc.id].highlights.length} Sensitive Phrase(s) Detected
+                                  </p>
+                                  <div className="space-y-1">
+                                    {offensiveLanguageResults[doc.id].highlights.map((highlight: any, idx: number) => (
+                                      <div key={idx} className="text-xs text-muted-foreground">
+                                        • "{highlight.text}" - {highlight.category} ({highlight.severity})
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="relative border rounded-lg overflow-hidden bg-background">
+                                  <FullImageWithSignedUrl
+                                    url={doc.file_url}
+                                    alt={doc.file_name}
+                                    fileType={(doc as any).file_type}
+                                    zoom={1}
+                                    rotation={0}
+                                  />
+                                  {(() => {
+                                    const boxes = offensiveLanguageResults[doc.id].highlights
+                                      .map((h: any) => h.boundingBox)
+                                      .filter(Boolean);
+                                    const viewW = boxes.length ? Math.max(...boxes.map((b: any) => b.x + b.width)) : 1000;
+                                    const viewH = boxes.length ? Math.max(...boxes.map((b: any) => b.y + b.height)) : 1000;
+                                    return (
+                                      <svg 
+                                        className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                                        preserveAspectRatio="none"
+                                        viewBox={`0 0 ${viewW} ${viewH}`}
+                                      >
+                                        {boxes.map((box: any, idx: number) => (
+                                          <rect
+                                            key={idx}
+                                            x={box.x}
+                                            y={box.y}
+                                            width={box.width}
+                                            height={box.height}
+                                            fill="rgba(239, 68, 68, 0.3)"
+                                            stroke="rgb(239, 68, 68)"
+                                            strokeWidth="2"
+                                          />
+                                        ))}
+                                      </svg>
+                                    );
+                                  })()}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-center text-muted-foreground py-8">
+                                No sensitive language detected in this document
+                              </div>
+                            )}
                           </TabsContent>
                           
                           <TabsContent value="text" className="mt-4">
