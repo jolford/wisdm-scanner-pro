@@ -115,8 +115,11 @@ const Batches = () => {
       if (logsError) throw logsError;
 
       // Then delete the batch
-      const { error } = await supabase.from('batches').delete().eq('id', batchId);
-      if (error) throw error;
+      // Call secured backend function to delete with cascading
+      const { data, error } = await supabase.functions.invoke('delete-batch-safe', {
+        body: { batchId },
+      });
+      if (error || (data && data.error)) throw new Error(error?.message || data?.error || 'Delete failed');
 
       toast({
         title: 'Success',

@@ -104,29 +104,14 @@ const BatchDetail = () => {
 
   const deleteBatchMutation = useMutation({
     mutationFn: async () => {
-      // First delete scanner import logs
-      const { error: logsError } = await supabase
-        .from('scanner_import_logs')
-        .delete()
-        .eq('batch_id', id);
+      // Use secure backend function to handle cascading deletes
+      const { data, error } = await supabase.functions.invoke('delete-batch-safe', {
+        body: { batchId: id },
+      });
 
-      if (logsError) throw logsError;
-
-      // Then delete all documents in the batch
-      const { error: docsError } = await supabase
-        .from('documents')
-        .delete()
-        .eq('batch_id', id);
-
-      if (docsError) throw docsError;
-
-      // Finally delete the batch
-      const { error: batchError } = await supabase
-        .from('batches')
-        .delete()
-        .eq('id', id);
-
-      if (batchError) throw batchError;
+      if (error || (data && (data as any).error)) {
+        throw new Error(error?.message || (data as any)?.error || 'Delete failed');
+      }
     },
     onSuccess: () => {
       toast({
