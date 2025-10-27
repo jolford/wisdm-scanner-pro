@@ -568,50 +568,64 @@ const [isExporting, setIsExporting] = useState(false);
       return;
     }
 
-    toast({
-      title: 'Processing Multiple Files',
-      description: `Processing ${files.length} files...`,
-    });
-
+    const total = files.length;
+    toast({ title: 'Processing Multiple Files', description: `Processing ${total} files...` });
     setProcessing(true);
-    
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+
+    const MAX_CONCURRENT = 3; // Keep under gateway limits for best throughput
+    const queue = [...files];
+    const processingErrors: string[] = [];
+    let processed = 0;
+
+    const processFile = async (file: File) => {
       try {
         if (file.type === 'application/pdf') {
           await processPdf(file);
         } else if (file.type.startsWith('image/')) {
           if (isTiffFile(file)) {
-            // Convert TIFF to PNG before sending to OCR
             const pngDataUrl = await convertTiffToPngDataUrl(file);
             await handleScanComplete('', pngDataUrl, file.name.replace(/\.tiff?$/i, '.png'));
           } else {
             const reader = new FileReader();
-            await new Promise((resolve, reject) => {
-              reader.onload = async (e) => {
-                try {
-                  const imageData = e.target?.result as string;
-                  await handleScanComplete('', imageData, file.name);
-                  resolve(null);
-                } catch (error) {
-                  reject(error);
-                }
-              };
+            const imageData = await new Promise<string>((resolve, reject) => {
+              reader.onload = (e) => resolve(e.target?.result as string);
               reader.onerror = reject;
               reader.readAsDataURL(file);
             });
+            await handleScanComplete('', imageData, file.name);
           }
         }
-      } catch (error) {
-        console.error(`Error processing file ${file.name}:`, error);
+      } catch (err: any) {
+        console.error(`Error processing file ${file.name}:`, err);
+        processingErrors.push(`${file.name}: ${err?.message || 'Unknown error'}`);
+      } finally {
+        processed += 1;
       }
-    }
-    
-    setProcessing(false);
-    toast({
-      title: 'Batch Complete',
-      description: `Successfully processed ${files.length} files`,
+    };
+
+    const workers = Array.from({ length: Math.min(MAX_CONCURRENT, queue.length) }).map(async () => {
+      while (queue.length) {
+        const next = queue.shift();
+        if (!next) break;
+        await processFile(next);
+        // Small delay to reduce chance of rate limiting
+        await new Promise((r) => setTimeout(r, 150));
+      }
     });
+
+    await Promise.all(workers);
+
+    setProcessing(false);
+
+    if (processingErrors.length > 0) {
+      toast({
+        title: 'Some Documents Failed',
+        description: `${processingErrors.length} of ${total} document(s) failed to process`,
+        variant: 'destructive',
+      });
+    }
+
+    toast({ title: 'Batch Complete', description: `Successfully processed ${processed} of ${total} files` });
 
     // After processing all files, go to Validation tab
     await loadQueueDocuments();
