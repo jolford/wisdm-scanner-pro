@@ -14,6 +14,125 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_trail: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          customer_id: string | null
+          entity_id: string | null
+          entity_type: string
+          error_message: string | null
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          new_values: Json | null
+          old_values: Json | null
+          success: boolean | null
+          user_agent: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          customer_id?: string | null
+          entity_id?: string | null
+          entity_type: string
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
+          success?: boolean | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          customer_id?: string | null
+          entity_id?: string | null
+          entity_type?: string
+          error_message?: string | null
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          new_values?: Json | null
+          old_values?: Json | null
+          success?: boolean | null
+          user_agent?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_trail_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      barcode_types: {
+        Row: {
+          action: string
+          barcode_format: string
+          created_at: string | null
+          created_by: string
+          document_class_id: string | null
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          name: string
+          pattern: string | null
+          project_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          action: string
+          barcode_format: string
+          created_at?: string | null
+          created_by: string
+          document_class_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name: string
+          pattern?: string | null
+          project_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          action?: string
+          barcode_format?: string
+          created_at?: string | null
+          created_by?: string
+          document_class_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name?: string
+          pattern?: string | null
+          project_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "barcode_types_document_class_id_fkey"
+            columns: ["document_class_id"]
+            isOneToOne: false
+            referencedRelation: "document_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "barcode_types_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batches: {
         Row: {
           assigned_to: string | null
@@ -847,6 +966,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "projects_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      reporting_snapshots: {
+        Row: {
+          created_at: string | null
+          customer_id: string | null
+          id: string
+          metric_data: Json
+          metric_type: string
+          snapshot_date: string
+          snapshot_hour: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          metric_data: Json
+          metric_type: string
+          snapshot_date: string
+          snapshot_hour?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          metric_data?: Json
+          metric_type?: string
+          snapshot_date?: string
+          snapshot_hour?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reporting_snapshots_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
