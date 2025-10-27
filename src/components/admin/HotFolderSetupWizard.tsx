@@ -18,6 +18,7 @@ interface HotFolderSetupWizardProps {
 
 export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotFolderSetupWizardProps) {
   const [currentStep, setCurrentStep] = useState(1);
+  const [setupType, setSetupType] = useState<"cloud" | "local" | null>(null);
   const [configId, setConfigId] = useState<string | null>(null);
   const [watchFolder, setWatchFolder] = useState("auto-import");
   const [batchTemplate, setBatchTemplate] = useState("Scanned_{date}");
@@ -147,7 +148,10 @@ export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotF
 
             <div className="grid gap-4">
               <button
-                onClick={() => setCurrentStep(2)}
+                onClick={() => {
+                  setSetupType("cloud");
+                  setCurrentStep(2);
+                }}
                 className="text-left p-4 border-2 border-muted rounded-lg hover:border-primary transition-colors"
               >
                 <div className="flex items-start gap-4">
@@ -165,7 +169,10 @@ export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotF
               </button>
 
               <button
-                onClick={() => setCurrentStep(2)}
+                onClick={() => {
+                  setSetupType("local");
+                  setCurrentStep(2);
+                }}
                 className="text-left p-4 border-2 border-muted rounded-lg hover:border-primary transition-colors"
               >
                 <div className="flex items-start gap-4">
@@ -182,6 +189,50 @@ export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotF
                 </div>
               </button>
             </div>
+
+            {setupType === "local" && (
+              <Alert>
+                <AlertDescription>
+                  <div className="space-y-4">
+                    <p className="font-medium">📦 Download Sync Agent Files:</p>
+                    <div className="grid gap-2">
+                      <a
+                        href="/downloads/scanner-sync-agent.js"
+                        download
+                        className="flex items-center gap-2 text-sm text-primary hover:underline"
+                      >
+                        <Download className="h-4 w-4" />
+                        scanner-sync-agent.js
+                      </a>
+                      <a
+                        href="/downloads/.env.scanner-sync"
+                        download
+                        className="flex items-center gap-2 text-sm text-primary hover:underline"
+                      >
+                        <Download className="h-4 w-4" />
+                        .env.scanner-sync (configuration template)
+                      </a>
+                      <a
+                        href="/downloads/package.json"
+                        download
+                        className="flex items-center gap-2 text-sm text-primary hover:underline"
+                      >
+                        <Download className="h-4 w-4" />
+                        package.json
+                      </a>
+                      <a
+                        href="/downloads/SCANNER_SYNC_SETUP.md"
+                        download
+                        className="flex items-center gap-2 text-sm text-primary hover:underline"
+                      >
+                        <Download className="h-4 w-4" />
+                        SCANNER_SYNC_SETUP.md (full instructions)
+                      </a>
+                    </div>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
 
             <Alert>
               <AlertDescription className="text-sm">
@@ -303,7 +354,23 @@ export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotF
                     <Circle className="h-4 w-4 mt-0.5 text-muted-foreground" />
                     <div>
                       <p className="font-medium">For Local Scanner:</p>
-                      <p className="text-muted-foreground">Download and configure the sync agent (see SCANNER_SYNC_SETUP.md)</p>
+                      <p className="text-muted-foreground mb-2">Download and configure the sync agent</p>
+                      {setupType === "local" && (
+                        <div className="flex flex-wrap gap-2">
+                          <a href="/downloads/scanner-sync-agent.js" download>
+                            <Button size="sm" variant="outline">
+                              <Download className="h-3 w-3 mr-1" />
+                              Download Agent
+                            </Button>
+                          </a>
+                          <a href="/downloads/SCANNER_SYNC_SETUP.md" download>
+                            <Button size="sm" variant="outline">
+                              <Download className="h-3 w-3 mr-1" />
+                              Setup Guide
+                            </Button>
+                          </a>
+                        </div>
+                      )}
                     </div>
                   </div>
 
