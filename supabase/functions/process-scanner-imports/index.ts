@@ -156,6 +156,27 @@ Deno.serve(async (req) => {
 
             if (docError) throw docError;
 
+            // Create OCR job for this document
+            const { error: jobError } = await supabaseAdmin
+              .from('jobs')
+              .insert({
+                job_type: 'ocr_document',
+                user_id: config.created_by,
+                customer_id: config.customer_id,
+                priority: 'normal',
+                payload: {
+                  document_id: document.id,
+                  file_url: publicUrl,
+                  project_id: config.project_id,
+                  batch_id: currentBatchId
+                },
+                status: 'pending'
+              });
+
+            if (jobError) {
+              console.error(`Failed to create job for document ${document.id}:`, jobError);
+            }
+
             // Log successful import
             await supabaseAdmin.from('scanner_import_logs').insert({
               config_id: config.id,
