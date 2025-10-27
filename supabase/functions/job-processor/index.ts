@@ -194,7 +194,16 @@ async function processOcrDocument(job: Job, supabase: any) {
       
       const buf = await resp.arrayBuffer();
       const contentType = resp.headers.get('content-type') || 'application/octet-stream';
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      
+      // Convert ArrayBuffer to base64 in chunks to avoid stack overflow
+      const bytes = new Uint8Array(buf);
+      let binary = '';
+      const chunkSize = 0x8000; // 32KB chunks
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, Math.min(i + chunkSize, bytes.length));
+        binary += String.fromCharCode.apply(null, Array.from(chunk));
+      }
+      const base64 = btoa(binary);
       
       if (!contentType.includes('pdf')) {
         finalImageData = `data:${contentType};base64,${base64}`;
@@ -216,7 +225,7 @@ async function processOcrDocument(job: Job, supabase: any) {
       return { error: `OCR processing failed: ${ocrError.message}` };
     }
 
-    const { text: extractedText, metadata: extractedMetadata, documentType, confidence } = ocrResult;
+    const { text: extractedText, metadata: extractedMetadata, documentType, confidence, wordBoundingBoxes } = ocrResult;
 
     // Track cost (estimate based on document processing)
     const estimatedCost = 0.002; // Default estimate per document
@@ -232,12 +241,17 @@ async function processOcrDocument(job: Job, supabase: any) {
       });
     }
 
-    // Prepare document update with classification
+    // Prepare document update with classification and word boxes for highlighting
     const updateData: any = {
       extracted_text: extractedText,
       extracted_metadata: extractedMetadata || {},
       validation_status: 'pending'
     };
+    
+    // Save word bounding boxes if available (for sensitive language highlighting)
+    if (wordBoundingBoxes && Array.isArray(wordBoundingBoxes) && wordBoundingBoxes.length > 0) {
+      updateData.word_bounding_boxes = wordBoundingBoxes;
+    }
     
     // Add classification if available
     if (documentType) {
