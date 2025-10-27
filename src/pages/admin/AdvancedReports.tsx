@@ -57,7 +57,7 @@ export default function AdvancedReports() {
       );
 
       // Calculate accuracy data
-      const validatedDocs = documents?.filter(d => d.validation_status === 'approved') || [];
+      const validatedDocs = documents?.filter(d => d.validation_status === 'validated') || [];
       const avgConfidence = validatedDocs.reduce((sum, d) => sum + (d.confidence_score || 0), 0) / validatedDocs.length || 0;
       
       setAccuracyData([
@@ -69,12 +69,12 @@ export default function AdvancedReports() {
       // Fetch user activity from audit trail
       const { data: auditLogs } = await supabase
         .from('audit_trail')
-        .select('user_id, action_type, created_at, profiles(email)')
+        .select('user_id, action_type, created_at')
         .gte('created_at', startDate.toISOString());
 
       const userActivityMap = new Map<string, number>();
       auditLogs?.forEach(log => {
-        const user = log.profiles?.email || 'Unknown';
+        const user = log.user_id || 'Unknown';
         userActivityMap.set(user, (userActivityMap.get(user) || 0) + 1);
       });
       
@@ -153,7 +153,7 @@ export default function AdvancedReports() {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Advanced Reports & Analytics">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>

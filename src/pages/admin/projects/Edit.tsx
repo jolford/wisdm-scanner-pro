@@ -24,6 +24,7 @@ import { TableExtractionConfig, TableExtractionConfig as TableConfig } from '@/c
 import { ScannerAutoImportConfig } from '@/components/admin/ScannerAutoImportConfig';
 import { EmailImportConfig } from '@/components/admin/EmailImportConfig';
 import { ValidationLookupConfig, ValidationLookupConfig as VLConfig } from '@/components/admin/ValidationLookupConfig';
+import { BarcodeConfig } from '@/components/admin/BarcodeConfig';
 
 interface ExtractionField {
   name: string;
@@ -900,6 +901,15 @@ const EditProject = () => {
                   <p className="text-sm text-muted-foreground mt-2">
                     Monitor an email inbox for automatic document import.
                   </p>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="barcode" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="font-medium text-base">Barcode Recognition</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <BarcodeConfig projectId={id || ''} />
                 </AccordionContent>
               </AccordionItem>
 

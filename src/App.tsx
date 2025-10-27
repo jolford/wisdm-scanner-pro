@@ -29,6 +29,7 @@ import CostTracking from "./pages/admin/CostTracking";
 import Analytics from "./pages/admin/Analytics";
 import SystemViability from "./pages/admin/SystemViability";
 import ErrorLogs from "./pages/admin/ErrorLogs";
+import AdvancedReports from "./pages/admin/AdvancedReports";
 import DocumentReprocessing from "./pages/admin/DocumentReprocessing";
 import BusinessMetrics from "./pages/admin/BusinessMetrics";
 import WhiteLabel from "./pages/admin/WhiteLabel";
@@ -113,6 +114,7 @@ const App = () => (
             <Route path="/admin/cost-tracking" element={<CostTracking />} />
             <Route path="/admin/analytics" element={<Analytics />} />
             <Route path="/admin/viability" element={<SystemViability />} />
+            <Route path="/admin/advanced-reports" element={<AdvancedReports />} />
             <Route path="/admin/error-logs" element={<ErrorLogs />} />
             <Route path="/admin/reprocess" element={<DocumentReprocessing />} />
             <Route path="/admin/business-metrics" element={<BusinessMetrics />} />

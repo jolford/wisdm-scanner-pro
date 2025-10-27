@@ -67,14 +67,14 @@ export function AuditTrailViewer() {
       query = query.gte('created_at', dateThreshold.toISOString());
     }
 
-    const { data, error } = await query;
+      const { data, error } = await query;
 
     setLoading(false);
 
     if (error) {
       toast({ title: "Error loading audit logs", description: error.message, variant: "destructive" });
     } else {
-      setAuditLogs(data || []);
+      setAuditLogs(data as any || []);
     }
   };
 

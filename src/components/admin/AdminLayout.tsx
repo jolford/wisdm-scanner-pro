@@ -61,6 +61,7 @@ const menuItems = [
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Licenses', url: '/admin/licenses', icon: Key },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
+  { title: 'Advanced Reports', url: '/admin/advanced-reports', icon: TrendingUp },
   { title: 'Error Logs', url: '/admin/error-logs', icon: AlertCircle },
   { title: 'Reprocess Docs', url: '/admin/reprocess', icon: RefreshCw },
 ];
