@@ -10,6 +10,8 @@ import { toast } from 'sonner';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { safeErrorMessage } from '@/lib/error-handler';
 import { z } from 'zod';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Plus, Trash2 } from 'lucide-react';
 
 const customerSchema = z.object({
   company_name: z.string().min(1, 'Company name is required').max(200),
@@ -22,6 +24,7 @@ const EditCustomer = () => {
   const { loading, isAdmin } = useRequireAuth(true);
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
+  type Project = { id: string; name: string };
   const [formData, setFormData] = useState({
     company_name: '',
     contact_name: '',
@@ -30,10 +33,15 @@ const EditCustomer = () => {
   });
   const [saving, setSaving] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [availableProjects, setAvailableProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
+  const [loadingProjects, setLoadingProjects] = useState<boolean>(true);
 
   useEffect(() => {
     if (!loading && isAdmin && id) {
       loadCustomer();
+      loadProjectsForCustomer();
     }
   }, [loading, isAdmin, id]);
 
@@ -63,6 +71,55 @@ const EditCustomer = () => {
     }
   };
 
+  const loadProjectsForCustomer = async () => {
+    if (!id) return;
+    try {
+      setLoadingProjects(true);
+      const [{ data: custProjects }, { data: unassigned }] = await Promise.all([
+        supabase.from('projects').select('id, name').eq('customer_id', id).order('name'),
+        supabase.from('projects').select('id, name').is('customer_id', null).eq('is_active', true).order('name')
+      ]);
+      setProjects(custProjects || []);
+      setAvailableProjects(unassigned || []);
+    } catch (error: any) {
+      toast.error('Failed to load projects: ' + error.message);
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
+
+  const handleAssignProject = async () => {
+    if (!id || !selectedProjectId) {
+      toast.error('Please select a project to assign');
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ customer_id: id })
+        .eq('id', selectedProjectId);
+      if (error) throw error;
+      toast.success('Project assigned');
+      setSelectedProjectId('');
+      await loadProjectsForCustomer();
+    } catch (error: any) {
+      toast.error('Failed to assign project: ' + error.message);
+    }
+  };
+
+  const handleUnassignProject = async (projectId: string) => {
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ customer_id: null })
+        .eq('id', projectId);
+      if (error) throw error;
+      toast.success('Project unassigned');
+      await loadProjectsForCustomer();
+    } catch (error: any) {
+      toast.error('Failed to unassign project: ' + error.message);
+    }
+  };
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -176,6 +233,59 @@ const EditCustomer = () => {
             </Button>
           </div>
         </form>
+      </Card>
+
+      {/* Projects for this customer */}
+      <Card className="mt-8 max-w-2xl p-6 bg-[var(--gradient-card)] shadow-[var(--shadow-elegant)] border border-primary/10">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold">Projects for this customer</h2>
+            <p className="text-sm text-muted-foreground">Assign or remove projects linked to this customer</p>
+          </div>
+          <Button variant="outline" onClick={() => navigate(`/admin/projects/new?customer_id=${id}`)}>
+            <Plus className="h-4 w-4 mr-2" />
+            New Project
+          </Button>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+              <SelectTrigger className="w-80">
+                <SelectValue placeholder={loadingProjects ? 'Loading projects...' : 'Assign existing project...'} />
+              </SelectTrigger>
+              <SelectContent>
+                {availableProjects.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button onClick={handleAssignProject} disabled={!selectedProjectId}>
+              Assign
+            </Button>
+          </div>
+
+          <div className="border-t pt-4">
+            {loadingProjects ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+              </div>
+            ) : projects.length > 0 ? (
+              <div className="space-y-2">
+                {projects.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="font-medium">{p.name}</div>
+                    <Button variant="ghost" className="text-destructive" onClick={() => handleUnassignProject(p.id)}>
+                      <Trash2 className="h-4 w-4 mr-1" /> Unassign
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-sm text-muted-foreground py-4">No projects assigned to this customer yet.</div>
+            )}
+          </div>
+        </div>
       </Card>
     </AdminLayout>
   );

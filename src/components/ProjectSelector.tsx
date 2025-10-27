@@ -26,15 +26,30 @@ export const ProjectSelector = ({ selectedProjectId, onProjectSelect }: ProjectS
 
   const loadProjects = async () => {
     try {
+      // 1) Find the customers this user has access to
+      const { data: myCustomers, error: custErr } = await supabase
+        .from('user_customers')
+        .select('customer_id');
+
+      if (custErr) throw custErr;
+
+      const customerIds = (myCustomers || []).map((c: any) => c.customer_id);
+      if (!customerIds.length) {
+        setProjects([]);
+        return;
+      }
+
+      // 2) Get active projects for those customers
       const { data: allProjects, error: projectsError } = await supabase
         .from('projects')
         .select('id')
         .eq('is_active', true)
+        .in('customer_id', customerIds)
         .order('name');
 
       if (projectsError) throw projectsError;
 
-      // Use get_project_safe to fetch full project data securely
+      // 3) Use get_project_safe to fetch full project data securely
       if (allProjects && allProjects.length > 0) {
         const projectPromises = allProjects.map(p => 
           supabase.rpc('get_project_safe', { project_id: p.id }).single()
