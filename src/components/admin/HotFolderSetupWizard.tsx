@@ -88,16 +88,29 @@ export function HotFolderSetupWizard({ projectId, customerId, onComplete }: HotF
     }
   };
 
-  const handleDownload = (e: React.MouseEvent, filename: string) => {
+  const handleDownload = async (e: React.MouseEvent, filename: string) => {
     e.preventDefault();
     e.stopPropagation();
-    const link = document.createElement('a');
-    link.href = `/downloads/${filename}`;
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    toast.success(`Downloading ${filename}`);
+    
+    try {
+      const response = await fetch(`/downloads/${filename}`);
+      if (!response.ok) throw new Error('File not found');
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      toast.success(`Downloaded ${filename}`);
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error(`Failed to download ${filename}`);
+    }
   };
 
   const handleNext = async () => {
