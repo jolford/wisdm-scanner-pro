@@ -1018,8 +1018,10 @@ const EditProject = () => {
                     <p className="text-sm text-muted-foreground mt-2">
                       Configure automatic exports to run on a schedule.
                     </p>
-                  </AccordionContent>
-                </AccordionItem>
+                </AccordionContent>
+              </AccordionItem>
+              
+              <AccordionItem value="validation" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-base">Validation Lookups</span>
@@ -1074,7 +1076,7 @@ const EditProject = () => {
     </Card>
   </main>
 </div>
-);
+  );
 };
 
 export default EditProject;
