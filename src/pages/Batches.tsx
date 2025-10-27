@@ -18,6 +18,16 @@ import { BulkActionsToolbar } from '@/components/BulkActionsToolbar';
 import { safeInvokeEdgeFunction } from '@/lib/edge-function-helper';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Batch {
   id: string;
@@ -47,6 +57,8 @@ const Batches = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(preferences?.default_batch_view || 'grid');
+  const [showPauseDialog, setShowPauseDialog] = useState(false);
+  const [pausing, setPausing] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const filteredBatches = batches.filter(batch =>
@@ -171,6 +183,24 @@ const Batches = () => {
         description: 'Failed to delete batch',
         variant: 'destructive',
       });
+    }
+  };
+
+  const handlePauseImports = async () => {
+    try {
+      setPausing(true);
+      const { data, error } = await safeInvokeEdgeFunction('toggle-scanner-imports', {
+        body: { active: false },
+      });
+      if (error || (data && (data as any).error)) throw new Error(error?.message || (data as any)?.error || 'Pause failed');
+
+      toast({ title: 'Imports paused', description: 'All hot-folder and email imports have been paused.' });
+      setShowPauseDialog(false);
+    } catch (err) {
+      console.error('Pause imports failed', err);
+      toast({ title: 'Error', description: 'Failed to pause imports', variant: 'destructive' });
+    } finally {
+      setPausing(false);
     }
   };
 
@@ -302,6 +332,13 @@ const Batches = () => {
               </div>
             </div>
             <div className="flex gap-2">
+              <Button
+                variant="destructive"
+                onClick={() => setShowPauseDialog(true)}
+                title="Temporarily stop all scanner/email imports"
+              >
+                Pause Imports
+              </Button>
               <Button 
                 variant="outline" 
                 onClick={() => {
@@ -331,6 +368,24 @@ const Batches = () => {
 
       {/* Main Content */}
       <main className="container mx-auto px-4 py-12">
+        {/* Pause Imports Dialog */}
+        <AlertDialog open={showPauseDialog} onOpenChange={setShowPauseDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Pause all imports?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will temporarily disable all hot-folder and email imports across projects. You can resume later from the admin tools.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={pausing}>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handlePauseImports} disabled={pausing} className="bg-destructive hover:bg-destructive/90">
+                {pausing ? 'Pausing...' : 'Pause Imports'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         <div className="mb-6 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4 flex-1">
             {filteredBatches.length > 0 && (
