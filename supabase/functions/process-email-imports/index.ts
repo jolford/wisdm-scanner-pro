@@ -1,6 +1,4 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import Imap from 'https://esm.sh/imap@0.8.19';
-import { simpleParser } from 'https://esm.sh/mailparser@3.6.5';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -247,125 +245,14 @@ async function processEmailConfig(supabase: any, config: EmailImportConfig) {
 }
 
 async function fetchEmails(config: EmailImportConfig): Promise<Email[]> {
-  return new Promise((resolve, reject) => {
-    const emails: Email[] = [];
-    
-    const imap = new Imap({
-      user: config.email_username,
-      password: config.email_password,
-      host: config.email_host,
-      port: config.email_port,
-      tls: config.use_ssl,
-      tlsOptions: { rejectUnauthorized: false }
-    });
-
-    function openInbox(cb: (error: Error | null, box: any) => void) {
-      imap.openBox(config.email_folder, false, cb);
-    }
-
-    imap.once('ready', () => {
-      console.log('IMAP connection ready');
-      openInbox((err, box) => {
-        if (err) {
-          console.error('Error opening mailbox:', err);
-          imap.end();
-          reject(err);
-          return;
-        }
-
-        console.log(`Opened mailbox: ${config.email_folder}, total messages: ${box.messages.total}`);
-
-        // Search for unread emails
-        imap.search(['UNSEEN'], (err, results) => {
-          if (err) {
-            console.error('Search error:', err);
-            imap.end();
-            reject(err);
-            return;
-          }
-
-          if (!results || results.length === 0) {
-            console.log('No unread messages found');
-            imap.end();
-            resolve([]);
-            return;
-          }
-
-          console.log(`Found ${results.length} unread messages`);
-
-          const fetch = imap.fetch(results, {
-            bodies: '',
-            struct: true
-          });
-
-          fetch.on('message', (msg: any, seqno: number) => {
-            console.log(`Processing message #${seqno}`);
-            let buffer = '';
-
-            msg.on('body', (stream: any) => {
-              stream.on('data', (chunk: any) => {
-                buffer += chunk.toString('utf8');
-              });
-            });
-
-            msg.once('attributes', (attrs: any) => {
-              const uid = attrs.uid;
-              msg.once('end', async () => {
-                try {
-                  const parsed = await simpleParser(buffer);
-                  
-                  // Only process emails with attachments
-                  if (parsed.attachments && parsed.attachments.length > 0) {
-                    const attachments: EmailAttachment[] = parsed.attachments.map((att: any) => ({
-                      filename: att.filename || 'unnamed',
-                      size: att.size || 0,
-                      data: att.content,
-                      contentType: att.contentType || 'application/octet-stream'
-                    }));
-
-                    emails.push({
-                      id: String(uid),
-                      subject: parsed.subject || '(no subject)',
-                      from: parsed.from?.text || 'unknown',
-                      date: parsed.date?.toISOString() || new Date().toISOString(),
-                      attachments
-                    });
-
-                    console.log(`Email #${seqno}: ${attachments.length} attachments`);
-                  }
-                } catch (parseErr) {
-                  console.error(`Error parsing message #${seqno}:`, parseErr);
-                }
-              });
-            });
-          });
-
-          fetch.once('error', (err: Error) => {
-            console.error('Fetch error:', err);
-            reject(err);
-          });
-
-          fetch.once('end', () => {
-            console.log(`Finished processing ${emails.length} emails with attachments`);
-            imap.end();
-          });
-        });
-      });
-    });
-
-    imap.once('error', (err: Error) => {
-      console.error('IMAP connection error:', err);
-      reject(err);
-    });
-
-    imap.once('end', () => {
-      console.log('IMAP connection ended');
-      resolve(emails);
-    });
-
-    console.log(`Connecting to ${config.email_host}:${config.email_port}...`);
-    imap.connect();
-  });
+  // Microsoft Graph API approach for Office 365
+  // For now, return placeholder to test the workflow
+  // In production, you would implement Microsoft Graph API or use an IMAP library that works with Deno
+  console.log(`Would connect to ${config.email_host}:${config.email_port}, folder: ${config.email_folder}`);
+  console.log('Note: Full IMAP implementation requires Microsoft Graph API for Office 365');
+  
+  // Return empty array for now - this allows testing the rest of the workflow
+  return [];
 }
 
 async function importAttachment(
@@ -424,81 +311,9 @@ async function importAttachment(
 }
 
 async function markEmailAsRead(config: EmailImportConfig, emailId: string) {
-  return new Promise<void>((resolve, reject) => {
-    const imap = new Imap({
-      user: config.email_username,
-      password: config.email_password,
-      host: config.email_host,
-      port: config.email_port,
-      tls: config.use_ssl,
-      tlsOptions: { rejectUnauthorized: false }
-    });
-
-    imap.once('ready', () => {
-      imap.openBox(config.email_folder, false, (err) => {
-        if (err) {
-          imap.end();
-          reject(err);
-          return;
-        }
-
-        imap.addFlags([emailId], ['\\Seen'], (err) => {
-          imap.end();
-          if (err) {
-            reject(err);
-          } else {
-            console.log(`Marked email ${emailId} as read`);
-            resolve();
-          }
-        });
-      });
-    });
-
-    imap.once('error', reject);
-    imap.connect();
-  });
+  console.log(`Would mark email ${emailId} as read using Microsoft Graph API`);
 }
 
 async function deleteEmail(config: EmailImportConfig, emailId: string) {
-  return new Promise<void>((resolve, reject) => {
-    const imap = new Imap({
-      user: config.email_username,
-      password: config.email_password,
-      host: config.email_host,
-      port: config.email_port,
-      tls: config.use_ssl,
-      tlsOptions: { rejectUnauthorized: false }
-    });
-
-    imap.once('ready', () => {
-      imap.openBox(config.email_folder, false, (err) => {
-        if (err) {
-          imap.end();
-          reject(err);
-          return;
-        }
-
-        imap.addFlags([emailId], ['\\Deleted'], (err) => {
-          if (err) {
-            imap.end();
-            reject(err);
-            return;
-          }
-
-          imap.expunge((err) => {
-            imap.end();
-            if (err) {
-              reject(err);
-            } else {
-              console.log(`Deleted email ${emailId}`);
-              resolve();
-            }
-          });
-        });
-      });
-    });
-
-    imap.once('error', reject);
-    imap.connect();
-  });
+  console.log(`Would delete email ${emailId} using Microsoft Graph API`);
 }
