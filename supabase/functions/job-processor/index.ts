@@ -170,21 +170,33 @@ async function processOcrDocument(job: Job, supabase: any) {
   const { imageData, extractionFields, projectId, batchId, documentId, isPdf, textData, fileUrl, file_url } = job.payload;
 
   try {
-    // If no image/text data but a file URL is provided, download and convert to data URL
+    // If no image/text data but a file URL is provided, download using signed URL
     let finalImageData = imageData;
     let finalTextData = textData;
 
-    const effectiveFileUrl = fileUrl || file_url; // support both keys
+    const effectiveFileUrl = fileUrl || file_url;
     if (!finalImageData && !finalTextData && effectiveFileUrl) {
-      const resp = await fetch(effectiveFileUrl);
+      // Extract bucket and path from the URL
+      const urlMatch = effectiveFileUrl.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+      if (!urlMatch) throw new Error('Invalid storage URL format');
+      
+      const [, bucket, filePath] = urlMatch;
+      
+      // Use signed URL for authenticated download
+      const { data: signedData, error: signError } = await supabase.storage
+        .from(bucket)
+        .createSignedUrl(filePath, 300); // 5 min expiry
+      
+      if (signError) throw new Error(`Failed to create signed URL: ${signError.message}`);
+      
+      const resp = await fetch(signedData.signedUrl);
       if (!resp.ok) throw new Error(`Failed to download file: ${resp.status}`);
+      
       const buf = await resp.arrayBuffer();
       const contentType = resp.headers.get('content-type') || 'application/octet-stream';
       const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
-      // Assume non-PDF is image; for PDFs, keep as fileUrl and let OCR handle text-only path if needed
-      if (contentType.includes('pdf')) {
-        // For PDFs, we can't generate textData here; pass isPdf true and leave imageData null
-      } else {
+      
+      if (!contentType.includes('pdf')) {
         finalImageData = `data:${contentType};base64,${base64}`;
       }
     }
@@ -333,15 +345,17 @@ async function updateMetrics(supabase: any, job: Job, failed: boolean) {
     ? Date.now() - new Date(job.started_at).getTime()
     : 0;
 
-  await supabase.rpc('upsert_job_metric', {
-    _customer_id: job.customer_id,
-    _job_type: job.job_type,
-    _metric_date: metricDate,
-    _metric_hour: metricHour,
-    _completed: !failed,
-    _failed: failed,
-    _processing_time_ms: processingTime,
-  }).catch((err: any) => {
+  try {
+    await supabase.rpc('upsert_job_metric', {
+      _customer_id: job.customer_id,
+      _job_type: job.job_type,
+      _metric_date: metricDate,
+      _metric_hour: metricHour,
+      _completed: !failed,
+      _failed: failed,
+      _processing_time_ms: processingTime,
+    });
+  } catch (err: any) {
     console.error('Failed to update metrics:', err);
-  });
+  }
 }
