@@ -383,6 +383,151 @@ export type Database = {
           },
         ]
       }
+      email_import_configs: {
+        Row: {
+          auto_create_batch: boolean | null
+          batch_name_template: string | null
+          created_at: string | null
+          created_by: string
+          customer_id: string | null
+          delete_after_import: boolean | null
+          email_host: string
+          email_password: string
+          email_port: number
+          email_username: string
+          id: string
+          is_active: boolean | null
+          last_check_at: string | null
+          last_error: string | null
+          mark_as_read: boolean | null
+          project_id: string
+          updated_at: string | null
+          use_ssl: boolean | null
+        }
+        Insert: {
+          auto_create_batch?: boolean | null
+          batch_name_template?: string | null
+          created_at?: string | null
+          created_by: string
+          customer_id?: string | null
+          delete_after_import?: boolean | null
+          email_host: string
+          email_password: string
+          email_port?: number
+          email_username: string
+          id?: string
+          is_active?: boolean | null
+          last_check_at?: string | null
+          last_error?: string | null
+          mark_as_read?: boolean | null
+          project_id: string
+          updated_at?: string | null
+          use_ssl?: boolean | null
+        }
+        Update: {
+          auto_create_batch?: boolean | null
+          batch_name_template?: string | null
+          created_at?: string | null
+          created_by?: string
+          customer_id?: string | null
+          delete_after_import?: boolean | null
+          email_host?: string
+          email_password?: string
+          email_port?: number
+          email_username?: string
+          id?: string
+          is_active?: boolean | null
+          last_check_at?: string | null
+          last_error?: string | null
+          mark_as_read?: boolean | null
+          project_id?: string
+          updated_at?: string | null
+          use_ssl?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_import_configs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_import_configs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_import_logs: {
+        Row: {
+          batch_id: string | null
+          config_id: string | null
+          document_id: string | null
+          email_date: string | null
+          email_from: string
+          email_subject: string
+          error_message: string | null
+          file_name: string
+          file_size: number | null
+          id: string
+          imported_at: string | null
+          status: string
+        }
+        Insert: {
+          batch_id?: string | null
+          config_id?: string | null
+          document_id?: string | null
+          email_date?: string | null
+          email_from: string
+          email_subject: string
+          error_message?: string | null
+          file_name: string
+          file_size?: number | null
+          id?: string
+          imported_at?: string | null
+          status: string
+        }
+        Update: {
+          batch_id?: string | null
+          config_id?: string | null
+          document_id?: string | null
+          email_date?: string | null
+          email_from?: string
+          email_subject?: string
+          error_message?: string | null
+          file_name?: string
+          file_size?: number | null
+          id?: string
+          imported_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_import_logs_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_import_logs_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "email_import_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_import_logs_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       error_logs: {
         Row: {
           component_name: string | null

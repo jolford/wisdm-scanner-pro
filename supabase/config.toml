@@ -3,6 +3,9 @@ project_id = "pbyerakkryuflamlmpvm"
 [functions.ai-assistant]
 verify_jwt = true
 
+[functions.process-email-imports]
+verify_jwt = false
+
 [functions.disable-user-mfa]
 verify_jwt = false
 
