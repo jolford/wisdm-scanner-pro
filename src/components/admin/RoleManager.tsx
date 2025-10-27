@@ -29,7 +29,7 @@ export function RoleManager() {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await safeInvokeEdgeFunction('admin-list-users');
+      const { data, error } = await safeInvokeEdgeFunction('admin-list-users-v2');
       
       if (error) {
         console.error('Error fetching users:', error);
@@ -53,7 +53,7 @@ export function RoleManager() {
     try {
       setUpdating(userId);
       
-      const { data, error } = await safeInvokeEdgeFunction('admin-set-role-metadata', {
+      const { data, error } = await safeInvokeEdgeFunction('admin-set-role-metadata-v2', {
         body: { targetUserId: userId, role }
       });
       

@@ -51,3 +51,9 @@ verify_jwt = true
 
 [functions.export-to-filebound]
 verify_jwt = true
+
+[functions.admin-list-users-v2]
+verify_jwt = true
+
+[functions.admin-set-role-metadata-v2]
+verify_jwt = true
