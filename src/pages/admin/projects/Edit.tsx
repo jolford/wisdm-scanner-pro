@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Trash2, ArrowLeft, ArrowUp, ArrowDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -401,7 +402,7 @@ const EditProject = () => {
               />
             </div>
 
-            <div className="flex items-center space-x-2 p-4 border border-border rounded-lg bg-muted/30">
+            <div className="flex items-center space-x-2 p-4 border border-border rounded-lg bg-muted/30 mb-6">
               <Checkbox
                 id="check-scanning"
                 checked={enableCheckScanning}
@@ -417,7 +418,17 @@ const EditProject = () => {
               </div>
             </div>
 
-            <Accordion type="multiple" defaultValue={[]} className="space-y-4">
+            <Tabs defaultValue="basic" className="space-y-6">
+              <TabsList className="grid w-full grid-cols-4 bg-muted/50">
+                <TabsTrigger value="basic">Basic Settings</TabsTrigger>
+                <TabsTrigger value="import">Import & Capture</TabsTrigger>
+                <TabsTrigger value="processing">Processing & AI</TabsTrigger>
+                <TabsTrigger value="export">Export & Integration</TabsTrigger>
+              </TabsList>
+
+              {/* Basic Settings Tab */}
+              <TabsContent value="basic" className="space-y-4">
+                <Accordion type="multiple" defaultValue={[]} className="space-y-4">
               <AccordionItem value="fields" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
                   <span className="font-medium text-base">Extraction Fields</span>
@@ -855,40 +866,26 @@ const EditProject = () => {
                   </p>
                 </AccordionContent>
               </AccordionItem>
+            </Accordion>
+            </TabsContent>
 
-              <AccordionItem value="scheduled" className="border rounded-lg px-4 bg-muted/20">
-                <AccordionTrigger className="hover:no-underline">
-                  <span className="font-medium text-base">Scheduled Exports</span>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <Card className="p-4 bg-muted/50">
-                    <ScheduledExportConfig
+            {/* Import & Capture Tab */}
+            <TabsContent value="import" className="space-y-4">
+              <Accordion type="multiple" defaultValue={[]} className="space-y-4">
+                <AccordionItem value="hot-folder-wizard" className="border rounded-lg px-4 bg-muted/20">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="font-medium text-base">🚀 Hot Folder Setup Wizard</span>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <HotFolderSetupWizard
                       projectId={id || ''}
-                      availableExportTypes={Object.keys(exportConfig).filter(
-                        type => !['filebound', 'docmgt'].includes(type)
-                      )}
+                      customerId={customerId}
                     />
-                  </Card>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Configure automatic exports to run on a schedule.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="hot-folder-wizard" className="border rounded-lg px-4 bg-muted/20">
-                <AccordionTrigger className="hover:no-underline">
-                  <span className="font-medium text-base">🚀 Hot Folder Setup Wizard</span>
-                </AccordionTrigger>
-                <AccordionContent>
-                  <HotFolderSetupWizard
-                    projectId={id || ''}
-                    customerId={customerId}
-                  />
-                  <p className="text-sm text-muted-foreground mt-2">
-                    Step-by-step wizard to set up automatic document imports from scanners.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Step-by-step wizard to set up automatic document imports from scanners.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
 
               <AccordionItem value="scanner" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
@@ -919,8 +916,13 @@ const EditProject = () => {
                   </p>
                 </AccordionContent>
               </AccordionItem>
+            </Accordion>
+            </TabsContent>
 
-              <AccordionItem value="barcode" className="border rounded-lg px-4 bg-muted/20">
+            {/* Processing & AI Tab */}
+            <TabsContent value="processing" className="space-y-4">
+              <Accordion type="multiple" defaultValue={[]} className="space-y-4">
+                <AccordionItem value="barcode" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
                   <span className="font-medium text-base">Barcode Recognition</span>
                 </AccordionTrigger>
@@ -994,8 +996,30 @@ const EditProject = () => {
                   </p>
                 </AccordionContent>
               </AccordionItem>
+            </Accordion>
+            </TabsContent>
 
-              <AccordionItem value="validation" className="border rounded-lg px-4 bg-muted/20">
+            {/* Export & Integration Tab */}
+            <TabsContent value="export" className="space-y-4">
+              <Accordion type="multiple" defaultValue={[]} className="space-y-4">
+                <AccordionItem value="scheduled" className="border rounded-lg px-4 bg-muted/20">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="font-medium text-base">Scheduled Exports</span>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <Card className="p-4 bg-muted/50">
+                      <ScheduledExportConfig
+                        projectId={id || ''}
+                        availableExportTypes={Object.keys(exportConfig).filter(
+                          type => !['filebound', 'docmgt'].includes(type)
+                        )}
+                      />
+                    </Card>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Configure automatic exports to run on a schedule.
+                    </p>
+                  </AccordionContent>
+                </AccordionItem>
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-base">Validation Lookups</span>
@@ -1035,20 +1059,22 @@ const EditProject = () => {
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
+          </TabsContent>
+        </Tabs>
 
-            <div className="flex gap-3 pt-4">
-              <Button type="submit" disabled={saving} className="bg-gradient-to-r from-primary to-accent">
-                {saving ? 'Saving...' : 'Save Changes'}
-              </Button>
-              <Button type="button" variant="outline" onClick={() => navigate('/admin/projects')}>
-                Cancel
-              </Button>
-            </div>
-          </form>
-        </Card>
-      </main>
-    </div>
-  );
+        <div className="flex gap-3 pt-4">
+          <Button type="submit" disabled={saving} className="bg-gradient-to-r from-primary to-accent">
+            {saving ? 'Saving...' : 'Save Changes'}
+          </Button>
+          <Button type="button" variant="outline" onClick={() => navigate('/admin/projects')}>
+            Cancel
+          </Button>
+        </div>
+      </form>
+    </Card>
+  </main>
+</div>
+);
 };
 
 export default EditProject;
