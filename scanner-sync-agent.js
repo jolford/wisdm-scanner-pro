@@ -13,7 +13,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import chokidar from 'chokidar';
-import { readFileSync } from 'fs';
+import { readFileSync, unlinkSync } from 'fs';
 import { basename, extname } from 'path';
 import { config } from 'dotenv';
 
