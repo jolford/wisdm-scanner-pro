@@ -221,25 +221,32 @@ const Index = () => {
           ? selectedProject?.metadata?.table_extraction_config?.fields || []
           : [];
         
-        const { data, error } = await supabase.functions.invoke('ocr-scan', {
-          body: {
+        // Create document first with pending status
+        const doc = await saveDocument(file.name, 'application/pdf', publicUrl, '', {}, []);
+        if (!doc) throw new Error('Failed to create document');
+
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) throw new Error('User not authenticated');
+
+        // Create job for OCR processing
+        const { error: jobError } = await supabase.from('jobs').insert([{
+          job_type: 'ocr_document',
+          customer_id: selectedProject?.customer_id || null,
+          user_id: user.id,
+          priority: 'normal',
+          payload: {
+            documentId: doc.id,
             textData: extractedPdfText,
             isPdf: true,
             extractionFields: selectedProject?.extraction_fields || [],
             tableExtractionFields: tableFields,
             enableCheckScanning: selectedProject?.enable_check_scanning || false,
-            customerId: selectedProject?.customer_id
           },
-        });
+        }]);
 
-        if (error) throw error;
-
-        setExtractedText(data.text);
-        setExtractedMetadata(data.metadata || {});
-        setBoundingBoxes(data.boundingBoxes || {});
-        setWordBoundingBoxes(data.wordBoundingBoxes || []);
-        await saveDocument(file.name, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || []);
-        toast({ title: 'PDF Processed', description: 'Extracted text and fields from PDF.' });
+        if (jobError) throw jobError;
+        toast({ title: 'PDF Queued', description: 'Processing in background...' });
       } else {
         // Fallback: render first PDF page to image and run OCR
         try {
@@ -264,25 +271,34 @@ const Index = () => {
             ? selectedProject?.metadata?.table_extraction_config?.fields || []
             : [];
 
-          const { data, error } = await supabase.functions.invoke('ocr-scan', {
-            body: {
+          setCurrentImage(dataUrl);
+
+          // Create document first with pending status
+          const doc = await saveDocument(file.name, 'application/pdf', publicUrl, '', {}, []);
+          if (!doc) throw new Error('Failed to create document');
+
+          // Get current user
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) throw new Error('User not authenticated');
+
+          // Create job for OCR processing
+          const { error: jobError } = await supabase.from('jobs').insert([{
+            job_type: 'ocr_document',
+            customer_id: selectedProject?.customer_id || null,
+            user_id: user.id,
+            priority: 'normal',
+            payload: {
+              documentId: doc.id,
               imageData: dataUrl,
               isPdf: false,
               extractionFields: selectedProject?.extraction_fields || [],
               tableExtractionFields: tableFields,
               enableCheckScanning: selectedProject?.enable_check_scanning || false,
-              customerId: selectedProject?.customer_id
             },
-          });
-          if (error) throw error;
+          }]);
 
-          setCurrentImage(dataUrl);
-          setExtractedText(data.text);
-          setExtractedMetadata(data.metadata || {});
-          setBoundingBoxes(data.boundingBoxes || {});
-          setWordBoundingBoxes(data.wordBoundingBoxes || []);
-          await saveDocument(file.name, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || []);
-          toast({ title: 'PDF Processed via OCR', description: 'Extracted text from rendered PDF page.' });
+          if (jobError) throw jobError;
+          toast({ title: 'PDF Queued', description: 'Processing in background...' });
         } catch (fallbackErr: any) {
           console.error('PDF image OCR fallback failed:', fallbackErr);
           toast({
@@ -325,33 +341,35 @@ const Index = () => {
         ? selectedProject?.metadata?.table_extraction_config?.fields || []
         : [];
       
-      const { data, error } = await supabase.functions.invoke('ocr-scan', {
-        body: { 
+      // Create document first with pending status
+      const doc = await saveDocument(fileName, 'image', imageUrl, '', {}, []);
+      if (!doc) throw new Error('Failed to create document');
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      // Create job for OCR processing
+      const { error: jobError } = await supabase.from('jobs').insert([{
+        job_type: 'ocr_document',
+        customer_id: selectedProject?.customer_id || null,
+        user_id: user.id,
+        priority: 'normal',
+        payload: {
+          documentId: doc.id,
           imageData: imageUrl,
           isPdf: false,
           extractionFields: selectedProject?.extraction_fields || [],
           tableExtractionFields: tableFields,
           enableCheckScanning: selectedProject?.enable_check_scanning || false,
-          customerId: selectedProject?.customer_id
         },
-      });
+      }]);
 
-      if (error) {
-        console.error('OCR error:', error);
-        throw error;
-      }
-
-      setExtractedText(data.text);
-      setExtractedMetadata(data.metadata || {});
-      setBoundingBoxes(data.boundingBoxes || {});
-      setWordBoundingBoxes(data.wordBoundingBoxes || []);
-      
-      // Save document with line items
-      await saveDocument(fileName, 'image', imageUrl, data.text, data.metadata || {}, data.lineItems || []);
+      if (jobError) throw jobError;
 
       toast({
-        title: 'Scan Complete',
-        description: 'Text and metadata extracted successfully.',
+        title: 'Scan Queued',
+        description: 'Processing in background...',
       });
     } catch (error: any) {
       console.error('Error processing scan:', error);
