@@ -2,16 +2,20 @@ import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
 import { useKeyboardShortcuts, GLOBAL_SHORTCUTS } from '@/hooks/use-keyboard-shortcuts';
+import { useBulkSelection } from '@/hooks/use-bulk-selection';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { ArrowLeft, FolderOpen, Search, Calendar, User, FileText, Trash2, ArrowRight, Download, HelpCircle, LayoutGrid, List, CheckCircle2, Clock, AlertCircle, Package } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserPreferences } from '@/hooks/use-user-preferences';
+import { BulkActionsToolbar } from '@/components/BulkActionsToolbar';
+import { safeInvokeEdgeFunction } from '@/lib/edge-function-helper';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
@@ -45,6 +49,25 @@ const Batches = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(preferences?.default_batch_view || 'grid');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  const filteredBatches = batches.filter(batch =>
+    batch.batch_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    batch.projects?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    batch.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    batch.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const {
+    selectedIds,
+    selectedItems,
+    toggleSelection,
+    toggleAll,
+    clearSelection,
+    isSelected,
+    isAllSelected,
+    isIndeterminate,
+    selectedCount,
+  } = useBulkSelection(filteredBatches);
+
   // Page-specific keyboard shortcuts
   useKeyboardShortcuts({
     shortcuts: [
@@ -55,6 +78,14 @@ const Batches = () => {
       {
         ...GLOBAL_SHORTCUTS.NEW,
         handler: () => navigate('/admin/batches/new'),
+      },
+      {
+        ...GLOBAL_SHORTCUTS.ESCAPE,
+        handler: () => {
+          if (selectedCount > 0) {
+            clearSelection();
+          }
+        },
       },
     ],
   });
@@ -122,17 +153,7 @@ const Batches = () => {
     }
 
     try {
-      // First, delete any scanner import logs that reference this batch
-      const { error: logsError } = await supabase
-        .from('scanner_import_logs')
-        .delete()
-        .eq('batch_id', batchId);
-
-      if (logsError) throw logsError;
-
-      // Then delete the batch
-      // Call secured backend function to delete with cascading
-      const { data, error } = await supabase.functions.invoke('delete-batch-safe', {
+      const { data, error } = await safeInvokeEdgeFunction('delete-batch-safe', {
         body: { batchId },
       });
       if (error || (data && data.error)) throw new Error(error?.message || data?.error || 'Delete failed');
@@ -148,6 +169,42 @@ const Batches = () => {
       toast({
         title: 'Error',
         description: 'Failed to delete batch',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    try {
+      const deletePromises = Array.from(selectedIds).map(batchId =>
+        safeInvokeEdgeFunction('delete-batch-safe', {
+          body: { batchId },
+        })
+      );
+
+      const results = await Promise.allSettled(deletePromises);
+      const failures = results.filter(r => r.status === 'rejected').length;
+
+      if (failures === 0) {
+        toast({
+          title: 'Success',
+          description: `${selectedIds.size} batches deleted successfully`,
+        });
+      } else {
+        toast({
+          title: 'Partial Success',
+          description: `${selectedIds.size - failures} batches deleted, ${failures} failed`,
+          variant: 'destructive',
+        });
+      }
+
+      clearSelection();
+      loadBatches();
+    } catch (error) {
+      console.error('Error bulk deleting batches:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete batches',
         variant: 'destructive',
       });
     }
@@ -223,13 +280,6 @@ const Batches = () => {
     return Math.round((batch.validated_documents / batch.total_documents) * 100);
   };
 
-  const filteredBatches = batches.filter(batch =>
-    batch.batch_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    batch.projects?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    batch.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    batch.profiles?.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -282,15 +332,26 @@ const Batches = () => {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-12">
         <div className="mb-6 flex items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              ref={searchInputRef}
-              placeholder="Search batches... (Press / to focus)"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
+          <div className="flex items-center gap-4 flex-1">
+            {filteredBatches.length > 0 && (
+              <Checkbox
+                checked={isAllSelected}
+                onCheckedChange={toggleAll}
+                aria-label="Select all batches"
+                className="data-[state=indeterminate]:bg-primary data-[state=indeterminate]:text-primary-foreground"
+                {...(isIndeterminate ? { 'data-state': 'indeterminate' as any } : {})}
+              />
+            )}
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                ref={searchInputRef}
+                placeholder="Search batches... (Press / to focus)"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
+            </div>
           </div>
           <ToggleGroup type="single" value={viewMode} onValueChange={(value) => value && setViewMode(value as 'grid' | 'list')}>
             <ToggleGroupItem value="grid" aria-label="Grid view">
@@ -323,12 +384,26 @@ const Batches = () => {
               return (
                 <Card 
                   key={batch.id} 
-                  className={`group relative overflow-hidden border-l-4 ${getStatusBorderColor(batch.status)} bg-gradient-to-br from-card via-card to-card/80 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-1`}
+                  className={`group relative overflow-hidden border-l-4 ${getStatusBorderColor(batch.status)} ${
+                    isSelected(batch.id) ? 'ring-2 ring-primary' : ''
+                  } bg-gradient-to-br from-card via-card to-card/80 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-1`}
                   onClick={() => navigate(`/batches/${batch.id}`)}
                 >
                   <div className="p-6">
+                    {/* Selection Checkbox */}
+                    <div 
+                      className="absolute top-3 left-3 z-10"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Checkbox
+                        checked={isSelected(batch.id)}
+                        onCheckedChange={() => toggleSelection(batch.id)}
+                        aria-label={`Select ${batch.batch_name}`}
+                      />
+                    </div>
+
                     {/* Header */}
-                    <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-start justify-between mb-4 pl-8">
                       <div className="flex-1 pr-2">
                         <h3 className="text-lg font-bold mb-2 flex items-center gap-2 group-hover:text-primary transition-colors">
                           <FolderOpen className="h-5 w-5 text-primary" />
@@ -413,12 +488,21 @@ const Batches = () => {
               return (
                 <Card 
                   key={batch.id} 
-                  className={`group border-l-4 ${getStatusBorderColor(batch.status)} bg-gradient-to-r from-card via-card to-card/80 shadow-sm hover:shadow-lg transition-all cursor-pointer`}
+                  className={`group border-l-4 ${getStatusBorderColor(batch.status)} ${
+                    isSelected(batch.id) ? 'ring-2 ring-primary' : ''
+                  } bg-gradient-to-r from-card via-card to-card/80 shadow-sm hover:shadow-lg transition-all cursor-pointer`}
                   onClick={() => navigate(`/batches/${batch.id}`)}
                 >
                   <div className="p-4">
                     <div className="flex items-center justify-between gap-6">
                       <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div onClick={(e) => e.stopPropagation()}>
+                          <Checkbox
+                            checked={isSelected(batch.id)}
+                            onCheckedChange={() => toggleSelection(batch.id)}
+                            aria-label={`Select ${batch.batch_name}`}
+                          />
+                        </div>
                         <FolderOpen className="h-5 w-5 text-primary shrink-0" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-3 mb-1">
@@ -496,6 +580,12 @@ const Batches = () => {
             })}
           </div>
         )}
+
+        <BulkActionsToolbar
+          selectedCount={selectedCount}
+          onClearSelection={clearSelection}
+          onBulkDelete={handleBulkDelete}
+        />
       </main>
     </div>
   );
