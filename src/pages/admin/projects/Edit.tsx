@@ -25,6 +25,7 @@ import { ScannerAutoImportConfig } from '@/components/admin/ScannerAutoImportCon
 import { EmailImportConfig } from '@/components/admin/EmailImportConfig';
 import { ValidationLookupConfig, ValidationLookupConfig as VLConfig } from '@/components/admin/ValidationLookupConfig';
 import { BarcodeConfig } from '@/components/admin/BarcodeConfig';
+import { HotFolderSetupWizard } from '@/components/admin/HotFolderSetupWizard';
 
 interface ExtractionField {
   name: string;
@@ -874,9 +875,24 @@ const EditProject = () => {
                 </AccordionContent>
               </AccordionItem>
 
+              <AccordionItem value="hot-folder-wizard" className="border rounded-lg px-4 bg-muted/20">
+                <AccordionTrigger className="hover:no-underline">
+                  <span className="font-medium text-base">🚀 Hot Folder Setup Wizard</span>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <HotFolderSetupWizard
+                    projectId={id || ''}
+                    customerId={customerId}
+                  />
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Step-by-step wizard to set up automatic document imports from scanners.
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+
               <AccordionItem value="scanner" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
-                  <span className="font-medium text-base">Scanner Auto-Import</span>
+                  <span className="font-medium text-base">Scanner Auto-Import (Advanced)</span>
                 </AccordionTrigger>
                 <AccordionContent>
                   <ScannerAutoImportConfig
@@ -884,7 +900,7 @@ const EditProject = () => {
                     customerId={customerId}
                   />
                   <p className="text-sm text-muted-foreground mt-2">
-                    Enable automatic import from network scanners.
+                    Advanced configuration for automatic import from network scanners.
                   </p>
                 </AccordionContent>
               </AccordionItem>
