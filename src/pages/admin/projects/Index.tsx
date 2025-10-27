@@ -5,9 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, ArrowLeft, FolderOpen, Edit, Search, SortAsc, FileText } from 'lucide-react';
+import { Plus, ArrowLeft, FolderOpen, Edit, Search, SortAsc, FileText, LayoutGrid, Table as TableIcon, List } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import wisdmLogo from '@/assets/wisdm-logo.png';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface Project {
   id: string;
@@ -15,15 +18,24 @@ interface Project {
   description: string;
   extraction_fields: any;
   created_at: string;
+  customer_id: string | null;
+}
+
+interface Customer {
+  id: string;
+  company_name: string;
 }
 
 const Projects = () => {
   const { loading } = useRequireAuth(true);
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [loadingProjects, setLoadingProjects] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'fields'>('date');
+  const [viewMode, setViewMode] = useState<'grid' | 'table' | 'list'>('grid');
+  const [groupByCustomer, setGroupByCustomer] = useState(false);
 
   useEffect(() => {
     if (!loading) {
@@ -33,9 +45,17 @@ const Projects = () => {
 
   const loadProjects = async () => {
     try {
+      // Load customers first
+      const { data: customersData } = await supabase
+        .from('customers')
+        .select('id, company_name')
+        .order('company_name');
+      
+      if (customersData) setCustomers(customersData);
+
       const { data: allProjects, error: projectsError } = await supabase
         .from('projects')
-        .select('id, created_at')
+        .select('id, created_at, customer_id')
         .order('created_at', { ascending: false });
 
       if (projectsError) throw projectsError;
@@ -77,6 +97,157 @@ const Projects = () => {
         return bFields - aFields;
       }
     });
+
+  const getCustomerName = (customerId: string | null) => {
+    if (!customerId) return 'Unassigned';
+    return customers.find(c => c.id === customerId)?.company_name || 'Unknown';
+  };
+
+  const renderProjectsView = (projectsList: Project[]) => {
+    if (viewMode === 'table') {
+      return (
+        <Card>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Customer</TableHead>
+                <TableHead>Description</TableHead>
+                <TableHead className="text-center">Fields</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {projectsList.map((project) => (
+                <TableRow key={project.id} className="cursor-pointer hover:bg-muted/50">
+                  <TableCell className="font-medium">{project.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{getCustomerName(project.customer_id)}</Badge>
+                  </TableCell>
+                  <TableCell className="max-w-md truncate">{project.description || 'No description'}</TableCell>
+                  <TableCell className="text-center">
+                    <Badge>{(project.extraction_fields as any[])?.length || 0}</Badge>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {new Date(project.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => navigate(`/admin/projects/${project.id}/edit`)}
+                    >
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Card>
+      );
+    }
+
+    if (viewMode === 'list') {
+      return (
+        <div className="space-y-2">
+          {projectsList.map((project) => (
+            <Card key={project.id} className="p-4 hover:shadow-md transition-all cursor-pointer border-l-4 border-l-primary/50 hover:border-l-primary">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-1">
+                    <h3 className="font-semibold truncate">{project.name}</h3>
+                    <Badge variant="outline" className="shrink-0">{getCustomerName(project.customer_id)}</Badge>
+                    <Badge className="shrink-0">{(project.extraction_fields as any[])?.length || 0} fields</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground truncate">{project.description || 'No description'}</p>
+                </div>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-sm text-muted-foreground">
+                    {new Date(project.created_at).toLocaleDateString()}
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={() => navigate(`/admin/projects/${project.id}/edit`)}
+                  >
+                    <Edit className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      );
+    }
+
+    // Grid view (default)
+    return (
+      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {projectsList.map((project) => (
+          <Card key={project.id} className="group p-5 bg-gradient-to-br from-card to-card/80 shadow-sm hover:shadow-md transition-all border-l-4 border-l-primary/50 hover:border-l-primary">
+            <div className="mb-3">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <h3 className="text-lg font-semibold group-hover:text-primary transition-colors line-clamp-1">
+                  {project.name}
+                </h3>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => navigate(`/admin/projects/${project.id}/edit`)}
+                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </div>
+              {project.customer_id && (
+                <Badge variant="outline" className="mb-2">{getCustomerName(project.customer_id)}</Badge>
+              )}
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {project.description || 'No description'}
+              </p>
+            </div>
+            
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-muted-foreground">Extraction Fields</p>
+                <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
+                  {(project.extraction_fields as any[])?.length || 0}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {(project.extraction_fields as any[])?.slice(0, 3).map((field, idx) => (
+                  <span key={idx} className="text-xs bg-muted text-foreground px-2 py-1 rounded border">
+                    {field.name}
+                  </span>
+                ))}
+                {(project.extraction_fields as any[])?.length > 3 && (
+                  <span className="text-xs text-muted-foreground px-2 py-1">
+                    +{(project.extraction_fields as any[]).length - 3}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-3 border-t flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                {new Date(project.created_at).toLocaleDateString()}
+              </p>
+              <Button
+                size="sm"
+                onClick={() => navigate(`/admin/projects/${project.id}/edit`)}
+                className="h-7 text-xs"
+              >
+                <Edit className="h-3 w-3 mr-1" />
+                Edit
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    );
+  };
 
   if (loading || loadingProjects) {
     return (
@@ -157,33 +328,62 @@ const Projects = () => {
             </Card>
           </div>
 
-          {/* Search and Sort Row */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search projects..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
+          {/* Search, Sort, and View Controls */}
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search projects..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              
+              <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SortAsc className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="date">Most Recent</SelectItem>
+                  <SelectItem value="name">Name (A-Z)</SelectItem>
+                  <SelectItem value="fields">Field Count</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            
-            <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SortAsc className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="date">Most Recent</SelectItem>
-                <SelectItem value="name">Name (A-Z)</SelectItem>
-                <SelectItem value="fields">Field Count</SelectItem>
-              </SelectContent>
-            </Select>
+
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <Tabs value={viewMode} onValueChange={(value: any) => setViewMode(value)} className="w-auto">
+                <TabsList>
+                  <TabsTrigger value="grid" className="gap-2">
+                    <LayoutGrid className="h-4 w-4" />
+                    Grid
+                  </TabsTrigger>
+                  <TabsTrigger value="table" className="gap-2">
+                    <TableIcon className="h-4 w-4" />
+                    Table
+                  </TabsTrigger>
+                  <TabsTrigger value="list" className="gap-2">
+                    <List className="h-4 w-4" />
+                    List
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              <Button
+                variant={groupByCustomer ? "default" : "outline"}
+                size="sm"
+                onClick={() => setGroupByCustomer(!groupByCustomer)}
+              >
+                {groupByCustomer ? "Ungroup" : "Group by Customer"}
+              </Button>
+            </div>
           </div>
         </div>
 
-        {/* Projects Grid */}
+        {/* Projects Views */}
         {filteredProjects.length === 0 ? (
           <Card className="p-12 text-center bg-gradient-to-br from-card to-card/80">
             <FolderOpen className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
@@ -203,66 +403,39 @@ const Projects = () => {
               </Button>
             )}
           </Card>
-        ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filteredProjects.map((project) => (
-              <Card key={project.id} className="group p-5 bg-gradient-to-br from-card to-card/80 shadow-sm hover:shadow-md transition-all border-l-4 border-l-primary/50 hover:border-l-primary">
-                <div className="mb-3">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <h3 className="text-lg font-semibold group-hover:text-primary transition-colors line-clamp-1">
-                      {project.name}
-                    </h3>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => navigate(`/admin/projects/${project.id}/edit`)}
-                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <p className="text-sm text-muted-foreground line-clamp-2">
-                    {project.description || 'No description'}
-                  </p>
+        ) : groupByCustomer ? (
+          <div className="space-y-6">
+            {/* Unassigned Projects */}
+            {filteredProjects.filter(p => !p.customer_id).length > 0 && (
+              <div>
+                <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                  <FolderOpen className="h-5 w-5" />
+                  Unassigned
+                  <Badge variant="secondary">{filteredProjects.filter(p => !p.customer_id).length}</Badge>
+                </h2>
+                {renderProjectsView(filteredProjects.filter(p => !p.customer_id))}
+              </div>
+            )}
+            
+            {/* Projects grouped by customer */}
+            {customers.map(customer => {
+              const customerProjects = filteredProjects.filter(p => p.customer_id === customer.id);
+              if (customerProjects.length === 0) return null;
+              
+              return (
+                <div key={customer.id}>
+                  <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                    <FolderOpen className="h-5 w-5" />
+                    {customer.company_name}
+                    <Badge variant="secondary">{customerProjects.length}</Badge>
+                  </h2>
+                  {renderProjectsView(customerProjects)}
                 </div>
-                
-                <div className="mb-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-medium text-muted-foreground">Extraction Fields</p>
-                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
-                      {(project.extraction_fields as any[])?.length || 0}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(project.extraction_fields as any[])?.slice(0, 3).map((field, idx) => (
-                      <span key={idx} className="text-xs bg-muted text-foreground px-2 py-1 rounded border">
-                        {field.name}
-                      </span>
-                    ))}
-                    {(project.extraction_fields as any[])?.length > 3 && (
-                      <span className="text-xs text-muted-foreground px-2 py-1">
-                        +{(project.extraction_fields as any[]).length - 3}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                <div className="pt-3 border-t flex items-center justify-between">
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(project.created_at).toLocaleDateString()}
-                  </p>
-                  <Button
-                    size="sm"
-                    onClick={() => navigate(`/admin/projects/${project.id}/edit`)}
-                    className="h-7 text-xs"
-                  >
-                    <Edit className="h-3 w-3 mr-1" />
-                    Edit
-                  </Button>
-                </div>
-              </Card>
-            ))}
+              );
+            })}
           </div>
+        ) : (
+          renderProjectsView(filteredProjects)
         )}
       </main>
     </div>
