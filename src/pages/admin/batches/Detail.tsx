@@ -408,27 +408,39 @@ ${xmlDocs}
           username: docmgtConfig.username,
           password: docmgtConfig.password,
           project: docmgtConfig.project,
+          recordTypeId: docmgtConfig.recordTypeId,
           fieldMappings: docmgtConfig.fieldMappings || {}
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Docmgt invocation error:', error);
+        throw new Error(error.message || 'Failed to invoke export function');
+      }
 
-      if (data.success) {
+      if (data?.success) {
         toast({ 
           title: 'Export successful', 
-          description: `Exported to Docmgt project: ${docmgtConfig.project}` 
+          description: data.message || `Successfully exported ${data.results?.length || 0} documents to Docmgt` 
         });
         queryClient.invalidateQueries({ queryKey: ['batch', id] });
       } else {
-        throw new Error(data.error || 'Export failed');
+        // Show detailed error with available record types if provided
+        let errorMsg = data?.error || data?.message || 'Export failed';
+        if (data?.availableRecordTypes && data.availableRecordTypes.length > 0) {
+          errorMsg += '\n\nAvailable RecordTypes: ' + 
+            data.availableRecordTypes.map((rt: any) => `${rt.name} (ID: ${rt.id})`).join(', ');
+        }
+        console.error('Docmgt export failed:', data);
+        throw new Error(errorMsg);
       }
     } catch (error: any) {
       console.error('Docmgt export error:', error);
       toast({ 
         title: 'Export failed', 
-        description: error.message || 'Failed to export to Docmgt',
-        variant: 'destructive'
+        description: error.message || 'Failed to export to Docmgt. Check console for details.',
+        variant: 'destructive',
+        duration: 10000, // Show for 10 seconds for long error messages
       });
     }
   };

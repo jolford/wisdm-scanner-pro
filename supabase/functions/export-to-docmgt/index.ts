@@ -482,10 +482,22 @@ serve(async (req) => {
   } catch (error: any) {
     console.error('Error exporting to Docmgt:', error);
     
+    // Provide detailed error message
+    let errorMessage = 'Failed to export to Docmgt';
+    if (error.message) {
+      errorMessage = error.message;
+    }
+    
+    // Add stack trace to logs for debugging
+    if (error.stack) {
+      console.error('Stack trace:', error.stack);
+    }
+    
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'Failed to export to Docmgt. Please try again.',
+        error: errorMessage,
         success: false,
+        details: error.toString(),
         availableRecordTypes: [],
       }),
       { 
