@@ -391,6 +391,7 @@ export type Database = {
           created_by: string
           customer_id: string | null
           delete_after_import: boolean | null
+          email_folder: string
           email_host: string
           email_password: string
           email_port: number
@@ -411,6 +412,7 @@ export type Database = {
           created_by: string
           customer_id?: string | null
           delete_after_import?: boolean | null
+          email_folder?: string
           email_host: string
           email_password: string
           email_port?: number
@@ -431,6 +433,7 @@ export type Database = {
           created_by?: string
           customer_id?: string | null
           delete_after_import?: boolean | null
+          email_folder?: string
           email_host?: string
           email_password?: string
           email_port?: number

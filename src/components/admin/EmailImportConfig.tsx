@@ -25,6 +25,7 @@ export function EmailImportConfig({ projectId, customerId }: EmailImportConfigPr
   const [emailPort, setEmailPort] = useState(993);
   const [emailUsername, setEmailUsername] = useState("");
   const [emailPassword, setEmailPassword] = useState("");
+  const [emailFolder, setEmailFolder] = useState("INBOX");
   const [useSsl, setUseSsl] = useState(true);
   const [isActive, setIsActive] = useState(true);
   const [autoCreateBatch, setAutoCreateBatch] = useState(true);
@@ -55,6 +56,7 @@ export function EmailImportConfig({ projectId, customerId }: EmailImportConfigPr
         setEmailPort(data.email_port || 993);
         setEmailUsername(data.email_username || "");
         setEmailPassword(data.email_password || "");
+        setEmailFolder(data.email_folder || "INBOX");
         setUseSsl(data.use_ssl ?? true);
         setIsActive(data.is_active ?? true);
         setAutoCreateBatch(data.auto_create_batch ?? true);
@@ -99,6 +101,7 @@ export function EmailImportConfig({ projectId, customerId }: EmailImportConfigPr
         email_port: emailPort,
         email_username: emailUsername,
         email_password: emailPassword,
+        email_folder: emailFolder,
         use_ssl: useSsl,
         is_active: isActive,
         auto_create_batch: autoCreateBatch,
@@ -243,6 +246,19 @@ export function EmailImportConfig({ projectId, customerId }: EmailImportConfigPr
               onChange={(e) => setEmailPassword(e.target.value)}
               placeholder="••••••••"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email-folder">Email Folder / Mailbox</Label>
+            <Input
+              id="email-folder"
+              value={emailFolder}
+              onChange={(e) => setEmailFolder(e.target.value)}
+              placeholder="INBOX"
+            />
+            <p className="text-xs text-muted-foreground">
+              Specify which folder to monitor (e.g., INBOX, INBOX/Scans, Documents)
+            </p>
           </div>
 
           <div className="flex items-center justify-between">

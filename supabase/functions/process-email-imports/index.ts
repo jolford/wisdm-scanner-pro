@@ -14,6 +14,7 @@ interface EmailImportConfig {
   email_port: number;
   email_username: string;
   email_password: string;
+  email_folder: string;
   use_ssl: boolean;
   auto_create_batch: boolean;
   batch_name_template: string;
@@ -135,7 +136,7 @@ Deno.serve(async (req) => {
 });
 
 async function processEmailConfig(supabase: any, config: EmailImportConfig) {
-  console.log(`Connecting to ${config.email_host}:${config.email_port}`);
+  console.log(`Connecting to ${config.email_host}:${config.email_port}, folder: ${config.email_folder}`);
   
   // Note: This is a placeholder implementation
   // In production, you would use a proper IMAP client library
@@ -246,9 +247,9 @@ async function processEmailConfig(supabase: any, config: EmailImportConfig) {
 // Placeholder function - in production, use a proper IMAP library
 async function fetchEmails(config: EmailImportConfig): Promise<Email[]> {
   // This would connect to the email server using IMAP
-  // and fetch unread emails with attachments
+  // and fetch unread emails with attachments from the specified folder
   // For now, return empty array
-  console.log('IMAP connection would be established here');
+  console.log(`IMAP connection would be established here for folder: ${config.email_folder}`);
   return [];
 }
 
