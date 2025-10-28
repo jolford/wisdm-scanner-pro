@@ -14,6 +14,7 @@ import { Plus, Play, Settings, Trash2 } from "lucide-react";
 
 export const BatchTemplates = () => {
   const [open, setOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const queryClient = useQueryClient();
 
@@ -64,6 +65,32 @@ export const BatchTemplates = () => {
     }
   });
 
+  // Create template mutation
+  const createTemplate = useMutation({
+    mutationFn: async (data: any) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const { data: customers } = await supabase.from('customers').select('id').limit(1).single();
+      
+      const { error } = await supabase
+        .from('batch_templates')
+        .insert({
+          ...data,
+          customer_id: customers?.id,
+          created_by: user?.id
+        });
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Template created');
+      setCreateOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['batch-templates'] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to create template: ${error.message}`);
+    }
+  });
+
   // Delete template mutation
   const deleteTemplate = useMutation({
     mutationFn: async (templateId: string) => {
@@ -95,7 +122,7 @@ export const BatchTemplates = () => {
           <h2 className="text-2xl font-bold">Batch Templates</h2>
           <p className="text-muted-foreground">Create reusable batch configurations</p>
         </div>
-        <Button>
+        <Button onClick={() => setCreateOpen(true)}>
           <Plus className="w-4 h-4 mr-2" />
           New Template
         </Button>
@@ -153,6 +180,56 @@ export const BatchTemplates = () => {
           </Card>
         ))}
       </div>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Template</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            createTemplate.mutate({
+              name: formData.get('name') as string,
+              description: formData.get('description') as string,
+              project_id: formData.get('project') as string || null,
+              is_active: true
+            });
+          }}>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="name">Template Name *</Label>
+                <Input id="name" name="name" required placeholder="e.g., Invoice Processing" />
+              </div>
+              
+              <div>
+                <Label htmlFor="description">Description</Label>
+                <Textarea id="description" name="description" placeholder="What is this template for?" />
+              </div>
+
+              <div>
+                <Label htmlFor="project">Default Project (Optional)</Label>
+                <Select name="project">
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects?.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button type="submit" className="w-full">
+                Create Template
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
