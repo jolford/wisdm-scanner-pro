@@ -204,7 +204,7 @@ RESPONSE REQUIREMENTS:
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',  // Using Gemini Flash for 5-10x faster processing
+        model: 'google/gemini-2.5-pro',  // Using Gemini Pro for best accuracy
         messages: [
           {
             role: 'system',

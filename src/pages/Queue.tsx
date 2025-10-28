@@ -225,41 +225,6 @@ const [isExporting, setIsExporting] = useState(false);
   useEffect(() => {
     if (selectedBatchId) {
       loadQueueDocuments();
-      
-      // Subscribe to real-time updates for documents in this batch
-      const channel = supabase
-        .channel(`batch-documents-${selectedBatchId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'UPDATE',
-            schema: 'public',
-            table: 'documents',
-            filter: `batch_id=eq.${selectedBatchId}`,
-          },
-          (payload) => {
-            console.log('Document updated:', payload);
-            const newStatus = (payload.new as any)?.validation_status;
-            const oldStatus = (payload.old as any)?.validation_status;
-            
-            // Show toast when document finishes processing (when extracted_text is added)
-            const hasNewText = (payload.new as any)?.extracted_text && !(payload.old as any)?.extracted_text;
-            if (hasNewText) {
-              toast({
-                title: 'Document Processed',
-                description: 'OCR completed successfully',
-              });
-            }
-            
-            // Reload queue when documents are processed
-            loadQueueDocuments();
-          }
-        )
-        .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
     } else {
       setValidationQueue([]);
       setValidatedDocs([]);
@@ -339,8 +304,7 @@ const [isExporting, setIsExporting] = useState(false);
     }
   };
 
-  // Create a pending document and queue OCR job
-  const createDocumentWithJob = async (fileName: string, fileType: string, fileUrl: string, imageData?: string, textData?: string, isPdf = false) => {
+  const saveDocument = async (fileName: string, fileType: string, fileUrl: string, text: string, metadata: any, lineItems: any[] = []) => {
     // Check license capacity before saving
     if (!hasCapacity(1)) {
       toast({
@@ -354,18 +318,17 @@ const [isExporting, setIsExporting] = useState(false);
     try {
       // Apply document naming pattern if configured
       const namingPattern = (selectedProject as any)?.metadata?.document_naming_pattern;
-      const finalFileName = applyDocumentNamingPattern(namingPattern, {}, fileName);
+      const finalFileName = applyDocumentNamingPattern(namingPattern, metadata, fileName);
 
-      // Create pending document
       const { data, error } = await supabase.from('documents').insert([{
         project_id: selectedProjectId,
         batch_id: selectedBatchId,
         file_name: finalFileName,
         file_type: fileType,
         file_url: fileUrl,
-        extracted_text: '',
-        extracted_metadata: {},
-        validation_status: 'pending',
+        extracted_text: text,
+        extracted_metadata: metadata,
+        line_items: lineItems,
         uploaded_by: user?.id,
       }]).select().single();
 
@@ -383,74 +346,8 @@ const [isExporting, setIsExporting] = useState(false);
         }
       }
 
-      // Create background job for OCR processing
-      const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
-        ? selectedProject?.metadata?.table_extraction_config?.fields || []
-        : [];
+      await loadQueueDocuments();
 
-      const { error: jobError } = await supabase.from('jobs').insert([{
-        job_type: 'ocr_document',
-        payload: {
-          documentId: data.id,
-          imageData: imageData || null,
-          textData: textData || null,
-          isPdf,
-          extractionFields,
-          tableExtractionFields: tableFields,
-          enableCheckScanning: enableMICR,
-          fileUrl,
-          batchId: selectedBatchId,
-          projectId: selectedProjectId,
-        },
-        customer_id: selectedProject?.customer_id,
-        user_id: user?.id,
-        priority: 'normal',
-        status: 'pending',
-        scheduled_for: new Date().toISOString(),
-      }]);
-
-      if (jobError) {
-        console.error('Failed to create OCR job:', jobError);
-        throw new Error('Failed to queue document for processing');
-      }
-
-      // Update batch document count
-      if (selectedBatchId && selectedBatch) {
-        await supabase
-          .from('batches')
-          .update({ 
-            total_documents: (selectedBatch.total_documents || 0) + 1,
-          })
-          .eq('id', selectedBatchId);
-      }
-
-      return data;
-    } catch (error) {
-      console.error('Error creating document:', error);
-      return null;
-    }
-  };
-
-  // Legacy saveDocument function for immediate processing (keep for exports/special cases)
-  const saveDocument = async (fileName: string, fileType: string, fileUrl: string, text: string, metadata: any, lineItems: any[] = []) => {
-    try {
-      const namingPattern = (selectedProject as any)?.metadata?.document_naming_pattern;
-      const finalFileName = applyDocumentNamingPattern(namingPattern, metadata, fileName);
-
-      const { data, error } = await supabase.from('documents').insert([{
-        project_id: selectedProjectId,
-        batch_id: selectedBatchId,
-        file_name: finalFileName,
-        file_type: fileType,
-        file_url: fileUrl,
-        extracted_text: text,
-        extracted_metadata: metadata,
-        line_items: lineItems,
-        uploaded_by: user?.id,
-      }]).select().single();
-
-      if (error) throw error;
-      
       if (selectedBatchId && selectedBatch) {
         await supabase
           .from('batches')
@@ -547,7 +444,7 @@ const [isExporting, setIsExporting] = useState(false);
                 }
               }
               
-              // If no text extracted, OCR will process it as image-based PDF
+              // If no text extracted, try OCR on first page of document
               if (!extractedPdfText || extractedPdfText.trim().length < 10) {
                 try {
                   const page = await pdfDoc.getPage(boundary.startPage);
@@ -564,8 +461,23 @@ const [isExporting, setIsExporting] = useState(false);
                   const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
                   let payloadImageData = await downscaleDataUrl(dataUrl, 1280, 0.7);
 
-                  // Create document with background job for image-based PDF
-                  await createDocumentWithJob(docName, 'application/pdf', publicUrl, payloadImageData, undefined, false);
+                  const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
+                    ? selectedProject?.metadata?.table_extraction_config?.fields || []
+                    : [];
+
+                  const data = await invokeOcr({
+                    imageData: payloadImageData,
+                    isPdf: false,
+                    extractionFields,
+                    tableExtractionFields: tableFields,
+                    enableCheckScanning: enableMICR,
+                    customerId: selectedProject?.customer_id,
+                  });
+                  if (!data) {
+                    throw new Error('OCR service returned no data');
+                  }
+
+                  await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || []);
                   return;
                 } catch (fallbackErr: any) {
                   console.error('PDF OCR fallback failed:', fallbackErr);
@@ -573,8 +485,24 @@ const [isExporting, setIsExporting] = useState(false);
                 }
               }
 
-              // Create document with background job for text-based PDF
-              await createDocumentWithJob(docName, 'application/pdf', publicUrl, undefined, extractedPdfText, true);
+              // Process extracted text
+              const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
+                ? selectedProject?.metadata?.table_extraction_config?.fields || []
+                : [];
+              
+              const data = await invokeOcr({ 
+                textData: extractedPdfText,
+                isPdf: true,
+                extractionFields,
+                tableExtractionFields: tableFields,
+                enableCheckScanning: enableMICR,
+                customerId: selectedProject?.customer_id,
+              });
+              if (!data) {
+                throw new Error('OCR service returned no data');
+              }
+              
+              await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || []);
             } catch (err: any) {
               console.error(`Failed to process document ${docName}:`, err);
               processingErrors.push(`${docName}: ${err.message}`);
@@ -737,6 +665,10 @@ const [isExporting, setIsExporting] = useState(false);
     setProcessing(true);
 
     try {
+      const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled
+        ? selectedProject?.metadata?.table_extraction_config?.fields || []
+        : [];
+      
       // Downscale large inline images to avoid request size limits
       let payloadImageData = imageUrl;
       if (typeof payloadImageData === 'string' && payloadImageData.startsWith('data:')) {
@@ -747,30 +679,24 @@ const [isExporting, setIsExporting] = useState(false);
         }
       }
       
-      // Upload image to storage first
-      const storageFileName = `${selectedBatchId}/${Date.now()}_${fileName}`;
-      const base64Data = payloadImageData.split(',')[1];
-      const blob = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-      
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(storageFileName, blob, {
-          contentType: 'image/jpeg',
-          upsert: false
-        });
+      const data = await invokeOcr({ 
+        imageData: payloadImageData,
+        isPdf: false,
+        extractionFields,
+        tableExtractionFields: tableFields,
+        enableCheckScanning: enableMICR,
+        customerId: selectedProject?.customer_id,
+      });
 
-      if (uploadError) throw uploadError;
+      if (!data) {
+        throw new Error('OCR service returned no data');
+      }
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('documents')
-        .getPublicUrl(storageFileName);
-
-      // Create document with background job
-      await createDocumentWithJob(fileName, 'image/jpeg', publicUrl, payloadImageData, undefined, false);
+      await saveDocument(fileName, 'image', imageUrl, data.text, data.metadata || {}, data.lineItems || []);
 
       toast({
-        title: 'Upload Complete',
-        description: 'Document queued for processing',
+        title: 'Scan Complete',
+        description: 'Text and metadata extracted successfully.',
       });
 
       // Refresh validation queue and switch to validation tab
