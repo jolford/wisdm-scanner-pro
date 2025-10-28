@@ -628,7 +628,7 @@ RESPONSE REQUIREMENTS:
                 }
               } else {
                 // Fallback: search line containing the word
-                const idx = lines.findIndex(l => /\b(MACHINE|ASSET)\b/i.test(l));
+                const idx = lines.findIndex((l: string) => /\b(MACHINE|ASSET)\b/i.test(l));
                 if (idx !== -1) {
                   const m = lines[idx].match(/\b(\d{4,6})\b/);
                   if (m?.[1]) {
