@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, X, Download, FolderInput, AlertCircle } from 'lucide-react';
+import { Trash2, X, Download, FolderInput, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,6 +19,9 @@ interface BulkActionsToolbarProps {
   onBulkDelete: () => Promise<void>;
   onBulkExport?: () => void;
   onBulkMove?: () => void;
+  onBulkValidate?: () => Promise<void>;
+  onBulkReject?: () => Promise<void>;
+  mode?: 'validation' | 'batch';
 }
 
 export function BulkActionsToolbar({
@@ -27,9 +30,13 @@ export function BulkActionsToolbar({
   onBulkDelete,
   onBulkExport,
   onBulkMove,
+  onBulkValidate,
+  onBulkReject,
+  mode = 'batch'
 }: BulkActionsToolbarProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -54,11 +61,46 @@ export function BulkActionsToolbar({
           <div className="h-6 w-px bg-primary-foreground/20" />
           
           <div className="flex gap-2">
+            {mode === 'validation' && onBulkValidate && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={async () => {
+                  setIsProcessing(true);
+                  await onBulkValidate();
+                  setIsProcessing(false);
+                }}
+                disabled={isProcessing}
+                className="h-8 bg-green-600 hover:bg-green-700 text-white"
+              >
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Validate
+              </Button>
+            )}
+            
+            {mode === 'validation' && onBulkReject && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={async () => {
+                  setIsProcessing(true);
+                  await onBulkReject();
+                  setIsProcessing(false);
+                }}
+                disabled={isProcessing}
+                className="h-8 border-red-300 text-red-700 hover:bg-red-50"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Reject
+              </Button>
+            )}
+            
             {onBulkMove && (
               <Button
                 size="sm"
                 variant="secondary"
                 onClick={onBulkMove}
+                disabled={isProcessing}
                 className="h-8"
               >
                 <FolderInput className="h-4 w-4 mr-2" />
@@ -71,6 +113,7 @@ export function BulkActionsToolbar({
                 size="sm"
                 variant="secondary"
                 onClick={onBulkExport}
+                disabled={isProcessing}
                 className="h-8"
               >
                 <Download className="h-4 w-4 mr-2" />
@@ -82,6 +125,7 @@ export function BulkActionsToolbar({
               size="sm"
               variant="destructive"
               onClick={() => setShowDeleteDialog(true)}
+              disabled={isProcessing}
               className="h-8"
             >
               <Trash2 className="h-4 w-4 mr-2" />
