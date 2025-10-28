@@ -54,7 +54,6 @@ interface AdminLayoutProps {
 
 const menuItems = [
   { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
-  { title: 'System Viability', url: '/admin/viability', icon: Target },
   { title: 'Projects', url: '/admin/projects', icon: FolderOpen },
   { title: 'Batch Templates', url: '/admin/batch-templates', icon: LayoutDashboard },
   { title: 'Documents', url: '/admin/documents', icon: FileText },
@@ -71,6 +70,7 @@ const adminToolsItems = [
 ];
 
 const salesToolsItems = [
+  { title: 'System Viability', url: '/admin/viability', icon: Target },
   { title: 'Business Metrics', url: '/admin/business-metrics', icon: TrendingUp },
   { title: 'Customer Success', url: '/admin/customer-success', icon: Trophy },
   { title: 'White-Label', url: '/admin/white-label', icon: Palette },
