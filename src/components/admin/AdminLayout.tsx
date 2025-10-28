@@ -20,6 +20,7 @@ import {
   TrendingUp,
   Trophy,
   Palette,
+  Activity,
 } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { supabase } from '@/integrations/supabase/client';
@@ -58,7 +59,7 @@ const menuItems = [
   { title: 'Batch Templates', url: '/admin/batch-templates', icon: LayoutDashboard },
   { title: 'Documents', url: '/admin/documents', icon: FileText },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
-  { title: 'Validation Analytics', url: '/admin/validation-analytics', icon: TrendingUp },
+  { title: 'Validation Analytics', url: '/admin/validation-analytics', icon: Activity },
   { title: 'Advanced Reports', url: '/admin/advanced-reports', icon: TrendingUp },
   { title: 'Reprocess Docs', url: '/admin/reprocess', icon: RefreshCw },
 ];
