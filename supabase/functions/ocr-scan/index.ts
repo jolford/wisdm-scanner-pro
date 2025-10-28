@@ -443,15 +443,30 @@ RESPONSE REQUIREMENTS:
             // New: { "fieldName": { "value": "value", "bbox": {...} } }
             const fields = parsed.fields || {};
             metadata = {};
+            
+            console.log('Extracting fields from parsed response. Expected fields:', extractionFields.map((f: any) => f.name).join(', '));
+            console.log('Fields in response:', Object.keys(fields).join(', ') || '(none)');
+            
             Object.keys(fields).forEach(key => {
               if (typeof fields[key] === 'string') {
                 // Old format: direct string value
                 metadata[key] = fields[key];
+                console.log(`Extracted field "${key}": "${fields[key]}"`);
               } else if (fields[key] && typeof fields[key] === 'object') {
                 // New format: object with value and bbox
-                metadata[key] = fields[key].value || fields[key];
+                const value = fields[key].value || fields[key];
+                metadata[key] = value;
+                console.log(`Extracted field "${key}": "${value}"`);
               }
             });
+            
+            // Log missing fields
+            const extractedFieldNames = Object.keys(metadata);
+            const expectedFieldNames = extractionFields.map((f: any) => f.name);
+            const missingFields = expectedFieldNames.filter((name: string) => !extractedFieldNames.includes(name));
+            if (missingFields.length > 0) {
+              console.warn('Missing expected fields:', missingFields.join(', '));
+            }
           }
           
           // Extract line items if table extraction was requested
