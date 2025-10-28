@@ -9,9 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Icon imports from lucide-react
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw } from 'lucide-react';
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles } from 'lucide-react';
 
 // Backend and utility imports
 import { supabase } from '@/integrations/supabase/client';
@@ -130,6 +131,10 @@ export const BatchValidationScreen = ({
     variance: string;
     variancePercent: string;
   }>>({});
+  
+  // Track AI validation state for each document and field
+  const [validatingFields, setValidatingFields] = useState<Set<string>>(new Set());
+  const [fieldConfidence, setFieldConfidence] = useState<Record<string, Record<string, number>>>({});
   
   // Toast notifications for user feedback
   const { toast } = useToast();
@@ -350,6 +355,100 @@ export const BatchValidationScreen = ({
         [fieldName]: value,
       }
     }));
+  };
+
+  /**
+   * Validate a specific field using AI
+   */
+  const validateFieldWithAI = async (docId: string, fieldName: string, fieldValue: string) => {
+    if (!fieldValue) {
+      toast({ title: 'Nothing to validate', description: 'Please enter a value first.' });
+      return;
+    }
+
+    const fieldKey = `${docId}-${fieldName}`;
+    setValidatingFields(prev => new Set(prev).add(fieldKey));
+
+    try {
+      const doc = documents.find(d => d.id === docId);
+      if (!doc) return;
+
+      const { data, error } = await supabase.functions.invoke('smart-validation', {
+        body: {
+          documentId: docId,
+          fieldName,
+          fieldValue,
+          context: (doc.extracted_text || '').substring(0, 500)
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.validation) {
+        const validation = data.validation as any;
+
+        // Update confidence
+        if (typeof validation.confidence === 'number') {
+          setFieldConfidence(prev => ({
+            ...prev,
+            [docId]: {
+              ...(prev[docId] || {}),
+              [fieldName]: validation.confidence,
+            }
+          }));
+        }
+
+        // Apply corrected/validated value
+        const corrected = validation.validated_value ?? validation.corrected_value ?? validation.value;
+        if (corrected !== undefined && corrected !== null && corrected !== '') {
+          handleFieldChange(docId, fieldName, String(corrected));
+        }
+
+        // Show toast with validation result
+        if (validation.is_valid === false || validation.isValid === false) {
+          toast({
+            title: 'Validation Issue',
+            description: validation.reasoning || 'Field may need correction',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Field Validated',
+            description: validation.reasoning || 'Field looks good',
+          });
+        }
+      }
+    } catch (error: any) {
+      console.error('Validation error:', error);
+      toast({
+        title: 'Validation Failed',
+        description: error.message || 'Could not validate field',
+        variant: 'destructive',
+      });
+    } finally {
+      setValidatingFields(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(fieldKey);
+        return newSet;
+      });
+    }
+  };
+
+  /**
+   * Validate all fields for a document
+   */
+  const validateAllFieldsForDoc = async (docId: string) => {
+    const doc = documents.find(d => d.id === docId);
+    if (!doc) return;
+
+    const metadata = getMetadataForDoc(doc);
+    
+    for (const field of projectFields) {
+      const value = getMetadataValue(metadata, field.name);
+      if (value) {
+        await validateFieldWithAI(docId, field.name, value);
+      }
+    }
   };
 
   /**
@@ -997,36 +1096,91 @@ export const BatchValidationScreen = ({
                             {/* AI Smart Validation Banner */}
                             <div className="p-3 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg mb-4">
                               <div className="flex items-center justify-between gap-2">
-                                <div className="flex items-center gap-2">
-                                  <span className="text-sm font-medium">✨ AI Smart Validation Available</span>
+                                <div className="flex items-start gap-2 flex-1">
+                                  <span className="text-2xl animate-pulse">✨</span>
+                                  <div className="flex-1">
+                                    <div className="text-sm font-medium mb-1">AI Smart Validation</div>
+                                    <div className="text-xs text-muted-foreground space-y-1">
+                                      <div className="flex items-center gap-1">
+                                        <span className="text-amber-500">💡</span>
+                                        <span>Click 💡 next to any field or use Validate All</span>
+                                      </div>
+                                      <div>1. Fill in field values (e.g., Invoice Total)</div>
+                                      <div>2. Click the 💡 lightbulb icon next to the field</div>
+                                      <div>3. AI will validate and suggest corrections if needed</div>
+                                    </div>
+                                  </div>
                                 </div>
-                                <span className="text-xs text-muted-foreground">
-                                  Validate fields with AI assistance
-                                </span>
+                                <Button
+                                  size="sm"
+                                  onClick={() => validateAllFieldsForDoc(doc.id)}
+                                  className="bg-primary hover:bg-primary/90"
+                                >
+                                  <Sparkles className="h-4 w-4 mr-1.5" />
+                                  Validate All
+                                </Button>
                               </div>
                             </div>
 
-                            {projectFields.map((field) => (
-                              <div key={field.name}>
-                                <Label htmlFor={`${doc.id}-${field.name}`} className="text-sm">
-                                  {field.name}
-                                  {field.description && (
-                                    <span className="text-xs text-muted-foreground ml-2">
-                                      {field.description}
-                                    </span>
-                                  )}
-                                </Label>
-                                <Input
-                                  id={`${doc.id}-${field.name}`}
-                                  value={getMetadataValue(metadata, field.name)}
-                                  onChange={(e) =>
-                                    handleFieldChange(doc.id, field.name, e.target.value)
-                                  }
-                                  placeholder={`Enter ${field.name}`}
-                                  className="mt-1"
-                                />
-                              </div>
-                            ))}
+                            {projectFields.map((field) => {
+                              const fieldValue = getMetadataValue(metadata, field.name);
+                              const fieldKey = `${doc.id}-${field.name}`;
+                              const isValidating = validatingFields.has(fieldKey);
+                              const confidence = fieldConfidence[doc.id]?.[field.name];
+                              const hasValue = fieldValue && fieldValue !== '';
+                              
+                              return (
+                                <div key={field.name}>
+                                  <div className="flex items-center justify-between mb-1">
+                                    <Label htmlFor={`${doc.id}-${field.name}`} className="text-sm">
+                                      {field.name}
+                                      {field.description && (
+                                        <span className="text-xs text-muted-foreground ml-2">
+                                          {field.description}
+                                        </span>
+                                      )}
+                                      {confidence !== undefined && (
+                                        <Badge 
+                                          variant={confidence > 0.8 ? "default" : confidence > 0.5 ? "secondary" : "destructive"}
+                                          className="ml-2 text-xs"
+                                        >
+                                          {Math.round(confidence * 100)}% confident
+                                        </Badge>
+                                      )}
+                                    </Label>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() => validateFieldWithAI(doc.id, field.name, fieldValue)}
+                                          disabled={isValidating || !hasValue}
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          {isValidating ? (
+                                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                          ) : (
+                                            <Lightbulb className={`h-4 w-4 ${hasValue ? 'text-amber-500' : 'text-muted-foreground'}`} />
+                                          )}
+                                        </Button>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Click to validate this field with AI</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </div>
+                                  <Input
+                                    id={`${doc.id}-${field.name}`}
+                                    value={fieldValue}
+                                    onChange={(e) =>
+                                      handleFieldChange(doc.id, field.name, e.target.value)
+                                    }
+                                    placeholder={`Enter ${field.name}`}
+                                    className="mt-1"
+                                  />
+                                </div>
+                              );
+                            })}
 
                             {/* Line Items Table - Only show if table extraction is configured or line items exist */}
                             {(() => {
