@@ -122,6 +122,15 @@ export const BatchValidationScreen = ({
   const [offensiveLanguageResults, setOffensiveLanguageResults] = useState<Record<string, { highlights: any[] }>>({});
   const [isScanning, setIsScanning] = useState(false);
   
+  // Track calculation variance for each document
+  const [calculationVariance, setCalculationVariance] = useState<Record<string, {
+    hasVariance: boolean;
+    calculatedTotal: string;
+    invoiceTotal: string;
+    variance: string;
+    variancePercent: string;
+  }>>({});
+  
   // Toast notifications for user feedback
   const { toast } = useToast();
 
@@ -203,6 +212,98 @@ export const BatchValidationScreen = ({
   }, [documents, batchId]);
 
   /**
+   * Check for calculation variance in all documents with line items
+   */
+  useEffect(() => {
+    const checkCalculationVariance = async () => {
+      const results: Record<string, any> = {};
+      
+      for (const doc of documents) {
+        try {
+          const items: any[] = (doc.line_items as any[]) || [];
+          if (!items.length) continue;
+          
+          const meta: Record<string, any> = (doc.extracted_metadata as any) || {};
+          
+          let calculatedTotal = 0;
+          let hasValidAmounts = false;
+          
+          // Sum up line items
+          items.forEach((item: any) => {
+            for (const key of Object.keys(item || {})) {
+              const lowerKey = key.toLowerCase();
+              if (
+                lowerKey.includes('total') ||
+                lowerKey.includes('amount') ||
+                lowerKey.includes('price') ||
+                lowerKey.includes('extended') ||
+                lowerKey.includes('subtotal')
+              ) {
+                const value = item[key];
+                if (value !== null && value !== undefined && value !== '') {
+                  const clean = String(value).replace(/[$,]/g, '').trim();
+                  const num = parseFloat(clean);
+                  if (!isNaN(num) && num !== 0) {
+                    calculatedTotal += num;
+                    hasValidAmounts = true;
+                    break;
+                  }
+                }
+              }
+            }
+          });
+          
+          if (!hasValidAmounts) continue;
+          
+          // Find invoice total
+          let invoiceTotal: number | null = null;
+          for (const key of Object.keys(meta || {})) {
+            const lowerKey = key.toLowerCase();
+            if (
+              lowerKey.includes('total') ||
+              lowerKey.includes('amount') ||
+              lowerKey.includes('grand') ||
+              lowerKey.includes('balance') ||
+              lowerKey.includes('due')
+            ) {
+              const value = meta[key];
+              if (value !== null && value !== undefined && value !== '') {
+                const clean = String(value).replace(/[$,]/g, '').trim();
+                const num = parseFloat(clean);
+                if (!isNaN(num) && num > 0) {
+                  invoiceTotal = num;
+                  break;
+                }
+              }
+            }
+          }
+          
+          if (invoiceTotal === null) continue;
+          
+          const variance = Math.abs(calculatedTotal - invoiceTotal);
+          const variancePercent = (variance / invoiceTotal) * 100;
+          
+          if (variance >= 0.01) {
+            results[doc.id] = {
+              hasVariance: true,
+              calculatedTotal: calculatedTotal.toFixed(2),
+              invoiceTotal: invoiceTotal.toFixed(2),
+              variance: variance.toFixed(2),
+              variancePercent: variancePercent.toFixed(2),
+            };
+          }
+        } catch (e) {
+          console.warn(`Failed to check calculation variance for document ${doc.id}:`, e);
+        }
+      }
+      
+      setCalculationVariance(results);
+    };
+    
+    checkCalculationVariance();
+  }, [documents]);
+
+  /**
    * Reset all state when batchId changes to prevent showing wrong thumbnails/data
    * from previous batch
    */
@@ -215,6 +316,7 @@ export const BatchValidationScreen = ({
     setDocumentRotation({});
     setShowRegionSelector(new Set());
     setOffensiveLanguageResults({});
+    setCalculationVariance({});
   }, [batchId]);
 
   /**
@@ -697,6 +799,15 @@ export const BatchValidationScreen = ({
                         <div className="flex flex-wrap gap-2 mt-1 mb-1">
                           <Badge variant="destructive" className="text-xs">
                             ⚠️ {offensiveLanguageResults[doc.id].highlights.length} Sensitive Phrase{offensiveLanguageResults[doc.id].highlights.length !== 1 ? 's' : ''}
+                          </Badge>
+                        </div>
+                      )}
+                      
+                      {/* Calculation Mismatch Warning Badge */}
+                      {calculationVariance[doc.id]?.hasVariance && (
+                        <div className="flex flex-wrap gap-2 mt-1 mb-1">
+                          <Badge variant="destructive" className="text-xs">
+                            ⚠️ CALCULATION MISMATCH: ${calculationVariance[doc.id].variance} variance
                           </Badge>
                         </div>
                       )}
