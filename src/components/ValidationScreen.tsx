@@ -794,103 +794,108 @@ useEffect(() => {
       </Card>
 
       {/* Right: Index Fields & Validation */}
-      <Card className="p-6 flex flex-col">
-        <h3 className="font-semibold mb-4">Index Fields</h3>
-        
-        {/* Document Classification */}
-        {classification?.document_type && (
-          <div className="mb-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
-            <div className="flex items-start gap-2 mb-2">
-              <Badge variant="outline" className="text-sm">
-                📄 {classification.document_type.replace(/_/g, ' ').toUpperCase()}
-              </Badge>
-              {classification.confidence !== undefined && (
-                <Badge variant="secondary" className="text-xs">
-                  {Math.round(classification.confidence * 100)}% confident
-                </Badge>
-              )}
-            </div>
-            {classification.reasoning && (
-              <p className="text-xs text-muted-foreground mt-2">
-                {classification.reasoning}
-              </p>
-            )}
-          </div>
-        )}
-        
-        {/* Calculation Variance Warning */}
-        {editedMetadata['_calculationMatch'] === 'false' && (
-          <div className="mb-4 p-4 bg-destructive/10 border-2 border-destructive/50 rounded-lg">
-            <div className="flex items-start gap-2 mb-3">
-              <Badge variant="destructive" className="text-sm">
-                ⚠️ CALCULATION MISMATCH
-              </Badge>
-            </div>
-            <div className="space-y-2 text-sm">
-              <p>
-                <span className="font-medium">Line Items Total:</span>{' '}
-                <span className="font-mono">${editedMetadata['_calculatedLineItemsTotal']}</span>
-              </p>
-              <p>
-                <span className="font-medium">Invoice Total:</span>{' '}
-                <span className="font-mono">${editedMetadata['_invoiceTotal']}</span>
-              </p>
-              <p className="text-destructive font-semibold pt-2 border-t border-destructive/20">
-                <span className="font-bold">VARIANCE:</span>{' '}
-                <span className="font-mono text-lg">${editedMetadata['_calculationVariance']}</span>
-                <span className="ml-2 text-base">({editedMetadata['_calculationVariancePercent']}%)</span>
-              </p>
-            </div>
-            <p className="mt-3 text-sm text-destructive font-medium">
-              ⚠️ Please verify line items and totals before validating
-            </p>
-          </div>
-        )}
-        
-        {editedMetadata['_calculationMatch'] === 'true' && (
-          <div className="mb-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-            <div className="flex items-center gap-2 text-sm">
-              <CheckCircle2 className="h-4 w-4 text-primary" />
-              <span className="font-medium">Calculation verified</span>
-              <span className="font-mono ml-auto">${editedMetadata['_calculatedLineItemsTotal']}</span>
-            </div>
-          </div>
-        )}
-
-        {/* AI Validation Section */}
-        <div className="mb-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <Sparkles className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold">AI Smart Validation</h3>
-              </div>
-              <p className="text-sm text-muted-foreground mb-3">
-                AI can validate extracted fields and suggest corrections with confidence scores. 
-                Click <Lightbulb className="inline h-3 w-3" /> on any field or validate all at once.
-              </p>
-              <Button
-                onClick={() => {
-                  projectFields.forEach(field => {
-                    const value = editedMetadata[field.name] || '';
-                    if (value && !field.name.startsWith('_')) {
-                      validateField(field.name, value);
-                    }
-                  });
-                }}
-                disabled={isValidating}
-                size="sm"
-                variant="default"
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                {isValidating ? 'Validating...' : 'Validate All Fields'}
-              </Button>
-            </div>
-          </div>
+      <Card className="p-6 flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="font-semibold">Index Fields</h3>
+          <Badge variant="outline" className="text-xs">
+            <Sparkles className="h-3 w-3 mr-1" />
+            AI Validation Available
+          </Badge>
         </div>
         
-        <div className="flex-1 overflow-auto space-y-4">
-          {projectFields.map((field) => {
+        {/* AI Validation Section - Always Visible at Top */}
+        <div className="mb-4 p-3 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="font-medium text-sm">AI Smart Validation</span>
+            </div>
+            <Button
+              onClick={() => {
+                projectFields.forEach(field => {
+                  const value = editedMetadata[field.name] || '';
+                  if (value && !field.name.startsWith('_')) {
+                    validateField(field.name, value);
+                  }
+                });
+              }}
+              disabled={isValidating}
+              size="sm"
+              variant="default"
+              className="h-7"
+            >
+              <Sparkles className="h-3 w-3 mr-1.5" />
+              {isValidating ? 'Validating...' : 'Validate All'}
+            </Button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2">
+            Click <Lightbulb className="inline h-3 w-3 mx-0.5" /> on fields to validate with AI
+          </p>
+        </div>
+        
+        <div className="flex-1 overflow-auto">
+          {/* Document Classification */}
+          {classification?.document_type && (
+            <div className="mb-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+              <div className="flex items-start gap-2 mb-2">
+                <Badge variant="outline" className="text-sm">
+                  📄 {classification.document_type.replace(/_/g, ' ').toUpperCase()}
+                </Badge>
+                {classification.confidence !== undefined && (
+                  <Badge variant="secondary" className="text-xs">
+                    {Math.round(classification.confidence * 100)}% confident
+                  </Badge>
+                )}
+              </div>
+              {classification.reasoning && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  {classification.reasoning}
+                </p>
+              )}
+            </div>
+          )}
+          
+          {/* Calculation Variance Warning */}
+          {editedMetadata['_calculationMatch'] === 'false' && (
+            <div className="mb-4 p-4 bg-destructive/10 border-2 border-destructive/50 rounded-lg">
+              <div className="flex items-start gap-2 mb-3">
+                <Badge variant="destructive" className="text-sm">
+                  ⚠️ CALCULATION MISMATCH
+                </Badge>
+              </div>
+              <div className="space-y-2 text-sm">
+                <p>
+                  <span className="font-medium">Line Items Total:</span>{' '}
+                  <span className="font-mono">${editedMetadata['_calculatedLineItemsTotal']}</span>
+                </p>
+                <p>
+                  <span className="font-medium">Invoice Total:</span>{' '}
+                  <span className="font-mono">${editedMetadata['_invoiceTotal']}</span>
+                </p>
+                <p className="text-destructive font-semibold pt-2 border-t border-destructive/20">
+                  <span className="font-bold">VARIANCE:</span>{' '}
+                  <span className="font-mono text-lg">${editedMetadata['_calculationVariance']}</span>
+                  <span className="ml-2 text-base">({editedMetadata['_calculationVariancePercent']}%)</span>
+                </p>
+              </div>
+              <p className="mt-3 text-sm text-destructive font-medium">
+                ⚠️ Please verify line items and totals before validating
+              </p>
+            </div>
+          )}
+          
+          {editedMetadata['_calculationMatch'] === 'true' && (
+            <div className="mb-4 p-3 bg-primary/5 border border-primary/20 rounded-lg">
+              <div className="flex items-center gap-2 text-sm">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <span className="font-medium">Calculation verified</span>
+                <span className="font-mono ml-auto">${editedMetadata['_calculatedLineItemsTotal']}</span>
+              </div>
+            </div>
+          )}
+          
+          <div className="space-y-4">
+            {projectFields.map((field) => {
             // Skip internal calculation fields from display
             if (field.name.startsWith('_calculation') || field.name.startsWith('_invoiceTotal') || field.name.startsWith('_calculated')) {
               return null;
@@ -991,6 +996,7 @@ useEffect(() => {
               <p className="text-sm">No index fields defined for this project</p>
             </div>
           )}
+          </div>
         </div>
 
         {/* Validation Actions */}
