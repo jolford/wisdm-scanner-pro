@@ -670,6 +670,20 @@ RESPONSE REQUIREMENTS:
                 ]
               };
               const templateResult = await localExtractWithTemplate(text, LOCAL_FORT_HALL_CASINO_TEMPLATE);
+              if (templateResult.success && templateResult.overallConfidence > 0.7) {
+                console.log(`Template extraction successful with ${(templateResult.overallConfidence * 100).toFixed(1)}% confidence`);
+                for (const [fieldName, data] of Object.entries(templateResult.fields)) {
+                  const fieldData = data as { value: string; confidence: number };
+                  if (fieldData.value) {
+                    metadata[fieldName] = fieldData.value;
+                    if (fieldConfidence) fieldConfidence[fieldName] = fieldData.confidence;
+                    console.log(`Template extracted ${fieldName}: ${fieldData.value} (confidence: ${(fieldData.confidence * 100).toFixed(1)}%)`);
+                  }
+                }
+                confidence = templateResult.overallConfidence;
+              } else {
+                console.log(`Template extraction failed or low confidence (${(templateResult.overallConfidence * 100).toFixed(1)}%)`);
+              }
             }
           } catch (postErr) {
             console.warn('Template extraction failed, using AI results:', postErr);
