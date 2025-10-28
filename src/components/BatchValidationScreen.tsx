@@ -85,6 +85,7 @@ interface Document {
  */
 interface BatchValidationScreenProps {
   documents: Document[];
+  allDocuments?: Document[]; // All documents in batch for progress calculation
   projectFields: Array<{ name: string; description: string }>;
   onValidationComplete: () => void;
   batchId: string;
@@ -99,6 +100,7 @@ interface BatchValidationScreenProps {
  */
 export const BatchValidationScreen = ({
   documents,
+  allDocuments,
   projectFields,
   onValidationComplete,
   batchId,
@@ -201,15 +203,16 @@ export const BatchValidationScreen = ({
     isAllSelected,
   } = useBulkSelection(filteredDocuments);
   
-  // Calculate progress metrics
+  // Calculate progress metrics from all documents in batch (not just pending ones)
+  const docsForMetrics = allDocuments || documents;
   const progressMetrics = {
-    totalDocuments: documents.length,
-    validated: documents.filter(d => d.validation_status === 'validated').length,
-    pending: documents.filter(d => d.validation_status === 'pending').length,
-    rejected: documents.filter(d => d.validation_status === 'rejected').length,
+    totalDocuments: docsForMetrics.length,
+    validated: docsForMetrics.filter(d => d.validation_status === 'validated').length,
+    pending: docsForMetrics.filter(d => d.validation_status === 'pending').length,
+    rejected: docsForMetrics.filter(d => d.validation_status === 'rejected').length,
     avgTimePerDoc: 45, // This could be calculated from actual validation times
-    accuracy: documents.length > 0 
-      ? Math.round((documents.filter(d => d.validation_status === 'validated').length / documents.length) * 100)
+    accuracy: docsForMetrics.length > 0 
+      ? Math.round((docsForMetrics.filter(d => d.validation_status === 'validated').length / docsForMetrics.length) * 100)
       : 0,
     topVendor: undefined, // Could be calculated from metadata
   };
@@ -980,6 +983,7 @@ export const BatchValidationScreen = ({
       });
 
       // Notify parent component that validation state changed
+      // This will trigger a reload of documents, updating the progress dashboard
       onValidationComplete();
       
       // If this was the last document, switch to export view

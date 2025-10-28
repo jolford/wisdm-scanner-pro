@@ -1672,6 +1672,7 @@ const [isExporting, setIsExporting] = useState(false);
               ) : (
                 <BatchValidationScreen
                   documents={validationQueue}
+                  allDocuments={[...validationQueue, ...validatedDocs]}
                   projectFields={extractionFields}
                   onValidationComplete={loadQueueDocuments}
                   batchId={selectedBatchId}
