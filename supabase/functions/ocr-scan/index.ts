@@ -246,10 +246,10 @@ RESPONSE REQUIREMENTS:
     }
 
 
-    // --- CALL LOVABLE AI FOR OCR PROCESSING WITH FALLBACK ---
-    // Try Gemini Pro first, fall back to Flash on failure
+    // --- CALL LOVABLE AI FOR OCR PROCESSING ---
+    // Using Gemini Pro for higher accuracy on complex documents like casino vouchers
     let response;
-    let modelUsed = 'google/gemini-2.5-flash';
+    let modelUsed = 'google/gemini-2.5-pro';
     
     try {
       response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
