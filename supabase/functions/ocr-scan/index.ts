@@ -578,30 +578,98 @@ RESPONSE REQUIREMENTS:
             if (isVoucherDoc && isCasinoVoucher) {
               console.log('Applying template-based extraction for casino voucher...');
               
-              // Import and apply template
-              const { extractWithTemplate, FORT_HALL_CASINO_TEMPLATE } = await import('../ocr-scan-template/index.ts');
-              const templateResult = await extractWithTemplate(text, FORT_HALL_CASINO_TEMPLATE);
-              
-              if (templateResult.success && templateResult.overallConfidence > 0.7) {
-                console.log(`Template extraction successful with ${(templateResult.overallConfidence * 100).toFixed(1)}% confidence`);
-                
-                // Override AI metadata with template results
-                for (const [fieldName, data] of Object.entries(templateResult.fields)) {
-                  const fieldData = data as { value: string; confidence: number };
-                  if (fieldData.value) {
-                    metadata[fieldName] = fieldData.value;
-                    if (fieldConfidence) {
-                      fieldConfidence[fieldName] = fieldData.confidence;
-                    }
-                    console.log(`Template extracted ${fieldName}: ${fieldData.value} (confidence: ${(fieldData.confidence * 100).toFixed(1)}%)`);
-                  }
-                }
-                
-                // Update overall confidence to template confidence
-                confidence = templateResult.overallConfidence;
-              } else {
-                console.log(`Template extraction failed or low confidence (${(templateResult.overallConfidence * 100).toFixed(1)}%)`);
+              // Inline template extractor (edge functions cannot import local files)
+              interface LocalExtractionZone {
+                fieldName: string;
+                searchPatterns: RegExp[];
+                contextKeywords?: string[];
+                cleanupRules?: ((text: string) => string)[];
+                validationPattern?: RegExp;
               }
+              interface LocalTemplate {
+                name: string;
+                documentType: string;
+                zones: LocalExtractionZone[];
+                overallHints?: string[];
+              }
+              async function localExtractWithTemplate(fullText: string, template: LocalTemplate) {
+                const fields: Record<string, { value: string; confidence: number }> = {};
+                const lines = fullText.split('\n').map(l => l.trim()).filter(Boolean);
+                let total = 0, count = 0;
+                for (const zone of template.zones) {
+                  let best = '', conf = 0;
+                  for (const pattern of zone.searchPatterns) {
+                    const m = fullText.match(pattern);
+                    if (m && m[0]) {
+                      let c = m[0];
+                      if (zone.cleanupRules) for (const r of zone.cleanupRules) c = r(c);
+                      if (!zone.validationPattern || zone.validationPattern.test(c)) {
+                        best = c; conf = zone.validationPattern ? 0.95 : 0.8; break;
+                      }
+                    }
+                    if (!best && zone.contextKeywords) {
+                      for (const line of lines) {
+                        const hasCtx = zone.contextKeywords.some(kw => line.toLowerCase().includes(kw.toLowerCase()));
+                        if (!hasCtx) continue;
+                        const mm = line.match(pattern);
+                        if (mm && mm[0]) {
+                          let c = mm[0];
+                          if (zone.cleanupRules) for (const r of zone.cleanupRules) c = r(c);
+                          if (!zone.validationPattern || zone.validationPattern.test(c)) { best = c; conf = 0.9; break; }
+                        }
+                      }
+                    }
+                    if (best) break;
+                  }
+                  fields[zone.fieldName] = { value: best, confidence: conf };
+                  if (best) { total += conf; count++; }
+                }
+                const overall = count ? total / count : 0;
+                return { success: count >= Math.ceil(template.zones.length * 0.75), fields, overallConfidence: overall };
+              }
+              const LOCAL_FORT_HALL_CASINO_TEMPLATE: LocalTemplate = {
+                name: 'Fort Hall Casino Cashout Ticket',
+                documentType: 'casino_voucher',
+                zones: [
+                  {
+                    fieldName: 'Validation Date',
+                    searchPatterns: [ /\d{1,2}[\/-]\d{1,2}[\/-]\d{4}\s+\d{1,2}:\d{2}:\d{2}/, /\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/ ],
+                    contextKeywords: ['VALIDATION', 'TICKET'],
+                    validationPattern: /\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/,
+                    cleanupRules: [ (t) => { const m = t.match(/\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/); return m ? m[0] : t; } ]
+                  },
+                  {
+                    fieldName: 'Amount',
+                    searchPatterns: [ /\$[\d,]+\.\d{2}/g ],
+                    validationPattern: /^\$[\d,]+\.\d{2}$/,
+                    cleanupRules: [ (t) => {
+                      const amts = t.match(/\$[\d,]+\.\d{2}/g) || [];
+                      let max = 0, out = '';
+                      for (const a of amts) { const n = parseFloat(a.replace(/[\$,]/g, '')); if (n > max) { max = n; out = a; } }
+                      return out || t;
+                    }]
+                  },
+                  {
+                    fieldName: 'Ticket Number',
+                    searchPatterns: [ /\d{2}-\d{4}-\d{4}-\d{4}-\d{4}/, /VALIDATION\s+([\d-]+)/i ],
+                    contextKeywords: ['VALIDATION'],
+                    validationPattern: /^\d{2}-\d{4}-\d{4}-\d{4}-\d{4}$/,
+                    cleanupRules: [ (t) => { const m = t.match(/\d{2}-\d{4}-\d{4}-\d{4}-\d{4}/); return m ? m[0] : t; } ]
+                  },
+                  {
+                    fieldName: 'Machine Number',
+                    searchPatterns: [ /MACHINE\s+#?(\d{3,6})/i, /ASSET\s*#?(\d{3,6})/i, /\b\d{3,6}-\d{2,3}\b/ ],
+                    contextKeywords: ['MACHINE', 'ASSET'],
+                    validationPattern: /^\d{3,6}(-\d{2,3})?$/,
+                    cleanupRules: [ (t) => {
+                      const dash = t.match(/\b\d{3,6}-\d{2,3}\b/);
+                      if (dash) return dash[0];
+                      const m = t.match(/\d{3,6}/); return m ? m[0] : t;
+                    } ]
+                  }
+                ]
+              };
+              const templateResult = await localExtractWithTemplate(text, LOCAL_FORT_HALL_CASINO_TEMPLATE);
             }
           } catch (postErr) {
             console.warn('Template extraction failed, using AI results:', postErr);
