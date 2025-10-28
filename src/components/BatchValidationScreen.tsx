@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // Icon imports from lucide-react
 import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles } from 'lucide-react';
@@ -19,6 +20,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ImageRegionSelector } from './ImageRegionSelector';
 import { useSignedUrl } from '@/hooks/use-signed-url';
+
+// Enhanced feature components
+import { BulkActionsToolbar } from './BulkActionsToolbar';
+import { SearchFilterBar, DocumentFilters } from './SearchFilterBar';
+import { ProgressTrackingDashboard } from './ProgressTrackingDashboard';
+import { SmartSuggestionsPanel } from './SmartSuggestionsPanel';
+import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
+import { useBulkSelection } from '@/hooks/use-bulk-selection';
 
 // Collapsible UI components for expandable document cards
 import {
@@ -136,8 +145,191 @@ export const BatchValidationScreen = ({
   const [validatingFields, setValidatingFields] = useState<Set<string>>(new Set());
   const [fieldConfidence, setFieldConfidence] = useState<Record<string, Record<string, number>>>({});
   
+  // Search and filter state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState<DocumentFilters>({});
+  
+  // Current document index for keyboard navigation
+  const [currentDocIndex, setCurrentDocIndex] = useState(0);
+  
   // Toast notifications for user feedback
   const { toast } = useToast();
+  
+  // Filter documents based on search and filters
+  const filteredDocuments = documents.filter(doc => {
+    // Search across all fields
+    if (searchQuery) {
+      const searchLower = searchQuery.toLowerCase();
+      const metadata = doc.extracted_metadata as Record<string, any> || {};
+      const matchesSearch = 
+        doc.file_name?.toLowerCase().includes(searchLower) ||
+        Object.values(metadata).some(value => 
+          String(value).toLowerCase().includes(searchLower)
+        );
+      if (!matchesSearch) return false;
+    }
+
+    // Apply filters
+    if (filters.documentType && doc.document_type !== filters.documentType) {
+      return false;
+    }
+    
+    if (filters.minConfidence && doc.classification_confidence) {
+      if (doc.classification_confidence < filters.minConfidence / 100) {
+        return false;
+      }
+    }
+    
+    if (filters.hasIssues) {
+      const hasIssues = 
+        offensiveLanguageResults[doc.id] ||
+        calculationVariance[doc.id]?.hasVariance;
+      if (!hasIssues) return false;
+    }
+
+    return true;
+  });
+  
+  // Bulk selection hook
+  const {
+    selectedIds,
+    toggleSelection,
+    clearSelection,
+    isSelected,
+    selectedCount,
+    toggleAll,
+    isAllSelected,
+  } = useBulkSelection(filteredDocuments);
+  
+  // Calculate progress metrics
+  const progressMetrics = {
+    totalDocuments: documents.length,
+    validated: documents.filter(d => d.validation_status === 'validated').length,
+    pending: documents.filter(d => d.validation_status === 'pending').length,
+    rejected: documents.filter(d => d.validation_status === 'rejected').length,
+    avgTimePerDoc: 45, // This could be calculated from actual validation times
+    accuracy: documents.length > 0 
+      ? Math.round((documents.filter(d => d.validation_status === 'validated').length / documents.length) * 100)
+      : 0,
+    topVendor: undefined, // Could be calculated from metadata
+  };
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts({
+    shortcuts: [
+      {
+        key: 'v',
+        description: 'Validate current document',
+        category: 'Validation',
+        handler: () => {
+          const currentDoc = filteredDocuments[currentDocIndex];
+          if (currentDoc && currentDoc.validation_status === 'pending') {
+            handleValidate(currentDoc, 'validated');
+          }
+        },
+      },
+      {
+        key: 'r',
+        description: 'Reject current document',
+        category: 'Validation',
+        handler: () => {
+          const currentDoc = filteredDocuments[currentDocIndex];
+          if (currentDoc && currentDoc.validation_status === 'pending') {
+            handleValidate(currentDoc, 'rejected');
+          }
+        },
+      },
+      {
+        key: 'n',
+        description: 'Next document',
+        category: 'Navigation',
+        handler: () => {
+          setCurrentDocIndex(prev => 
+            Math.min(prev + 1, filteredDocuments.length - 1)
+          );
+        },
+      },
+      {
+        key: 'p',
+        description: 'Previous document',
+        category: 'Navigation',
+        handler: () => {
+          setCurrentDocIndex(prev => Math.max(prev - 1, 0));
+        },
+      },
+      {
+        key: 'e',
+        description: 'Expand/collapse current document',
+        category: 'Navigation',
+        handler: () => {
+          const currentDoc = filteredDocuments[currentDocIndex];
+          if (currentDoc) {
+            toggleExpanded(currentDoc.id);
+          }
+        },
+      },
+      {
+        key: 'Escape',
+        description: 'Clear selection',
+        category: 'Actions',
+        handler: () => {
+          if (selectedCount > 0) {
+            clearSelection();
+          }
+        },
+      },
+    ],
+  });
+
+  /**
+   * Bulk validate selected documents
+   */
+  const handleBulkValidate = async () => {
+    const selectedDocs = filteredDocuments.filter(d => selectedIds.has(d.id));
+    for (const doc of selectedDocs) {
+      await handleValidate(doc, 'validated');
+    }
+    clearSelection();
+  };
+
+  /**
+   * Bulk reject selected documents
+   */
+  const handleBulkReject = async () => {
+    const selectedDocs = filteredDocuments.filter(d => selectedIds.has(d.id));
+    for (const doc of selectedDocs) {
+      await handleValidate(doc, 'rejected');
+    }
+    clearSelection();
+  };
+
+  /**
+   * Bulk delete selected documents
+   */
+  const handleBulkDelete = async () => {
+    try {
+      const { error } = await supabase
+        .from('documents')
+        .delete()
+        .in('id', Array.from(selectedIds));
+
+      if (error) throw error;
+
+      toast({
+        title: 'Documents Deleted',
+        description: `${selectedIds.size} documents deleted successfully`,
+      });
+
+      clearSelection();
+      onValidationComplete();
+    } catch (error: any) {
+      toast({
+        title: 'Delete Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
 
   /**
    * Detect offensive language in all documents for AB1466 projects
@@ -322,6 +514,10 @@ export const BatchValidationScreen = ({
     setShowRegionSelector(new Set());
     setOffensiveLanguageResults({});
     setCalculationVariance({});
+    clearSelection();
+    setSearchQuery('');
+    setFilters({});
+    setCurrentDocIndex(0);
   }, [batchId]);
 
   /**
@@ -826,19 +1022,42 @@ export const BatchValidationScreen = ({
   return (
     <TooltipProvider>
     <div className="space-y-4 pb-24">
+      {/* Progress Tracking Dashboard */}
+      <ProgressTrackingDashboard 
+        metrics={progressMetrics}
+        batchName={batchName}
+      />
+
+      {/* Search & Filter Bar */}
+      <SearchFilterBar
+        onSearch={setSearchQuery}
+        onFilterChange={setFilters}
+        totalResults={filteredDocuments.length}
+      />
+
       {/* Header with document count and Validate All button */}
       <div className="flex items-center justify-between mb-4">
-        <div>
-          <h2 className="text-2xl font-bold">Validation Queue</h2>
-          <p className="text-muted-foreground">
-            {documents.length} document{documents.length !== 1 ? 's' : ''} pending validation
-          </p>
+        <div className="flex items-center gap-4">
+          {filteredDocuments.length > 0 && (
+            <Checkbox
+              checked={isAllSelected}
+              onCheckedChange={toggleAll}
+              aria-label="Select all documents"
+            />
+          )}
+          <div>
+            <h2 className="text-2xl font-bold">Validation Queue</h2>
+            <p className="text-muted-foreground">
+              {filteredDocuments.length} document{filteredDocuments.length !== 1 ? 's' : ''} 
+              {searchQuery || filters.documentType || filters.minConfidence || filters.hasIssues ? ' (filtered)' : ' pending validation'}
+            </p>
+          </div>
         </div>
         <Button
           onClick={handleValidateAll}
           variant="default"
           className="bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm"
-          disabled={documents.length === 0}
+          disabled={filteredDocuments.length === 0}
         >
           <CheckCircle2 className="h-4 w-4 mr-2" />
           Validate All
@@ -847,19 +1066,31 @@ export const BatchValidationScreen = ({
 
       {/* List of documents to validate */}
       <div className="space-y-3">
-        {documents.map((doc) => {
+        {filteredDocuments.map((doc, index) => {
           // Calculate state for this document
           const isExpanded = expandedDocs.has(doc.id);
           const isValidating = validatingDocs.has(doc.id);
           const metadata = getMetadataForDoc(doc);
+          const isCurrent = index === currentDocIndex;
 
           return (
-            <Card key={doc.id} className="overflow-hidden">
+            <Card 
+              key={doc.id} 
+              className={`overflow-hidden ${isCurrent ? 'ring-2 ring-primary' : ''} ${isSelected(doc.id) ? 'bg-accent/20' : ''}`}
+            >
               {/* Collapsible card for each document */}
               <Collapsible open={isExpanded} onOpenChange={() => toggleExpanded(doc.id)}>
                 {/* Document header: thumbnail, metadata badges, and action buttons */}
                 <div className="p-4 flex items-center justify-between bg-muted/30">
                   <div className="flex items-center gap-3 flex-1">
+                    {/* Checkbox for bulk selection */}
+                    <Checkbox
+                      checked={isSelected(doc.id)}
+                      onCheckedChange={() => toggleSelection(doc.id)}
+                      aria-label={`Select ${doc.file_name}`}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    
                     {/* Document thumbnail (image or PDF first page) */}
                     {doc.file_url ? (
                       <div className="flex-shrink-0">
@@ -1367,6 +1598,16 @@ export const BatchValidationScreen = ({
           </Card>
         )}
       </div>
+
+      {/* Bulk Actions Toolbar */}
+      <BulkActionsToolbar
+        selectedCount={selectedCount}
+        onClearSelection={clearSelection}
+        onBulkValidate={handleBulkValidate}
+        onBulkReject={handleBulkReject}
+        onBulkDelete={handleBulkDelete}
+        mode="validation"
+      />
     </div>
     </TooltipProvider>
   );
