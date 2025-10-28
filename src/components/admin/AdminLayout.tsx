@@ -56,6 +56,7 @@ const menuItems = [
   { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
   { title: 'System Viability', url: '/admin/viability', icon: Target },
   { title: 'Projects', url: '/admin/projects', icon: FolderOpen },
+  { title: 'Batch Templates', url: '/admin/batch-templates', icon: LayoutDashboard },
   { title: 'Documents', url: '/admin/documents', icon: FileText },
   { title: 'Customers', url: '/admin/customers', icon: Building2 },
   { title: 'Users', url: '/admin/users', icon: Users },

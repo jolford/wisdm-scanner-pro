@@ -336,6 +336,7 @@ RESPONSE REQUIREMENTS:
     // Initialize result variables with defaults
     let extractedText = responseText;
     let metadata: Record<string, string> = {};
+    let fieldConfidence: Record<string, number> = {};
     let lineItems: any[] = [];
     let documentType = 'other';
     let confidence = 0;
@@ -436,13 +437,15 @@ RESPONSE REQUIREMENTS:
           documentType = parsed.documentType || 'other';
           confidence = parsed.confidence || 0;
           
-          // Extract field values and handle both old and new formats
+          // Extract field values with confidence scores
+          let fieldConfidence: Record<string, number> = {};
           if (extractionFields && extractionFields.length > 0) {
             // Handle both formats:
             // Old: { "fieldName": "value" }
-            // New: { "fieldName": { "value": "value", "bbox": {...} } }
+            // New: { "fieldName": { "value": "value", "bbox": {...}, "confidence": 0.95 } }
             const fields = parsed.fields || {};
             metadata = {};
+            fieldConfidence = {};
             
             console.log('Extracting fields from parsed response. Expected fields:', extractionFields.map((f: any) => f.name).join(', '));
             console.log('Fields in response:', Object.keys(fields).join(', ') || '(none)');
@@ -451,12 +454,15 @@ RESPONSE REQUIREMENTS:
               if (typeof fields[key] === 'string') {
                 // Old format: direct string value
                 metadata[key] = fields[key];
+                fieldConfidence[key] = 0.85; // Default confidence
                 console.log(`Extracted field "${key}": "${fields[key]}"`);
               } else if (fields[key] && typeof fields[key] === 'object') {
-                // New format: object with value and bbox
+                // New format: object with value, bbox, and confidence
                 const value = fields[key].value || fields[key];
+                const conf = fields[key].confidence || 0.85;
                 metadata[key] = value;
-                console.log(`Extracted field "${key}": "${value}"`);
+                fieldConfidence[key] = conf;
+                console.log(`Extracted field "${key}": "${value}" (confidence: ${conf})`);
               }
             });
             
@@ -827,14 +833,15 @@ Review the image and provide corrected text with any OCR errors fixed.`;
     }
 
     // --- RETURN SUCCESS RESPONSE ---
-    // Return all extracted data to the client
+    // Return all extracted data to the client including field-level confidence
     return new Response(
       JSON.stringify({ 
         text: extractedText,              // Full document text
         metadata: metadata,               // Extracted field values
         lineItems: lineItems,             // Extracted table rows (if applicable)
         documentType: documentType,       // Classified document type
-        confidence: confidence,           // OCR confidence score (boosted if validation applied)
+        confidence: confidence,           // Overall OCR confidence score
+        fieldConfidence: fieldConfidence || {}, // Per-field confidence scores
         validationApplied: validationApplied, // Whether two-pass validation was used
         boundingBoxes: fieldBoundingBoxes, // Field locations on document
         wordBoundingBoxes: wordBoundingBoxes // Word-level coordinates for highlighting

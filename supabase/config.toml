@@ -60,3 +60,13 @@ verify_jwt = true
 
 [functions.process-hot-folders]
 verify_jwt = false
+
+# New batch automation functions
+[functions.parallel-ocr-batch]
+verify_jwt = true
+
+[functions.apply-batch-template]
+verify_jwt = true
+
+[functions.smart-validation]
+verify_jwt = true
