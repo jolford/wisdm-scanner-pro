@@ -95,6 +95,31 @@ export const ValidationScreen = ({
   const [resolvedBoundingBoxes, setResolvedBoundingBoxes] = useState(boundingBoxes);
   const [resolvedWordBoxes, setResolvedWordBoxes] = useState<Array<{ text: string; bbox: any }>>(wordBoundingBoxes || []);
 
+  // Helper to normalize any metadata value to a displayable string
+  const toFieldString = (v: any): string => {
+    if (v === null || v === undefined) return '';
+    if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') return String(v);
+    if (typeof v === 'object') {
+      // Handle new format { value: string, bbox: {...} }
+      if ('value' in v && (typeof (v as any).value === 'string' || typeof (v as any).value === 'number')) {
+        return String((v as any).value);
+      }
+    }
+    return '';
+  };
+
+  const normalizeSuggestions = (arr: any): string[] => {
+    if (!Array.isArray(arr)) return [];
+    return arr
+      .map((s: any) => {
+        if (typeof s === 'string') return s;
+        if (typeof s === 'number' || typeof s === 'boolean') return String(s);
+        if (s && typeof s === 'object' && 'value' in s) return String(s.value);
+        return '';
+      })
+      .filter(Boolean);
+  };
+
   // Load field confidence from document
   useEffect(() => {
     const loadConfidence = async () => {
@@ -116,60 +141,65 @@ export const ValidationScreen = ({
   }, [documentId]);
   
   // Smart validation function
-  const validateField = async (fieldName: string, fieldValue: string) => {
+  const validateField = async (fieldName: string, fieldValue: any) => {
     if (!documentId) return;
-    
+
+    const valueStr = toFieldString(fieldValue);
+    if (!valueStr) {
+      toast({ title: 'Nothing to validate', description: 'Please enter a value first.' });
+      return;
+    }
+
     setIsValidating(true);
     try {
       const { data, error } = await supabase.functions.invoke('smart-validation', {
         body: {
           documentId,
           fieldName,
-          fieldValue,
+          fieldValue: valueStr,
           context: extractedText.substring(0, 500)
         }
       });
-      
+
       if (error) throw error;
-      
+
       if (data?.validation) {
-        const validation = data.validation;
-        
+        const validation = data.validation as any;
+
         // Update confidence
-        setFieldConfidence(prev => ({
-          ...prev,
-          [fieldName]: validation.confidence
-        }));
-        
-        // Update suggestions
-        if (validation.suggestions && validation.suggestions.length > 0) {
-          setValidationSuggestions(prev => ({
+        if (typeof validation.confidence === 'number') {
+          setFieldConfidence(prev => ({
             ...prev,
-            [fieldName]: validation
-          }));
-          
-          setSuggestions(prev => ({
-            ...prev,
-            [fieldName]: validation.suggestions
+            [fieldName]: validation.confidence,
           }));
         }
-        
-        // Show toast for low confidence
-        if (validation.confidence < 0.7) {
-          toast({
-            title: "Low Confidence Detected",
-            description: validation.reasoning || "AI suggests reviewing this field",
-            variant: "destructive"
-          });
+
+        // Apply corrected/validated value when provided
+        const corrected = validation.validated_value ?? validation.corrected_value ?? validation.value;
+        if (corrected !== undefined && corrected !== null && corrected !== '') {
+          setEditedMetadata(prev => ({ ...prev, [fieldName]: toFieldString(corrected) }));
         }
+
+        // Normalize and show suggestions
+        const suggs = normalizeSuggestions(validation.suggestions);
+        if (suggs.length > 0) {
+          setValidationSuggestions(prev => ({ ...prev, [fieldName]: { ...validation, suggestions: suggs } }));
+          setSuggestions(prev => ({ ...prev, [fieldName]: suggs }));
+        }
+
+        toast({
+          title: 'AI validation complete',
+          description: corrected ? `Updated ${fieldName} to ${toFieldString(corrected)}` : (suggs.length ? 'Suggestions available below' : 'No changes suggested'),
+        });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Smart validation failed:', error);
+      const message = error?.message || 'Unexpected error running AI validation';
+      toast({ title: 'Validation failed', description: message, variant: 'destructive' });
     } finally {
       setIsValidating(false);
     }
   };
-
   useEffect(() => { setResolvedBoundingBoxes(boundingBoxes); }, [boundingBoxes]);
   useEffect(() => { setResolvedWordBoxes(wordBoundingBoxes || []); }, [wordBoundingBoxes]);
 
