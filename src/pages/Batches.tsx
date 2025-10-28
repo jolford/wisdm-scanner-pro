@@ -272,6 +272,7 @@ const Batches = () => {
       validated: 'bg-teal-500',
       complete: 'bg-green-500',
       exported: 'bg-gray-500',
+      suspended: 'bg-amber-600',
       error: 'bg-red-500',
     };
     return colors[status as keyof typeof colors] || 'bg-gray-500';

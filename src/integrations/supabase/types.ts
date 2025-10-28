@@ -1603,6 +1603,7 @@ export type Database = {
         | "complete"
         | "exported"
         | "error"
+        | "suspended"
       document_class_type:
         | "invoice"
         | "receipt"
@@ -1762,6 +1763,7 @@ export const Constants = {
         "complete",
         "exported",
         "error",
+        "suspended",
       ],
       document_class_type: [
         "invoice",

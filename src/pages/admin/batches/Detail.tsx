@@ -138,6 +138,7 @@ const BatchDetail = () => {
       validated: 'bg-teal-500',
       complete: 'bg-green-500',
       exported: 'bg-gray-500',
+      suspended: 'bg-amber-600',
       error: 'bg-red-500',
     };
     return colors[status as keyof typeof colors] || 'bg-gray-500';
@@ -477,6 +478,23 @@ ${xmlDocs}
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {batch.status !== 'suspended' ? (
+              <Button 
+                variant="outline" 
+                onClick={() => updateStatusMutation.mutate('suspended')}
+                disabled={updateStatusMutation.isPending}
+              >
+                Suspend Batch
+              </Button>
+            ) : (
+              <Button 
+                variant="outline"
+                onClick={() => updateStatusMutation.mutate('validation')}
+                disabled={updateStatusMutation.isPending}
+              >
+                Resume Batch
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" disabled={!documents || documents.length === 0}>
