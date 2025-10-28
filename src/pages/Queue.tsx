@@ -415,8 +415,8 @@ const [isExporting, setIsExporting] = useState(false);
         description: `Found ${boundaries.length} document(s) using ${effectiveConfig.method} separation`,
       });
       
-      // Process documents in parallel batches for speed (tuned to reduce timeouts)
-      const BATCH_SIZE = 3;
+      // Process documents in parallel batches for speed
+      const BATCH_SIZE = 8;
       const processingErrors: string[] = [];
       
       for (let batchStart = 0; batchStart < boundaries.length; batchStart += BATCH_SIZE) {
@@ -458,8 +458,8 @@ const [isExporting, setIsExporting] = useState(false);
                   canvas.height = Math.ceil(viewport.height);
                   if (!ctx) throw new Error('Canvas context not available');
                   await page.render({ canvasContext: ctx as any, viewport }).promise;
-                  const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
-                  let payloadImageData = await downscaleDataUrl(dataUrl, 1280, 0.7);
+                  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                  let payloadImageData = await downscaleDataUrl(dataUrl, 1600, 0.85);
 
                   const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
                     ? selectedProject?.metadata?.table_extraction_config?.fields || []
@@ -572,7 +572,7 @@ const [isExporting, setIsExporting] = useState(false);
     toast({ title: 'Processing Multiple Files', description: `Processing ${total} files...` });
     setProcessing(true);
 
-    const MAX_CONCURRENT = 3; // Keep under gateway limits for best throughput
+    const MAX_CONCURRENT = 8; // Optimal throughput
     const queue = [...files];
     const processingErrors: string[] = [];
     let processed = 0;
@@ -673,7 +673,7 @@ const [isExporting, setIsExporting] = useState(false);
       let payloadImageData = imageUrl;
       if (typeof payloadImageData === 'string' && payloadImageData.startsWith('data:')) {
         try {
-          payloadImageData = await downscaleDataUrl(payloadImageData, 1280, 0.7);
+          payloadImageData = await downscaleDataUrl(payloadImageData, 1600, 0.85);
         } catch (e) {
           console.warn('Image downscale failed, sending original');
         }
