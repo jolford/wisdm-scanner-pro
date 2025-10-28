@@ -782,14 +782,14 @@ const [isExporting, setIsExporting] = useState(false);
         ? selectedProject?.metadata?.table_extraction_config?.fields || []
         : [];
       
-      // Pre-process and validate image
+      // Downscale large inline images quickly
       let payloadImageData = imageUrl;
       if (typeof payloadImageData === 'string' && payloadImageData.startsWith('data:')) {
-        const { dataUrl: processed, error: procError } = await preprocessImage(payloadImageData, fileName);
-        if (procError) {
-          console.warn('Image preprocessing warning:', procError);
+        try {
+          payloadImageData = await downscaleDataUrl(payloadImageData, 1600, 0.85);
+        } catch (e) {
+          console.warn('Image downscale failed, sending original');
         }
-        payloadImageData = processed;
       }
       
       const data = await invokeOcr({ 
