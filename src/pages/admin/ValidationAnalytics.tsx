@@ -1,10 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/hooks/use-auth';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, LineChart, PieChart } from 'lucide-react';
 import { toast } from 'sonner';
@@ -30,33 +28,20 @@ interface UserProductivity {
 }
 
 export default function ValidationAnalytics() {
-  const navigate = useNavigate();
-  const { user, isAdmin } = useAuth();
+  useRequireAuth(true); // Require admin access
+  
   const [analytics, setAnalytics] = useState<AnalyticsData[]>([]);
   const [timeRange, setTimeRange] = useState('7'); // days
   const [selectedProject, setSelectedProject] = useState<string>('all');
   const [projects, setProjects] = useState<any[]>([]);
   const [userProductivity, setUserProductivity] = useState<UserProductivity[]>([]);
   const [errorProneFields, setErrorProneFields] = useState<Array<{ field: string; count: number }>>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Wait for auth to load
-    if (user === undefined) {
-      return;
-    }
-
-    if (!isAdmin) {
-      toast.error('Admin access required');
-      navigate('/admin');
-      return;
-    }
-
-    setIsLoading(false);
     loadProjects();
     loadAnalytics();
     loadUserProductivity();
-  }, [isAdmin, navigate, timeRange, selectedProject, user]);
+  }, [timeRange, selectedProject]);
 
   const loadProjects = async () => {
     const { data } = await supabase
@@ -180,11 +165,6 @@ export default function ValidationAnalytics() {
 
   return (
     <AdminLayout title="Validation Analytics">
-      {isLoading ? (
-        <div className="flex items-center justify-center min-h-[400px]">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-        </div>
-      ) : (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
@@ -345,7 +325,6 @@ export default function ValidationAnalytics() {
           </CardContent>
         </Card>
       </div>
-      )}
     </AdminLayout>
   );
 }
