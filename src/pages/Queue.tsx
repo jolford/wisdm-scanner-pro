@@ -685,7 +685,7 @@ const [isExporting, setIsExporting] = useState(false);
     toast({ title: 'Processing Multiple Files', description: `Processing ${total} files...` });
     setProcessing(true);
 
-    const MAX_CONCURRENT = 8; // Optimal throughput
+    const MAX_CONCURRENT = 3; // Limit to reduce timeouts and improve stability
     const queue = [...files];
     const processingErrors: string[] = [];
     let processed = 0;
