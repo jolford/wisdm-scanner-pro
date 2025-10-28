@@ -542,6 +542,88 @@ export type Database = {
           },
         ]
       }
+      document_comments: {
+        Row: {
+          comment: string
+          created_at: string
+          document_id: string
+          flag_for_review: boolean | null
+          id: string
+          is_resolved: boolean | null
+          resolved_at: string | null
+          resolved_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          comment: string
+          created_at?: string
+          document_id: string
+          flag_for_review?: boolean | null
+          id?: string
+          is_resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          comment?: string
+          created_at?: string
+          document_id?: string
+          flag_for_review?: boolean | null
+          id?: string
+          is_resolved?: boolean | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_comments_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      document_locks: {
+        Row: {
+          document_id: string
+          expires_at: string
+          id: string
+          locked_at: string
+          locked_by: string
+          session_id: string
+        }
+        Insert: {
+          document_id: string
+          expires_at?: string
+          id?: string
+          locked_at?: string
+          locked_by: string
+          session_id: string
+        }
+        Update: {
+          document_id?: string
+          expires_at?: string
+          id?: string
+          locked_at?: string
+          locked_by?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_locks_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: true
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           batch_id: string | null
@@ -846,6 +928,50 @@ export type Database = {
           user_id?: string | null
         }
         Relationships: []
+      }
+      field_changes: {
+        Row: {
+          change_type: string
+          created_at: string
+          document_id: string
+          field_name: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          user_id: string
+          validation_status: string | null
+        }
+        Insert: {
+          change_type: string
+          created_at?: string
+          document_id: string
+          field_name: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          user_id: string
+          validation_status?: string | null
+        }
+        Update: {
+          change_type?: string
+          created_at?: string
+          document_id?: string
+          field_name?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          user_id?: string
+          validation_status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_changes_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       job_metrics: {
         Row: {
@@ -1646,6 +1772,72 @@ export type Database = {
         }
         Relationships: []
       }
+      validation_analytics: {
+        Row: {
+          avg_time_seconds: number | null
+          created_at: string
+          customer_id: string
+          document_type: string | null
+          documents_rejected: number | null
+          documents_validated: number | null
+          field_errors: Json | null
+          id: string
+          project_id: string | null
+          total_time_seconds: number | null
+          updated_at: string
+          user_id: string | null
+          validation_date: string
+          validation_hour: number
+        }
+        Insert: {
+          avg_time_seconds?: number | null
+          created_at?: string
+          customer_id: string
+          document_type?: string | null
+          documents_rejected?: number | null
+          documents_validated?: number | null
+          field_errors?: Json | null
+          id?: string
+          project_id?: string | null
+          total_time_seconds?: number | null
+          updated_at?: string
+          user_id?: string | null
+          validation_date?: string
+          validation_hour?: number
+        }
+        Update: {
+          avg_time_seconds?: number | null
+          created_at?: string
+          customer_id?: string
+          document_type?: string | null
+          documents_rejected?: number | null
+          documents_validated?: number | null
+          field_errors?: Json | null
+          id?: string
+          project_id?: string | null
+          total_time_seconds?: number | null
+          updated_at?: string
+          user_id?: string | null
+          validation_date?: string
+          validation_hour?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_analytics_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "validation_analytics_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -1679,6 +1871,7 @@ export type Database = {
         Args: { _customer_id: string; _job_type?: string }
         Returns: boolean
       }
+      cleanup_expired_locks: { Args: never; Returns: undefined }
       consume_license_documents:
         | {
             Args: {
@@ -1741,6 +1934,16 @@ export type Database = {
         Returns: boolean
       }
       jwt_claim: { Args: { path: string }; Returns: string }
+      track_field_change: {
+        Args: {
+          _change_type: string
+          _document_id: string
+          _field_name: string
+          _new_value: string
+          _old_value: string
+        }
+        Returns: string
+      }
       update_tenant_usage: {
         Args: {
           _cost_usd: number

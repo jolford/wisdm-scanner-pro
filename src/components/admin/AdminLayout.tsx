@@ -58,6 +58,7 @@ const menuItems = [
   { title: 'Batch Templates', url: '/admin/batch-templates', icon: LayoutDashboard },
   { title: 'Documents', url: '/admin/documents', icon: FileText },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
+  { title: 'Validation Analytics', url: '/admin/validation-analytics', icon: TrendingUp },
   { title: 'Advanced Reports', url: '/admin/advanced-reports', icon: TrendingUp },
   { title: 'Reprocess Docs', url: '/admin/reprocess', icon: RefreshCw },
 ];
