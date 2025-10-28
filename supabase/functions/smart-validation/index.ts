@@ -104,8 +104,19 @@ Respond with JSON only:
 
       let validation;
       try {
-        validation = JSON.parse(validationText);
-      } catch {
+        // Strip markdown code blocks if present
+        let cleanedText = validationText.trim();
+        if (cleanedText.startsWith('```')) {
+          // Remove opening code block (```json or just ```)
+          cleanedText = cleanedText.replace(/^```(?:json)?\s*\n/, '');
+          // Remove closing code block
+          cleanedText = cleanedText.replace(/\n```\s*$/, '');
+        }
+        
+        validation = JSON.parse(cleanedText);
+      } catch (parseError) {
+        console.error('Failed to parse AI response:', parseError);
+        console.error('Raw response:', validationText);
         validation = {
           isValid: true,
           confidence: 0.7,
