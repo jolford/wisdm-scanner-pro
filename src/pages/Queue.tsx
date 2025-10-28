@@ -402,6 +402,27 @@ const [isExporting, setIsExporting] = useState(false);
     if (!selectedBatchId) return;
 
     try {
+      // First check if the batch still exists
+      const { data: batchCheck, error: batchError } = await supabase
+        .from('batches')
+        .select('id')
+        .eq('id', selectedBatchId)
+        .maybeSingle();
+
+      if (batchError || !batchCheck) {
+        // Batch was deleted, clear selection
+        toast({
+          title: 'Batch Deleted',
+          description: 'The selected batch no longer exists',
+          variant: 'destructive',
+        });
+        setSelectedBatchId(null);
+        setSelectedBatch(null);
+        setValidationQueue([]);
+        setValidatedDocs([]);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('documents')
         .select('*')
@@ -1479,22 +1500,22 @@ const [isExporting, setIsExporting] = useState(false);
                   console.log('Help button clicked - navigating to /help');
                   navigate('/help');
                 }} 
-                className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3"
+                className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3 bg-blue-50 hover:bg-blue-100 dark:bg-blue-950 dark:hover:bg-blue-900"
               >
                 <HelpCircle className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Help</span>
               </Button>
               {isAdmin && (
-                <Button variant="outline" size="sm" onClick={() => navigate('/admin')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
+                <Button variant="outline" size="sm" onClick={() => navigate('/admin')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3 bg-purple-50 hover:bg-purple-100 dark:bg-purple-950 dark:hover:bg-purple-900">
                   <Settings className="h-4 w-4 sm:mr-2" />
                   <span className="hidden sm:inline">Admin</span>
                 </Button>
               )}
-              <Button variant="outline" size="sm" onClick={() => navigate('/batches')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
+              <Button variant="outline" size="sm" onClick={() => navigate('/batches')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3 bg-amber-50 hover:bg-amber-100 dark:bg-amber-950 dark:hover:bg-amber-900">
                 <FolderOpen className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Batches</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={() => navigate('/settings')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
+              <Button variant="outline" size="sm" onClick={() => navigate('/settings')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3 bg-slate-50 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-800">
                 <User className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Settings</span>
               </Button>

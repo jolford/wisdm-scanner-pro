@@ -91,13 +91,17 @@ const DocumentsAdmin = () => {
           file_type,
           validation_status,
           created_at,
+          batch_id,
           projects!inner(name),
           batches(batch_name)
         `)
+        .not('batch_id', 'is', null)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setDocuments(data || []);
+      // Filter out documents from deleted batches (where join returned null)
+      const validDocs = (data || []).filter(doc => doc.batches !== null);
+      setDocuments(validDocs);
     } catch (error: any) {
       toast.error('Failed to load documents: ' + error.message);
     }
