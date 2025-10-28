@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 
 // Icon imports from lucide-react
 import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles } from 'lucide-react';
@@ -824,6 +824,7 @@ export const BatchValidationScreen = ({
 
   // --- RENDER COMPONENT ---
   return (
+    <TooltipProvider>
     <div className="space-y-4 pb-24">
       {/* Header with document count and Validate All button */}
       <div className="flex items-center justify-between mb-4">
@@ -1367,6 +1368,7 @@ export const BatchValidationScreen = ({
         )}
       </div>
     </div>
+    </TooltipProvider>
   );
 };
 
