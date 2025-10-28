@@ -101,6 +101,13 @@ serve(async (req) => {
     if (extractionFields && extractionFields.length > 0) {
       const fieldNames = extractionFields.map((f: any) => f.name);
       
+      // Check if this is a casino voucher/jackpot slip
+      const isCasinoVoucher = extractionFields.some((f: any) => 
+        f.name.toLowerCase().includes('validation') || 
+        f.name.toLowerCase().includes('ticket') ||
+        f.name.toLowerCase().includes('machine')
+      );
+      
       // Check if this is a medical/lab form with accessioning/requisition numbers
       // These require special handling for accurate barcode recognition
       const hasAccessioningField = extractionFields.some((f: any) => 
@@ -108,7 +115,51 @@ serve(async (req) => {
         f.name.toLowerCase().includes('requisition')
       );
       
-      if (hasAccessioningField) {
+      if (isCasinoVoucher) {
+        // SPECIALIZED PROMPT FOR CASINO VOUCHER/JACKPOT SLIP EXTRACTION
+        const baseJson = `{"fullText": "complete extracted text", "documentType": "casino_voucher", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}}`;
+        const tableJson = hasTableExtraction 
+          ? `, "lineItems": [{${tableExtractionFields.map((f: any) => `"${f.name}": "value"`).join(', ')}}]`
+          : '';
+        
+        systemPrompt = `CRITICAL: You MUST return ONLY valid JSON with no additional text, explanations, or markdown formatting. 
+
+You are an advanced OCR system specialized in casino vouchers and cashout tickets. Return this EXACT JSON structure: ${baseJson.slice(0, -1)}${tableJson}}
+
+CASINO VOUCHER EXTRACTION RULES:
+1. AMOUNT: Look for the LARGEST dollar amount prominently displayed in the CENTER of the voucher (e.g., "$100.30")
+2. VALIDATION/TICKET NUMBER: Look for the BARCODE with adjacent text like "VALIDATION" followed by a long number in format ##-####-####-####-#### (e.g., "00-6644-2732-2896-8065")
+3. VALIDATION DATE: Look for date near the VALIDATION text or barcode, typically in format MM/DD/YYYY (e.g., "12/3/2024")
+4. MACHINE NUMBER: Look for text referencing "MACHINE" or equipment number
+5. VOUCHER NUMBER: Often appears as "VOUCHER #" followed by digits
+
+CRITICAL RULES:
+- Extract the EXACT numbers as they appear - DO NOT invent or hallucinate numbers
+- The prominently displayed dollar amount in large font is the voucher amount
+- The validation/ticket number is the long hyphenated number near the barcode
+- Verify all digits carefully - accuracy is critical
+
+RESPONSE REQUIREMENTS:
+- Return ONLY the JSON object
+- NO markdown code blocks (\`\`\`json)
+- NO explanatory text before or after JSON
+- Use double quotes for all strings
+- Ensure valid JSON syntax`;
+
+        let tableInstructions = '';
+        if (hasTableExtraction) {
+          tableInstructions = ` Extract ALL rows from line item tables into "lineItems" array with fields: ${tableExtractionFields.map((f: any) => f.name).join(', ')}.`;
+        }
+
+        userPrompt = `This is a CASINO VOUCHER or CASHOUT TICKET. Extract the following fields with EXTREME ACCURACY: ${fieldNames.join(', ')}.${tableInstructions} 
+
+KEY REMINDERS:
+- The AMOUNT is the large dollar value displayed prominently (NOT small print amounts)
+- The VALIDATION/TICKET NUMBER is the long hyphenated number near the barcode (format: ##-####-####-####-####)
+- Extract EXACTLY what you see - do not make up numbers
+
+RESPOND WITH ONLY THE JSON OBJECT - NO OTHER TEXT.`;
+      } else if (hasAccessioningField) {
         // SPECIALIZED PROMPT FOR BARCODE/ACCESSIONING NUMBER EXTRACTION
         // These numbers are critical for lab forms and must be extracted with high accuracy
         const baseJson = `{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}}`;
