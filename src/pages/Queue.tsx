@@ -1654,6 +1654,7 @@ const [isExporting, setIsExporting] = useState(false);
                   projectFields={extractionFields}
                   onValidationComplete={loadQueueDocuments}
                   batchId={selectedBatchId}
+                  batchName={selectedBatch?.batch_name}
                   onSwitchToExport={() => handleTabChange('export')}
                 />
               )}

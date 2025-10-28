@@ -58,13 +58,16 @@ const menuItems = [
   { title: 'Projects', url: '/admin/projects', icon: FolderOpen },
   { title: 'Batch Templates', url: '/admin/batch-templates', icon: LayoutDashboard },
   { title: 'Documents', url: '/admin/documents', icon: FileText },
+  { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
+  { title: 'Advanced Reports', url: '/admin/advanced-reports', icon: TrendingUp },
+  { title: 'Reprocess Docs', url: '/admin/reprocess', icon: RefreshCw },
+];
+
+const adminToolsItems = [
   { title: 'Customers', url: '/admin/customers', icon: Building2 },
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Licenses', url: '/admin/licenses', icon: Key },
-  { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
-  { title: 'Advanced Reports', url: '/admin/advanced-reports', icon: TrendingUp },
   { title: 'Error Logs', url: '/admin/error-logs', icon: AlertCircle },
-  { title: 'Reprocess Docs', url: '/admin/reprocess', icon: RefreshCw },
 ];
 
 const salesToolsItems = [
@@ -157,6 +160,29 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
                       </CollapsibleContent>
                     </SidebarMenuItem>
                   </Collapsible>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            <SidebarGroup>
+              <SidebarGroupLabel>Admin Tools</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {adminToolsItems.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        onClick={() => navigate(item.url)}
+                        className={
+                          isActive(item.url)
+                            ? 'bg-primary/10 text-primary font-medium'
+                            : 'hover:bg-muted/50'
+                        }
+                      >
+                        <item.icon className="h-4 w-4 mr-2" />
+                        <span>{item.title}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>

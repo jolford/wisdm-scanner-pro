@@ -78,6 +78,7 @@ interface BatchValidationScreenProps {
   projectFields: Array<{ name: string; description: string }>;
   onValidationComplete: () => void;
   batchId: string;
+  batchName?: string;
   onSwitchToExport?: () => void;
 }
 
@@ -91,8 +92,11 @@ export const BatchValidationScreen = ({
   projectFields,
   onValidationComplete,
   batchId,
+  batchName,
   onSwitchToExport,
 }: BatchValidationScreenProps) => {
+  // Check if this is an AB1466 batch
+  const isAB1466Batch = batchName?.includes('AB1466');
   // Track which document cards are expanded (showing details)
   const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
   
@@ -630,7 +634,7 @@ export const BatchValidationScreen = ({
         </div>
         <Button
           onClick={handleValidateAll}
-          className="bg-green-600 hover:bg-green-700"
+          className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200"
           disabled={documents.length === 0}
         >
           <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -715,21 +719,21 @@ export const BatchValidationScreen = ({
                         handleValidate(doc, 'validated');
                       }}
                       disabled={isValidating}
-                      className="bg-green-600 hover:bg-green-700"
+                      className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200"
                     >
-                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                      <CheckCircle2 className="h-4 w-4 mr-1.5" />
                       Validate
                     </Button>
                     <Button
                       size="sm"
-                      variant="destructive"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleValidate(doc, 'rejected');
                       }}
                       disabled={isValidating}
+                      className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200"
                     >
-                      <XCircle className="h-4 w-4 mr-1" />
+                      <XCircle className="h-4 w-4 mr-1.5" />
                       Reject
                     </Button>
                     <CollapsibleTrigger asChild>
@@ -867,9 +871,11 @@ export const BatchValidationScreen = ({
                       {/* Right column: Editable metadata fields */}
                       <div className="space-y-4">
                         <Tabs defaultValue="fields" className="w-full">
-                          <TabsList className="w-full grid grid-cols-3">
+                          <TabsList className={`w-full grid ${isAB1466Batch ? 'grid-cols-3' : 'grid-cols-2'}`}>
                             <TabsTrigger value="fields">Edit Fields</TabsTrigger>
-                            <TabsTrigger value="image">Sensitive Areas</TabsTrigger>
+                            {isAB1466Batch && (
+                              <TabsTrigger value="image">Sensitive Areas</TabsTrigger>
+                            )}
                             <TabsTrigger value="text">Extracted Text</TabsTrigger>
                           </TabsList>
                           
