@@ -883,6 +883,18 @@ export const BatchValidationScreen = ({
                           </TabsList>
                           
                           <TabsContent value="fields" className="space-y-4 mt-4">
+                            {/* AI Smart Validation Banner */}
+                            <div className="p-3 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg mb-4">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm font-medium">✨ AI Smart Validation Available</span>
+                                </div>
+                                <span className="text-xs text-muted-foreground">
+                                  Validate fields with AI assistance
+                                </span>
+                              </div>
+                            </div>
+
                             {projectFields.map((field) => (
                               <div key={field.name}>
                                 <Label htmlFor={`${doc.id}-${field.name}`} className="text-sm">
