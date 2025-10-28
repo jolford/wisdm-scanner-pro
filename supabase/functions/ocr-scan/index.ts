@@ -558,30 +558,47 @@ RESPONSE REQUIREMENTS:
               lower.includes('cashout ticket') || lower.includes('cashout voucher') || lower.includes('voucher #');
             
             if (isVoucherDoc) {
-              // 1) Amount: choose the largest currency value seen in text
-              const moneyMatches = Array.from(text.matchAll(/\$?\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})/g)) as RegExpMatchArray[];
-              const moneyValues = moneyMatches
-                .map((m: RegExpMatchArray) => parseFloat(String(m[0]).replace(/[$,\s]/g, '')))
-                .filter((v: number) => !isNaN(v));
-              if (moneyValues.length > 0) {
-                const maxAmount = Math.max(...moneyValues);
-                const currentAmount = metadata['Amount'] ? parseFloat(String(metadata['Amount']).replace(/[$,\s]/g, '')) : NaN;
-                if (isNaN(currentAmount) || Math.abs(currentAmount - maxAmount) > 0.99) {
-                  metadata['Amount'] = `$${maxAmount.toFixed(2)}`;
-                  console.log('Voucher heuristic applied: Amount set to largest value found:', metadata['Amount']);
+              const lines = text.split(/\r?\n/);
+
+              // 1) Amount: prefer values explicitly prefixed by "$"
+              const dollarMatches = Array.from(text.matchAll(/\$\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})/g)) as RegExpMatchArray[];
+              if (dollarMatches.length > 0) {
+                const amounts = dollarMatches.map((m: RegExpMatchArray) => ({
+                  raw: String(m[0]),
+                  val: parseFloat(String(m[0]).replace(/[$,\s]/g, '')),
+                })).filter(a => !isNaN(a.val));
+                if (amounts.length > 0) {
+                  // Choose the largest $-prefixed amount (ticket face value is the biggest with a $ sign)
+                  const top = amounts.reduce((a, b) => (b.val > a.val ? b : a));
+                  const currentAmount = metadata['Amount'] ? parseFloat(String(metadata['Amount']).replace(/[$,\s]/g, '')) : NaN;
+                  if (isNaN(currentAmount) || Math.abs(currentAmount - top.val) > 0.01) {
+                    metadata['Amount'] = `$${top.val.toFixed(2)}`;
+                    console.log('Voucher heuristic applied: Amount set to $-prefixed max:', metadata['Amount']);
+                  }
                 }
               }
 
-              // 2) Ticket Number: prefer pattern 00-####-####-####-####
-              const ticketMatch = text.match(/\b\d{2}-\d{4}-\d{4}-\d{4}-\d{4}\b/);
-              if (ticketMatch) {
-                if (metadata['Ticket Number'] !== ticketMatch[0]) {
-                  metadata['Ticket Number'] = ticketMatch[0];
-                  console.log('Voucher heuristic applied: Ticket Number fixed to', ticketMatch[0]);
+              // 2) Ticket Number: strict format 00-####-####-####-####, prefer nearest to the word VALIDATION
+              const ticketRe = /\b00-\d{4}-\d{4}-\d{4}-\d{4}\b/g;
+              const tickets = Array.from(text.matchAll(ticketRe)) as RegExpMatchArray[];
+              if (tickets.length > 0) {
+                let chosen = tickets[0][0] as string;
+                const valIdx = lower.indexOf('validation');
+                if (valIdx >= 0) {
+                  let bestDist = Infinity;
+                  for (const m of tickets) {
+                    const idx = (m.index as number) ?? 0;
+                    const d = Math.abs(idx - valIdx);
+                    if (d < bestDist) { bestDist = d; chosen = (m[0] as string); }
+                  }
+                }
+                if (metadata['Ticket Number'] !== chosen) {
+                  metadata['Ticket Number'] = chosen;
+                  console.log('Voucher heuristic applied: Ticket Number anchored to VALIDATION:', chosen);
                 }
               }
 
-              // 3) Validation Date: pick date nearest to the word VALIDATION
+              // 3) Validation Date: pick date nearest to VALIDATION
               const validationIdx = lower.indexOf('validation');
               const dateMatches = Array.from(text.matchAll(/\b(0?[1-9]|1[0-2])[\/-](0?[1-9]|[12][0-9]|3[01])[\/-](20\d{2})\b/g)) as RegExpMatchArray[];
               if (dateMatches.length > 0) {
@@ -594,7 +611,6 @@ RESPONSE REQUIREMENTS:
                     if (d < bestDist) { bestDist = d; selected = (m[0] as string); }
                   }
                 }
-                // Normalize to MM/DD/YYYY
                 const normalized = selected.replace(/-/g, '/');
                 if (metadata['Validation Date'] !== normalized) {
                   metadata['Validation Date'] = normalized;
@@ -602,13 +618,25 @@ RESPONSE REQUIREMENTS:
                 }
               }
 
-              // 4) Machine/Asset Number
-              const machineMatch = text.match(/MACHINE\s*#\s*(\d+)/i) || text.match(/ASSET\s*#\s*(\d+)/i);
-              if (machineMatch && machineMatch[1]) {
-                const value = machineMatch[1];
+              // 4) Machine/Asset Number: prefer ASSET#/MACHINE# explicit labels; else a 4–6 digit number on a line containing those words
+              const explicitMachine = text.match(/(?:MACHINE|ASSET)\s*#\s*(\d{3,6})/i);
+              if (explicitMachine?.[1]) {
+                const value = explicitMachine[1];
                 if (metadata['Machine Number'] !== value) {
                   metadata['Machine Number'] = value;
-                  console.log('Voucher heuristic applied: Machine Number set to', value);
+                  console.log('Voucher heuristic applied: Machine Number from explicit label:', value);
+                }
+              } else {
+                // Fallback: search line containing the word
+                const idx = lines.findIndex(l => /\b(MACHINE|ASSET)\b/i.test(l));
+                if (idx !== -1) {
+                  const m = lines[idx].match(/\b(\d{4,6})\b/);
+                  if (m?.[1]) {
+                    if (metadata['Machine Number'] !== m[1]) {
+                      metadata['Machine Number'] = m[1];
+                      console.log('Voucher heuristic applied: Machine Number from line:', m[1]);
+                    }
+                  }
                 }
               }
             }
