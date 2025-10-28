@@ -62,6 +62,7 @@ const EditProject = () => {
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
   const [enableCheckScanning, setEnableCheckScanning] = useState(false);
+  const [ocrModel, setOcrModel] = useState('google/gemini-2.5-flash');
   const [documentNamingPattern, setDocumentNamingPattern] = useState('');
   const [customerId, setCustomerId] = useState<string | undefined>();
   const [fields, setFields] = useState<ExtractionField[]>([
@@ -149,6 +150,7 @@ const EditProject = () => {
           queues: any;
           metadata: any;
           enable_check_scanning: boolean;
+          ocr_model: string;
           export_types: string[];
           created_at: string;
           updated_at: string;
@@ -157,6 +159,7 @@ const EditProject = () => {
         setProjectName(projectData.name);
         setProjectDescription(projectData.description || '');
         setEnableCheckScanning(projectData.enable_check_scanning || false);
+        setOcrModel(projectData.ocr_model || 'google/gemini-2.5-flash');
         setCustomerId(projectData.customer_id || undefined);
         
         // Set extraction fields with proper type checking
@@ -306,6 +309,7 @@ const EditProject = () => {
           name: projectName,
           description: projectDescription,
           enable_check_scanning: enableCheckScanning,
+          ocr_model: ocrModel,
           extraction_fields: validFields as any,
           export_types: selectedExportTypes,
           queues: queues as any,
@@ -416,6 +420,34 @@ const EditProject = () => {
                   Optimizes extraction for checks with MICR line reading (routing number, account number, check number, amount)
                 </p>
               </div>
+            </div>
+
+            <div className="space-y-2 p-4 border border-border rounded-lg bg-muted/30 mb-6">
+              <Label htmlFor="ocr-model" className="font-medium">
+                AI Model for OCR Processing
+              </Label>
+              <Select value={ocrModel} onValueChange={setOcrModel}>
+                <SelectTrigger id="ocr-model">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="google/gemini-2.5-flash">
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">Gemini Flash (Default)</span>
+                      <span className="text-xs text-muted-foreground">Faster, lower cost - Good for most documents</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="google/gemini-2.5-pro">
+                    <div className="flex flex-col items-start">
+                      <span className="font-medium">Gemini Pro</span>
+                      <span className="text-xs text-muted-foreground">Higher accuracy, 3-5x cost - Best for complex documents like casino vouchers</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Choose the AI model for text extraction. Pro model is recommended for casino vouchers and complex handwriting.
+              </p>
             </div>
 
             <Tabs defaultValue="basic" className="space-y-6">

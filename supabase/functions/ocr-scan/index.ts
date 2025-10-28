@@ -34,6 +34,7 @@
 
 // Import Deno standard library server
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
 
 // CORS headers to allow requests from web applications
 const corsHeaders = {
@@ -60,7 +61,7 @@ serve(async (req) => {
 
     // --- PARSE REQUEST BODY ---
     // Extract parameters from the request
-    const { imageData, isPdf, extractionFields, textData, tableExtractionFields, enableCheckScanning, documentId, customerId } = await req.json();
+    const { imageData, isPdf, extractionFields, textData, tableExtractionFields, enableCheckScanning, documentId, customerId, projectId } = await req.json();
     
     console.log('Processing OCR request...', isPdf ? 'PDF' : 'Image');
     console.log('MICR Mode:', enableCheckScanning);
@@ -246,10 +247,33 @@ RESPONSE REQUIREMENTS:
     }
 
 
+    // --- DETERMINE AI MODEL TO USE ---
+    // Fetch project's AI model preference if projectId is provided
+    let modelUsed = 'google/gemini-2.5-flash'; // default
+    if (projectId) {
+      try {
+        const supabaseAdmin = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        );
+        
+        const { data: project, error: projectError } = await supabaseAdmin
+          .from('projects')
+          .select('ocr_model')
+          .eq('id', projectId)
+          .single();
+          
+        if (!projectError && project?.ocr_model) {
+          modelUsed = project.ocr_model;
+          console.log(`Using project-configured AI model: ${modelUsed}`);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch project OCR model, using default:', err);
+      }
+    }
+
     // --- CALL LOVABLE AI FOR OCR PROCESSING ---
-    // Using Gemini Pro for higher accuracy on complex documents like casino vouchers
     let response;
-    let modelUsed = 'google/gemini-2.5-pro';
     
     try {
       response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {

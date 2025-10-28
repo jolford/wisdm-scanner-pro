@@ -217,6 +217,7 @@ async function processOcrDocument(job: Job, supabase: any) {
         isPdf,
         extractionFields,
         textData: finalTextData,
+        projectId, // Pass project ID so OCR can use project-specific AI model
       }
     });
 

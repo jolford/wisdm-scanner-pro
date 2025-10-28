@@ -1217,6 +1217,7 @@ export type Database = {
           is_active: boolean | null
           metadata: Json | null
           name: string
+          ocr_model: string | null
           queues: Json | null
           updated_at: string | null
         }
@@ -1232,6 +1233,7 @@ export type Database = {
           is_active?: boolean | null
           metadata?: Json | null
           name: string
+          ocr_model?: string | null
           queues?: Json | null
           updated_at?: string | null
         }
@@ -1247,6 +1249,7 @@ export type Database = {
           is_active?: boolean | null
           metadata?: Json | null
           name?: string
+          ocr_model?: string | null
           queues?: Json | null
           updated_at?: string | null
         }
