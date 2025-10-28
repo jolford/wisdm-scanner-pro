@@ -634,7 +634,8 @@ export const BatchValidationScreen = ({
         </div>
         <Button
           onClick={handleValidateAll}
-          className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200"
+          variant="ghost"
+          className="bg-gradient-to-br from-emerald-500 via-green-500 to-emerald-600 hover:from-emerald-600 hover:via-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 border-0"
           disabled={documents.length === 0}
         >
           <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -714,24 +715,26 @@ export const BatchValidationScreen = ({
                   <div className="flex items-center gap-2">
                     <Button
                       size="sm"
+                      variant="ghost"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleValidate(doc, 'validated');
                       }}
                       disabled={isValidating}
-                      className="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-700 hover:to-green-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200"
+                      className="bg-gradient-to-br from-emerald-500 via-green-500 to-emerald-600 hover:from-emerald-600 hover:via-green-600 hover:to-emerald-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 border-0"
                     >
                       <CheckCircle2 className="h-4 w-4 mr-1.5" />
                       Validate
                     </Button>
                     <Button
                       size="sm"
+                      variant="ghost"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleValidate(doc, 'rejected');
                       }}
                       disabled={isValidating}
-                      className="bg-gradient-to-r from-red-600 to-red-500 hover:from-red-700 hover:to-red-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-200"
+                      className="bg-gradient-to-br from-rose-500 via-red-500 to-rose-600 hover:from-rose-600 hover:via-red-600 hover:to-rose-700 text-white font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 border-0"
                     >
                       <XCircle className="h-4 w-4 mr-1.5" />
                       Reject
