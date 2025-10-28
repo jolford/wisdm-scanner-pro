@@ -133,6 +133,117 @@ export type Database = {
           },
         ]
       }
+      batch_auto_rules: {
+        Row: {
+          conditions: Json
+          created_at: string
+          customer_id: string
+          id: string
+          is_active: boolean
+          name: string
+          priority: number
+          template_id: string
+          updated_at: string
+        }
+        Insert: {
+          conditions: Json
+          created_at?: string
+          customer_id: string
+          id?: string
+          is_active?: boolean
+          name: string
+          priority?: number
+          template_id: string
+          updated_at?: string
+        }
+        Update: {
+          conditions?: Json
+          created_at?: string
+          customer_id?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          priority?: number
+          template_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_auto_rules_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_auto_rules_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "batch_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      batch_templates: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_id: string
+          description: string | null
+          export_settings: Json | null
+          extraction_config: Json | null
+          id: string
+          is_active: boolean
+          name: string
+          project_id: string | null
+          updated_at: string
+          validation_rules: Json | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_id: string
+          description?: string | null
+          export_settings?: Json | null
+          extraction_config?: Json | null
+          id?: string
+          is_active?: boolean
+          name: string
+          project_id?: string | null
+          updated_at?: string
+          validation_rules?: Json | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          description?: string | null
+          export_settings?: Json | null
+          extraction_config?: Json | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          project_id?: string | null
+          updated_at?: string
+          validation_rules?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_templates_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_templates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batches: {
         Row: {
           assigned_to: string | null
@@ -340,6 +451,44 @@ export type Database = {
         }
         Relationships: []
       }
+      document_cache: {
+        Row: {
+          cache_key: string
+          cached_data: Json
+          created_at: string
+          document_id: string
+          expires_at: string
+          id: string
+          signed_url: string | null
+        }
+        Insert: {
+          cache_key: string
+          cached_data: Json
+          created_at?: string
+          document_id: string
+          expires_at: string
+          id?: string
+          signed_url?: string | null
+        }
+        Update: {
+          cache_key?: string
+          cached_data?: Json
+          created_at?: string
+          document_id?: string
+          expires_at?: string
+          id?: string
+          signed_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_cache_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_classes: {
         Row: {
           barcode_config: Json | null
@@ -404,6 +553,7 @@ export type Database = {
           document_type: Database["public"]["Enums"]["document_type"] | null
           extracted_metadata: Json | null
           extracted_text: string | null
+          field_confidence: Json | null
           file_name: string
           file_type: string
           file_url: string | null
@@ -411,6 +561,7 @@ export type Database = {
           line_items: Json | null
           needs_review: boolean | null
           page_number: number | null
+          processing_priority: number | null
           project_id: string
           redacted_file_url: string | null
           redaction_metadata: Json | null
@@ -421,6 +572,7 @@ export type Database = {
           validation_status:
             | Database["public"]["Enums"]["validation_status"]
             | null
+          validation_suggestions: Json | null
           word_bounding_boxes: Json | null
         }
         Insert: {
@@ -433,6 +585,7 @@ export type Database = {
           document_type?: Database["public"]["Enums"]["document_type"] | null
           extracted_metadata?: Json | null
           extracted_text?: string | null
+          field_confidence?: Json | null
           file_name: string
           file_type: string
           file_url?: string | null
@@ -440,6 +593,7 @@ export type Database = {
           line_items?: Json | null
           needs_review?: boolean | null
           page_number?: number | null
+          processing_priority?: number | null
           project_id: string
           redacted_file_url?: string | null
           redaction_metadata?: Json | null
@@ -450,6 +604,7 @@ export type Database = {
           validation_status?:
             | Database["public"]["Enums"]["validation_status"]
             | null
+          validation_suggestions?: Json | null
           word_bounding_boxes?: Json | null
         }
         Update: {
@@ -462,6 +617,7 @@ export type Database = {
           document_type?: Database["public"]["Enums"]["document_type"] | null
           extracted_metadata?: Json | null
           extracted_text?: string | null
+          field_confidence?: Json | null
           file_name?: string
           file_type?: string
           file_url?: string | null
@@ -469,6 +625,7 @@ export type Database = {
           line_items?: Json | null
           needs_review?: boolean | null
           page_number?: number | null
+          processing_priority?: number | null
           project_id?: string
           redacted_file_url?: string | null
           redaction_metadata?: Json | null
@@ -479,6 +636,7 @@ export type Database = {
           validation_status?:
             | Database["public"]["Enums"]["validation_status"]
             | null
+          validation_suggestions?: Json | null
           word_bounding_boxes?: Json | null
         }
         Relationships: [
@@ -1539,6 +1697,7 @@ export type Database = {
             }
             Returns: boolean
           }
+      delete_expired_cache: { Args: never; Returns: undefined }
       generate_license_key: { Args: never; Returns: string }
       get_next_job: { Args: never; Returns: string }
       get_project_safe: {
