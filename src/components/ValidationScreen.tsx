@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Lightbulb, Crop, Eraser } from 'lucide-react';
+import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Lightbulb, Crop, Eraser, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { documentMetadataSchema } from '@/lib/validation-schemas';
@@ -856,6 +856,38 @@ useEffect(() => {
             </div>
           </div>
         )}
+
+        {/* AI Validation Section */}
+        <div className="mb-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                <h3 className="font-semibold">AI Smart Validation</h3>
+              </div>
+              <p className="text-sm text-muted-foreground mb-3">
+                AI can validate extracted fields and suggest corrections with confidence scores. 
+                Click <Lightbulb className="inline h-3 w-3" /> on any field or validate all at once.
+              </p>
+              <Button
+                onClick={() => {
+                  projectFields.forEach(field => {
+                    const value = editedMetadata[field.name] || '';
+                    if (value && !field.name.startsWith('_')) {
+                      validateField(field.name, value);
+                    }
+                  });
+                }}
+                disabled={isValidating}
+                size="sm"
+                variant="default"
+              >
+                <Sparkles className="h-4 w-4 mr-2" />
+                {isValidating ? 'Validating...' : 'Validate All Fields'}
+              </Button>
+            </div>
+          </div>
+        </div>
         
         <div className="flex-1 overflow-auto space-y-4">
           {projectFields.map((field) => {
