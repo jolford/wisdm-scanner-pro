@@ -118,12 +118,16 @@ const Help = () => {
       id: 'validation',
       title: 'Document Validation',
       icon: Eye,
-      description: 'Review and correct extracted data',
+      description: 'Review and correct extracted data with advanced tools',
       steps: [
-        { title: 'Review Queue', description: 'Access the Validation tab to see pending documents', icon: Eye },
-        { title: 'Check Extracted Data', description: 'Review text and metadata fields for accuracy', icon: CheckCircle },
+        { title: 'Review Queue', description: 'Access the Validation tab to see pending documents with real-time progress tracking', icon: Eye },
+        { title: 'Use Bulk Operations', description: 'Select multiple documents (Shift+Click or Ctrl+Click) to validate, reject, or delete in bulk', icon: CheckCircle },
+        { title: 'Search & Filter', description: 'Use the search bar and filters to find documents by type, confidence score, or issues', icon: Search },
+        { title: 'Smart Suggestions', description: 'Get AI-powered field suggestions based on historical data and vendor patterns', icon: Bot },
+        { title: 'Keyboard Shortcuts', description: 'Press ? to view keyboard shortcuts for faster navigation and validation', icon: Settings },
+        { title: 'Check Extracted Data', description: 'Review text and metadata fields for accuracy with confidence scores', icon: CheckCircle },
         { title: 'Make Corrections', description: 'Edit fields directly or adjust extraction regions', icon: Settings },
-        { title: 'Mark as Validated', description: 'Approve documents to move them to the validated queue', icon: CheckCircle },
+        { title: 'Track Progress', description: 'Monitor validation metrics including accuracy, time per document, and completion percentage', icon: Database },
       ]
     },
     {
@@ -183,8 +187,28 @@ const Help = () => {
       category: 'Validation & Export',
       questions: [
         {
+          q: 'How do I use bulk operations?',
+          a: 'Select multiple documents by holding Shift (range) or Ctrl/Cmd (individual). A toolbar will appear with bulk actions: Validate All, Reject All, Delete All, Export, or Move. This saves time when processing similar documents.'
+        },
+        {
+          q: 'What are Smart Suggestions?',
+          a: 'Smart Suggestions analyze your historical validation data to predict values for empty fields. They show confidence scores and sources (Historical Data or Vendor Pattern). Click "Apply" to accept a suggestion instantly.'
+        },
+        {
+          q: 'How do I use keyboard shortcuts?',
+          a: 'Press ? (question mark) anywhere to view all keyboard shortcuts. Common ones: Arrow keys for navigation, V to validate, R to reject, E to edit, Escape to close dialogs. Shortcuts work everywhere except when typing in input fields.'
+        },
+        {
+          q: 'What is the Progress Tracking Dashboard?',
+          a: 'The dashboard shows real-time metrics: total documents, validated/pending/rejected counts, average time per document, and accuracy percentage. It updates automatically as you validate documents and shows estimated completion time.'
+        },
+        {
+          q: 'How do I filter documents?',
+          a: 'Use the Search & Filter bar to find documents by: search term (any text), document type, minimum confidence score (0-100%), or documents with issues only. Combine filters for precise results.'
+        },
+        {
           q: 'What if extracted data is incorrect?',
-          a: 'Use the Validation screen to review and edit any extracted fields. You can modify text, adjust extraction regions, or re-extract data from selected areas of the document.'
+          a: 'Use the Validation screen to review and edit any extracted fields. You can modify text, adjust extraction regions, or re-extract data from selected areas of the document. Smart Suggestions can help fill missing fields.'
         },
         {
           q: 'How do I configure Filebound/Docmgt export?',
@@ -192,7 +216,7 @@ const Help = () => {
         },
         {
           q: 'Can I export before validating all documents?',
-          a: 'Export functions only include validated documents. Documents in the validation queue will not be exported. Complete validation before exporting your batch.'
+          a: 'Export functions only include validated documents. Documents in the validation queue will not be exported. Complete validation before exporting your batch. Use bulk operations to validate multiple documents quickly.'
         },
         {
           q: 'What happens if an export fails?',
@@ -243,7 +267,41 @@ const Help = () => {
         'Check that documents exist in the validation queue',
         'Refresh the page to reload document data',
         'Verify you have "validate" permission',
+        'Clear search filters if no documents appear',
         'Check browser console for errors',
+      ]
+    },
+    {
+      issue: 'Progress dashboard not updating',
+      icon: Database,
+      solutions: [
+        'Dashboard updates automatically when you validate documents',
+        'If metrics seem stuck, refresh the page',
+        'Ensure you\'re validating documents (not just viewing)',
+        'Progress calculates from all documents in the batch',
+        'Check that batch contains documents to track',
+      ]
+    },
+    {
+      issue: 'Bulk operations not working',
+      icon: CheckCircle,
+      solutions: [
+        'Select at least one document first (click checkboxes)',
+        'Use Shift+Click for ranges, Ctrl/Cmd+Click for individual',
+        'Bulk toolbar appears when documents are selected',
+        'Some bulk actions require specific permissions',
+        'Deselect all and try selecting again if toolbar is stuck',
+      ]
+    },
+    {
+      issue: 'Keyboard shortcuts not responding',
+      icon: Settings,
+      solutions: [
+        'Shortcuts don\'t work while typing in input fields (press Escape first)',
+        'Press ? to view all available shortcuts',
+        'Some shortcuts require no modifier keys (just the letter)',
+        'Navigation shortcuts use Shift key (e.g., Shift+Q for Queue)',
+        'Reload page if shortcuts stop working completely',
       ]
     },
     {
