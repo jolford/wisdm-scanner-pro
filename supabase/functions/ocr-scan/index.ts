@@ -274,7 +274,7 @@ RESPONSE REQUIREMENTS:
     // Override model for casino vouchers - GPT-5 Vision performs better on these
     if (isCasinoVoucher) {
       modelUsed = 'openai/gpt-5';
-      console.log('Using GPT-5 Vision for casino voucher scanning (better accuracy)');
+      console.log('Using GPT-5 Vision for casino voucher text extraction (template matching will refine fields)');
     }
 
     // --- CALL LOVABLE AI FOR OCR PROCESSING ---
@@ -568,98 +568,43 @@ RESPONSE REQUIREMENTS:
             }
           }
           
-          // Heuristic post-processing for Casino Vouchers / Cashout Tickets
+          // Template-based extraction for Casino Vouchers
           try {
             const text = (extractedText || '').toString();
             const lower = text.toLowerCase();
             const isVoucherDoc = documentType === 'casino_voucher' ||
               lower.includes('cashout ticket') || lower.includes('cashout voucher') || lower.includes('voucher #');
             
-            if (isVoucherDoc) {
-              const lines = text.split(/\r?\n/);
-
-              // 1) Amount: prefer values explicitly prefixed by "$"
-              const dollarMatches = Array.from(text.matchAll(/\$\s*\d{1,3}(?:,\d{3})*(?:\.\d{2})/g)) as RegExpMatchArray[];
-              if (dollarMatches.length > 0) {
-                const amounts = dollarMatches.map((m: RegExpMatchArray) => ({
-                  raw: String(m[0]),
-                  val: parseFloat(String(m[0]).replace(/[$,\s]/g, '')),
-                })).filter(a => !isNaN(a.val));
-                if (amounts.length > 0) {
-                  // Choose the largest $-prefixed amount (ticket face value is the biggest with a $ sign)
-                  const top = amounts.reduce((a, b) => (b.val > a.val ? b : a));
-                  const currentAmount = metadata['Amount'] ? parseFloat(String(metadata['Amount']).replace(/[$,\s]/g, '')) : NaN;
-                  if (isNaN(currentAmount) || Math.abs(currentAmount - top.val) > 0.01) {
-                    metadata['Amount'] = `$${top.val.toFixed(2)}`;
-                    console.log('Voucher heuristic applied: Amount set to $-prefixed max:', metadata['Amount']);
-                  }
-                }
-              }
-
-              // 2) Ticket Number: strict format 00-####-####-####-####, prefer nearest to the word VALIDATION
-              const ticketRe = /\b00-\d{4}-\d{4}-\d{4}-\d{4}\b/g;
-              const tickets = Array.from(text.matchAll(ticketRe)) as RegExpMatchArray[];
-              if (tickets.length > 0) {
-                let chosen = tickets[0][0] as string;
-                const valIdx = lower.indexOf('validation');
-                if (valIdx >= 0) {
-                  let bestDist = Infinity;
-                  for (const m of tickets) {
-                    const idx = (m.index as number) ?? 0;
-                    const d = Math.abs(idx - valIdx);
-                    if (d < bestDist) { bestDist = d; chosen = (m[0] as string); }
-                  }
-                }
-                if (metadata['Ticket Number'] !== chosen) {
-                  metadata['Ticket Number'] = chosen;
-                  console.log('Voucher heuristic applied: Ticket Number anchored to VALIDATION:', chosen);
-                }
-              }
-
-              // 3) Validation Date: pick date nearest to VALIDATION
-              const validationIdx = lower.indexOf('validation');
-              const dateMatches = Array.from(text.matchAll(/\b(0?[1-9]|1[0-2])[\/-](0?[1-9]|[12][0-9]|3[01])[\/-](20\d{2})\b/g)) as RegExpMatchArray[];
-              if (dateMatches.length > 0) {
-                let selected = (dateMatches[0] as RegExpMatchArray)[0];
-                if (validationIdx >= 0) {
-                  let bestDist = Infinity;
-                  for (const m of dateMatches as RegExpMatchArray[]) {
-                    const idx = (m.index as number) ?? 0;
-                    const d = Math.abs(idx - validationIdx);
-                    if (d < bestDist) { bestDist = d; selected = (m[0] as string); }
-                  }
-                }
-                const normalized = selected.replace(/-/g, '/');
-                if (metadata['Validation Date'] !== normalized) {
-                  metadata['Validation Date'] = normalized;
-                  console.log('Voucher heuristic applied: Validation Date set to', normalized);
-                }
-              }
-
-              // 4) Machine/Asset Number: prefer ASSET#/MACHINE# explicit labels; else a 4–6 digit number on a line containing those words
-              const explicitMachine = text.match(/(?:MACHINE|ASSET)\s*#\s*(\d{3,6})/i);
-              if (explicitMachine?.[1]) {
-                const value = explicitMachine[1];
-                if (metadata['Machine Number'] !== value) {
-                  metadata['Machine Number'] = value;
-                  console.log('Voucher heuristic applied: Machine Number from explicit label:', value);
-                }
-              } else {
-                // Fallback: search line containing the word
-                const idx = lines.findIndex((l: string) => /\b(MACHINE|ASSET)\b/i.test(l));
-                if (idx !== -1) {
-                  const m = lines[idx].match(/\b(\d{4,6})\b/);
-                  if (m?.[1]) {
-                    if (metadata['Machine Number'] !== m[1]) {
-                      metadata['Machine Number'] = m[1];
-                      console.log('Voucher heuristic applied: Machine Number from line:', m[1]);
+            if (isVoucherDoc && isCasinoVoucher) {
+              console.log('Applying template-based extraction for casino voucher...');
+              
+              // Import and apply template
+              const { extractWithTemplate, FORT_HALL_CASINO_TEMPLATE } = await import('../ocr-scan-template/index.ts');
+              const templateResult = await extractWithTemplate(text, FORT_HALL_CASINO_TEMPLATE);
+              
+              if (templateResult.success && templateResult.overallConfidence > 0.7) {
+                console.log(`Template extraction successful with ${(templateResult.overallConfidence * 100).toFixed(1)}% confidence`);
+                
+                // Override AI metadata with template results
+                for (const [fieldName, data] of Object.entries(templateResult.fields)) {
+                  const fieldData = data as { value: string; confidence: number };
+                  if (fieldData.value) {
+                    metadata[fieldName] = fieldData.value;
+                    if (fieldConfidence) {
+                      fieldConfidence[fieldName] = fieldData.confidence;
                     }
+                    console.log(`Template extracted ${fieldName}: ${fieldData.value} (confidence: ${(fieldData.confidence * 100).toFixed(1)}%)`);
                   }
                 }
+                
+                // Update overall confidence to template confidence
+                confidence = templateResult.overallConfidence;
+              } else {
+                console.log(`Template extraction failed or low confidence (${(templateResult.overallConfidence * 100).toFixed(1)}%)`);
               }
             }
           } catch (postErr) {
-            console.warn('Voucher heuristic post-processing failed:', postErr);
+            console.warn('Template extraction failed, using AI results:', postErr);
           }
           
           // Extract line items if table extraction was requested
