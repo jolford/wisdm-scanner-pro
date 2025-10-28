@@ -280,14 +280,62 @@ RESPONSE REQUIREMENTS:
     // --- CALL LOVABLE AI FOR OCR PROCESSING ---
     let response;
     
+    // GPT-5 and newer OpenAI models don't support temperature parameter
+    const supportsTemperature = !modelUsed.startsWith('openai/gpt-5');
+    
     try {
+      const requestBody: any = {
+        model: modelUsed,
+        messages: [
+          {
+            role: 'system',
+            content: systemPrompt
+          },
+          {
+            role: 'user',
+            content: textData
+              ? [
+                  {
+                    type: 'text',
+                    text: `${userPrompt}\n\nDocument text:\n${textData}`
+                  }
+                ]
+              : [
+                  {
+                    type: 'text',
+                    text: userPrompt
+                  },
+                  {
+                    type: 'image_url',
+                    image_url: {
+                      url: imageData
+                    }
+                  }
+                ]
+          }
+        ]
+      };
+      
+      // Only add temperature for models that support it
+      if (supportsTemperature) {
+        requestBody.temperature = 0.1;
+      }
+      
       response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${LOVABLE_API_KEY}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
+        body: JSON.stringify(requestBody),
+      });
+
+      // If Pro fails with timeout/error, try Flash as fallback
+      if (!response.ok && (response.status === 504 || response.status >= 500)) {
+        console.log('Gemini Flash failed, falling back to Flash-Lite...');
+        modelUsed = 'google/gemini-2.5-flash-lite';
+        
+        const fallbackBody: any = {
           model: modelUsed,
           messages: [
             {
@@ -316,15 +364,11 @@ RESPONSE REQUIREMENTS:
                     }
                   ]
             }
-          ],
-          temperature: 0.1,
-        }),
-      });
-
-      // If Pro fails with timeout/error, try Flash as fallback
-      if (!response.ok && (response.status === 504 || response.status >= 500)) {
-        console.log('Gemini Flash failed, falling back to Flash-Lite...');
-        modelUsed = 'google/gemini-2.5-flash-lite';
+          ]
+        };
+        
+        // Flash-lite supports temperature
+        fallbackBody.temperature = 0.1;
         
         response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
@@ -332,38 +376,7 @@ RESPONSE REQUIREMENTS:
             'Authorization': `Bearer ${LOVABLE_API_KEY}`,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            model: modelUsed,
-            messages: [
-              {
-                role: 'system',
-                content: systemPrompt
-              },
-              {
-                role: 'user',
-                content: textData
-                  ? [
-                      {
-                        type: 'text',
-                        text: `${userPrompt}\n\nDocument text:\n${textData}`
-                      }
-                    ]
-                  : [
-                      {
-                        type: 'text',
-                        text: userPrompt
-                      },
-                      {
-                        type: 'image_url',
-                        image_url: {
-                          url: imageData
-                        }
-                      }
-                    ]
-              }
-            ],
-            temperature: 0.1,
-          }),
+          body: JSON.stringify(fallbackBody),
         });
       }
     } catch (fetchError) {
@@ -821,7 +834,7 @@ Review the image and provide corrected text with any OCR errors fixed.`;
                     ]
               }
             ],
-            temperature: 0.1,
+            temperature: 0.1, // Gemini supports temperature
           }),
         });
 
@@ -969,7 +982,7 @@ Review the image and provide corrected text with any OCR errors fixed.`;
                 ]
               }
             ],
-            temperature: 0.1,
+            temperature: 0.1, // Gemini supports temperature
           }),
         });
         
