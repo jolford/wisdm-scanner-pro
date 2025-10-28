@@ -61,6 +61,9 @@ export const ValidationScreen = ({
   classification,
 }: ValidationScreenProps) => {
   const [editedMetadata, setEditedMetadata] = useState(metadata);
+  const [fieldConfidence, setFieldConfidence] = useState<Record<string, number>>({});
+  const [validationSuggestions, setValidationSuggestions] = useState<Record<string, any>>({});
+  const [isValidating, setIsValidating] = useState(false);
   const [validationStatus, setValidationStatus] = useState<'pending' | 'validated' | 'rejected'>('pending');
   const [isSaving, setIsSaving] = useState(false);
   const [imageZoom, setImageZoom] = useState(1);
@@ -91,6 +94,81 @@ export const ValidationScreen = ({
   // Resolved OCR geometry for redaction (props or lazy-fetched)
   const [resolvedBoundingBoxes, setResolvedBoundingBoxes] = useState(boundingBoxes);
   const [resolvedWordBoxes, setResolvedWordBoxes] = useState<Array<{ text: string; bbox: any }>>(wordBoundingBoxes || []);
+
+  // Load field confidence from document
+  useEffect(() => {
+    const loadConfidence = async () => {
+      if (!documentId) return;
+      
+      const { data, error } = await supabase
+        .from('documents')
+        .select('field_confidence, validation_suggestions')
+        .eq('id', documentId)
+        .single();
+      
+      if (!error && data) {
+        setFieldConfidence((data.field_confidence as Record<string, number>) || {});
+        setValidationSuggestions((data.validation_suggestions as Record<string, any>) || {});
+      }
+    };
+    
+    loadConfidence();
+  }, [documentId]);
+  
+  // Smart validation function
+  const validateField = async (fieldName: string, fieldValue: string) => {
+    if (!documentId) return;
+    
+    setIsValidating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('smart-validation', {
+        body: {
+          documentId,
+          fieldName,
+          fieldValue,
+          context: extractedText.substring(0, 500)
+        }
+      });
+      
+      if (error) throw error;
+      
+      if (data?.validation) {
+        const validation = data.validation;
+        
+        // Update confidence
+        setFieldConfidence(prev => ({
+          ...prev,
+          [fieldName]: validation.confidence
+        }));
+        
+        // Update suggestions
+        if (validation.suggestions && validation.suggestions.length > 0) {
+          setValidationSuggestions(prev => ({
+            ...prev,
+            [fieldName]: validation
+          }));
+          
+          setSuggestions(prev => ({
+            ...prev,
+            [fieldName]: validation.suggestions
+          }));
+        }
+        
+        // Show toast for low confidence
+        if (validation.confidence < 0.7) {
+          toast({
+            title: "Low Confidence Detected",
+            description: validation.reasoning || "AI suggests reviewing this field",
+            variant: "destructive"
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Smart validation failed:', error);
+    } finally {
+      setIsValidating(false);
+    }
+  };
 
   useEffect(() => { setResolvedBoundingBoxes(boundingBoxes); }, [boundingBoxes]);
   useEffect(() => { setResolvedWordBoxes(wordBoundingBoxes || []); }, [wordBoundingBoxes]);
@@ -788,25 +866,66 @@ useEffect(() => {
             
             return (
             <div key={field.name} className="space-y-2">
-              <Label htmlFor={field.name} className="text-sm">
-                {field.name}
-                {field.description && (
-                  <span className="text-xs text-muted-foreground ml-2">
-                    {field.description}
-                  </span>
+              <div className="flex items-center justify-between">
+                <Label htmlFor={field.name} className="text-sm">
+                  {field.name}
+                  {field.description && (
+                    <span className="text-xs text-muted-foreground ml-2">
+                      {field.description}
+                    </span>
+                  )}
+                </Label>
+                {fieldConfidence[field.name] !== undefined && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Badge 
+                          variant={
+                            fieldConfidence[field.name] >= 0.9 ? 'default' :
+                            fieldConfidence[field.name] >= 0.7 ? 'secondary' : 'destructive'
+                          }
+                          className="text-xs"
+                        >
+                          {Math.round(fieldConfidence[field.name] * 100)}% confident
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">
+                          {validationSuggestions[field.name]?.reasoning || 'AI confidence score'}
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
-              </Label>
+              </div>
               <div className="relative">
-                <Input
-                  id={field.name}
-                  value={editedMetadata[field.name] || ''}
-                  onChange={(e) => handleFieldChange(field.name, e.target.value)}
-                  onFocus={() => setFocusedField(field.name)}
-                  onBlur={() => setFocusedField(null)}
-                  placeholder={`Enter ${field.name}`}
-                  maxLength={500}
-                  className={`${fieldErrors[field.name] ? 'border-destructive' : ''}`}
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id={field.name}
+                    value={editedMetadata[field.name] || ''}
+                    onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                    onFocus={() => setFocusedField(field.name)}
+                    onBlur={() => {
+                      setFocusedField(null);
+                      // Auto-validate on blur if field has value
+                      if (editedMetadata[field.name]) {
+                        validateField(field.name, editedMetadata[field.name]);
+                      }
+                    }}
+                    placeholder={`Enter ${field.name}`}
+                    maxLength={500}
+                    className={`flex-1 ${fieldErrors[field.name] ? 'border-destructive' : ''}`}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => validateField(field.name, editedMetadata[field.name] || '')}
+                    disabled={isValidating || !editedMetadata[field.name]}
+                  >
+                    <Lightbulb className="h-4 w-4" />
+                  </Button>
+                </div>
                 {fieldErrors[field.name] && (
                   <p className="text-xs text-destructive mt-1">
                     {fieldErrors[field.name]}
