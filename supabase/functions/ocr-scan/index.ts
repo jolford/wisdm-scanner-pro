@@ -558,12 +558,14 @@ RESPONSE REQUIREMENTS:
 
     console.log('OCR completed - Document Type:', documentType, 'Confidence:', confidence, 'Metadata:', metadata, 'Line Items:', lineItems.length);
 
-    // --- TWO-PASS VALIDATION FOR LOW CONFIDENCE ---
-    // If confidence is below threshold, run a second validation pass
+    // --- TWO-PASS VALIDATION DISABLED FOR PERFORMANCE ---
+    // Previously: If confidence < 0.85, ran second validation pass
+    // This was causing 2x processing time - disabled to restore speed
     const CONFIDENCE_THRESHOLD = 0.85;
     let validationApplied = false;
     
-    if (confidence < CONFIDENCE_THRESHOLD && confidence > 0) {
+    // Validation pass disabled for performance
+    if (false && confidence < CONFIDENCE_THRESHOLD && confidence > 0) {
       console.log(`Low confidence detected (${confidence}). Running validation pass...`);
       
       try {
