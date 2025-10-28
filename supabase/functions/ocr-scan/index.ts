@@ -97,17 +97,16 @@ serve(async (req) => {
     // Determine if we need to extract line item tables (for invoices, receipts, etc.)
     const hasTableExtraction = tableExtractionFields && Array.isArray(tableExtractionFields) && tableExtractionFields.length > 0;
     
+    // Check if this is a casino voucher/jackpot slip (define early for model selection)
+    const isCasinoVoucher = extractionFields && extractionFields.some((f: any) => 
+      f.name.toLowerCase().includes('validation') || 
+      f.name.toLowerCase().includes('ticket') ||
+      f.name.toLowerCase().includes('machine')
+    );
     
     // --- BUILD SPECIALIZED PROMPTS BASED ON EXTRACTION REQUIREMENTS ---
     if (extractionFields && extractionFields.length > 0) {
       const fieldNames = extractionFields.map((f: any) => f.name);
-      
-      // Check if this is a casino voucher/jackpot slip
-      const isCasinoVoucher = extractionFields.some((f: any) => 
-        f.name.toLowerCase().includes('validation') || 
-        f.name.toLowerCase().includes('ticket') ||
-        f.name.toLowerCase().includes('machine')
-      );
       
       // Check if this is a medical/lab form with accessioning/requisition numbers
       // These require special handling for accurate barcode recognition
@@ -270,6 +269,12 @@ RESPONSE REQUIREMENTS:
       } catch (err) {
         console.warn('Failed to fetch project OCR model, using default:', err);
       }
+    }
+    
+    // Override model for casino vouchers - GPT-5 Vision performs better on these
+    if (isCasinoVoucher) {
+      modelUsed = 'openai/gpt-5';
+      console.log('Using GPT-5 Vision for casino voucher scanning (better accuracy)');
     }
 
     // --- CALL LOVABLE AI FOR OCR PROCESSING ---
