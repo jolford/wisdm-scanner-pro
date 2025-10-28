@@ -747,8 +747,69 @@ Review the image and provide corrected text with any OCR errors fixed.`;
       console.log('No bounding boxes extracted');
     }
 
-    // --- WORD-LEVEL BOUNDING BOXES DISABLED FOR PERFORMANCE ---
+    // --- EXTRACT WORD-LEVEL BOUNDING BOXES FOR SENSITIVE LANGUAGE DETECTION ---
+    // Using Flash-Lite for fast, efficient word extraction
     let wordBoundingBoxes: Array<{ text: string; bbox: { x: number; y: number; width: number; height: number } }> = [];
+    try {
+      // For image processing (not text-based PDFs), extract word coordinates if available
+      if (!textData && imageData) {
+        const systemPromptWords = `You are a specialized OCR system that returns word-level bounding boxes. Return ONLY a JSON array of words with coordinates: [{"text": "word", "bbox": {"x": 0, "y": 0, "width": 10, "height": 10}}]. Use percentage coordinates (0-100). Extract ALL visible words.`;
+        const userPromptWords = 'Extract all words from this image with their exact bounding box coordinates as percentages of image dimensions.';
+        
+        const wordsResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash-lite',
+            messages: [
+              { role: 'system', content: systemPromptWords },
+              { 
+                role: 'user', 
+                content: [
+                  { type: 'text', text: userPromptWords },
+                  { type: 'image_url', image_url: { url: imageData } }
+                ]
+              }
+            ],
+            temperature: 0.1,
+          }),
+        });
+        
+        if (wordsResponse.ok) {
+          const wordsData = await wordsResponse.json();
+          const wordsText = wordsData.choices[0].message.content;
+          
+          try {
+            let jsonToParse = wordsText;
+            if (wordsText.includes('```')) {
+              const codeBlockMatch = wordsText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
+              if (codeBlockMatch) {
+                jsonToParse = codeBlockMatch[1].trim();
+              }
+            }
+            
+            const jsonMatch = jsonToParse.match(/\[[\s\S]*\]/);
+            if (jsonMatch) {
+              const parsed = JSON.parse(jsonMatch[0]);
+              if (Array.isArray(parsed)) {
+                wordBoundingBoxes = parsed.filter((item: any) => 
+                  item && typeof item === 'object' && 
+                  item.text && item.bbox &&
+                  typeof item.bbox.x === 'number'
+                );
+              }
+            }
+          } catch (e) {
+            console.log('Failed to parse word bounding boxes:', e);
+          }
+        }
+      }
+    } catch (e) {
+      console.log('Word bounding box extraction failed (non-critical):', e);
+    }
 
     // --- RETURN SUCCESS RESPONSE ---
     // Return all extracted data to the client
