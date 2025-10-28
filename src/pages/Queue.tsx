@@ -68,6 +68,76 @@ const Queue = () => {
     return String(value || '');
   };
   
+  // Advanced image pre-processing with validation and optimization
+  const preprocessImage = async (dataUrl: string, fileName: string): Promise<{ dataUrl: string; error?: string }> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        // Validation checks
+        const maxDimension = 4096; // Max supported by most AI models
+        const maxFileSize = 10 * 1024 * 1024; // 10MB
+        
+        // Check dimensions
+        if (img.width > maxDimension || img.height > maxDimension) {
+          console.warn(`Image too large (${img.width}x${img.height}), will downscale`);
+        }
+        
+        // Determine optimal quality based on content
+        const pixelCount = img.width * img.height;
+        let quality = 0.85;
+        let maxDim = 1600;
+        
+        // Adjust quality for very large images
+        if (pixelCount > 4000000) { // > 4MP
+          quality = 0.80;
+          maxDim = 2048;
+        } else if (pixelCount > 2000000) { // > 2MP
+          quality = 0.85;
+          maxDim = 1600;
+        }
+        
+        // Smart scaling
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve({ dataUrl, error: 'Canvas context unavailable' });
+          return;
+        }
+        
+        // Enable image smoothing for better quality
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        
+        // Use JPEG for photos, PNG for documents/text
+        const isLikelyDocument = fileName.toLowerCase().includes('scan') || 
+                                  fileName.toLowerCase().includes('doc');
+        const format = isLikelyDocument ? 'image/png' : 'image/jpeg';
+        const compressed = canvas.toDataURL(format, quality);
+        
+        // Check final size
+        const finalSize = compressed.length * 0.75; // Approximate byte size
+        if (finalSize > maxFileSize) {
+          console.warn('Image still too large after compression, reducing quality further');
+          const veryCompressed = canvas.toDataURL('image/jpeg', 0.7);
+          resolve({ dataUrl: veryCompressed });
+        } else {
+          resolve({ dataUrl: compressed });
+        }
+      };
+      
+      img.onerror = () => {
+        resolve({ dataUrl, error: 'Image validation failed' });
+      };
+      
+      img.src = dataUrl;
+    });
+  };
+  
   // Downscale a data URL to JPEG with max dimension to avoid Edge Function payload limits
   const downscaleDataUrl = async (dataUrl: string, maxDim = 1600, quality = 0.85): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -99,6 +169,49 @@ const Queue = () => {
       await new Promise((r) => setTimeout(r, 300 * (attempt + 1)));
     }
     throw new Error(lastErr?.message || 'OCR service unreachable');
+  };
+  
+  // Batch OCR processing - process multiple documents in one call
+  const batchInvokeOcr = async (documents: Array<{ fileName: string; imageData?: string; textData?: string; isPdf: boolean }>, maxRetries = 2): Promise<any[]> => {
+    const results = [];
+    
+    // Process in mini-batches of 3 for optimal balance
+    const MINI_BATCH_SIZE = 3;
+    
+    for (let i = 0; i < documents.length; i += MINI_BATCH_SIZE) {
+      const batch = documents.slice(i, Math.min(i + MINI_BATCH_SIZE, documents.length));
+      
+      // Process batch in parallel
+      const batchResults = await Promise.allSettled(
+        batch.map(doc => invokeOcr({
+          imageData: doc.imageData,
+          textData: doc.textData,
+          isPdf: doc.isPdf,
+          extractionFields,
+          tableExtractionFields: selectedProject?.metadata?.table_extraction_config?.enabled 
+            ? selectedProject?.metadata?.table_extraction_config?.fields || []
+            : [],
+          enableCheckScanning: enableMICR,
+          customerId: selectedProject?.customer_id,
+        }, maxRetries))
+      );
+      
+      // Collect results
+      batchResults.forEach((result, idx) => {
+        if (result.status === 'fulfilled') {
+          results.push({ success: true, data: result.value, fileName: batch[idx].fileName });
+        } else {
+          results.push({ success: false, error: result.reason, fileName: batch[idx].fileName });
+        }
+      });
+      
+      // Small delay between mini-batches to avoid rate limits
+      if (i + MINI_BATCH_SIZE < documents.length) {
+        await new Promise(r => setTimeout(r, 100));
+      }
+    }
+    
+    return results;
   };
   
   const [processingBatches, setProcessingBatches] = useState<Set<string>>(new Set());
@@ -669,14 +782,14 @@ const [isExporting, setIsExporting] = useState(false);
         ? selectedProject?.metadata?.table_extraction_config?.fields || []
         : [];
       
-      // Downscale large inline images to avoid request size limits
+      // Pre-process and validate image
       let payloadImageData = imageUrl;
       if (typeof payloadImageData === 'string' && payloadImageData.startsWith('data:')) {
-        try {
-          payloadImageData = await downscaleDataUrl(payloadImageData, 1600, 0.85);
-        } catch (e) {
-          console.warn('Image downscale failed, sending original');
+        const { dataUrl: processed, error: procError } = await preprocessImage(payloadImageData, fileName);
+        if (procError) {
+          console.warn('Image preprocessing warning:', procError);
         }
+        payloadImageData = processed;
       }
       
       const data = await invokeOcr({ 

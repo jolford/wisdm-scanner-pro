@@ -195,49 +195,103 @@ RESPONSE REQUIREMENTS:
     }
 
 
-    // --- CALL LOVABLE AI FOR OCR PROCESSING ---
-    // Single AI call that handles OCR, field extraction, classification, and table extraction
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-2.5-pro',  // Using Gemini Pro for best accuracy
-        messages: [
-          {
-            role: 'system',
-            content: systemPrompt
-          },
-          {
-            role: 'user',
-            // For PDFs with text, send the text directly
-            // For images, send the image data URL
-            content: textData
-              ? [
-                  {
-                    type: 'text',
-                    text: `${userPrompt}\n\nDocument text:\n${textData}`
-                  }
-                ]
-              : [
-                  {
-                    type: 'text',
-                    text: userPrompt
-                  },
-                  {
-                    type: 'image_url',
-                    image_url: {
-                      url: imageData  // Base64 data URL
+    // --- CALL LOVABLE AI FOR OCR PROCESSING WITH FALLBACK ---
+    // Try Gemini Pro first, fall back to Flash on failure
+    let response;
+    let modelUsed = 'google/gemini-2.5-pro';
+    
+    try {
+      response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: modelUsed,
+          messages: [
+            {
+              role: 'system',
+              content: systemPrompt
+            },
+            {
+              role: 'user',
+              content: textData
+                ? [
+                    {
+                      type: 'text',
+                      text: `${userPrompt}\n\nDocument text:\n${textData}`
                     }
-                  }
-                ]
-          }
-        ],
-        temperature: 0.1,  // Low temperature for more deterministic/accurate extraction
-      }),
-    });
+                  ]
+                : [
+                    {
+                      type: 'text',
+                      text: userPrompt
+                    },
+                    {
+                      type: 'image_url',
+                      image_url: {
+                        url: imageData
+                      }
+                    }
+                  ]
+            }
+          ],
+          temperature: 0.1,
+        }),
+      });
+
+      // If Pro fails with timeout/error, try Flash as fallback
+      if (!response.ok && (response.status === 504 || response.status >= 500)) {
+        console.log('Gemini Pro failed, falling back to Flash...');
+        modelUsed = 'google/gemini-2.5-flash';
+        
+        response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: modelUsed,
+            messages: [
+              {
+                role: 'system',
+                content: systemPrompt
+              },
+              {
+                role: 'user',
+                content: textData
+                  ? [
+                      {
+                        type: 'text',
+                        text: `${userPrompt}\n\nDocument text:\n${textData}`
+                      }
+                    ]
+                  : [
+                      {
+                        type: 'text',
+                        text: userPrompt
+                      },
+                      {
+                        type: 'image_url',
+                        image_url: {
+                          url: imageData
+                        }
+                      }
+                    ]
+              }
+            ],
+            temperature: 0.1,
+          }),
+        });
+      }
+    } catch (fetchError) {
+      console.error('Primary OCR call failed:', fetchError);
+      throw new Error('OCR service unavailable');
+    }
+
+    console.log(`OCR processed with model: ${modelUsed}`);
 
 
     // --- ERROR HANDLING FOR AI API ---
