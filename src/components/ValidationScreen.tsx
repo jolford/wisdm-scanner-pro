@@ -834,17 +834,24 @@ useEffect(() => {
         </div>
         
         {/* AI Validation Section - Always Visible at Top */}
-        <div className="mb-4 p-3 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg">
-          <div className="flex items-center justify-between gap-2">
+        <div className="mb-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-950/30 dark:to-purple-950/30 border-2 border-primary/30 rounded-lg shadow-sm">
+          <div className="flex items-center justify-between gap-2 mb-3">
             <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <span className="font-medium text-sm">AI Smart Validation</span>
+              <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+              <div>
+                <span className="font-semibold text-base">AI Smart Validation</span>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Click 💡 next to any field or use Validate All
+                </p>
+              </div>
             </div>
             <Button
               onClick={() => {
+                console.log('Validate All clicked');
                 projectFields.forEach(field => {
                   const value = editedMetadata[field.name] || '';
                   if (value && !field.name.startsWith('_')) {
+                    console.log(`Validating field: ${field.name} with value:`, value);
                     validateField(field.name, value);
                   }
                 });
@@ -852,15 +859,23 @@ useEffect(() => {
               disabled={isValidating}
               size="sm"
               variant="default"
-              className="h-7"
+              className="h-8 font-semibold"
             >
               <Sparkles className="h-3 w-3 mr-1.5" />
               {isValidating ? 'Validating...' : 'Validate All'}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-2">
-            Click <Lightbulb className="inline h-3 w-3 mx-0.5" /> on fields to validate with AI
-          </p>
+          <div className="flex items-start gap-2 text-xs bg-white/50 dark:bg-black/20 p-2 rounded border border-primary/20">
+            <Lightbulb className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-medium">How it works:</p>
+              <ol className="list-decimal list-inside space-y-0.5 text-muted-foreground">
+                <li>Fill in a field value (e.g., Invoice Total)</li>
+                <li>Click the 💡 lightbulb icon next to the field</li>
+                <li>AI will validate and suggest corrections if needed</li>
+              </ol>
+            </div>
+          </div>
         </div>
         
         <div className="flex-1 overflow-auto">
@@ -983,15 +998,28 @@ useEffect(() => {
                     maxLength={500}
                     className={`flex-1 ${fieldErrors[field.name] ? 'border-destructive' : ''}`}
                   />
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => validateField(field.name, editedMetadata[field.name] || '')}
-                    disabled={isValidating || !editedMetadata[field.name]}
-                  >
-                    <Lightbulb className="h-4 w-4" />
-                  </Button>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            console.log(`Lightbulb clicked for field: ${field.name}`, editedMetadata[field.name]);
+                            validateField(field.name, editedMetadata[field.name] || '');
+                          }}
+                          disabled={isValidating || !editedMetadata[field.name]}
+                          className="hover:bg-amber-50 hover:border-amber-300"
+                        >
+                          <Lightbulb className={`h-4 w-4 ${editedMetadata[field.name] ? 'text-amber-500' : 'text-muted-foreground'}`} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p className="text-xs">Click to validate with AI</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
                 {fieldErrors[field.name] && (
                   <p className="text-xs text-destructive mt-1">
