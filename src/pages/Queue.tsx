@@ -406,6 +406,7 @@ const [isExporting, setIsExporting] = useState(false);
         user_id: user?.id,
         priority: 'normal',
         status: 'pending',
+        scheduled_for: new Date().toISOString(),
       }]);
 
       if (jobError) {
