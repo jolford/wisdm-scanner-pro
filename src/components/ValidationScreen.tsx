@@ -239,56 +239,36 @@ export const ValidationScreen = ({
     }
   };
   
-  // Build a preview for the selected reference so users can see what is used
-  useEffect(() => {
-    if (!selectedReferenceId) { 
-      setReferencePreviewUrl('');
-      setSelectedReferenceMeta(null);
-      return; 
-    }
-    const ref = referenceSignatures.find(r => r.id === selectedReferenceId);
-    if (!ref) { setReferencePreviewUrl(''); setSelectedReferenceMeta(null); return; }
-    (async () => {
-      try {
-        const { data: urlData } = await supabase.storage
-          .from('documents')
-          .createSignedUrl(ref.signature_image_url, 3600);
-        setReferencePreviewUrl(urlData?.signedUrl || '');
-        setSelectedReferenceMeta({ entity_name: ref.entity_name, entity_id: ref.entity_id, entity_type: ref.entity_type });
-      } catch (e) {
-        setReferencePreviewUrl('');
-      }
-    })();
-  }, [selectedReferenceId, referenceSignatures]);
   
   useEffect(() => {
-    if (!displayUrl) { setPreviewUrl(null); return; }
-    if (!isPdf) { setPreviewUrl(displayUrl); return; }
-    try {
-      // Fetch bytes first to avoid any cross-origin quirks
-      const resp = await fetch(displayUrl);
-      const buffer = await resp.arrayBuffer();
-      const loadingTask = pdfjsLib.getDocument({ data: buffer });
-      const pdf = await loadingTask.promise;
-      const page = await pdf.getPage(1);
-      let viewport = page.getViewport({ scale: 1.2 });
-      const maxDim = 1800;
-      const scale = Math.min(1.2, maxDim / Math.max(viewport.width, viewport.height));
-      viewport = page.getViewport({ scale });
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
-      canvas.width = Math.round(viewport.width);
-      canvas.height = Math.round(viewport.height);
-      await page.render({ canvasContext: ctx, viewport }).promise;
-      setPreviewUrl(canvas.toDataURL('image/png'));
-    } catch (e) {
-      console.error('PDF preview render failed', e);
-      setPreviewUrl(null);
-    }
-  };
-  run();
-}, [displayUrl, isPdf]);
+    const run = async () => {
+      if (!displayUrl) { setPreviewUrl(null); return; }
+      if (!isPdf) { setPreviewUrl(displayUrl); return; }
+      try {
+        // Fetch bytes first to avoid any cross-origin quirks
+        const resp = await fetch(displayUrl);
+        const buffer = await resp.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: buffer });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+        let viewport = page.getViewport({ scale: 1.2 });
+        const maxDim = 1800;
+        const scale = Math.min(1.2, maxDim / Math.max(viewport.width, viewport.height));
+        viewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+        canvas.width = Math.round(viewport.width);
+        canvas.height = Math.round(viewport.height);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        setPreviewUrl(canvas.toDataURL('image/png'));
+      } catch (e) {
+        console.error('PDF preview render failed', e);
+        setPreviewUrl(null);
+      }
+    };
+    run();
+  }, [displayUrl, isPdf]);
 
 // Lazy-fetch word-level boxes when opening Redaction Tool (for previously saved docs)
 useEffect(() => {
