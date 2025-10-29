@@ -753,10 +753,23 @@ RESPONSE REQUIREMENTS:
                   }
                 }
 
-                // 2) Explicit "INVOICE NO/NUMBER/#" label anywhere (same line)
+                // 1b) Generic header line containing "Invoice Number" or "INV #" etc.
+                if (!inv) {
+                  const genericHeaderIdx = lines.findIndex((ln: string) => /invoice\s*number|\binv\s*(?:no\.?|num\.?|#)?\b/i.test(ln));
+                  if (genericHeaderIdx !== -1 && lines[genericHeaderIdx + 1]) {
+                    const valuesLine = lines[genericHeaderIdx + 1];
+                    const tokens = (valuesLine.match(/[A-Z]*\d[\d-]{3,}/g) || []).filter((t: string) => looksLikeId(t));
+                    if (tokens.length) {
+                      inv = clean(tokens[tokens.length - 1]);
+                      console.log(`Found Invoice Number (generic header): ${inv} from values line: ${valuesLine.substring(0, 80)}`);
+                    }
+                  }
+                }
+
+                // 2) Explicit label anywhere (same line)
                 if (!inv) {
                   for (const line of lines) {
-                    const m = line.match(/invoice\s*(?:no\.?|#|number|num\.?)\s*[:#\-]?\s*([A-Z]*\d[\d-]{4,})/i);
+                    const m = line.match(/(?:invoice|inv)\s*(?:no\.?|#|number|num\.?|id)?\s*[:#\-]?\s*([A-Z]*\d[\d-]{4,})/i);
                     if (m && !/customer|account/i.test(line)) {
                       const candidate = clean(m[1]).replace(/^0+(?=\d)/, '');
                       if (looksLikeId(candidate)) {
@@ -771,7 +784,7 @@ RESPONSE REQUIREMENTS:
                 // 3) Label on one line, value on next (check next 2 lines)
                 if (!inv) {
                   for (let i = 0; i < lines.length - 1; i++) {
-                    if (/invoice\s*(?:no\.?|#|number|num\.?)\s*$/i.test(lines[i]) && !/customer|account/i.test(lines[i])) {
+                    if (/(?:invoice|inv)\s*(?:no\.?|#|number|num\.?|id)?\s*$/i.test(lines[i]) && !/customer|account/i.test(lines[i])) {
                       for (let j = 1; j <= 2; j++) {
                         const next = (lines[i + j] || '').trim();
                         const m2 = next.match(/^([A-Z]*\d[\d-]{4,})/);
@@ -791,7 +804,7 @@ RESPONSE REQUIREMENTS:
 
                 // 4) Fallback: search globally for "INVOICE NO" then nearest id within 40 chars
                 if (!inv) {
-                  const global = text.match(/invoice\s*no\.?\s*[:#\-\s]{0,10}([A-Za-z]*\d[\d-]{3,})/i);
+                  const global = text.match(/(?:invoice|inv)\s*(?:no\.?|#|number|num\.?|id)?\s*[:#\-\s]{0,10}([A-Za-z]*\d[\d-]{3,})/i);
                   if (global && looksLikeId(global[1])) {
                     inv = clean(global[1]);
                     console.log(`Found Invoice Number (global proximity): ${inv}`);
@@ -817,13 +830,22 @@ RESPONSE REQUIREMENTS:
                 const dateRe = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/;
 
                 // 1) Table header variant seen on many invoices: "INVOICE DATE | DATE SHIPPED | ..."
-                const tableIdx = lines.findIndex((ln: string) => /invoice\s*date/i.test(ln) && /date\s*shipp?ed/i.test(ln));
+                const tableIdx = lines.findIndex((ln: string) => /invoice\s*date/i.test(ln) && /(ship\s*date|date\s*shipp?ed)/i.test(ln));
                 if (tableIdx !== -1 && lines[tableIdx + 1]) {
+                  const headerLine = lines[tableIdx];
                   const valuesLine = lines[tableIdx + 1];
-                  const d = valuesLine.match(dateRe);
-                  if (d) {
-                    invDate = d[1];
-                    console.log(`Found Invoice Date (table header variant): ${invDate} from values line: ${valuesLine.substring(0, 80)}`);
+                  // Pick the date token closest to the "INVOICE DATE" column position
+                  const headerPos = headerLine.toLowerCase().indexOf('invoice date');
+                  const matches = Array.from(valuesLine.matchAll(dateRe)) as RegExpMatchArray[];
+                  if (matches.length) {
+                    let best: RegExpMatchArray = matches[0] as RegExpMatchArray;
+                    let bestDist = Math.abs(((best.index as number) ?? 0) - Math.max(0, headerPos));
+                    for (const m of matches as RegExpMatchArray[]) {
+                      const dist = Math.abs(((m.index as number) ?? 0) - Math.max(0, headerPos));
+                      if (dist < bestDist) { best = m; bestDist = dist; }
+                    }
+                    invDate = (best[1] as string);
+                    console.log(`Found Invoice Date (table header nearest-col): ${invDate} from values line: ${valuesLine.substring(0, 80)}`);
                   }
                 }
 
@@ -843,7 +865,7 @@ RESPONSE REQUIREMENTS:
                 // 3) Same-line label: "INVOICE DATE: MM/DD/YY"
                 if (!invDate) {
                   for (const line of lines) {
-                    const m = line.match(/invoice\s*(?:date|dt\.?)\s*[:\-]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
+                    const m = line.match(/(?:invoice|inv)\s*(?:date|dt\.?)\s*[:\-]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
                     if (m) {
                       invDate = m[1];
                       console.log(`Found Invoice Date (same-line): ${invDate} from line: ${line.substring(0, 60)}`);
@@ -855,7 +877,7 @@ RESPONSE REQUIREMENTS:
                 // 4) Next-line fallback
                 if (!invDate) {
                   for (let i = 0; i < lines.length - 1; i++) {
-                    if (/invoice\s*(?:date|dt\.?)\s*$/i.test(lines[i])) {
+                    if (/(?:invoice|inv)\s*(?:date|dt\.?)\s*$/i.test(lines[i])) {
                       const next = lines[i + 1].trim();
                       const m2 = next.match(dateRe);
                       if (m2) {
