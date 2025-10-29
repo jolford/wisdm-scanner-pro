@@ -1478,6 +1478,56 @@ export type Database = {
           },
         ]
       }
+      signature_references: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          entity_id: string
+          entity_name: string | null
+          entity_type: string
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          project_id: string
+          signature_image_url: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          entity_id: string
+          entity_name?: string | null
+          entity_type: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          project_id: string
+          signature_image_url: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          entity_id?: string
+          entity_name?: string | null
+          entity_type?: string
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          project_id?: string
+          signature_image_url?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signature_references_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       system_settings: {
         Row: {
           created_at: string | null

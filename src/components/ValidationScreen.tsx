@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Lightbulb, Crop, Eraser, Sparkles } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +28,7 @@ if ((pdfjsLib as any).GlobalWorkerOptions) {
 
 interface ValidationScreenProps {
   documentId?: string;
+  projectId?: string; // Added for fetching reference signatures
   imageUrl: string;
   fileName: string;
   extractedText: string;
@@ -48,6 +50,7 @@ interface ValidationScreenProps {
 
 export const ValidationScreen = ({
   documentId,
+  projectId,
   imageUrl,
   fileName,
   extractedText,
@@ -89,6 +92,9 @@ export const ValidationScreen = ({
   const [signatureImage, setSignatureImage] = useState<string>('');
   const [signatureValidationResult, setSignatureValidationResult] = useState<any>(null);
   const [isValidatingSignature, setIsValidatingSignature] = useState(false);
+  const [referenceSignatures, setReferenceSignatures] = useState<any[]>([]);
+  const [selectedReferenceId, setSelectedReferenceId] = useState<string | null>(null);
+  const [entityIdField, setEntityIdField] = useState<string>('');
   const { toast } = useToast();
   const { isAdmin } = useAuth();
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
@@ -207,6 +213,30 @@ export const ValidationScreen = ({
   };
   useEffect(() => { setResolvedBoundingBoxes(boundingBoxes); }, [boundingBoxes]);
   useEffect(() => { setResolvedWordBoxes(wordBoundingBoxes || []); }, [wordBoundingBoxes]);
+
+  // Fetch reference signatures when signature verification is enabled
+  useEffect(() => {
+    if (enableSignatureVerification && projectId) {
+      fetchReferenceSignatures();
+    }
+  }, [enableSignatureVerification, projectId]);
+
+  const fetchReferenceSignatures = async () => {
+    if (!projectId) return;
+    try {
+      const { data, error } = await supabase
+        .from('signature_references')
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      setReferenceSignatures(data || []);
+    } catch (error) {
+      console.error('Error fetching reference signatures:', error);
+    }
+  };
+
 
 useEffect(() => {
   const run = async () => {
@@ -523,21 +553,78 @@ useEffect(() => {
 
     setIsValidatingSignature(true);
     try {
+      let referenceImageUrl = null;
+      
+      // If a reference signature is selected, fetch it
+      if (selectedReferenceId) {
+        const reference = referenceSignatures.find(r => r.id === selectedReferenceId);
+        if (reference) {
+          // Get signed URL for the reference signature
+          const { data: urlData } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(reference.signature_image_url, 3600);
+          
+          if (urlData?.signedUrl) {
+            // Convert to base64
+            const response = await fetch(urlData.signedUrl);
+            const blob = await response.blob();
+            const reader = new FileReader();
+            referenceImageUrl = await new Promise((resolve) => {
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+          }
+        }
+      } else if (entityIdField && editedMetadata?.[entityIdField]) {
+        // Auto-match based on entity ID field
+        const matchingRef = referenceSignatures.find(
+          r => r.entity_id === String(editedMetadata[entityIdField])
+        );
+        
+        if (matchingRef) {
+          const { data: urlData } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(matchingRef.signature_image_url, 3600);
+          
+          if (urlData?.signedUrl) {
+            const response = await fetch(urlData.signedUrl);
+            const blob = await response.blob();
+            const reader = new FileReader();
+            referenceImageUrl = await new Promise((resolve) => {
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+          }
+          
+          toast({
+            title: 'Auto-matched reference',
+            description: `Using reference for ${matchingRef.entity_name || matchingRef.entity_id}`,
+          });
+        }
+      }
+
       const { data, error } = await supabase.functions.invoke('validate-signature', {
         body: {
           signatureImage,
-          strictMode: false,
-        },
+          referenceImage: referenceImageUrl,
+          strictMode: !!referenceImageUrl
+        }
       });
 
       if (error) throw error;
 
       setSignatureValidationResult(data);
       
-      if (data.signatureDetected) {
+      if (referenceImageUrl && data.match !== undefined) {
         toast({
-          title: 'Signature Validated',
-          description: `Signature detected with ${Math.round((data.confidence || 0) * 100)}% confidence`,
+          title: data.match ? 'Signature Match' : 'Signature Mismatch',
+          description: `Similarity: ${Math.round((data.similarityScore || 0) * 100)}% - ${data.recommendation || 'review'}`,
+          variant: data.match ? 'default' : 'destructive',
+        });
+      } else if (data.signatureDetected) {
+        toast({
+          title: 'Signature Detected',
+          description: `Detected with ${Math.round((data.confidence || 0) * 100)}% confidence`,
         });
       } else {
         toast({
@@ -968,6 +1055,35 @@ useEffect(() => {
             </div>
             
             <div className="space-y-3">
+              {referenceSignatures.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm">Compare Against Reference</Label>
+                  <Select value={selectedReferenceId || ''} onValueChange={setSelectedReferenceId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select reference signature..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">None (Detection only)</SelectItem>
+                      {referenceSignatures.map((ref) => (
+                        <SelectItem key={ref.id} value={ref.id}>
+                          {ref.entity_name || ref.entity_id} ({ref.entity_type})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  
+                  <div className="text-xs text-muted-foreground">
+                    Or auto-match using field:
+                    <Input
+                      placeholder="e.g., voter_id"
+                      value={entityIdField}
+                      onChange={(e) => setEntityIdField(e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              )}
+
               <div>
                 <Label htmlFor="signature-upload" className="text-sm mb-2 block">
                   Upload Signature Image
@@ -998,25 +1114,48 @@ useEffect(() => {
                     className="w-full"
                     variant="default"
                   >
-                    {isValidatingSignature ? 'Validating...' : 'Validate Signature'}
+                    {isValidatingSignature ? 'Validating...' : (selectedReferenceId || (entityIdField && editedMetadata?.[entityIdField]) ? 'Compare Signature' : 'Detect Signature')}
                   </Button>
                 </div>
               )}
               
               {signatureValidationResult && (
                 <div className={`p-3 rounded border ${
-                  signatureValidationResult.signatureDetected 
-                    ? 'bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-700'
-                    : 'bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-700'
+                  signatureValidationResult.match !== undefined
+                    ? (signatureValidationResult.match ? 'bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-700' : 'bg-yellow-50 dark:bg-yellow-950/30 border-yellow-300 dark:border-yellow-700')
+                    : (signatureValidationResult.signatureDetected ? 'bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-700' : 'bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-700')
                 }`}>
-                  <div className="flex items-start gap-2 mb-2">
-                    <Badge variant={signatureValidationResult.signatureDetected ? 'default' : 'destructive'} className="text-xs">
-                      {signatureValidationResult.signatureDetected ? '✓ Signature Detected' : '✗ No Signature'}
-                    </Badge>
-                    {signatureValidationResult.confidence !== undefined && (
-                      <Badge variant="secondary" className="text-xs">
-                        {Math.round(signatureValidationResult.confidence * 100)}% confidence
-                      </Badge>
+                  <div className="flex items-start gap-2 mb-2 flex-wrap">
+                    {signatureValidationResult.match !== undefined ? (
+                      <>
+                        <Badge variant={signatureValidationResult.match ? 'default' : 'secondary'} className="text-xs">
+                          {signatureValidationResult.match ? '✓ Match' : '≈ No Match'}
+                        </Badge>
+                        {signatureValidationResult.similarityScore !== undefined && (
+                          <Badge variant="secondary" className="text-xs">
+                            {Math.round(signatureValidationResult.similarityScore * 100)}% similarity
+                          </Badge>
+                        )}
+                        {signatureValidationResult.recommendation && (
+                          <Badge 
+                            variant={signatureValidationResult.recommendation === 'accept' ? 'default' : signatureValidationResult.recommendation === 'review' ? 'secondary' : 'destructive'} 
+                            className="text-xs"
+                          >
+                            {signatureValidationResult.recommendation}
+                          </Badge>
+                        )}
+                      </>
+                    ) : (
+                      <>
+                        <Badge variant={signatureValidationResult.signatureDetected ? 'default' : 'destructive'} className="text-xs">
+                          {signatureValidationResult.signatureDetected ? '✓ Signature Detected' : '✗ No Signature'}
+                        </Badge>
+                        {signatureValidationResult.confidence !== undefined && (
+                          <Badge variant="secondary" className="text-xs">
+                            {Math.round(signatureValidationResult.confidence * 100)}% confidence
+                          </Badge>
+                        )}
+                      </>
                     )}
                   </div>
                   
@@ -1031,6 +1170,28 @@ useEffect(() => {
                       <p><strong>Handwritten:</strong> {signatureValidationResult.characteristics.isHandwritten ? 'Yes' : 'No'}</p>
                       <p><strong>Complexity:</strong> {signatureValidationResult.characteristics.complexity}</p>
                       <p><strong>Clarity:</strong> {signatureValidationResult.characteristics.clarity}</p>
+                    </div>
+                  )}
+
+                  {signatureValidationResult.differences && signatureValidationResult.differences.length > 0 && (
+                    <div className="mt-2 text-xs">
+                      <p className="font-semibold">Differences:</p>
+                      <ul className="list-disc list-inside text-muted-foreground">
+                        {signatureValidationResult.differences.map((diff: string, idx: number) => (
+                          <li key={idx}>{diff}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {signatureValidationResult.similarities && signatureValidationResult.similarities.length > 0 && (
+                    <div className="mt-2 text-xs">
+                      <p className="font-semibold">Similarities:</p>
+                      <ul className="list-disc list-inside text-muted-foreground">
+                        {signatureValidationResult.similarities.map((sim: string, idx: number) => (
+                          <li key={idx}>{sim}</li>
+                        ))}
+                      </ul>
                     </div>
                   )}
                 </div>

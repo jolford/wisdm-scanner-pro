@@ -27,6 +27,7 @@ import { EmailImportConfig } from '@/components/admin/EmailImportConfig';
 import { ValidationLookupConfig, ValidationLookupConfig as VLConfig } from '@/components/admin/ValidationLookupConfig';
 import { BarcodeConfig } from '@/components/admin/BarcodeConfig';
 import { HotFolderSetupWizard } from '@/components/admin/HotFolderSetupWizard';
+import { SignatureReferencesManager } from '@/components/admin/SignatureReferencesManager';
 
 interface ExtractionField {
   name: string;
