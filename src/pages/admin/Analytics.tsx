@@ -389,21 +389,6 @@ const Analytics = () => {
             </div>
           </Card>
 
-          <Card className="p-6 bg-gradient-to-br from-orange-500/5 to-orange-500/10 border-orange-500/20">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-orange-500/10 rounded-lg">
-                <AlertTriangle className="h-6 w-6 text-orange-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Error Rate</p>
-                <p className="text-3xl font-bold">{analytics.errorRate.toFixed(1)}%</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {analytics.jobMetrics.failed} failed jobs
-                </p>
-              </div>
-            </div>
-          </Card>
-
           <Card className="p-6 bg-gradient-to-br from-blue-500/5 to-blue-500/10 border-blue-500/20">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-blue-500/10 rounded-lg">
