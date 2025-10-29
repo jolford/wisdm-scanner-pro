@@ -200,26 +200,43 @@ serve(async (req) => {
     async function downloadBytes(url: string): Promise<{ bytes: Uint8Array; contentType: string }> {
       try {
         const storageUrl = Deno.env.get('SUPABASE_URL');
-        if (storageUrl && url.startsWith(storageUrl) && url.includes('/storage/v1/object/')) {
-          // Match /storage/v1/object/(sign|public|authenticated)/bucket/path
-          const match = url.match(/\/storage\/v1\/object\/(?:sign|public|authenticated)\/([^/]+)\/(.+?)(?:\?|$)/);
-          if (match) {
-            const bucket = match[1];
-            const objectPath = decodeURIComponent(match[2]);
-            const { data, error } = await supabase.storage.from(bucket).download(objectPath);
-            if (error) throw error;
-            const ab = new Uint8Array(await data.arrayBuffer());
-            const ct = data.type || 'application/octet-stream';
-            return { bytes: ab, contentType: ct };
+        
+        // Always try storage SDK first for Supabase URLs
+        if (storageUrl && url.includes(storageUrl)) {
+          // Extract storage path from any Supabase storage URL format
+          let filePath: string | null = null;
+          try {
+            const u = new URL(url);
+            // Match /documents/path or /storage/v1/object/.../documents/path
+            const m = u.pathname.match(/\/documents\/(.+)$/);
+            filePath = m ? decodeURIComponent(m[1]) : null;
+          } catch {
+            const m = url.match(/\/documents\/(.+?)(?:\?|#|$)/);
+            filePath = m ? decodeURIComponent(m[1]) : null;
+          }
+          
+          if (filePath) {
+            try {
+              const { data, error } = await supabase.storage.from('documents').download(filePath);
+              if (!error && data) {
+                const ab = new Uint8Array(await data.arrayBuffer());
+                const ct = data.type || 'application/octet-stream';
+                return { bytes: ab, contentType: ct };
+              }
+            } catch (storageErr) {
+              console.warn('Storage SDK download failed, will try direct fetch:', storageErr);
+            }
           }
         }
-        // Fallback to direct fetch (for external URLs or non-storage patterns)
+        
+        // Fallback to direct fetch (for external URLs or if storage failed)
         const res = await fetch(url);
-        if (!res.ok) throw new Error(`Failed to download document: ${res.status}`);
+        if (!res.ok) throw new Error(`Failed to download document: ${res.status} ${res.statusText}`);
         const ab = new Uint8Array(await res.arrayBuffer());
         const ct = res.headers.get('content-type') || 'application/octet-stream';
         return { bytes: ab, contentType: ct };
       } catch (e) {
+        console.error('downloadBytes error for URL:', url, e);
         throw e;
       }
     }
