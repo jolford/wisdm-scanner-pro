@@ -95,6 +95,8 @@ export const ValidationScreen = ({
   const [referenceSignatures, setReferenceSignatures] = useState<any[]>([]);
   const [selectedReferenceId, setSelectedReferenceId] = useState<string | null>(null);
   const [entityIdField, setEntityIdField] = useState<string>('');
+  const [referencePreviewUrl, setReferencePreviewUrl] = useState<string>('');
+  const [selectedReferenceMeta, setSelectedReferenceMeta] = useState<any>(null);
   const { toast } = useToast();
   const { isAdmin } = useAuth();
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
@@ -236,10 +238,30 @@ export const ValidationScreen = ({
       console.error('Error fetching reference signatures:', error);
     }
   };
-
-
-useEffect(() => {
-  const run = async () => {
+  
+  // Build a preview for the selected reference so users can see what is used
+  useEffect(() => {
+    if (!selectedReferenceId) { 
+      setReferencePreviewUrl('');
+      setSelectedReferenceMeta(null);
+      return; 
+    }
+    const ref = referenceSignatures.find(r => r.id === selectedReferenceId);
+    if (!ref) { setReferencePreviewUrl(''); setSelectedReferenceMeta(null); return; }
+    (async () => {
+      try {
+        const { data: urlData } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(ref.signature_image_url, 3600);
+        setReferencePreviewUrl(urlData?.signedUrl || '');
+        setSelectedReferenceMeta({ entity_name: ref.entity_name, entity_id: ref.entity_id, entity_type: ref.entity_type });
+      } catch (e) {
+        setReferencePreviewUrl('');
+      }
+    })();
+  }, [selectedReferenceId, referenceSignatures]);
+  
+  useEffect(() => {
     if (!displayUrl) { setPreviewUrl(null); return; }
     if (!isPdf) { setPreviewUrl(displayUrl); return; }
     try {
@@ -582,6 +604,9 @@ useEffect(() => {
         );
         
         if (matchingRef) {
+          // Reflect selection in UI
+          setSelectedReferenceId(matchingRef.id);
+          
           const { data: urlData } = await supabase.storage
             .from('documents')
             .createSignedUrl(matchingRef.signature_image_url, 3600);
@@ -1071,6 +1096,16 @@ useEffect(() => {
                       ))}
                     </SelectContent>
                   </Select>
+                  
+                  {selectedReferenceMeta && referencePreviewUrl && (
+                    <div className="mt-2 flex items-center gap-3 p-2 rounded border bg-muted/30">
+                      <img src={referencePreviewUrl} alt="Reference signature preview" className="h-10 w-auto object-contain rounded" />
+                      <div className="text-xs">
+                        <p className="font-medium">Using reference: {selectedReferenceMeta.entity_name || selectedReferenceMeta.entity_id}</p>
+                        <p className="text-muted-foreground">{selectedReferenceMeta.entity_type} • ID: {selectedReferenceMeta.entity_id}</p>
+                      </div>
+                    </div>
+                  )}
                   
                   <div className="text-xs text-muted-foreground">
                     Or auto-match using field:
