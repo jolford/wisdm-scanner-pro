@@ -1957,6 +1957,7 @@ export type Database = {
           customer_id: string
           description: string
           enable_check_scanning: boolean
+          enable_signature_verification: boolean
           export_types: string[]
           extraction_fields: Json
           id: string
