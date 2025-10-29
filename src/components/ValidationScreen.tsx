@@ -124,6 +124,35 @@ export const ValidationScreen = ({
       }
     })();
   }, [projectId, enableSignatureVerification]);
+
+  // Fallback: auto-enable if project has signature cues
+  useEffect(() => {
+    if (sigEnabled) return;
+    const hasSignatureField = (projectFields || []).some(
+      (f) => f?.name?.toLowerCase().includes('signature')
+    );
+    if (hasSignatureField) setSigEnabled(true);
+  }, [sigEnabled, projectFields]);
+
+  // Fallback: enable if project already has active signature references
+  useEffect(() => {
+    if (!projectId || sigEnabled) return;
+    (async () => {
+      try {
+        const { count } = await supabase
+          .from('signature_references')
+          .select('id', { count: 'exact', head: true })
+          .eq('project_id', projectId)
+          .eq('is_active', true);
+        if ((count || 0) > 0) {
+          setSigEnabled(true);
+        }
+      } catch {
+        // ignore - optional enhancement
+      }
+    })();
+  }, [projectId, sigEnabled]);
+
   // Resolved OCR geometry for redaction (props or lazy-fetched)
   const [resolvedBoundingBoxes, setResolvedBoundingBoxes] = useState(boundingBoxes);
   const [resolvedWordBoxes, setResolvedWordBoxes] = useState<Array<{ text: string; bbox: any }>>(wordBoundingBoxes || []);
