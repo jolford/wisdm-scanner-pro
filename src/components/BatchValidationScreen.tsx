@@ -60,6 +60,7 @@ if ((pdfjsLib as any).GlobalWorkerOptions) {
  */
 interface Document {
   id: string;
+  project_id: string;
   file_name: string;
   file_url: string;
   extracted_text: string;
@@ -1393,11 +1394,15 @@ const { toast } = useToast();
 </div>
 
                             <Dialog open={signatureDialogDocId === doc.id} onOpenChange={(o) => setSignatureDialogDocId(o ? doc.id : null)}>
-                              <DialogContent className="sm:max-w-2xl">
+                              <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                                 <DialogHeader>
                                   <DialogTitle>Signature Verification</DialogTitle>
                                 </DialogHeader>
-                                <SignatureValidator />
+                                <SignatureValidator 
+                                  documentImageUrl={doc.file_url}
+                                  projectId={doc.project_id}
+                                  currentMetadata={getMetadataForDoc(doc)}
+                                />
                               </DialogContent>
                             </Dialog>
 
