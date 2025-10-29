@@ -280,12 +280,12 @@ export const ValidationScreen = ({
   useEffect(() => { setResolvedBoundingBoxes(boundingBoxes); }, [boundingBoxes]);
   useEffect(() => { setResolvedWordBoxes(wordBoundingBoxes || []); }, [wordBoundingBoxes]);
 
-  // Fetch reference signatures when signature verification is enabled
+  // Fetch reference signatures when project changes
   useEffect(() => {
-    if (sigEnabled && projectId) {
+    if (projectId) {
       fetchReferenceSignatures();
     }
-  }, [sigEnabled, projectId]);
+  }, [projectId]);
 
   const fetchReferenceSignatures = async () => {
     if (!projectId) return;
@@ -1109,7 +1109,7 @@ useEffect(() => {
         </div>
         
         {/* Signature Verification Section */}
-        {sigEnabled && (
+        {(sigEnabled || true) && (
           <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 border-2 border-purple-300/30 dark:border-purple-700/30 rounded-lg shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/50">
