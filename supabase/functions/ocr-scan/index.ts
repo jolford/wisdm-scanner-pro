@@ -202,7 +202,7 @@ RESPONSE REQUIREMENTS:
         const fieldGuidance = fieldNames.map((fname: string) => {
           const lowerName = fname.toLowerCase();
           if (lowerName.includes('invoice') && lowerName.includes('number')) {
-            return `\n- ${fname}: Look in TOP HEADER area (usually upper right), often labeled "INVOICE NO", "INVOICE #", or "INV#". Read ALL digits carefully - this is a critical identifier. Common formats: 7-10 digit numbers.`;
+            return `\n- ${fname}: CRITICAL - Find the number DIRECTLY ADJACENT to the label "INVOICE NO", "INVOICE NUMBER", "INVOICE #", or "INV#" (usually upper right corner). DO NOT confuse with "CUSTOMER NO", "ACCOUNT NO", or "PURCHASE ORDER". The invoice number is the identifier specifically labeled as "INVOICE". Read ALL digits with extreme precision.`;
           }
           if (lowerName.includes('invoice') && lowerName.includes('date')) {
             return `\n- ${fname}: Usually near invoice number in header area. Format varies: MM/DD/YY, MM/DD/YYYY, YYYY-MM-DD.`;
