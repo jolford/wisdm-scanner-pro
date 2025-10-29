@@ -104,6 +104,26 @@ export const ValidationScreen = ({
   const { signedUrl: displayUrl } = useSignedUrl(currentImageUrl);
   const isPdf = fileName?.toLowerCase().endsWith('.pdf');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  // Resolve signature verification from prop or backend (project settings)
+  const [sigEnabled, setSigEnabled] = useState<boolean>(enableSignatureVerification);
+  useEffect(() => { setSigEnabled(enableSignatureVerification); }, [enableSignatureVerification]);
+  useEffect(() => {
+    if (!projectId) return;
+    if (enableSignatureVerification) return; // already true via prop
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('projects')
+          .select('enable_signature_verification')
+          .eq('id', projectId)
+          .single();
+        if (data?.enable_signature_verification) setSigEnabled(true);
+      } catch (_) {
+        // ignore - non-blocking enhancement
+      }
+    })();
+  }, [projectId, enableSignatureVerification]);
   // Resolved OCR geometry for redaction (props or lazy-fetched)
   const [resolvedBoundingBoxes, setResolvedBoundingBoxes] = useState(boundingBoxes);
   const [resolvedWordBoxes, setResolvedWordBoxes] = useState<Array<{ text: string; bbox: any }>>(wordBoundingBoxes || []);
@@ -218,10 +238,10 @@ export const ValidationScreen = ({
 
   // Fetch reference signatures when signature verification is enabled
   useEffect(() => {
-    if (enableSignatureVerification && projectId) {
+    if (sigEnabled && projectId) {
       fetchReferenceSignatures();
     }
-  }, [enableSignatureVerification, projectId]);
+  }, [sigEnabled, projectId]);
 
   const fetchReferenceSignatures = async () => {
     if (!projectId) return;
@@ -1045,7 +1065,7 @@ useEffect(() => {
         </div>
         
         {/* Signature Verification Section */}
-        {enableSignatureVerification && (
+        {sigEnabled && (
           <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 border-2 border-purple-300/30 dark:border-purple-700/30 rounded-lg shadow-sm">
             <div className="flex items-center gap-2 mb-3">
               <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/50">
