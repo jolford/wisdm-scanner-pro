@@ -42,13 +42,13 @@ export default function AdvancedReports() {
       // Fetch document throughput
       const { data: documents } = await supabase
         .from('documents')
-        .select('created_at, validation_status, confidence_score')
-        .gte('created_at', startDate.toISOString());
+        .select('created_at, validated_at, validation_status, confidence_score')
+        .or(`validated_at.gte.${startDate.toISOString()},created_at.gte.${startDate.toISOString()}`);
 
       // Process throughput data by day
       const throughputMap = new Map<string, number>();
       documents?.forEach(doc => {
-        const day = format(new Date(doc.created_at), 'MMM dd');
+        const day = format(new Date((doc as any).validated_at || (doc as any).created_at), 'MMM dd');
         throughputMap.set(day, (throughputMap.get(day) || 0) + 1);
       });
       
@@ -57,13 +57,13 @@ export default function AdvancedReports() {
       );
 
       // Calculate accuracy data
-      const validatedDocs = documents?.filter(d => d.validation_status === 'validated') || [];
-      const avgConfidence = validatedDocs.reduce((sum, d) => sum + (d.confidence_score || 0), 0) / validatedDocs.length || 0;
+      const docsWithScore = (documents || []).filter(d => (d as any).confidence_score != null);
+      const avgConfidence = docsWithScore.reduce((sum, d: any) => sum + ((d.confidence_score as number) || 0), 0) / (docsWithScore.length || 1);
       
       setAccuracyData([
-        { name: 'High Confidence (>90%)', value: validatedDocs.filter(d => (d.confidence_score || 0) > 0.9).length },
-        { name: 'Medium Confidence (70-90%)', value: validatedDocs.filter(d => (d.confidence_score || 0) >= 0.7 && (d.confidence_score || 0) <= 0.9).length },
-        { name: 'Low Confidence (<70%)', value: validatedDocs.filter(d => (d.confidence_score || 0) < 0.7).length },
+        { name: 'High Confidence (>90%)', value: docsWithScore.filter((d: any) => ((d.confidence_score as number) || 0) > 0.9).length },
+        { name: 'Medium Confidence (70-90%)', value: docsWithScore.filter((d: any) => ((d.confidence_score as number) || 0) >= 0.7 && ((d.confidence_score as number) || 0) <= 0.9).length },
+        { name: 'Low Confidence (<70%)', value: docsWithScore.filter((d: any) => ((d.confidence_score as number) || 0) < 0.7).length },
       ]);
 
       // Fetch user activity from audit trail

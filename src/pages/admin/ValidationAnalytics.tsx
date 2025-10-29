@@ -8,14 +8,14 @@ import { BarChart, LineChart, PieChart } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface AnalyticsData {
-  customer_id: string;
-  project_id: string | null;
-  document_type: string | null;
+  customer_id?: string;
+  project_id?: string | null;
+  document_type?: string | null;
   validation_date: string;
   documents_validated: number;
   documents_rejected: number;
   avg_time_seconds: number;
-  field_errors: any; // JSONB field
+  field_errors?: any; // JSONB field
 }
 
 interface UserProductivity {
@@ -59,28 +59,58 @@ export default function ValidationAnalytics() {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - parseInt(timeRange));
 
-      let query = supabase
-        .from('validation_analytics')
-        .select('*')
-        .gte('validation_date', startDate.toISOString().split('T')[0])
-        .order('validation_date', { ascending: true });
+      // Build analytics from documents (validated/rejected) instead of a materialized table
+      let docsQuery = supabase
+        .from('documents')
+        .select('validation_status, validated_at, project_id')
+        .not('validated_at', 'is', null)
+        .gte('validated_at', startDate.toISOString());
 
       if (selectedProject !== 'all') {
-        query = query.eq('project_id', selectedProject);
+        docsQuery = docsQuery.eq('project_id', selectedProject);
       }
 
-      const { data, error } = await query;
+      const { data: docsData, error: docsError } = await docsQuery;
+      if (docsError) throw docsError;
 
-      if (error) throw error;
+      // Aggregate by validation_date (day)
+      const byDate: Record<string, { validation_date: string; documents_validated: number; documents_rejected: number; avg_time_seconds: number }>= {};
+      (docsData || []).forEach((d: any) => {
+        const day = new Date(d.validated_at).toISOString().split('T')[0];
+        if (!byDate[day]) {
+          byDate[day] = { validation_date: day, documents_validated: 0, documents_rejected: 0, avg_time_seconds: 0 };
+        }
+        if (d.validation_status === 'validated') byDate[day].documents_validated++;
+        if (d.validation_status === 'rejected') byDate[day].documents_rejected++;
+      });
 
-      setAnalytics(data || []);
+      // Derive an overall average processing time from jobs during the period
+      const { data: jobData } = await supabase
+        .from('jobs')
+        .select('started_at, completed_at, created_at')
+        .gte('created_at', startDate.toISOString());
 
-      // Calculate error-prone fields
+      const times = (jobData || [])
+        .map((j: any) => (j.started_at && j.completed_at) ? (new Date(j.completed_at).getTime() - new Date(j.started_at).getTime()) / 1000 : 0)
+        .filter((t: number) => t > 0);
+      const overallAvgTime = times.length > 0 ? (times.reduce((a: number, b: number) => a + b, 0) / times.length) : 0;
+
+      const analyticsData = Object.values(byDate)
+        .map(r => ({ ...r, avg_time_seconds: overallAvgTime }))
+        .sort((a, b) => a.validation_date.localeCompare(b.validation_date));
+
+      setAnalytics(analyticsData);
+
+      // Most error-prone fields from field_changes
+      const { data: fieldChanges } = await supabase
+        .from('field_changes')
+        .select('field_name, created_at')
+        .gte('created_at', startDate.toISOString());
+
       const fieldErrorMap: Record<string, number> = {};
-      data?.forEach((record) => {
-        Object.entries(record.field_errors || {}).forEach(([field, count]) => {
-          fieldErrorMap[field] = (fieldErrorMap[field] || 0) + (count as number);
-        });
+      (fieldChanges || []).forEach((fc: any) => {
+        const name = fc.field_name || 'Unknown';
+        fieldErrorMap[name] = (fieldErrorMap[name] || 0) + 1;
       });
 
       const sortedFields = Object.entries(fieldErrorMap)
