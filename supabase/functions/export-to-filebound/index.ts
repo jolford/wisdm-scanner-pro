@@ -493,6 +493,38 @@ serve(async (req) => {
           throw new Error('Unable to create or locate FileBound file');
         }
 
+        // Attempt to resolve a usable Divider for uploads (some projects require it)
+        async function getDividerInfo(projectId: string | number, fileId: string | number): Promise<{ id?: string; name?: string } | null> {
+          const tryUrls = [
+            `${baseUrl}/api/projects/${projectId}/dividers`,
+            `${baseUrl}/api/projects/${projectId}/dividers?default=true`,
+            `${baseUrl}/api/files/${fileId}/dividers`,
+          ];
+          for (const url of tryUrls) {
+            try {
+              const res = await fetch(url, {
+                method: 'GET',
+                headers: { 'Authorization': `Basic ${authString}`, 'Accept': 'application/json' },
+              });
+              if (!res.ok) continue;
+              const body = await res.json().catch(() => []);
+              const arr = Array.isArray(body) ? body : (Array.isArray(body?.Data) ? body.Data : []);
+              if (!arr.length) continue;
+              // Prefer default divider if flagged, else first
+              const pick = arr.find((d: any) => d?.Default || d?.IsDefault || d?.isDefault) || arr[0];
+              const id = pick?.DividerId ?? pick?.Id ?? pick?.dividerId ?? pick?.id;
+              const name = pick?.DividerName ?? pick?.Name ?? pick?.dividerName ?? pick?.name;
+              if (id || name) {
+                console.log('Resolved FileBound divider', { id, name, from: url });
+                return { id: id ? String(id) : undefined, name: name ? String(name) : undefined };
+              }
+            } catch (e) {
+              console.warn('Fetch divider info failed', { url, message: (e as any)?.message });
+            }
+          }
+          return null;
+        }
+
         function getExtension(fileName: string, ct: string): string {
           const fromName = (fileName?.split('.')?.pop() || '').toLowerCase();
           if (fromName) return fromName;
@@ -507,55 +539,103 @@ serve(async (req) => {
         // Upload the document content to the created file
         const ext = getExtension(doc.file_name || '', contentType);
 
-        // Try uploading as raw binary (most common method)
-        const uploadEndpoints = [
-          { url: `${baseUrl}/api/files/${fileId}/document`, method: 'POST' as const },
-          { url: `${baseUrl}/api/files/${fileId}/documents`, method: 'POST' as const },
-          { url: `${baseUrl}/api/documents/${fileId}`, method: 'PUT' as const },
-        ];
+        // Try to resolve a Divider (some projects enforce it)
+        const divider = await getDividerInfo(projectId, fileId);
+        const urlWithDivider = (u: string) => {
+          if (divider?.id) return `${u}${u.includes('?') ? '&' : '?'}dividerId=${encodeURIComponent(divider.id)}`;
+          if (divider?.name) return `${u}${u.includes('?') ? '&' : '?'}divider=${encodeURIComponent(divider.name)}`;
+          return u;
+        };
 
         let uploaded = false;
         let lastError: any = null;
         
         // Convert bytes to standard array for Blob
         const byteArray = Array.from(bytes);
-        
-        for (const ep of uploadEndpoints) {
-          try {
-            console.log(`Attempting binary upload to ${ep.url}`);
-            const blob = new Blob([new Uint8Array(byteArray)], { type: contentType || 'application/octet-stream' });
-            const res = await fetch(ep.url, {
-              method: ep.method,
-              headers: {
-                'Authorization': `Basic ${authString}`,
-                'Content-Type': contentType || 'application/octet-stream',
-                'Content-Disposition': `attachment; filename="${doc.file_name}"`,
-              },
-              body: blob
-            });
-            
-            if (res.ok || res.status === 201) {
-              console.log(`Binary upload successful to ${ep.url}`);
-              const okJson = await res.json().catch(() => ({ success: true }));
-              successes.push({ id: doc.id, result: okJson, fileId });
-              uploaded = true;
-              break;
-            } else {
-              const t = await res.text();
-              lastError = { url: ep.url, status: res.status, details: (t || '').slice(0, 500) };
-              console.warn('FileBound binary upload failed', lastError);
+
+        // 1) Try multipart/form-data (commonly required by FileBound)
+        if (!uploaded) {
+          const formEndpoints = [
+            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/document`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'PUT' as const },
+          ];
+          for (const ep of formEndpoints) {
+            try {
+              const fd = new FormData();
+              const filename = doc.file_name || `document.${ext}`;
+              const blob = new Blob([new Uint8Array(byteArray)], { type: contentType || 'application/octet-stream' });
+              fd.append('file', blob, filename);
+              if (divider?.id) fd.append('dividerId', divider.id);
+              else if (divider?.name) fd.append('divider', divider.name);
+              const res = await fetch(ep.url, {
+                method: ep.method,
+                headers: {
+                  'Authorization': `Basic ${authString}`,
+                  // Do not set Content-Type explicitly; let the browser set boundary
+                },
+                body: fd,
+              });
+              if (res.ok || res.status === 201) {
+                console.log(`Multipart upload successful to ${ep.url}`);
+                const okJson = await res.json().catch(() => ({ success: true }));
+                successes.push({ id: doc.id, result: okJson, fileId });
+                uploaded = true;
+                break;
+              } else {
+                const t = await res.text();
+                lastError = { url: ep.url, status: res.status, details: (t || '').slice(0, 500) };
+                console.warn('FileBound multipart upload failed', lastError);
+              }
+            } catch (err: any) {
+              console.warn(`Multipart upload error to ${ep.url}:`, err.message);
             }
-          } catch (err: any) {
-            console.warn(`Binary upload error to ${ep.url}:`, err.message);
           }
         }
 
-        // If binary upload failed, try JSON with base64
+        // 2) Try raw binary upload
+        if (!uploaded) {
+          const uploadEndpoints = [
+            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/document`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'PUT' as const },
+            // Avoid /api/documents/{id} as it's often for existing document resources
+          ];
+          for (const ep of uploadEndpoints) {
+            try {
+              console.log(`Attempting binary upload to ${ep.url}`);
+              const blob = new Blob([new Uint8Array(byteArray)], { type: contentType || 'application/octet-stream' });
+              const res = await fetch(ep.url, {
+                method: ep.method,
+                headers: {
+                  'Authorization': `Basic ${authString}`,
+                  'Content-Type': contentType || 'application/octet-stream',
+                  'Content-Disposition': `attachment; filename="${doc.file_name}"`,
+                },
+                body: blob
+              });
+              if (res.ok || res.status === 201) {
+                console.log(`Binary upload successful to ${ep.url}`);
+                const okJson = await res.json().catch(() => ({ success: true }));
+                successes.push({ id: doc.id, result: okJson, fileId });
+                uploaded = true;
+                break;
+              } else {
+                const t = await res.text();
+                lastError = { url: ep.url, status: res.status, details: (t || '').slice(0, 500) };
+                console.warn('FileBound binary upload failed', lastError);
+              }
+            } catch (err: any) {
+              console.warn(`Binary upload error to ${ep.url}:`, err.message);
+            }
+          }
+        }
+
+        // 3) If still failing, try JSON with base64
         if (!uploaded) {
           console.log('Binary uploads failed, trying JSON with base64');
           const b64 = toBase64(bytes);
-          
-          const uploadPayloads = [
+          const basePayloads = [
             {
               Name: doc.file_name,
               Extension: ext,
@@ -571,11 +651,16 @@ serve(async (req) => {
               contentType,
             },
           ];
+          const uploadPayloads = basePayloads.map(p => ({
+            ...(divider?.id ? { DividerId: divider.id } : {}),
+            ...(divider?.name ? { Divider: divider.name } : {}),
+            ...p,
+          }));
 
           const jsonEndpoints = [
-            { url: `${baseUrl}/api/files/${fileId}/document`, method: 'PUT' as const },
-            { url: `${baseUrl}/api/files/${fileId}/documents`, method: 'POST' as const },
-            { url: `${baseUrl}/api/documents/${fileId}`, method: 'PUT' as const },
+            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/document`), method: 'PUT' as const },
+            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'PUT' as const },
           ];
 
           for (const body of uploadPayloads) {
@@ -607,6 +692,7 @@ serve(async (req) => {
             if (uploaded) break;
           }
         }
+
 
         if (!uploaded) {
           failures.push({ id: doc.id, error: 'Upload failed', ...lastError });
