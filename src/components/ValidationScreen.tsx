@@ -153,6 +153,21 @@ export const ValidationScreen = ({
     })();
   }, [projectId, sigEnabled]);
 
+  // Additional fallback: enable if metadata includes signature
+  useEffect(() => {
+    if (sigEnabled) return;
+    const keys = Object.keys(editedMetadata || {});
+    const hasSigMeta = keys.some(k => k?.toLowerCase().includes('signature'));
+    if (hasSigMeta) setSigEnabled(true);
+  }, [sigEnabled, editedMetadata]);
+
+  // Debugging visibility
+  useEffect(() => {
+    const hasSigField = (projectFields || []).some(f => f?.name?.toLowerCase().includes('signature'));
+    const hasSigMeta = Object.keys(editedMetadata || {}).some(k => k?.toLowerCase().includes('signature'));
+    console.debug('SignatureSection visibility', { projectId, propEnabled: enableSignatureVerification, sigEnabled, hasSigField, hasSigMeta, refs: referenceSignatures?.length || 0 });
+  }, [projectId, enableSignatureVerification, sigEnabled, projectFields, editedMetadata, referenceSignatures]);
+
   // Resolved OCR geometry for redaction (props or lazy-fetched)
   const [resolvedBoundingBoxes, setResolvedBoundingBoxes] = useState(boundingBoxes);
   const [resolvedWordBoxes, setResolvedWordBoxes] = useState<Array<{ text: string; bbox: any }>>(wordBoundingBoxes || []);
