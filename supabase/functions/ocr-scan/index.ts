@@ -708,13 +708,52 @@ RESPONSE REQUIREMENTS:
                 }
                 confidence = templateResult.overallConfidence;
               } else {
-                console.log(`Template extraction failed or low confidence (${(templateResult.overallConfidence * 100).toFixed(1)}%)`);
+            console.log(`Template extraction failed or low confidence (${(templateResult.overallConfidence * 100).toFixed(1)}%)`);
               }
             }
           } catch (postErr) {
             console.warn('Template extraction failed, using AI results:', postErr);
           }
-          
+
+          // Invoice-specific label-based corrections (avoid mistaking CUSTOMER NO)
+          try {
+            const text = (extractedText || '').toString();
+            const lower = text.toLowerCase();
+            const likelyInvoice = documentType === 'invoice' || lower.includes('invoice');
+            if (likelyInvoice && extractionFields && extractionFields.length) {
+              const wantsInvoiceNumber = extractionFields.some((f: any) => (f.name || '').toLowerCase().includes('invoice number'));
+              if (wantsInvoiceNumber) {
+                let inv = '';
+                const lines = text.split('\n');
+                // 1) Same-line: INVOICE NO/NUMBER/# : value
+                for (const raw of lines) {
+                  const line = raw.replace(/\s{2,}/g, ' ').trim();
+                  const m = line.match(/invoice\s*(?:no\.?|#|number)\s*[:\-]?\s*([A-Z]*\d[\d-]{4,})/i);
+                  if (m) { inv = m[1].replace(/[^A-Za-z0-9-]/g, '').replace(/^0+(?=\d)/, ''); break; }
+                }
+                // 2) Next-line fallback: label on one line, value on the next
+                if (!inv) {
+                  for (let i = 0; i < lines.length; i++) {
+                    if (/invoice\s*(?:no\.?|#|number)/i.test(lines[i])) {
+                      const next = (lines[i + 1] || '').trim();
+                      const m2 = next.match(/^[A-Z]*\d[\d-]{4,}/);
+                      if (m2) { inv = m2[0].replace(/[^A-Za-z0-9-]/g, ''); break; }
+                    }
+                  }
+                }
+                // Exclude customer/account numbers
+                if (inv && /customer\s*(?:no\.?|#|number)/i.test(inv)) inv = '';
+                if (inv) {
+                  metadata['Invoice Number'] = inv;
+                  if (fieldConfidence) fieldConfidence['Invoice Number'] = Math.max(fieldConfidence['Invoice Number'] || 0, 0.93);
+                  console.log(`Label-based fix applied for Invoice Number: ${inv}`);
+                }
+              }
+            }
+          } catch (fixErr) {
+            console.warn('Invoice label-based correction failed:', fixErr);
+          }
+
           // Extract line items if table extraction was requested
           if (hasTableExtraction && parsed.lineItems) {
             lineItems = Array.isArray(parsed.lineItems) ? parsed.lineItems : [];
