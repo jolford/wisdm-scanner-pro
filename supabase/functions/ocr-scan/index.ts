@@ -721,32 +721,86 @@ RESPONSE REQUIREMENTS:
             const lower = text.toLowerCase();
             const likelyInvoice = documentType === 'invoice' || lower.includes('invoice');
             if (likelyInvoice && extractionFields && extractionFields.length) {
+              console.log('Applying invoice label-based extraction post-processing...');
+              
+              // INVOICE NUMBER extraction
               const wantsInvoiceNumber = extractionFields.some((f: any) => (f.name || '').toLowerCase().includes('invoice number'));
               if (wantsInvoiceNumber) {
                 let inv = '';
-                const lines = text.split('\n');
-                // 1) Same-line: INVOICE NO/NUMBER/# : value
-                for (const raw of lines) {
-                  const line = raw.replace(/\s{2,}/g, ' ').trim();
-                  const m = line.match(/invoice\s*(?:no\.?|#|number)\s*[:\-]?\s*([A-Z]*\d[\d-]{4,})/i);
-                  if (m) { inv = m[1].replace(/[^A-Za-z0-9-]/g, '').replace(/^0+(?=\d)/, ''); break; }
+                const lines = text.split('\n').map((l: string) => l.trim());
+                
+                // Try multiple patterns in order of specificity
+                for (const line of lines) {
+                  // Pattern 1: INVOICE NO./NO/NUMBER/# : value (same line)
+                  let m = line.match(/invoice\s*(?:no\.?|#|number|num\.?)\s*[:\-]?\s*([A-Z]*\d[\d-]{4,})/i);
+                  if (m && !line.match(/customer|account/i)) {
+                    inv = m[1].replace(/[^A-Za-z0-9-]/g, '').replace(/^0+(?=\d)/, '');
+                    console.log(`Found Invoice Number (same-line): ${inv} from line: ${line.substring(0, 60)}`);
+                    break;
+                  }
                 }
-                // 2) Next-line fallback: label on one line, value on the next
+                
+                // Pattern 2: Label on one line, value on next
                 if (!inv) {
-                  for (let i = 0; i < lines.length; i++) {
-                    if (/invoice\s*(?:no\.?|#|number)/i.test(lines[i])) {
-                      const next = (lines[i + 1] || '').trim();
-                      const m2 = next.match(/^[A-Z]*\d[\d-]{4,}/);
-                      if (m2) { inv = m2[0].replace(/[^A-Za-z0-9-]/g, ''); break; }
+                  for (let i = 0; i < lines.length - 1; i++) {
+                    if (/invoice\s*(?:no\.?|#|number|num\.?)\s*$/i.test(lines[i]) && !lines[i].match(/customer|account/i)) {
+                      const next = lines[i + 1].trim();
+                      const m2 = next.match(/^([A-Z]*\d[\d-]{4,})/);
+                      if (m2) {
+                        inv = m2[1].replace(/[^A-Za-z0-9-]/g, '');
+                        console.log(`Found Invoice Number (next-line): ${inv} from lines: ${lines[i]} / ${next}`);
+                        break;
+                      }
                     }
                   }
                 }
-                // Exclude customer/account numbers
-                if (inv && /customer\s*(?:no\.?|#|number)/i.test(inv)) inv = '';
+                
                 if (inv) {
                   metadata['Invoice Number'] = inv;
-                  if (fieldConfidence) fieldConfidence['Invoice Number'] = Math.max(fieldConfidence['Invoice Number'] || 0, 0.93);
-                  console.log(`Label-based fix applied for Invoice Number: ${inv}`);
+                  if (fieldConfidence) fieldConfidence['Invoice Number'] = 0.95;
+                  console.log(`✓ Label-based override applied for Invoice Number: ${inv}`);
+                } else {
+                  console.log('✗ No invoice number found via label-based extraction');
+                }
+              }
+              
+              // INVOICE DATE extraction
+              const wantsInvoiceDate = extractionFields.some((f: any) => (f.name || '').toLowerCase().includes('invoice date'));
+              if (wantsInvoiceDate) {
+                let invDate = '';
+                const lines = text.split('\n').map((l: string) => l.trim());
+                
+                for (const line of lines) {
+                  // Pattern: INVOICE DATE/DT : MM/DD/YY or MM/DD/YYYY
+                  const m = line.match(/invoice\s*(?:date|dt\.?)\s*[:\-]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
+                  if (m) {
+                    invDate = m[1];
+                    console.log(`Found Invoice Date (same-line): ${invDate} from line: ${line.substring(0, 60)}`);
+                    break;
+                  }
+                }
+                
+                // Next-line fallback
+                if (!invDate) {
+                  for (let i = 0; i < lines.length - 1; i++) {
+                    if (/invoice\s*(?:date|dt\.?)\s*$/i.test(lines[i])) {
+                      const next = lines[i + 1].trim();
+                      const m2 = next.match(/^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/);
+                      if (m2) {
+                        invDate = m2[1];
+                        console.log(`Found Invoice Date (next-line): ${invDate}`);
+                        break;
+                      }
+                    }
+                  }
+                }
+                
+                if (invDate) {
+                  metadata['Invoice Date'] = invDate;
+                  if (fieldConfidence) fieldConfidence['Invoice Date'] = 0.95;
+                  console.log(`✓ Label-based override applied for Invoice Date: ${invDate}`);
+                } else {
+                  console.log('✗ No invoice date found via label-based extraction');
                 }
               }
             }
