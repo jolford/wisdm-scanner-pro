@@ -11,6 +11,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { SignatureValidator } from './SignatureValidator';
 
 // Icon imports from lucide-react
 import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles } from 'lucide-react';
@@ -155,7 +157,8 @@ export const BatchValidationScreen = ({
   const [currentDocIndex, setCurrentDocIndex] = useState(0);
   
   // Toast notifications for user feedback
-  const { toast } = useToast();
+const { toast } = useToast();
+  const [signatureDialogDocId, setSignatureDialogDocId] = useState<string | null>(null);
   
   // Filter documents based on search and filters
   const filteredDocuments = documents.filter(doc => {
@@ -1369,16 +1372,34 @@ export const BatchValidationScreen = ({
                                     </div>
                                   </div>
                                 </div>
-                                <Button
-                                  size="sm"
-                                  onClick={() => validateAllFieldsForDoc(doc.id)}
-                                  className="bg-primary hover:bg-primary/90"
-                                >
-                                  <Sparkles className="h-4 w-4 mr-1.5" />
-                                  Validate All
-                                </Button>
+<div className="flex items-center gap-2">
+                                  <Button
+                                    size="sm"
+                                    onClick={() => validateAllFieldsForDoc(doc.id)}
+                                    className="bg-primary hover:bg-primary/90"
+                                  >
+                                    <Sparkles className="h-4 w-4 mr-1.5" />
+                                    Validate All
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setSignatureDialogDocId(doc.id)}
+                                  >
+                                    ✍️ Signature Check
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
+</div>
+
+                            <Dialog open={signatureDialogDocId === doc.id} onOpenChange={(o) => setSignatureDialogDocId(o ? doc.id : null)}>
+                              <DialogContent className="sm:max-w-2xl">
+                                <DialogHeader>
+                                  <DialogTitle>Signature Verification</DialogTitle>
+                                </DialogHeader>
+                                <SignatureValidator />
+                              </DialogContent>
+                            </Dialog>
 
                             {projectFields.map((field) => {
                               const fieldValue = getMetadataValue(metadata, field.name);
