@@ -344,6 +344,7 @@ const Index = () => {
       // Create document first with pending status
       const doc = await saveDocument(fileName, 'image', imageUrl, '', {}, []);
       if (!doc) throw new Error('Failed to create document');
+      setCurrentDocumentId(doc.id);
 
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
@@ -369,8 +370,62 @@ const Index = () => {
 
       toast({
         title: 'Scan Queued',
-        description: 'Processing in background...',
+        description: 'Processing in background. Waiting for results...',
       });
+
+      // Poll for OCR completion
+      let attempts = 0;
+      const maxAttempts = 30; // 30 seconds max
+      const pollInterval = setInterval(async () => {
+        attempts++;
+        
+        const { data: docData, error: docError } = await supabase
+          .from('documents')
+          .select('extracted_text, extracted_metadata, word_bounding_boxes')
+          .eq('id', doc.id)
+          .single();
+
+        if (docError || attempts >= maxAttempts) {
+          clearInterval(pollInterval);
+          if (attempts >= maxAttempts) {
+            toast({
+              title: 'OCR Timeout',
+              description: 'Processing is taking longer than expected. Check the Queue tab for status.',
+              variant: 'destructive',
+            });
+          }
+          setIsProcessing(false);
+          return;
+        }
+
+        // Check if OCR has completed
+        if (docData && docData.extracted_text) {
+          clearInterval(pollInterval);
+          
+          // Load the extracted data
+          setExtractedText(docData.extracted_text || '');
+          
+          // Parse metadata with type checking
+          const metadata = docData.extracted_metadata as Record<string, any> || {};
+          setExtractedMetadata(typeof metadata === 'object' && !Array.isArray(metadata) ? metadata : {});
+          
+          // Parse word bounding boxes with type checking
+          const wordBoxes = docData.word_bounding_boxes as any[] || [];
+          setWordBoundingBoxes(Array.isArray(wordBoxes) ? wordBoxes : []);
+          
+          // Load bounding boxes from metadata if available
+          if (typeof metadata === 'object' && metadata.boundingBoxes) {
+            setBoundingBoxes(metadata.boundingBoxes);
+          }
+
+          toast({
+            title: 'OCR Complete',
+            description: 'Document is ready for validation',
+          });
+          
+          setIsProcessing(false);
+        }
+      }, 1000); // Check every second
     } catch (error: any) {
       console.error('Error processing scan:', error);
       toast({
