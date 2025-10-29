@@ -729,6 +729,17 @@ RESPONSE REQUIREMENTS:
                 let inv = '';
                 const lines = text.split('\n').map((l: string) => l.trim());
                 
+                // Header block pattern: labels row then values row (Sales Person | Ship Date | Invoice Number)
+                const headerIdx = lines.findIndex((ln: string) => /sales\s*person/i.test(ln) && /ship\s*date/i.test(ln) && /invoice\s*number/i.test(ln));
+                if (headerIdx !== -1 && lines[headerIdx + 1]) {
+                  const valuesLine = lines[headerIdx + 1];
+                  const nums = valuesLine.match(/[A-Z]*\d[\d-]{4,}/g) || [];
+                  if (nums.length) {
+                    inv = nums[nums.length - 1].replace(/[^A-Za-z0-9-]/g, '');
+                    console.log(`Found Invoice Number (header block): ${inv} from values line: ${valuesLine.substring(0, 80)}`);
+                  }
+                }
+                
                 // Try multiple patterns in order of specificity
                 for (const line of lines) {
                   // Pattern 1: INVOICE NO./NO/NUMBER/# : value (same line)
@@ -769,6 +780,17 @@ RESPONSE REQUIREMENTS:
               if (wantsInvoiceDate) {
                 let invDate = '';
                 const lines = text.split('\n').map((l: string) => l.trim());
+                
+                // Header block pattern: labels row then values row
+                const headerIdx2 = lines.findIndex((ln: string) => /sales\s*person/i.test(ln) && /ship\s*date/i.test(ln) && /invoice\s*number/i.test(ln));
+                if (headerIdx2 !== -1 && lines[headerIdx2 + 1]) {
+                  const valuesLine = lines[headerIdx2 + 1];
+                  const d = valuesLine.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/);
+                  if (d) {
+                    invDate = d[1];
+                    console.log(`Found Invoice Date (header block): ${invDate} from values line: ${valuesLine.substring(0, 80)}`);
+                  }
+                }
                 
                 for (const line of lines) {
                   // Pattern: INVOICE DATE/DT : MM/DD/YY or MM/DD/YYYY
