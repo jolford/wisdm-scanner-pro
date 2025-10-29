@@ -130,7 +130,7 @@ const SystemViability = () => {
         : 0;
 
       const extractionAccuracy = scores.length > 0
-        ? (scores.reduce((sum, s) => sum + Number(s.confidence_score || 0), 0) / scores.length)
+        ? (scores.reduce((sum, s) => sum + Number(s.confidence_score || 0), 0) / scores.length) * 100
         : 0;
 
       // Calculate ROI
