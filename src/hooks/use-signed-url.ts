@@ -38,9 +38,15 @@ export const useSignedUrl = (publicUrl: string | null | undefined, expiresIn: nu
         }
         
         if (!filePath) {
-          setSignedUrl(publicUrl);
-          setLoading(false);
-          return;
+          // Handle bare storage paths like "projectId/.../filename.ext"
+          const looksLikeStoragePath = !/^https?:\/\//i.test(publicUrl) && !/^data:/i.test(publicUrl) && !/^blob:/i.test(publicUrl);
+          if (looksLikeStoragePath) {
+            filePath = publicUrl;
+          } else {
+            setSignedUrl(publicUrl);
+            setLoading(false);
+            return;
+          }
         }
 
         // If it's already a signed URL from storage, just use it
@@ -106,7 +112,12 @@ export const getSignedUrl = async (
   }
   
   if (!filePath) {
-    return publicUrl;
+    const looksLikeStoragePath = !/^https?:\/\//i.test(publicUrl) && !/^data:/i.test(publicUrl) && !/^blob:/i.test(publicUrl);
+    if (looksLikeStoragePath) {
+      filePath = publicUrl;
+    } else {
+      return publicUrl;
+    }
   }
 
   // Generate signed URL
