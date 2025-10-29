@@ -42,7 +42,7 @@ export default function AdvancedReports() {
       // Fetch document throughput
       const { data: documents } = await supabase
         .from('documents')
-        .select('created_at, validated_at, validation_status, confidence_score')
+        .select('created_at, validated_at, validation_status, confidence_score, validated_by, uploaded_by')
         .or(`validated_at.gte.${startDate.toISOString()},created_at.gte.${startDate.toISOString()}`);
 
       // Process throughput data by day
@@ -108,14 +108,36 @@ export default function AdvancedReports() {
         .gte('metric_date', format(startDate, 'yyyy-MM-dd'));
 
       const totalJobs = jobMetrics?.reduce((sum, m) => sum + m.completed_jobs + m.failed_jobs, 0) || 0;
-      const avgTime = jobMetrics?.reduce((sum, m) => sum + (m.avg_processing_time_ms || 0), 0) / (jobMetrics?.length || 1);
-      const successRate = jobMetrics?.reduce((sum, m) => sum + m.completed_jobs, 0) / totalJobs * 100 || 0;
+      const avgTimeFromMetrics = jobMetrics?.reduce((sum, m) => sum + (m.avg_processing_time_ms || 0), 0) / (jobMetrics?.length || 1);
+
+      // Fallback to jobs table if metrics empty
+      const { data: jobsData } = await supabase
+        .from('jobs')
+        .select('started_at, completed_at, created_at, status')
+        .gte('created_at', startDate.toISOString());
+
+      const times = (jobsData || [])
+        .map(j => (j.started_at && j.completed_at) ? (new Date(j.completed_at).getTime() - new Date(j.started_at).getTime()) / 1000 : 0)
+        .filter(t => t > 0);
+      const avgTimeFromJobs = times.length > 0 ? (times.reduce((a, b) => a + b, 0) / times.length) : 0;
+
+      const avgTime = avgTimeFromMetrics ? (avgTimeFromMetrics / 1000) : avgTimeFromJobs;
+
+      // Accuracy rate: use confidence if available, fallback to validation ratio
+      const validatedCount = (documents || []).filter((d: any) => d.validation_status === 'validated').length;
+      const accuracyRate = (docsWithScore.length > 0)
+        ? avgConfidence * 100
+        : ((documents && documents.length > 0) ? (validatedCount / documents.length) * 100 : 0);
+
+      // Active users: fallback to unique validators/uploaders if no audit logs
+      const activeUsersFromAudit = new Set((auditLogs || []).map(l => l.user_id)).size;
+      const activeUsersFromDocs = new Set([...(documents || []).map((d: any) => d.validated_by).filter(Boolean), ...(documents || []).map((d: any) => d.uploaded_by).filter(Boolean)]).size;
 
       setSummaryStats({
         totalDocuments: documents?.length || 0,
-        avgProcessingTime: avgTime / 1000, // Convert to seconds
-        accuracyRate: avgConfidence * 100,
-        activeUsers: new Set(auditLogs?.map(l => l.user_id)).size,
+        avgProcessingTime: avgTime || 0,
+        accuracyRate,
+        activeUsers: activeUsersFromAudit || activeUsersFromDocs || 0,
       });
 
     } catch (error) {
@@ -256,26 +278,32 @@ export default function AdvancedReports() {
               <CardDescription>Document accuracy breakdown</CardDescription>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={accuracyData}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={false}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {accuracyData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+              {accuracyData.some(d => d.value > 0) ? (
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={accuracyData}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={false}
+                      outerRadius={100}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {accuracyData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                  No confidence scores recorded in the selected period
+                </div>
+              )}
             </CardContent>
           </Card>
 
