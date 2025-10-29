@@ -109,13 +109,60 @@ export function SignatureValidator({ documentImageUrl, projectId, currentMetadat
       const response = await fetch(signedUrl);
       const blob = await response.blob();
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setReferenceImage(reader.result as string);
+      reader.onloadend = async () => {
+        const rawDataUrl = reader.result as string;
+        // Compress reference image
+        const compressedDataUrl = await compressImage(rawDataUrl, 500);
+        setReferenceImage(compressedDataUrl);
       };
       reader.readAsDataURL(blob);
     } catch (error) {
       console.error('Error loading reference image:', error);
     }
+  };
+
+  const compressImage = async (dataUrl: string, maxSizeKB = 500): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        
+        // Scale down if too large
+        const maxDim = 1200;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = (height / width) * maxDim;
+            width = maxDim;
+          } else {
+            width = (width / height) * maxDim;
+            height = maxDim;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(dataUrl);
+          return;
+        }
+        
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Try different quality levels to stay under size limit
+        let quality = 0.85;
+        let result = canvas.toDataURL('image/jpeg', quality);
+        
+        while (result.length > maxSizeKB * 1024 && quality > 0.1) {
+          quality -= 0.1;
+          result = canvas.toDataURL('image/jpeg', quality);
+        }
+        
+        resolve(result);
+      };
+      img.src = dataUrl;
+    });
   };
 
   const handleUseCurrentDocument = async () => {
@@ -157,6 +204,8 @@ export function SignatureValidator({ documentImageUrl, projectId, currentMetadat
 
 
       const isPdf = /pdf$/i.test(blob.type) || /\.pdf($|\?)/i.test(documentImageUrl);
+      let rawDataUrl: string;
+      
       if (isPdf) {
         // Render first page of PDF to PNG using pdfjs
         const buffer = await blob.arrayBuffer();
@@ -164,7 +213,7 @@ export function SignatureValidator({ documentImageUrl, projectId, currentMetadat
         const pdf = await loadingTask.promise;
         const page = await pdf.getPage(1);
         let viewport = page.getViewport({ scale: 1.2 });
-        const maxDim = 1600;
+        const maxDim = 1200;
         const scale = Math.min(1.6, maxDim / Math.max(viewport.width, viewport.height));
         viewport = page.getViewport({ scale });
         const canvas = document.createElement('canvas');
@@ -173,18 +222,20 @@ export function SignatureValidator({ documentImageUrl, projectId, currentMetadat
         canvas.width = Math.round(viewport.width);
         canvas.height = Math.round(viewport.height);
         await page.render({ canvasContext: ctx, viewport }).promise;
-        const dataUrl = canvas.toDataURL('image/png');
-        setSignatureImage(dataUrl);
+        rawDataUrl = canvas.toDataURL('image/png');
       } else {
         const reader = new FileReader();
-        await new Promise<void>((resolve) => {
+        rawDataUrl = await new Promise<string>((resolve) => {
           reader.onloadend = () => {
-            setSignatureImage(reader.result as string);
-            resolve();
+            resolve(reader.result as string);
           };
           reader.readAsDataURL(blob);
         });
       }
+
+      // Compress image to reduce size
+      const compressedDataUrl = await compressImage(rawDataUrl, 500);
+      setSignatureImage(compressedDataUrl);
 
       setResult(null);
       toast({
@@ -203,7 +254,7 @@ export function SignatureValidator({ documentImageUrl, projectId, currentMetadat
     }
   };
 
-  const handleImageUpload = (
+  const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     setImage: (img: string) => void
   ) => {
@@ -211,9 +262,11 @@ export function SignatureValidator({ documentImageUrl, projectId, currentMetadat
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const dataUrl = event.target?.result as string;
-      setImage(dataUrl);
+    reader.onload = async (event) => {
+      const rawDataUrl = event.target?.result as string;
+      // Compress the uploaded image
+      const compressedDataUrl = await compressImage(rawDataUrl, 500);
+      setImage(compressedDataUrl);
       setResult(null); // Clear previous results
     };
     reader.readAsDataURL(file);

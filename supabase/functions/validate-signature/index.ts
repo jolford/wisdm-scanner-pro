@@ -46,6 +46,32 @@ serve(async (req) => {
       );
     }
 
+    // Validate image format
+    const validateImageUrl = (imageUrl: string): boolean => {
+      if (!imageUrl.startsWith('data:image/')) {
+        return false;
+      }
+      // Check size (max ~10MB base64 = ~7.5MB actual)
+      if (imageUrl.length > 10 * 1024 * 1024) {
+        return false;
+      }
+      return true;
+    };
+
+    if (!validateImageUrl(signatureImage)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid signature image format or size too large (max 7MB)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (referenceImage && !validateImageUrl(referenceImage)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid reference image format or size too large (max 7MB)' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('Service configuration error');
