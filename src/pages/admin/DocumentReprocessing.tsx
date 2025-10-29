@@ -185,6 +185,7 @@ const DocumentReprocessing = () => {
             extracted_text: ocrData.text,
             extracted_metadata: ocrData.metadata || {},
             line_items: ocrData.lineItems || [],
+            confidence_score: ocrData.confidence || 0,
           })
           .eq('id', doc.id);
 

@@ -438,7 +438,7 @@ const [isExporting, setIsExporting] = useState(false);
     }
   };
 
-  const saveDocument = async (fileName: string, fileType: string, fileUrl: string, text: string, metadata: any, lineItems: any[] = []) => {
+  const saveDocument = async (fileName: string, fileType: string, fileUrl: string, text: string, metadata: any, lineItems: any[] = [], confidence: number = 0) => {
     // Check license capacity before saving
     if (!hasCapacity(1)) {
       toast({
@@ -463,6 +463,7 @@ const [isExporting, setIsExporting] = useState(false);
         extracted_text: text,
         extracted_metadata: metadata,
         line_items: lineItems,
+        confidence_score: confidence || 0,
         uploaded_by: user?.id,
       }]).select().single();
 
@@ -611,7 +612,7 @@ const [isExporting, setIsExporting] = useState(false);
                     throw new Error('OCR service returned no data');
                   }
 
-                  await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || []);
+                  await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || [], data.confidence || 0);
                   return;
                 } catch (fallbackErr: any) {
                   console.error('PDF OCR fallback failed:', fallbackErr);
@@ -636,7 +637,7 @@ const [isExporting, setIsExporting] = useState(false);
                 throw new Error('OCR service returned no data');
               }
               
-              await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || []);
+              await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || [], data.confidence || 0);
             } catch (err: any) {
               console.error(`Failed to process document ${docName}:`, err);
               processingErrors.push(`${docName}: ${err.message}`);
@@ -826,7 +827,7 @@ const [isExporting, setIsExporting] = useState(false);
         throw new Error('OCR service returned no data');
       }
 
-      await saveDocument(fileName, 'image', imageUrl, data.text, data.metadata || {}, data.lineItems || []);
+      await saveDocument(fileName, 'image', imageUrl, data.text, data.metadata || {}, data.lineItems || [], data.confidence || 0);
 
       toast({
         title: 'Scan Complete',
