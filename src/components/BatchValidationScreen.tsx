@@ -1132,9 +1132,29 @@ export const BatchValidationScreen = ({
                       {/* Sensitive Language Warning Badge */}
                       {offensiveLanguageResults[doc.id] && (
                         <div className="flex flex-wrap gap-2 mt-1 mb-1">
-                          <Badge variant="destructive" className="text-xs">
-                            ⚠️ {offensiveLanguageResults[doc.id].highlights.length} Sensitive Phrase{offensiveLanguageResults[doc.id].highlights.length !== 1 ? 's' : ''}
-                          </Badge>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Badge variant="destructive" className="text-xs cursor-help">
+                                  ⚠️ {offensiveLanguageResults[doc.id].highlights.length} Sensitive Phrase{offensiveLanguageResults[doc.id].highlights.length !== 1 ? 's' : ''}
+                                </Badge>
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-md">
+                                <div className="space-y-1">
+                                  {offensiveLanguageResults[doc.id].highlights.slice(0, 3).map((h: any, idx: number) => (
+                                    <div key={idx} className="text-xs">
+                                      <strong>{h.text}</strong> - {h.reason}
+                                    </div>
+                                  ))}
+                                  {offensiveLanguageResults[doc.id].highlights.length > 3 && (
+                                    <div className="text-xs italic">
+                                      +{offensiveLanguageResults[doc.id].highlights.length - 3} more...
+                                    </div>
+                                  )}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </div>
                       )}
                       
