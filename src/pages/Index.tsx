@@ -531,11 +531,24 @@ const Index = () => {
             <div className="space-y-6 mb-6">
               <ProjectSelector
                 selectedProjectId={selectedProjectId}
-                onProjectSelect={(id, project) => {
+                onProjectSelect={async (id, project) => {
                   setSelectedProjectId(id);
-                  setSelectedProject(project);
                   setSelectedBatchId(null);
                   setSelectedBatch(null);
+                  try {
+                    const { data, error } = await supabase
+                      .from('projects')
+                      .select('*')
+                      .eq('id', id)
+                      .single();
+                    if (!error && data) {
+                      setSelectedProject(data);
+                    } else {
+                      setSelectedProject(project); // fallback
+                    }
+                  } catch {
+                    setSelectedProject(project); // fallback on any unexpected error
+                  }
                 }}
               />
               
