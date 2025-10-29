@@ -554,11 +554,17 @@ serve(async (req) => {
             const formEndpoints = [
               { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/document`), method: 'POST' as const },
               { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/pages`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/upload`), method: 'POST' as const },
               { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/document`), method: 'POST' as const },
               { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/documents`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/pages`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/documents/upload?fileId=${fileId}`), method: 'POST' as const },
               { url: urlWithDivider(`${baseUrl}/api/documents?fileId=${fileId}`), method: 'POST' as const },
               { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'PUT' as const },
+              { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/pages`), method: 'PUT' as const },
               { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/documents`), method: 'PUT' as const },
+              { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/pages`), method: 'PUT' as const },
               { url: urlWithDivider(`${baseUrl}/api/documents?fileId=${fileId}`), method: 'PUT' as const },
             ];
           for (const ep of formEndpoints) {
@@ -566,7 +572,19 @@ serve(async (req) => {
               const fd = new FormData();
               const filename = doc.file_name || `document.${ext}`;
               const blob = new Blob([new Uint8Array(byteArray)], { type: contentType || 'application/octet-stream' });
+              // Try multiple common field names used by various FileBound instances
               fd.append('file', blob, filename);
+              fd.append('document', blob, filename);
+              fd.append('upload', blob, filename);
+              fd.append('UploadedFile', blob, filename);
+              fd.append('File', blob, filename);
+              fd.append('PageFile', blob, filename);
+              fd.append('page', blob, filename);
+              // Provide filename hints
+              fd.append('FileName', filename);
+              fd.append('fileName', filename);
+              fd.append('name', filename);
+              // Provide fileId for endpoints that expect it as form field
               fd.append('fileId', String(fileId));
               const res = await fetch(ep.url, {
                 method: ep.method,
@@ -599,11 +617,17 @@ serve(async (req) => {
           const uploadEndpoints = [
             { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/document`), method: 'POST' as const },
             { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/pages`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/upload`), method: 'POST' as const },
             { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/document`), method: 'POST' as const },
             { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/documents`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/pages`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/documents/upload?fileId=${fileId}`), method: 'POST' as const },
             { url: urlWithDivider(`${baseUrl}/api/documents?fileId=${fileId}`), method: 'POST' as const },
             { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'PUT' as const },
+            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/pages`), method: 'PUT' as const },
             { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/documents`), method: 'PUT' as const },
+            { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/pages`), method: 'PUT' as const },
             { url: urlWithDivider(`${baseUrl}/api/documents?fileId=${fileId}`), method: 'PUT' as const },
             // Avoid /api/documents/{id} as it's often for existing document resources
           ];
@@ -660,6 +684,10 @@ serve(async (req) => {
           ];
           const uploadPayloads = basePayloads.map(p => ({
             ...p,
+            FileId: fileId,
+            fileId: fileId,
+            FileName: doc.file_name,
+            fileName: doc.file_name,
           }));
 
           const jsonEndpoints = [
@@ -670,6 +698,7 @@ serve(async (req) => {
             { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/document`), method: 'PUT' as const },
             { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/documents`), method: 'POST' as const },
             { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/documents`), method: 'PUT' as const },
+            { url: urlWithDivider(`${baseUrl}/api/documents`), method: 'POST' as const },
             { url: urlWithDivider(`${baseUrl}/api/documents?fileId=${fileId}`), method: 'POST' as const },
             { url: urlWithDivider(`${baseUrl}/api/documents?fileId=${fileId}`), method: 'PUT' as const },
           ];
