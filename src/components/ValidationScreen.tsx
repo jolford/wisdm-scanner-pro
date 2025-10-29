@@ -1127,12 +1127,12 @@ useEffect(() => {
               {referenceSignatures.length > 0 && (
                 <div className="space-y-2">
                   <Label className="text-sm">Compare Against Reference</Label>
-                  <Select value={selectedReferenceId || ''} onValueChange={setSelectedReferenceId}>
+                  <Select value={selectedReferenceId || 'none'} onValueChange={(val) => setSelectedReferenceId(val === 'none' ? null : val)}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select reference signature..." />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None (Detection only)</SelectItem>
+                      <SelectItem value="none">None (Detection only)</SelectItem>
                       {referenceSignatures.map((ref) => (
                         <SelectItem key={ref.id} value={ref.id}>
                           {ref.entity_name || ref.entity_id} ({ref.entity_type})
