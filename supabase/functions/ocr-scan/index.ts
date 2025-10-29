@@ -728,47 +728,79 @@ RESPONSE REQUIREMENTS:
               if (wantsInvoiceNumber) {
                 let inv = '';
                 const lines = text.split('\n').map((l: string) => l.trim());
-                
-                // Header block pattern: labels row then values row (Sales Person | Ship Date | Invoice Number)
+
+                // 0) Helper utils
+                const clean = (s: string) => s.replace(/[^A-Za-z0-9-]/g, '');
+                const looksLikeId = (s: string) => {
+                  if (!s) return false;
+                  if (/\//.test(s)) return false; // avoid dates
+                  const digits = (s.match(/\d/g) || []).length;
+                  if (digits < 5) return false; // invoice IDs usually 5+ digits
+                  const leadingZeros = (s.match(/^0+/)?.[0]?.length || 0);
+                  // Penalize numbers with many leading zeros (like 00020677) unless nothing else is found
+                  return leadingZeros <= 2 || digits >= 6;
+                };
+
+                // 1) Header block pattern previously seen on some templates
                 const headerIdx = lines.findIndex((ln: string) => /sales\s*person/i.test(ln) && /ship\s*date/i.test(ln) && /invoice\s*number/i.test(ln));
                 if (headerIdx !== -1 && lines[headerIdx + 1]) {
                   const valuesLine = lines[headerIdx + 1];
                   const nums = valuesLine.match(/[A-Z]*\d[\d-]{4,}/g) || [];
-                  if (nums.length) {
-                    inv = nums[nums.length - 1].replace(/[^A-Za-z0-9-]/g, '');
+                  const candidate = nums[nums.length - 1];
+                  if (candidate && looksLikeId(candidate)) {
+                    inv = clean(candidate);
                     console.log(`Found Invoice Number (header block): ${inv} from values line: ${valuesLine.substring(0, 80)}`);
                   }
                 }
-                
-                // Try multiple patterns in order of specificity
-                for (const line of lines) {
-                  // Pattern 1: INVOICE NO./NO/NUMBER/# : value (same line)
-                  let m = line.match(/invoice\s*(?:no\.?|#|number|num\.?)\s*[:\-]?\s*([A-Z]*\d[\d-]{4,})/i);
-                  if (m && !line.match(/customer|account/i)) {
-                    inv = m[1].replace(/[^A-Za-z0-9-]/g, '').replace(/^0+(?=\d)/, '');
-                    console.log(`Found Invoice Number (same-line): ${inv} from line: ${line.substring(0, 60)}`);
-                    break;
-                  }
-                }
-                
-                // Pattern 2: Label on one line, value on next
+
+                // 2) Explicit "INVOICE NO/NUMBER/#" label anywhere (same line)
                 if (!inv) {
-                  for (let i = 0; i < lines.length - 1; i++) {
-                    if (/invoice\s*(?:no\.?|#|number|num\.?)\s*$/i.test(lines[i]) && !lines[i].match(/customer|account/i)) {
-                      const next = lines[i + 1].trim();
-                      const m2 = next.match(/^([A-Z]*\d[\d-]{4,})/);
-                      if (m2) {
-                        inv = m2[1].replace(/[^A-Za-z0-9-]/g, '');
-                        console.log(`Found Invoice Number (next-line): ${inv} from lines: ${lines[i]} / ${next}`);
+                  for (const line of lines) {
+                    const m = line.match(/invoice\s*(?:no\.?|#|number|num\.?)\s*[:#\-]?\s*([A-Z]*\d[\d-]{4,})/i);
+                    if (m && !/customer|account/i.test(line)) {
+                      const candidate = clean(m[1]).replace(/^0+(?=\d)/, '');
+                      if (looksLikeId(candidate)) {
+                        inv = candidate;
+                        console.log(`Found Invoice Number (same-line): ${inv} from line: ${line.substring(0, 60)}`);
                         break;
                       }
                     }
                   }
                 }
-                
+
+                // 3) Label on one line, value on next (check next 2 lines)
+                if (!inv) {
+                  for (let i = 0; i < lines.length - 1; i++) {
+                    if (/invoice\s*(?:no\.?|#|number|num\.?)\s*$/i.test(lines[i]) && !/customer|account/i.test(lines[i])) {
+                      for (let j = 1; j <= 2; j++) {
+                        const next = (lines[i + j] || '').trim();
+                        const m2 = next.match(/^([A-Z]*\d[\d-]{4,})/);
+                        if (m2) {
+                          const candidate = clean(m2[1]);
+                          if (looksLikeId(candidate)) {
+                            inv = candidate;
+                            console.log(`Found Invoice Number (next-line +${j}): ${inv} from lines: ${lines[i]} / ${next}`);
+                            break;
+                          }
+                        }
+                      }
+                      if (inv) break;
+                    }
+                  }
+                }
+
+                // 4) Fallback: search globally for "INVOICE NO" then nearest id within 40 chars
+                if (!inv) {
+                  const global = text.match(/invoice\s*no\.?\s*[:#\-\s]{0,10}([A-Za-z]*\d[\d-]{3,})/i);
+                  if (global && looksLikeId(global[1])) {
+                    inv = clean(global[1]);
+                    console.log(`Found Invoice Number (global proximity): ${inv}`);
+                  }
+                }
+
                 if (inv) {
                   metadata['Invoice Number'] = inv;
-                  if (fieldConfidence) fieldConfidence['Invoice Number'] = 0.95;
+                  if (fieldConfidence) fieldConfidence['Invoice Number'] = 0.97;
                   console.log(`✓ Label-based override applied for Invoice Number: ${inv}`);
                 } else {
                   console.log('✗ No invoice number found via label-based extraction');
@@ -780,34 +812,52 @@ RESPONSE REQUIREMENTS:
               if (wantsInvoiceDate) {
                 let invDate = '';
                 const lines = text.split('\n').map((l: string) => l.trim());
-                
-                // Header block pattern: labels row then values row
-                const headerIdx2 = lines.findIndex((ln: string) => /sales\s*person/i.test(ln) && /ship\s*date/i.test(ln) && /invoice\s*number/i.test(ln));
-                if (headerIdx2 !== -1 && lines[headerIdx2 + 1]) {
-                  const valuesLine = lines[headerIdx2 + 1];
-                  const d = valuesLine.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/);
+
+                // Helper
+                const dateRe = /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/;
+
+                // 1) Table header variant seen on many invoices: "INVOICE DATE | DATE SHIPPED | ..."
+                const tableIdx = lines.findIndex((ln: string) => /invoice\s*date/i.test(ln) && /date\s*shipp?ed/i.test(ln));
+                if (tableIdx !== -1 && lines[tableIdx + 1]) {
+                  const valuesLine = lines[tableIdx + 1];
+                  const d = valuesLine.match(dateRe);
                   if (d) {
                     invDate = d[1];
-                    console.log(`Found Invoice Date (header block): ${invDate} from values line: ${valuesLine.substring(0, 80)}`);
+                    console.log(`Found Invoice Date (table header variant): ${invDate} from values line: ${valuesLine.substring(0, 80)}`);
                   }
                 }
-                
-                for (const line of lines) {
-                  // Pattern: INVOICE DATE/DT : MM/DD/YY or MM/DD/YYYY
-                  const m = line.match(/invoice\s*(?:date|dt\.?)\s*[:\-]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
-                  if (m) {
-                    invDate = m[1];
-                    console.log(`Found Invoice Date (same-line): ${invDate} from line: ${line.substring(0, 60)}`);
-                    break;
+
+                // 2) Header block pattern used on some templates (Sales Person | Ship Date | Invoice Number)
+                if (!invDate) {
+                  const headerIdx2 = lines.findIndex((ln: string) => /sales\s*person/i.test(ln) && /ship\s*date/i.test(ln) && /invoice\s*number/i.test(ln));
+                  if (headerIdx2 !== -1 && lines[headerIdx2 + 1]) {
+                    const valuesLine = lines[headerIdx2 + 1];
+                    const d = valuesLine.match(dateRe);
+                    if (d) {
+                      invDate = d[1];
+                      console.log(`Found Invoice Date (header block): ${invDate} from values line: ${valuesLine.substring(0, 80)}`);
+                    }
                   }
                 }
-                
-                // Next-line fallback
+
+                // 3) Same-line label: "INVOICE DATE: MM/DD/YY"
+                if (!invDate) {
+                  for (const line of lines) {
+                    const m = line.match(/invoice\s*(?:date|dt\.?)\s*[:\-]?\s*(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
+                    if (m) {
+                      invDate = m[1];
+                      console.log(`Found Invoice Date (same-line): ${invDate} from line: ${line.substring(0, 60)}`);
+                      break;
+                    }
+                  }
+                }
+
+                // 4) Next-line fallback
                 if (!invDate) {
                   for (let i = 0; i < lines.length - 1; i++) {
                     if (/invoice\s*(?:date|dt\.?)\s*$/i.test(lines[i])) {
                       const next = lines[i + 1].trim();
-                      const m2 = next.match(/^(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/);
+                      const m2 = next.match(dateRe);
                       if (m2) {
                         invDate = m2[1];
                         console.log(`Found Invoice Date (next-line): ${invDate}`);
@@ -816,10 +866,19 @@ RESPONSE REQUIREMENTS:
                     }
                   }
                 }
-                
+
+                // 5) Global fallback near the label
+                if (!invDate) {
+                  const g = text.match(/invoice\s*(?:date|dt\.?)\s*[:\-\s]{0,10}(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i);
+                  if (g) {
+                    invDate = g[1];
+                    console.log(`Found Invoice Date (global proximity): ${invDate}`);
+                  }
+                }
+
                 if (invDate) {
                   metadata['Invoice Date'] = invDate;
-                  if (fieldConfidence) fieldConfidence['Invoice Date'] = 0.95;
+                  if (fieldConfidence) fieldConfidence['Invoice Date'] = 0.96;
                   console.log(`✓ Label-based override applied for Invoice Date: ${invDate}`);
                 } else {
                   console.log('✗ No invoice date found via label-based extraction');
