@@ -1135,9 +1135,11 @@ export const BatchValidationScreen = ({
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Badge variant="destructive" className="text-xs cursor-help">
-                                  ⚠️ {offensiveLanguageResults[doc.id].highlights.length} Sensitive Phrase{offensiveLanguageResults[doc.id].highlights.length !== 1 ? 's' : ''}
-                                </Badge>
+                                <div className="inline-block">
+                                  <Badge variant="destructive" className="text-xs cursor-help">
+                                    ⚠️ {offensiveLanguageResults[doc.id].highlights.length} Sensitive Phrase{offensiveLanguageResults[doc.id].highlights.length !== 1 ? 's' : ''}
+                                  </Badge>
+                                </div>
                               </TooltipTrigger>
                               <TooltipContent className="max-w-md">
                                 <div className="space-y-1">
