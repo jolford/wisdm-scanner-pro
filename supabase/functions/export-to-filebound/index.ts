@@ -157,19 +157,30 @@ serve(async (req) => {
     const baseUrl = fileboundUrl.replace(/\/$/, '');
     const authString = btoa(`${username}:${password}`);
 
-    const projectsResp = await fetch(`${baseUrl}/api/projects`, {
-      method: 'GET',
-      headers: { 'Authorization': `Basic ${authString}`, 'Accept': 'application/json' },
-    });
-    if (!projectsResp.ok) {
-      const errText = await projectsResp.text();
-      console.error('Filebound list projects error:', errText);
+    // Try projects endpoint across versions
+    const projectUrls = [
+      `${baseUrl}/api/projects`,
+      `${baseUrl}/api/v1/projects`,
+      `${baseUrl}/api/v2/projects`,
+    ];
+    let projectsResp: Response | null = null;
+    let projectsArr: any[] = [];
+    for (const url of projectUrls) {
+      const r = await fetch(url, {
+        method: 'GET',
+        headers: { 'Authorization': `Basic ${authString}`, 'Accept': 'application/json' },
+      });
+      if (r.ok) { projectsResp = r; break; }
+      const errText = await r.text();
+      console.warn('Filebound list projects error:', { url, status: r.status, body: (errText || '').slice(0, 300) });
+    }
+    if (!projectsResp) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to list FileBound projects', status: projectsResp.status, details: (errText || '').slice(0, 500) }),
+        JSON.stringify({ success: false, error: 'Failed to list FileBound projects (no endpoint matched)' }),
         { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
-    const projectsArr: any[] = await projectsResp.json();
+    projectsArr = await projectsResp.json();
 
     const projectMatch = projectsArr.find((p: any) => {
       const pid = String(p.ProjectId ?? p.Id ?? p.id ?? '');
@@ -643,6 +654,7 @@ serve(async (req) => {
         // 1) Try multipart/form-data (commonly required by FileBound)
         if (!uploaded) {
             const formEndpoints = [
+              // no version prefix
               { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/document`), method: 'POST' as const },
               { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'POST' as const },
               { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/pages`), method: 'POST' as const },
@@ -652,11 +664,36 @@ serve(async (req) => {
               { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/pages`), method: 'POST' as const },
               { url: urlWithDivider(`${baseUrl}/api/documents/upload?fileId=${fileId}`), method: 'POST' as const },
               { url: urlWithDivider(`${baseUrl}/api/documents?fileId=${fileId}`), method: 'POST' as const },
+              // v1
+              { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/document`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/documents`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/pages`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/upload`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v1/projects/${projectId}/files/${fileId}/documents`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v1/documents/upload?fileId=${fileId}`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v1/documents?fileId=${fileId}`), method: 'POST' as const },
+              // v2
+              { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/document`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/documents`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/pages`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/upload`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v2/projects/${projectId}/files/${fileId}/documents`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v2/documents/upload?fileId=${fileId}`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v2/documents?fileId=${fileId}`), method: 'POST' as const },
+              // PUT variants
               { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'PUT' as const },
               { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/pages`), method: 'PUT' as const },
               { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/documents`), method: 'PUT' as const },
               { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/pages`), method: 'PUT' as const },
               { url: urlWithDivider(`${baseUrl}/api/documents?fileId=${fileId}`), method: 'PUT' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/documents`), method: 'PUT' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/pages`), method: 'PUT' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v1/projects/${projectId}/files/${fileId}/documents`), method: 'PUT' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v1/documents?fileId=${fileId}`), method: 'PUT' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/documents`), method: 'PUT' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/pages`), method: 'PUT' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v2/projects/${projectId}/files/${fileId}/documents`), method: 'PUT' as const },
+              { url: urlWithDivider(`${baseUrl}/api/v2/documents?fileId=${fileId}`), method: 'PUT' as const },
             ];
           for (const ep of formEndpoints) {
             try {
@@ -706,6 +743,7 @@ serve(async (req) => {
         // 2) Try raw binary upload
         if (!uploaded) {
           const uploadEndpoints = [
+            // no version prefix
             { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/document`), method: 'POST' as const },
             { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'POST' as const },
             { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/pages`), method: 'POST' as const },
@@ -715,11 +753,36 @@ serve(async (req) => {
             { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/pages`), method: 'POST' as const },
             { url: urlWithDivider(`${baseUrl}/api/documents/upload?fileId=${fileId}`), method: 'POST' as const },
             { url: urlWithDivider(`${baseUrl}/api/documents?fileId=${fileId}`), method: 'POST' as const },
+            // v1
+            { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/document`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/documents`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/pages`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/upload`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v1/projects/${projectId}/files/${fileId}/documents`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v1/documents/upload?fileId=${fileId}`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v1/documents?fileId=${fileId}`), method: 'POST' as const },
+            // v2
+            { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/document`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/documents`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/pages`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/upload`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v2/projects/${projectId}/files/${fileId}/documents`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v2/documents/upload?fileId=${fileId}`), method: 'POST' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v2/documents?fileId=${fileId}`), method: 'POST' as const },
+            // PUT variants
             { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'PUT' as const },
             { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/pages`), method: 'PUT' as const },
             { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/documents`), method: 'PUT' as const },
             { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/pages`), method: 'PUT' as const },
             { url: urlWithDivider(`${baseUrl}/api/documents?fileId=${fileId}`), method: 'PUT' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/documents`), method: 'PUT' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/pages`), method: 'PUT' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v1/projects/${projectId}/files/${fileId}/documents`), method: 'PUT' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v1/documents?fileId=${fileId}`), method: 'PUT' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/documents`), method: 'PUT' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/pages`), method: 'PUT' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v2/projects/${projectId}/files/${fileId}/documents`), method: 'PUT' as const },
+            { url: urlWithDivider(`${baseUrl}/api/v2/documents?fileId=${fileId}`), method: 'PUT' as const },
             // Avoid /api/documents/{id} as it's often for existing document resources
           ];
           for (const ep of uploadEndpoints) {
