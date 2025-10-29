@@ -171,7 +171,6 @@ const Analytics = () => {
         supabase
           .from('documents')
           .select('confidence_score')
-          .gte('created_at', daysAgo.toISOString())
           .not('confidence_score', 'is', null),
       ]);
 
