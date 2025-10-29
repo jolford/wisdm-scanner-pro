@@ -94,6 +94,7 @@ interface BatchValidationScreenProps {
   batchId: string;
   batchName?: string;
   onSwitchToExport?: () => void;
+  enableSignatureVerification?: boolean;
 }
 
 /**
@@ -109,6 +110,7 @@ export const BatchValidationScreen = ({
   batchId,
   batchName,
   onSwitchToExport,
+  enableSignatureVerification = false,
 }: BatchValidationScreenProps) => {
   // Check if this is an AB1466 batch
   const isAB1466Batch = batchName?.includes('AB1466');
@@ -1373,7 +1375,7 @@ const { toast } = useToast();
                                     </div>
                                   </div>
                                 </div>
-<div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2">
                                   <Button
                                     size="sm"
                                     onClick={() => validateAllFieldsForDoc(doc.id)}
@@ -1382,13 +1384,15 @@ const { toast } = useToast();
                                     <Sparkles className="h-4 w-4 mr-1.5" />
                                     Validate All
                                   </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => setSignatureDialogDocId(doc.id)}
-                                  >
-                                    ✍️ Signature Check
-                                  </Button>
+                                  {enableSignatureVerification && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => setSignatureDialogDocId(doc.id)}
+                                    >
+                                      ✍️ Signature Check
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
 </div>
