@@ -42,6 +42,7 @@ const Index = () => {
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
   const { toast } = useContextualToast();
+  const showValidation = !!currentDocumentId;
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -517,7 +518,7 @@ const Index = () => {
       <main className="container mx-auto px-4 py-12">
         <LicenseWarning />
         
-        {!extractedText ? (
+        {!showValidation ? (
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-8">
               <h2 className="text-3xl font-bold mb-3">
