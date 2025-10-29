@@ -504,9 +504,24 @@ export function SignatureValidator({ documentImageUrl, projectId, currentMetadat
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
+                      {/* Show matched entity name */}
+                      {selectedReferenceId && selectedReferenceId !== 'none' && (
+                        <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                          <div className="text-sm font-medium">
+                            Comparing against: {referenceSignatures.find(r => r.id === selectedReferenceId)?.entity_name || 
+                                              referenceSignatures.find(r => r.id === selectedReferenceId)?.entity_id || 'Reference'}
+                          </div>
+                          {result.match && (
+                            <div className="text-lg font-bold text-green-600 mt-1">
+                              ✓ Identity Confirmed
+                            </div>
+                          )}
+                        </div>
+                      )}
+                      
                       <div className="flex flex-wrap gap-2">
                         <Badge variant={result.match ? 'default' : 'secondary'}>
-                          {result.match ? '✓ Match' : '≈ No Match'}
+                          {result.match ? '✓ Match' : '✗ No Match'}
                         </Badge>
                         {result.similarityScore !== undefined && (
                           <Badge variant="outline">

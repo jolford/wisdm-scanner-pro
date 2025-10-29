@@ -111,9 +111,20 @@ Return your response as a JSON object with this structure:
   "differences": ["list of differences"],
   "similarities": ["list of similarities"],
   "recommendation": "accept|review|reject"
-}`;
+}
 
-      userPrompt = `Compare these two signatures. The first image is the signature to validate, the second is the reference signature. Analyze stroke patterns, overall shape, character formation, and writing style. ${strictMode ? 'Use strict validation criteria.' : 'Use moderate validation criteria.'}`;
+CRITICAL: Do NOT include "signatureDetected" field in comparison mode - only return the fields listed above.`;
+
+      userPrompt = `Compare these two signatures. The first image is the signature to validate, the second is the reference signature. 
+
+Analyze these aspects:
+- Stroke patterns and flow
+- Overall shape and slant
+- Character formation and spacing
+- Writing style and pressure
+- Size and proportions
+
+${strictMode ? 'Use strict validation criteria - signatures must be very similar to match.' : 'Use moderate validation criteria - allow for natural variation in signing.'}`;
     }
 
     // Build messages array for API call

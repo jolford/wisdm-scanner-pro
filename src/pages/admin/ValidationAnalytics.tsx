@@ -133,15 +133,7 @@ export default function ValidationAnalytics() {
       // Get validation data directly from documents table
       let docsQuery = supabase
         .from('documents')
-        .select(`
-          validated_by,
-          validation_status,
-          validated_at,
-          profiles!documents_validated_by_fkey (
-            full_name,
-            email
-          )
-        `)
+        .select('validated_by, validation_status, validated_at')
         .not('validated_by', 'is', null)
         .not('validated_at', 'is', null)
         .gte('validated_at', startDate.toISOString());
@@ -153,6 +145,17 @@ export default function ValidationAnalytics() {
       const { data: docsData } = await docsQuery;
       if (!docsData) return;
 
+      // Get unique user IDs
+      const userIds = [...new Set(docsData.map((d: any) => d.validated_by).filter(Boolean))];
+      
+      // Fetch user profiles
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, email')
+        .in('id', userIds);
+      
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
       // Calculate productivity metrics by user
       const userMetrics: Record<string, UserProductivity> = {};
 
@@ -161,9 +164,10 @@ export default function ValidationAnalytics() {
         if (!userId) return;
 
         if (!userMetrics[userId]) {
+          const profile = profileMap.get(userId);
           userMetrics[userId] = {
             user_id: userId,
-            user_name: doc.profiles?.full_name || doc.profiles?.email || 'Unknown User',
+            user_name: profile?.full_name || profile?.email || 'Unknown User',
             total_validated: 0,
             total_rejected: 0,
             avg_time: 0,

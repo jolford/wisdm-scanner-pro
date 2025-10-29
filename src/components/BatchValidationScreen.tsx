@@ -951,6 +951,25 @@ const { toast } = useToast();
         normalizedMetadata[key] = getMetadataValue(metadata, key);
       });
       
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // Track field changes
+      const originalMeta = doc.extracted_metadata || {};
+      const changedFields: Array<{field_name: string; old_value: string; new_value: string}> = [];
+      
+      Object.keys(normalizedMetadata).forEach(key => {
+        const oldVal = String(originalMeta[key] || '');
+        const newVal = String(normalizedMetadata[key] || '');
+        if (oldVal !== newVal) {
+          changedFields.push({
+            field_name: key,
+            old_value: oldVal,
+            new_value: newVal
+          });
+        }
+      });
+
       // Update the document in the database
       const { error } = await supabase
         .from('documents')
@@ -959,8 +978,24 @@ const { toast } = useToast();
           line_items: editedLineItems[doc.id] || doc.line_items || [],
           validation_status: status,
           validated_at: new Date().toISOString(),
+          validated_by: user?.id,
         })
         .eq('id', doc.id);
+      
+      // Log field changes
+      if (!error && user && changedFields.length > 0) {
+        await supabase.from('field_changes').insert(
+          changedFields.map(cf => ({
+            document_id: doc.id,
+            user_id: user.id,
+            field_name: cf.field_name,
+            old_value: cf.old_value,
+            new_value: cf.new_value,
+            change_type: 'edit',
+            validation_status: status
+          }))
+        );
+      }
 
       if (error) throw error;
 

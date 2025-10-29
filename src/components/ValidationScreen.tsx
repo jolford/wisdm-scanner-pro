@@ -797,12 +797,15 @@ useEffect(() => {
           ? { ...editedMetadata, _signatureValidation: JSON.stringify(signatureValidationResult) }
           : editedMetadata;
           
+        const { data: { user } } = await supabase.auth.getUser();
+        
         const { error } = await supabase
           .from('documents')
           .update({
             extracted_metadata: finalMetadata,
             validation_status: status,
             validated_at: new Date().toISOString(),
+            validated_by: user?.id,
           })
           .eq('id', documentId);
 
