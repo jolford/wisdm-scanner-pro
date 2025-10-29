@@ -472,11 +472,12 @@ const EditProject = () => {
             </div>
 
             <Tabs defaultValue="basic" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-4 bg-muted/50">
+              <TabsList className="grid w-full grid-cols-5 bg-muted/50">
                 <TabsTrigger value="basic">Basic Settings</TabsTrigger>
                 <TabsTrigger value="import">Import & Capture</TabsTrigger>
                 <TabsTrigger value="processing">Processing & AI</TabsTrigger>
                 <TabsTrigger value="export">Export & Integration</TabsTrigger>
+                <TabsTrigger value="signatures">Signatures</TabsTrigger>
               </TabsList>
 
               {/* Basic Settings Tab */}
@@ -1114,6 +1115,22 @@ const EditProject = () => {
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
+          </TabsContent>
+
+          {/* Signatures Tab */}
+          <TabsContent value="signatures" className="space-y-4">
+            {enableSignatureVerification ? (
+              <SignatureReferencesManager projectId={id || ''} />
+            ) : (
+              <Card className="p-8 text-center">
+                <div className="text-muted-foreground">
+                  <p className="font-medium mb-2">Signature Verification is Disabled</p>
+                  <p className="text-sm">
+                    Enable "Signature Verification" in the general settings above to manage reference signatures.
+                  </p>
+                </div>
+              </Card>
+            )}
           </TabsContent>
         </Tabs>
 

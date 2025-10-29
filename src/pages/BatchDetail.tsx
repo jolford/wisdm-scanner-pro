@@ -419,6 +419,7 @@ ${xmlDocs}
               </Button>
               <ValidationScreen
                 documentId={selectedDocument.id}
+                projectId={batch.project_id}
                 imageUrl={selectedDocument.file_url}
                 fileName={selectedDocument.file_name}
                 extractedText={selectedDocument.extracted_text || ''}
