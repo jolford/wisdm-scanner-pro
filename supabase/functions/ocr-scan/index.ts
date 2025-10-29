@@ -198,9 +198,35 @@ RESPONSE REQUIREMENTS:
           ? `, "lineItems": [{${tableExtractionFields.map((f: any) => `"${f.name}": "value"`).join(', ')}}]`
           : '';
         
+        // Add field-specific extraction guidance
+        const fieldGuidance = fieldNames.map((fname: string) => {
+          const lowerName = fname.toLowerCase();
+          if (lowerName.includes('invoice') && lowerName.includes('number')) {
+            return `\n- ${fname}: Look in TOP HEADER area (usually upper right), often labeled "INVOICE NO", "INVOICE #", or "INV#". Read ALL digits carefully - this is a critical identifier. Common formats: 7-10 digit numbers.`;
+          }
+          if (lowerName.includes('invoice') && lowerName.includes('date')) {
+            return `\n- ${fname}: Usually near invoice number in header area. Format varies: MM/DD/YY, MM/DD/YYYY, YYYY-MM-DD.`;
+          }
+          if (lowerName.includes('invoice') && lowerName.includes('total')) {
+            return `\n- ${fname}: Look for BOTTOM RIGHT total or summary section. Often labeled "TOTAL", "AMOUNT DUE", "INVOICE TOTAL". Include currency symbol if present.`;
+          }
+          if (lowerName.includes('vendor') && lowerName.includes('name')) {
+            return `\n- ${fname}: Usually TOP LEFT of document, company/business name above address.`;
+          }
+          return '';
+        }).filter((g: string) => g).join('');
+        
         systemPrompt = `CRITICAL: You MUST return ONLY valid JSON with no additional text, explanations, or markdown formatting.
 
 You are an advanced OCR system. Return this EXACT JSON structure: ${baseJson.slice(0, -1)}${tableJson}}
+
+FIELD EXTRACTION GUIDANCE:${fieldGuidance}
+
+GENERAL RULES:
+- Read text EXACTLY as printed - verify each digit/character
+- For invoice numbers: Triple-check accuracy, these are critical identifiers
+- Preserve formatting (dates, currency symbols, punctuation)
+- If a field is not found, return empty string ""
 
 RESPONSE REQUIREMENTS:
 - Return ONLY the JSON object
@@ -215,7 +241,7 @@ RESPONSE REQUIREMENTS:
           tableInstructions = ` Extract ALL rows from line item tables into "lineItems" array with fields: ${tableExtractionFields.map((f: any) => f.name).join(', ')}.`;
         }
         
-        userPrompt = `Extract from this ${isPdf ? 'PDF' : 'image'}: ${fieldNames.join(', ')}.${tableInstructions} Classify document type. RESPOND WITH ONLY THE JSON OBJECT - NO OTHER TEXT.`;
+        userPrompt = `Extract from this ${isPdf ? 'PDF' : 'image'}: ${fieldNames.join(', ')}.${tableInstructions} Pay special attention to invoice number accuracy. Classify document type. RESPOND WITH ONLY THE JSON OBJECT - NO OTHER TEXT.`;
       }
     } else {
       // NO CUSTOM FIELDS - JUST OCR AND CLASSIFICATION
