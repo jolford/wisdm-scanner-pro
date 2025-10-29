@@ -654,6 +654,10 @@ serve(async (req) => {
         // 1) Try multipart/form-data (commonly required by FileBound)
         if (!uploaded) {
             const formEndpoints = [
+              // Direct, documented upload endpoints
+              { url: urlWithDivider(`${baseUrl}/api/documentBinaryData/0?extension=${ext}&fileId=${fileId}`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/DocumentBinaryData/0?extension=${ext}&fileId=${fileId}`), method: 'POST' as const },
+              { url: urlWithDivider(`${baseUrl}/api/documentUpload`), method: 'POST' as const },
               // no version prefix
               { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/document`), method: 'POST' as const },
               { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'POST' as const },
@@ -700,7 +704,14 @@ serve(async (req) => {
               const fd = new FormData();
               const filename = doc.file_name || `document.${ext}`;
               const blob = new Blob([new Uint8Array(byteArray)], { type: contentType || 'application/octet-stream' });
-              // Try multiple common field names used by various FileBound instances
+              // Official field names per FileBound docs
+              fd.append('documentToUpload', blob, filename);
+              fd.append('fileId', String(fileId)); // DocumentBinaryData
+              fd.append('fileid', String(fileId)); // DocumentUpload
+              fd.append('extension', ext);
+              fd.append('id', '0'); // new document
+              fd.append('status', '1'); // active
+              // Also include common alternates for broader compatibility
               fd.append('file', blob, filename);
               fd.append('document', blob, filename);
               fd.append('upload', blob, filename);
@@ -712,8 +723,6 @@ serve(async (req) => {
               fd.append('FileName', filename);
               fd.append('fileName', filename);
               fd.append('name', filename);
-              // Provide fileId for endpoints that expect it as form field
-              fd.append('fileId', String(fileId));
               const res = await fetch(ep.url, {
                 method: ep.method,
                 headers: {
@@ -845,6 +854,8 @@ serve(async (req) => {
           }));
 
           const jsonEndpoints = [
+            // Official: Add document to file by fileId
+            { url: urlWithDivider(`${baseUrl}/api/documents/${fileId}`), method: 'PUT' as const },
             { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/document`), method: 'PUT' as const },
             { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'POST' as const },
             { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'PUT' as const },
