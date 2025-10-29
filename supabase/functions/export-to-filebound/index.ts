@@ -197,13 +197,33 @@ serve(async (req) => {
 
     // Helper: build index fields per document using fieldMappings
     const fieldMappings = (fileboundConfig.fieldMappings || {}) as Record<string, string>;
+    const batchCustomFields = (batch.metadata as any)?.custom_fields || {};
+    
     const buildIndexFields = (doc: any) => {
       const out: Record<string, any> = {};
+      
+      // Add batch-level custom fields first
+      for (const [batchField, batchValue] of Object.entries(batchCustomFields)) {
+        // Check if this batch field is mapped to an ECM field
+        const mappedField = fieldMappings[batchField];
+        if (mappedField && batchValue !== undefined && batchValue !== null && batchValue !== '') {
+          out[mappedField] = batchValue;
+        } else if (!mappedField && batchValue !== undefined && batchValue !== null && batchValue !== '') {
+          // If not mapped, include with original name
+          out[batchField] = batchValue;
+        }
+      }
+      
+      // Add document-level extracted fields
       for (const [localField, ecmField] of Object.entries(fieldMappings)) {
         if (!ecmField) continue;
         const val = (doc.extracted_metadata || {})[localField];
         if (val !== undefined && val !== null && val !== '') out[ecmField] = val;
       }
+      
+      // Always include batch name
+      out['Batch Name'] = batch.batch_name;
+      
       return out;
     };
 

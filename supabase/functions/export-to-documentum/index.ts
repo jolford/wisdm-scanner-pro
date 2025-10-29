@@ -148,12 +148,19 @@ serve(async (req) => {
 
     console.log(`Exporting ${documents.length} documents to Documentum at ${documentumUrl}`);
 
+    // Get batch custom fields
+    const batchCustomFields = (batch.metadata as any)?.custom_fields || {};
+    
     // Prepare documents for Documentum API
     const documentumDocuments = documents.map(doc => ({
       object_name: doc.file_name,
       r_object_type: 'dm_document',
       a_content_type: doc.file_type,
-      properties: doc.extracted_metadata || {},
+      properties: {
+        batch_name: batch.batch_name,
+        ...batchCustomFields,
+        ...(doc.extracted_metadata || {}),
+      },
       content_url: doc.file_url,
     }));
 

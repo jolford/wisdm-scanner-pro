@@ -196,8 +196,24 @@ const BatchDetail = () => {
       return;
     }
 
-    const headers = ['File Name', 'Status', 'Page', 'Confidence', 'Type', ...Object.keys(documents[0].extracted_metadata || {})];
+    // Get batch custom fields from metadata
+    const batchCustomFields = (batch?.metadata as any)?.custom_fields || {};
+    const batchFieldKeys = Object.keys(batchCustomFields);
+    
+    const headers = [
+      'Batch Name',
+      ...batchFieldKeys,
+      'File Name',
+      'Status',
+      'Page',
+      'Confidence',
+      'Type',
+      ...Object.keys(documents[0].extracted_metadata || {})
+    ];
+    
     const rows = documents.map(doc => [
+      batch?.batch_name || '',
+      ...batchFieldKeys.map(key => batchCustomFields[key] || ''),
       doc.file_name,
       doc.validation_status,
       doc.page_number,
@@ -217,7 +233,7 @@ const BatchDetail = () => {
 
     toast({ 
       title: 'Exported successfully', 
-      description: `CSV file downloaded (configured destination: ${getExportDestination('csv')})` 
+      description: `CSV file downloaded with batch fields (destination: ${getExportDestination('csv')})` 
     });
   };
 
@@ -227,6 +243,8 @@ const BatchDetail = () => {
       return;
     }
 
+    const batchCustomFields = (batch?.metadata as any)?.custom_fields || {};
+    
     const exportData = {
       batch: {
         id: batch?.id,
@@ -235,8 +253,11 @@ const BatchDetail = () => {
         created_at: batch?.created_at,
         total_documents: batch?.total_documents,
         validated_documents: batch?.validated_documents,
+        custom_fields: batchCustomFields,
       },
       documents: documents.map(doc => ({
+        batch_name: batch?.batch_name,
+        ...batchCustomFields,
         file_name: doc.file_name,
         validation_status: doc.validation_status,
         page_number: doc.page_number,
@@ -258,7 +279,7 @@ const BatchDetail = () => {
 
     toast({ 
       title: 'Exported successfully', 
-      description: `JSON file downloaded (configured destination: ${getExportDestination('json')})` 
+      description: `JSON file downloaded with batch fields (destination: ${getExportDestination('json')})` 
     });
   };
 
@@ -268,11 +289,21 @@ const BatchDetail = () => {
       return;
     }
 
-    const text = documents.map(doc => {
+    const batchCustomFields = (batch?.metadata as any)?.custom_fields || {};
+    const batchFieldsText = Object.entries(batchCustomFields)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('\n');
+    
+    const batchHeader = `BATCH: ${batch?.batch_name || 'Unnamed'}\n${batchFieldsText ? batchFieldsText + '\n' : ''}${'='.repeat(80)}\n\n`;
+    
+    const text = batchHeader + documents.map(doc => {
+      const batchFields = Object.entries(batchCustomFields)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n');
       const metadata = Object.entries(doc.extracted_metadata || {})
         .map(([key, value]) => `${key}: ${value}`)
         .join('\n');
-      return `File: ${doc.file_name}\nStatus: ${doc.validation_status}\nPage: ${doc.page_number}\n${metadata}\n\nExtracted Text:\n${doc.extracted_text || 'N/A'}\n\n${'='.repeat(80)}\n`;
+      return `File: ${doc.file_name}\nBatch: ${batch?.batch_name}\n${batchFields ? batchFields + '\n' : ''}Status: ${doc.validation_status}\nPage: ${doc.page_number}\n${metadata}\n\nExtracted Text:\n${doc.extracted_text || 'N/A'}\n\n${'='.repeat(80)}\n`;
     }).join('\n');
 
     const blob = new Blob([text], { type: 'text/plain' });
@@ -285,7 +316,7 @@ const BatchDetail = () => {
 
     toast({ 
       title: 'Exported successfully', 
-      description: `Text file downloaded (configured destination: ${getExportDestination('txt')})` 
+      description: `Text file downloaded with batch fields (destination: ${getExportDestination('txt')})` 
     });
   };
 
@@ -295,27 +326,51 @@ const BatchDetail = () => {
       return;
     }
 
+    const batchCustomFields = (batch?.metadata as any)?.custom_fields || {};
+    
+    const escapeXml = (str: any) => String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&apos;');
+
+    const batchFieldsXml = Object.entries(batchCustomFields)
+      .map(([key, value]) => `    <${key}>${escapeXml(value)}</${key}>`)
+      .join('\n');
+
     const xmlDocs = documents.map(doc => {
+      const batchFieldsForDoc = Object.entries(batchCustomFields)
+        .map(([key, value]) => `    <${key}>${escapeXml(value)}</${key}>`)
+        .join('\n');
       const metadata = Object.entries(doc.extracted_metadata || {})
-        .map(([key, value]) => `    <${key}>${value}</${key}>`)
+        .map(([key, value]) => `    <${key}>${escapeXml(value)}</${key}>`)
         .join('\n');
       return `  <document>
-    <file_name>${doc.file_name}</file_name>
-    <validation_status>${doc.validation_status}</validation_status>
-    <page_number>${doc.page_number}</page_number>
-    <confidence_score>${doc.confidence_score || ''}</confidence_score>
-    <file_type>${doc.file_type}</file_type>
+    <batch_name>${escapeXml(batch?.batch_name)}</batch_name>
+${batchFieldsForDoc}
+    <file_name>${escapeXml(doc.file_name)}</file_name>
+    <validation_status>${escapeXml(doc.validation_status)}</validation_status>
+    <page_number>${escapeXml(doc.page_number)}</page_number>
+    <confidence_score>${escapeXml(doc.confidence_score || '')}</confidence_score>
+    <file_type>${escapeXml(doc.file_type)}</file_type>
     <metadata>
 ${metadata}
     </metadata>
-    <extracted_text>${doc.extracted_text || ''}</extracted_text>
+    <extracted_text>${escapeXml(doc.extracted_text || '')}</extracted_text>
   </document>`;
     }).join('\n');
 
     const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <batch>
-  <name>${batch?.batch_name}</name>
-  <status>${batch?.status}</status>
+  <batch_info>
+    <name>${escapeXml(batch?.batch_name)}</name>
+    <status>${escapeXml(batch?.status)}</status>
+    <total_documents>${escapeXml(batch?.total_documents)}</total_documents>
+  </batch_info>
+  <custom_fields>
+${batchFieldsXml}
+  </custom_fields>
   <documents>
 ${xmlDocs}
   </documents>
@@ -331,7 +386,7 @@ ${xmlDocs}
 
     toast({ 
       title: 'Exported successfully', 
-      description: `XML file downloaded (configured destination: ${getExportDestination('xml')})` 
+      description: `XML file downloaded with batch fields (destination: ${getExportDestination('xml')})` 
     });
   };
 

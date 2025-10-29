@@ -248,6 +248,7 @@ serve(async (req) => {
     }
     // Map WISDM metadata keys to DocMgt variable names if provided
     const fieldMappings: Record<string, string> = (docmgtConfig as any).fieldMappings || {};
+    const batchCustomFields = (batch.metadata as any)?.custom_fields || {};
 
     const exportResults = [] as any[];
     let successDocCount = 0;
@@ -282,10 +283,24 @@ serve(async (req) => {
       }
 
       // Build DocMgt record payload from metadata
-      const datasArray = Object.entries(metadata).map(([key, value]) => ({
-        DataName: fieldMappings[key] || key,
-        DataValue: String(typeof value === 'object' && value && 'value' in (value as any) ? (value as any).value : value ?? ''),
-      }));
+      // Include batch-level custom fields first, then document metadata
+      const datasArray = [
+        // Add batch custom fields
+        ...Object.entries(batchCustomFields).map(([key, value]) => ({
+          DataName: fieldMappings[key] || key,
+          DataValue: String(value ?? ''),
+        })),
+        // Add batch name
+        {
+          DataName: 'Batch Name',
+          DataValue: String(batch.batch_name ?? ''),
+        },
+        // Add document metadata
+        ...Object.entries(metadata).map(([key, value]) => ({
+          DataName: fieldMappings[key] || key,
+          DataValue: String(typeof value === 'object' && value && 'value' in (value as any) ? (value as any).value : value ?? ''),
+        })),
+      ];
 
       let lastError: string | null = null;
       let success = false;

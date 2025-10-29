@@ -147,12 +147,20 @@ serve(async (req) => {
 
     console.log(`Exporting ${documents.length} documents to SharePoint at ${sharepointUrl}`);
 
+    // Get batch custom fields
+    const batchCustomFields = (batch.metadata as any)?.custom_fields || {};
+    
     // Prepare documents for SharePoint API
     const sharepointDocuments = documents.map(doc => ({
       Title: doc.file_name,
       FileLeafRef: doc.file_name,
       ContentType: doc.file_type,
-      Metadata: doc.extracted_metadata || {},
+      BatchName: batch.batch_name,
+      ...batchCustomFields,
+      Metadata: {
+        ...batchCustomFields,
+        ...(doc.extracted_metadata || {}),
+      },
       FileUrl: doc.file_url,
     }));
 
