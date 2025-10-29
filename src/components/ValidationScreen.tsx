@@ -33,6 +33,7 @@ interface ValidationScreenProps {
   metadata: Record<string, string>;
   projectFields: Array<{ name: string; description: string }>;
   projectName?: string; // Added to detect AB1466 project
+  enableSignatureVerification?: boolean; // Enable signature verification for this project
   boundingBoxes?: Record<string, { x: number; y: number; width: number; height: number }>;
   wordBoundingBoxes?: Array<{ text: string; bbox: any }>;
   onValidate: (status: 'validated' | 'rejected', metadata: Record<string, string>) => void;
@@ -53,6 +54,7 @@ export const ValidationScreen = ({
   metadata,
   projectFields,
   projectName,
+  enableSignatureVerification = false,
   boundingBoxes = {},
   wordBoundingBoxes = [],
   onValidate,
@@ -84,6 +86,9 @@ export const ValidationScreen = ({
     boundingBox: { x: number; y: number; width: number; height: number } | null;
   }>>([]);
   const [isAnalyzingLanguage, setIsAnalyzingLanguage] = useState(false);
+  const [signatureImage, setSignatureImage] = useState<string>('');
+  const [signatureValidationResult, setSignatureValidationResult] = useState<any>(null);
+  const [isValidatingSignature, setIsValidatingSignature] = useState(false);
   const { toast } = useToast();
   const { isAdmin } = useAuth();
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
@@ -506,6 +511,66 @@ useEffect(() => {
     });
   };
 
+  const handleSignatureValidation = async () => {
+    if (!signatureImage) {
+      toast({
+        title: 'No signature image',
+        description: 'Please upload a signature image first',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsValidatingSignature(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('validate-signature', {
+        body: {
+          signatureImage,
+          strictMode: false,
+        },
+      });
+
+      if (error) throw error;
+
+      setSignatureValidationResult(data);
+      
+      if (data.signatureDetected) {
+        toast({
+          title: 'Signature Validated',
+          description: `Signature detected with ${Math.round((data.confidence || 0) * 100)}% confidence`,
+        });
+      } else {
+        toast({
+          title: 'No signature detected',
+          description: 'Please verify the image contains a valid signature',
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      console.error('Signature validation failed:', error);
+      toast({
+        title: 'Validation failed',
+        description: error?.message || 'Failed to validate signature',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsValidatingSignature(false);
+    }
+  };
+
+  const handleSignatureImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setSignatureImage(result);
+      setSignatureValidationResult(null); // Reset previous results
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleRegionClick = async (x: number, y: number) => {
     toast({
       title: 'Extracting text...',
@@ -571,10 +636,15 @@ useEffect(() => {
 
     try {
       if (documentId) {
+        // Include signature validation results in metadata if available
+        const finalMetadata = signatureValidationResult 
+          ? { ...editedMetadata, _signatureValidation: JSON.stringify(signatureValidationResult) }
+          : editedMetadata;
+          
         const { error } = await supabase
           .from('documents')
           .update({
-            extracted_metadata: editedMetadata,
+            extracted_metadata: finalMetadata,
             validation_status: status,
             validated_at: new Date().toISOString(),
           })
@@ -588,7 +658,11 @@ useEffect(() => {
         description: `Document has been marked as ${status}`,
       });
 
-      onValidate(status, editedMetadata);
+      const finalMetadata = signatureValidationResult 
+        ? { ...editedMetadata, _signatureValidation: JSON.stringify(signatureValidationResult) }
+        : editedMetadata;
+      
+      onValidate(status, finalMetadata);
       
       // Switch to export tab if validated and callback provided
       if (status === 'validated' && onSwitchToExport) {
@@ -877,6 +951,93 @@ useEffect(() => {
             </div>
           </div>
         </div>
+        
+        {/* Signature Verification Section */}
+        {enableSignatureVerification && (
+          <div className="mb-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 border-2 border-purple-300/30 dark:border-purple-700/30 rounded-lg shadow-sm">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-purple-100 dark:bg-purple-900/50">
+                <span className="text-lg">✍️</span>
+              </div>
+              <div>
+                <span className="font-semibold text-base">Signature Verification</span>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Upload and validate document signatures
+                </p>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              <div>
+                <Label htmlFor="signature-upload" className="text-sm mb-2 block">
+                  Upload Signature Image
+                </Label>
+                <Input
+                  id="signature-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleSignatureImageUpload}
+                  className="cursor-pointer"
+                />
+              </div>
+              
+              {signatureImage && (
+                <div className="space-y-2">
+                  <div className="relative w-full h-32 bg-white dark:bg-gray-900 rounded border">
+                    <img
+                      src={signatureImage}
+                      alt="Signature"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  
+                  <Button
+                    onClick={handleSignatureValidation}
+                    disabled={isValidatingSignature}
+                    size="sm"
+                    className="w-full"
+                    variant="default"
+                  >
+                    {isValidatingSignature ? 'Validating...' : 'Validate Signature'}
+                  </Button>
+                </div>
+              )}
+              
+              {signatureValidationResult && (
+                <div className={`p-3 rounded border ${
+                  signatureValidationResult.signatureDetected 
+                    ? 'bg-green-50 dark:bg-green-950/30 border-green-300 dark:border-green-700'
+                    : 'bg-red-50 dark:bg-red-950/30 border-red-300 dark:border-red-700'
+                }`}>
+                  <div className="flex items-start gap-2 mb-2">
+                    <Badge variant={signatureValidationResult.signatureDetected ? 'default' : 'destructive'} className="text-xs">
+                      {signatureValidationResult.signatureDetected ? '✓ Signature Detected' : '✗ No Signature'}
+                    </Badge>
+                    {signatureValidationResult.confidence !== undefined && (
+                      <Badge variant="secondary" className="text-xs">
+                        {Math.round(signatureValidationResult.confidence * 100)}% confidence
+                      </Badge>
+                    )}
+                  </div>
+                  
+                  {signatureValidationResult.analysis && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {signatureValidationResult.analysis}
+                    </p>
+                  )}
+                  
+                  {signatureValidationResult.characteristics && (
+                    <div className="mt-2 text-xs space-y-1">
+                      <p><strong>Handwritten:</strong> {signatureValidationResult.characteristics.isHandwritten ? 'Yes' : 'No'}</p>
+                      <p><strong>Complexity:</strong> {signatureValidationResult.characteristics.complexity}</p>
+                      <p><strong>Clarity:</strong> {signatureValidationResult.characteristics.clarity}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
         
         <div className="flex-1 overflow-auto">
           {/* Document Classification */}

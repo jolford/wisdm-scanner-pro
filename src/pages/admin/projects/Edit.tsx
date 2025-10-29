@@ -62,6 +62,7 @@ const EditProject = () => {
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
   const [enableCheckScanning, setEnableCheckScanning] = useState(false);
+  const [enableSignatureVerification, setEnableSignatureVerification] = useState(false);
   const [ocrModel, setOcrModel] = useState('google/gemini-2.5-flash');
   const [documentNamingPattern, setDocumentNamingPattern] = useState('');
   const [customerId, setCustomerId] = useState<string | undefined>();
@@ -150,6 +151,7 @@ const EditProject = () => {
           queues: any;
           metadata: any;
           enable_check_scanning: boolean;
+          enable_signature_verification: boolean;
           ocr_model: string;
           export_types: string[];
           created_at: string;
@@ -159,6 +161,7 @@ const EditProject = () => {
         setProjectName(projectData.name);
         setProjectDescription(projectData.description || '');
         setEnableCheckScanning(projectData.enable_check_scanning || false);
+        setEnableSignatureVerification(projectData.enable_signature_verification || false);
         setOcrModel(projectData.ocr_model || 'google/gemini-2.5-flash');
         setCustomerId(projectData.customer_id || undefined);
         
@@ -309,6 +312,7 @@ const EditProject = () => {
           name: projectName,
           description: projectDescription,
           enable_check_scanning: enableCheckScanning,
+          enable_signature_verification: enableSignatureVerification,
           ocr_model: ocrModel,
           extraction_fields: validFields as any,
           export_types: selectedExportTypes,
@@ -418,6 +422,22 @@ const EditProject = () => {
                 </Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Optimizes extraction for checks with MICR line reading (routing number, account number, check number, amount)
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 p-4 border border-border rounded-lg bg-muted/30 mb-6">
+              <Checkbox
+                id="signature-verification"
+                checked={enableSignatureVerification}
+                onCheckedChange={(checked) => setEnableSignatureVerification(checked as boolean)}
+              />
+              <div className="flex-1">
+                <Label htmlFor="signature-verification" className="cursor-pointer font-medium">
+                  Enable Signature Verification
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Allows users to upload and validate signatures on documents during the validation process
                 </p>
               </div>
             </div>

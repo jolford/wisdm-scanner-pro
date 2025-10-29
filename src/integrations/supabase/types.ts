@@ -1211,6 +1211,7 @@ export type Database = {
           customer_id: string | null
           description: string | null
           enable_check_scanning: boolean | null
+          enable_signature_verification: boolean | null
           export_types: string[] | null
           extraction_fields: Json
           id: string
@@ -1227,6 +1228,7 @@ export type Database = {
           customer_id?: string | null
           description?: string | null
           enable_check_scanning?: boolean | null
+          enable_signature_verification?: boolean | null
           export_types?: string[] | null
           extraction_fields?: Json
           id?: string
@@ -1243,6 +1245,7 @@ export type Database = {
           customer_id?: string | null
           description?: string | null
           enable_check_scanning?: boolean | null
+          enable_signature_verification?: boolean | null
           export_types?: string[] | null
           extraction_fields?: Json
           id?: string

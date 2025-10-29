@@ -427,6 +427,7 @@ ${xmlDocs}
                 wordBoundingBoxes={selectedDocument.word_bounding_boxes || []}
                 projectFields={(batch.projects?.extraction_fields as Array<{ name: string; description: string }>) || []}
                 projectName={batch.projects?.name}
+                enableSignatureVerification={(batch.projects as any)?.enable_signature_verification || false}
                 onValidate={async () => {
                   setSelectedDocument(null);
                 }}
