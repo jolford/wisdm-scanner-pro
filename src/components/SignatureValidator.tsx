@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, CheckCircle, XCircle, AlertCircle, Loader2, FileImage } from 'lucide-react';
+import { Upload, CheckCircle, XCircle, AlertCircle, Loader2, FileImage, RotateCcw, RotateCw } from 'lucide-react';
 import { getSignedUrl } from '@/hooks/use-signed-url';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
@@ -165,6 +165,37 @@ export function SignatureValidator({ documentImageUrl, projectId, currentMetadat
     });
   };
 
+  // Rotate a data URL image by degrees (90, 180, 270)
+  const rotateDataUrl = async (dataUrl: string, degrees: 90 | 180 | 270): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const rad = (degrees * Math.PI) / 180;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(dataUrl);
+
+        const width = img.width;
+        const height = img.height;
+
+        if (degrees === 90 || degrees === 270) {
+          canvas.width = height;
+          canvas.height = width;
+        } else {
+          canvas.width = width;
+          canvas.height = height;
+        }
+
+        ctx.translate(canvas.width / 2, canvas.height / 2);
+        ctx.rotate(rad);
+        ctx.drawImage(img, -width / 2, -height / 2);
+
+        resolve(canvas.toDataURL('image/jpeg', 0.9));
+      };
+      img.src = dataUrl;
+    });
+  };
+
   const handleUseCurrentDocument = async () => {
     if (!documentImageUrl) {
       toast({
@@ -212,10 +243,10 @@ export function SignatureValidator({ documentImageUrl, projectId, currentMetadat
         const loadingTask = (pdfjsLib as any).getDocument({ data: buffer });
         const pdf = await loadingTask.promise;
         const page = await pdf.getPage(1);
-        let viewport = page.getViewport({ scale: 1.2 });
+        let viewport = page.getViewport({ scale: 1.2, rotation: page.rotate });
         const maxDim = 1200;
         const scale = Math.min(1.6, maxDim / Math.max(viewport.width, viewport.height));
-        viewport = page.getViewport({ scale });
+        viewport = page.getViewport({ scale, rotation: page.rotate });
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         if (!ctx) throw new Error('Canvas unavailable');
@@ -434,12 +465,26 @@ export function SignatureValidator({ documentImageUrl, projectId, currentMetadat
               />
             </div>
             {signatureImage && (
-              <div className="relative w-full h-32 bg-muted rounded border">
-                <img
-                  src={signatureImage}
-                  alt="Signature to validate"
-                  className="w-full h-full object-contain"
-                />
+              <div className="space-y-2">
+                <div className="relative w-full h-32 bg-muted rounded border">
+                  <img
+                    src={signatureImage}
+                    alt="Signature to validate"
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="secondary" size="sm" onClick={async () => {
+                    if (!signatureImage) return; setSignatureImage(await rotateDataUrl(signatureImage, 270));
+                  }}>
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                  <Button type="button" variant="secondary" size="sm" onClick={async () => {
+                    if (!signatureImage) return; setSignatureImage(await rotateDataUrl(signatureImage, 90));
+                  }}>
+                    <RotateCw className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             )}
           </div>
@@ -454,6 +499,18 @@ export function SignatureValidator({ documentImageUrl, projectId, currentMetadat
                   alt="Reference signature"
                   className="w-full h-full object-contain"
                 />
+              </div>
+              <div className="flex justify-end gap-2 mt-2">
+                <Button type="button" variant="secondary" size="sm" onClick={async () => {
+                  if (!referenceImage) return; setReferenceImage(await rotateDataUrl(referenceImage, 270));
+                }}>
+                  <RotateCcw className="h-4 w-4" />
+                </Button>
+                <Button type="button" variant="secondary" size="sm" onClick={async () => {
+                  if (!referenceImage) return; setReferenceImage(await rotateDataUrl(referenceImage, 90));
+                }}>
+                  <RotateCw className="h-4 w-4" />
+                </Button>
               </div>
               <p className="text-xs text-muted-foreground">
                 Using stored reference for comparison
