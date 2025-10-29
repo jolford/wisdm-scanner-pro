@@ -90,10 +90,9 @@ export const getSignedUrl = async (
     throw new Error('No URL provided');
   }
 
-  // If already public storage URL, just return as-is
-  if (/\/storage\/v1\/object\/public\//.test(publicUrl)) {
-    return publicUrl;
-  }
+  // Always try to sign, even if the URL looks public
+  // Some environments mark buckets public but still require signed URLs
+  // Proceed to extract storage path and create a signed URL
 
   // Extract the storage path from the URL safely (ignore query/fragment)
   let filePath: string | null = null;

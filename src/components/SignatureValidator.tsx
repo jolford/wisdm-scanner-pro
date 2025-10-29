@@ -11,6 +11,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, CheckCircle, XCircle, AlertCircle, Loader2, FileImage } from 'lucide-react';
 import { getSignedUrl } from '@/hooks/use-signed-url';
+import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
+import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
+
+if ((pdfjsLib as any).GlobalWorkerOptions) {
+  (pdfjsLib as any).GlobalWorkerOptions.workerPort = new (PdfWorker as any)();
+}
 
 interface ValidationResult {
   // Detection mode results
@@ -124,19 +130,67 @@ export function SignatureValidator({ documentImageUrl, projectId, currentMetadat
 
     setLoadingDocImage(true);
     try {
-      const signedUrl = await getSignedUrl(documentImageUrl);
-      const response = await fetch(signedUrl);
-      const blob = await response.blob();
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSignatureImage(reader.result as string);
-        setResult(null);
-        toast({
-          title: 'Document loaded',
-          description: 'Ready to detect signature from document',
+      // Prefer Storage SDK download to avoid URL quirks
+      let blob: Blob | null = null;
+      try {
+        // Extract storage path from URL
+        let filePath: string | null = null;
+        try {
+          const u = new URL(documentImageUrl);
+          const m = u.pathname.match(/\/documents\/(.+)$/);
+          filePath = m ? decodeURIComponent(m[1]) : null;
+        } catch {
+          const m = documentImageUrl.match(/\/documents\/(.+?)(?:\?|#|$)/);
+          filePath = m ? decodeURIComponent(m[1]) : null;
+        }
+        if (filePath) {
+          const { data, error } = await supabase.storage.from('documents').download(filePath);
+          if (!error && data) blob = data as Blob;
+        }
+      } catch {}
+
+      if (!blob) {
+        const signedUrl = await getSignedUrl(documentImageUrl);
+        const response = await fetch(signedUrl);
+        blob = await response.blob();
+      }
+
+
+      const isPdf = /pdf$/i.test(blob.type) || /\.pdf($|\?)/i.test(documentImageUrl);
+      if (isPdf) {
+        // Render first page of PDF to PNG using pdfjs
+        const buffer = await blob.arrayBuffer();
+        const loadingTask = (pdfjsLib as any).getDocument({ data: buffer });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+        let viewport = page.getViewport({ scale: 1.2 });
+        const maxDim = 1600;
+        const scale = Math.min(1.6, maxDim / Math.max(viewport.width, viewport.height));
+        viewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Canvas unavailable');
+        canvas.width = Math.round(viewport.width);
+        canvas.height = Math.round(viewport.height);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+        const dataUrl = canvas.toDataURL('image/png');
+        setSignatureImage(dataUrl);
+      } else {
+        const reader = new FileReader();
+        await new Promise<void>((resolve) => {
+          reader.onloadend = () => {
+            setSignatureImage(reader.result as string);
+            resolve();
+          };
+          reader.readAsDataURL(blob);
         });
-      };
-      reader.readAsDataURL(blob);
+      }
+
+      setResult(null);
+      toast({
+        title: 'Document loaded',
+        description: 'Ready to detect signature from document',
+      });
     } catch (error) {
       console.error('Error loading document image:', error);
       toast({
