@@ -549,6 +549,97 @@ serve(async (req) => {
         // Convert bytes to standard array for Blob
         const byteArray = Array.from(bytes);
 
+        // 0) Try creating a Document resource first, then upload pages to it (common in some FileBound versions)
+        if (!uploaded) {
+          // Create document under file
+          const createDocBodies = [
+            { Name: doc.file_name || `document.${ext}`, Notes: doc.file_name || '' },
+            { Title: doc.file_name || `document.${ext}`, Notes: doc.file_name || '' },
+            { name: doc.file_name || `document.${ext}`, notes: doc.file_name || '' },
+          ];
+          const createDocEndpoints = [
+            { url: `${baseUrl}/api/files/${fileId}/documents`, method: 'POST' as const },
+            { url: `${baseUrl}/api/projects/${projectId}/files/${fileId}/documents`, method: 'POST' as const },
+          ];
+
+          let documentId: string | undefined;
+          outerCreate: for (const body of createDocBodies) {
+            for (const ep of createDocEndpoints) {
+              try {
+                const res = await fetch(ep.url, {
+                  method: ep.method,
+                  headers: {
+                    'Authorization': `Basic ${authString}`,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                  },
+                  body: JSON.stringify(body)
+                });
+                if (res.ok || res.status === 201) {
+                  // Try to get id from headers then body
+                  const loc = res.headers.get('Location') || res.headers.get('location');
+                  if (loc) {
+                    const m = loc.match(/documents\/(\d+|[a-f0-9-]+)$/i);
+                    if (m) { documentId = m[1]; break outerCreate; }
+                  }
+                  const txt = await res.text();
+                  try {
+                    const j = JSON.parse(txt);
+                    documentId = j.DocumentId ?? j.documentId ?? j.Id ?? j.id ?? j?.Data?.DocumentId;
+                    if (documentId) break outerCreate;
+                  } catch (_) {}
+                } else {
+                  const t = await res.text();
+                  lastError = { url: ep.url, status: res.status, details: (t || '').slice(0, 500) };
+                }
+              } catch (err: any) {
+                lastError = { url: ep.url, status: 0, details: err?.message };
+              }
+            }
+          }
+
+          // If a document was created, try uploading its page content
+          if (documentId) {
+            const filename = doc.file_name || `document.${ext}`;
+            const blob = new Blob([new Uint8Array(byteArray)], { type: contentType || 'application/octet-stream' });
+            const pageFormFields = ['PageFile', 'file', 'document', 'upload', 'UploadedFile', 'File'];
+            const pageEndpoints = [
+              { url: `${baseUrl}/api/documents/${documentId}/pages`, method: 'POST' as const },
+              { url: `${baseUrl}/api/documents/${documentId}/upload`, method: 'POST' as const },
+            ];
+            pageUploadLoop: for (const ep of pageEndpoints) {
+              for (const field of pageFormFields) {
+                try {
+                  const fd = new FormData();
+                  fd.append(field, blob, filename);
+                  fd.append('FileName', filename);
+                  const res = await fetch(ep.url, {
+                    method: ep.method,
+                    headers: {
+                      'Authorization': `Basic ${authString}`,
+                      'Accept': 'application/json',
+                      'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: fd,
+                  });
+                  if (res.ok || res.status === 201) {
+                    const okJson = await res.json().catch(() => ({ success: true }));
+                    successes.push({ id: doc.id, result: okJson, fileId, documentId });
+                    uploaded = true;
+                    break pageUploadLoop;
+                  } else {
+                    const t = await res.text();
+                    lastError = { url: ep.url, status: res.status, details: (t || '').slice(0, 500) };
+                  }
+                } catch (err: any) {
+                  lastError = { url: ep.url, status: 0, details: err?.message };
+                }
+              }
+            }
+          }
+        }
+
         // 1) Try multipart/form-data (commonly required by FileBound)
         if (!uploaded) {
             const formEndpoints = [
