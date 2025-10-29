@@ -21,7 +21,7 @@ import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, Zoom
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ImageRegionSelector } from './ImageRegionSelector';
-import { useSignedUrl } from '@/hooks/use-signed-url';
+import { useSignedUrl, getSignedUrl } from '@/hooks/use-signed-url';
 
 // Enhanced feature components
 import { BulkActionsToolbar } from './BulkActionsToolbar';
