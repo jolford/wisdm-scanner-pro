@@ -1676,47 +1676,56 @@ const FullImageWithSignedUrl = ({
           setDisplayUrl(src);
           return;
         }
-        
-        // For PDFs: Render first page as image at higher resolution
-        const resp = await fetch(src, { cache: 'no-store' });
-        const buffer = await resp.arrayBuffer();
+
+        // Prefer downloading via SDK to avoid CORS and 400 responses
+        let buffer: ArrayBuffer | null = null;
+        try {
+          // Extract storage path from URL
+          let filePath: string | null = null;
+          try {
+            const u = new URL(src);
+            const m = u.pathname.match(/\/documents\/(.+)$/);
+            filePath = m ? decodeURIComponent(m[1]) : null;
+          } catch {
+            const m = src.match(/\/documents\/(.+?)(?:\?|#|$)/);
+            filePath = m ? decodeURIComponent(m[1]) : null;
+          }
+
+          if (filePath) {
+            const { data, error } = await supabase.storage.from('documents').download(filePath);
+            if (!error && data) {
+              buffer = await data.arrayBuffer();
+            }
+          }
+        } catch (e) {
+          // ignore, will fallback to fetch below
+        }
+
+        // If SDK download failed, fallback to fetch of the signed URL
+        if (!buffer) {
+          const resp = await fetch(src, { cache: 'no-store' });
+          if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+          buffer = await resp.arrayBuffer();
+        }
+
+        // Render first page as image at higher resolution
         const loadingTask = pdfjsLib.getDocument({ data: buffer });
         const pdf = await loadingTask.promise;
         const page = await pdf.getPage(1);
-        
-        // Render at 2x scale for better quality
         const viewport = page.getViewport({ scale: 2 });
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
-        if (!context) return;
-        
+        if (!context) { setDisplayUrl(null); return; }
         canvas.width = Math.round(viewport.width);
         canvas.height = Math.round(viewport.height);
-        
         await page.render({ canvasContext: context, viewport }).promise;
         setDisplayUrl(canvas.toDataURL('image/png'));
       } catch (e) {
-        console.error('PDF render failed', e);
-        // Try alternative method
-        try {
-          const loadingTask = pdfjsLib.getDocument({ url: src });
-          const pdf = await loadingTask.promise;
-          const page = await pdf.getPage(1);
-          const viewport = page.getViewport({ scale: 2 });
-          const canvas = document.createElement('canvas');
-          const context = canvas.getContext('2d');
-          if (!context) { setDisplayUrl(null); return; }
-          canvas.width = Math.round(viewport.width);
-          canvas.height = Math.round(viewport.height);
-          await page.render({ canvasContext: context, viewport }).promise;
-          setDisplayUrl(canvas.toDataURL('image/png'));
-        } catch (e2) {
-          console.error('Both PDF render methods failed', e2);
-          setDisplayUrl(src);
-        }
+        console.error('PDF render failed (after SDK+fetch attempts)', e);
+        setDisplayUrl(null); // ensure error UI renders instead of broken <img>
       }
     };
-    
+
     generateDisplayUrl();
   }, [signedUrl, url, isPdf]);
 
@@ -1735,8 +1744,16 @@ const FullImageWithSignedUrl = ({
   // Show error state if display URL failed to generate
   if (!displayUrl) {
     return (
-      <div className="w-full h-48 flex items-center justify-center bg-muted rounded">
-        <ImageIcon className="h-12 w-12 text-muted-foreground" />
+      <div className="w-full h-48 flex flex-col items-center justify-center bg-muted rounded gap-2">
+        <ImageIcon className="h-10 w-10 text-muted-foreground" />
+        <a
+          href={signedUrl || url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm underline"
+        >
+          Open original file
+        </a>
       </div>
     );
   }
