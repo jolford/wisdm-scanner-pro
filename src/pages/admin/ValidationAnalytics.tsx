@@ -130,34 +130,40 @@ export default function ValidationAnalytics() {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - parseInt(timeRange));
 
-      // Get validation data from audit trail
-      const { data: auditData } = await supabase
-        .from('audit_trail')
+      // Get validation data directly from documents table
+      let docsQuery = supabase
+        .from('documents')
         .select(`
-          user_id,
-          action_type,
-          created_at,
-          profiles!user_id (
+          validated_by,
+          validation_status,
+          validated_at,
+          profiles!documents_validated_by_fkey (
             full_name,
             email
           )
         `)
-        .gte('created_at', startDate.toISOString())
-        .in('action_type', ['document_validated', 'document_rejected']);
+        .not('validated_by', 'is', null)
+        .not('validated_at', 'is', null)
+        .gte('validated_at', startDate.toISOString());
 
-      if (!auditData) return;
+      if (selectedProject !== 'all') {
+        docsQuery = docsQuery.eq('project_id', selectedProject);
+      }
+
+      const { data: docsData } = await docsQuery;
+      if (!docsData) return;
 
       // Calculate productivity metrics by user
       const userMetrics: Record<string, UserProductivity> = {};
 
-      auditData.forEach((record) => {
-        const userId = record.user_id;
+      docsData.forEach((doc: any) => {
+        const userId = doc.validated_by;
         if (!userId) return;
 
         if (!userMetrics[userId]) {
           userMetrics[userId] = {
             user_id: userId,
-            user_name: (record.profiles as any)?.full_name || 'Unknown',
+            user_name: doc.profiles?.full_name || doc.profiles?.email || 'Unknown User',
             total_validated: 0,
             total_rejected: 0,
             avg_time: 0,
@@ -165,9 +171,9 @@ export default function ValidationAnalytics() {
           };
         }
 
-        if (record.action_type === 'document_validated') {
+        if (doc.validation_status === 'validated') {
           userMetrics[userId].total_validated++;
-        } else if (record.action_type === 'document_rejected') {
+        } else if (doc.validation_status === 'rejected') {
           userMetrics[userId].total_rejected++;
         }
       });

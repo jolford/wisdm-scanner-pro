@@ -263,7 +263,7 @@ export default function AdvancedReports() {
                     cx="50%"
                     cy="50%"
                     labelLine={false}
-                    label={(entry) => entry.name}
+                    label={false}
                     outerRadius={100}
                     fill="#8884d8"
                     dataKey="value"
@@ -273,6 +273,7 @@ export default function AdvancedReports() {
                     ))}
                   </Pie>
                   <Tooltip />
+                  <Legend />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>
