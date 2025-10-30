@@ -423,16 +423,33 @@ const [isExporting, setIsExporting] = useState(false);
         return;
       }
 
-      const { data, error } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('batch_id', selectedBatchId)
-        .order('created_at', { ascending: false });
+      let docsData: any[] | null = null;
+      let lastError: any = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        const { data, error } = await supabase
+          .from('documents')
+          .select('*')
+          .eq('batch_id', selectedBatchId)
+          .order('created_at', { ascending: false });
 
-      if (error) throw error;
+        if (!error) {
+          docsData = data as any[];
+          break;
+        }
+        lastError = error;
+        if ((error as any)?.code === '57014') {
+          // Brief backoff on statement timeout
+          await new Promise((r) => setTimeout(r, 250 * (attempt + 1)));
+          continue;
+        } else {
+          throw error;
+        }
+      }
 
-      setValidationQueue(data?.filter(d => d.validation_status === 'pending') || []);
-      setValidatedDocs(data?.filter(d => d.validation_status === 'validated') || []);
+      if (!docsData) throw lastError;
+
+      setValidationQueue(docsData?.filter(d => d.validation_status === 'pending') || []);
+      setValidatedDocs(docsData?.filter(d => d.validation_status === 'validated') || []);
     } catch (error) {
       console.error('Error loading queue:', error);
     }
@@ -481,7 +498,11 @@ const [isExporting, setIsExporting] = useState(false);
         }
       }
 
-      await loadQueueDocuments();
+try {
+        await loadQueueDocuments();
+      } catch (e) {
+        console.warn('loadQueueDocuments failed post-insert; will refresh later', e);
+      }
 
       if (selectedBatchId && selectedBatch) {
         await supabase
