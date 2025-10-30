@@ -124,9 +124,9 @@ const App = () => {
           <div className="flex flex-col min-h-screen">
             <Toaster />
             <Sonner />
-            <CommandPalette />
             <KeyboardShortcutsDialog open={showShortcuts} onOpenChange={setShowShortcuts} />
           <BrowserRouter>
+            <CommandPalette />
             <GlobalKeyboardShortcuts onShowShortcuts={() => setShowShortcuts(true)} />
           <RecoveryRedirect />
           <div className="flex-1">
