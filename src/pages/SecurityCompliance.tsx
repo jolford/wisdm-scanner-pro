@@ -20,9 +20,15 @@ export default function SecurityCompliance() {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 20;
+      const margin = 15;
       const maxWidth = pageWidth - 2 * margin;
       let yPos = margin;
+
+      // Colors matching the design
+      const primaryColor: [number, number, number] = [59, 130, 246]; // Blue
+      const textColor: [number, number, number] = [0, 0, 0];
+      const mutedColor: [number, number, number] = [107, 114, 128];
+      const lightBg: [number, number, number] = [249, 250, 251];
 
       // Helper functions
       const checkPageBreak = (requiredSpace: number) => {
@@ -34,9 +40,10 @@ export default function SecurityCompliance() {
         return false;
       };
 
-      const addWrappedText = (text: string, fontSize: number, isBold: boolean = false) => {
+      const addWrappedText = (text: string, fontSize: number, isBold: boolean = false, color: [number, number, number] = textColor) => {
         doc.setFontSize(fontSize);
         doc.setFont("helvetica", isBold ? "bold" : "normal");
+        doc.setTextColor(...color);
         const lines = doc.splitTextToSize(text, maxWidth);
         lines.forEach((line: string) => {
           checkPageBreak(fontSize / 2 + 2);
@@ -45,149 +52,307 @@ export default function SecurityCompliance() {
         });
       };
 
-      // Add logo
+      const addCard = (title: string, icon: string, content: () => void) => {
+        checkPageBreak(25);
+        
+        // Card background
+        doc.setFillColor(...lightBg);
+        doc.rect(margin, yPos - 5, maxWidth, 10, 'F');
+        
+        // Title with icon
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...primaryColor);
+        doc.text(`${icon} ${title}`, margin + 5, yPos);
+        yPos += 10;
+        
+        content();
+      };
+
+      // Header with logo
       const logoImg = new Image();
       logoImg.src = wisdmLogo;
-      doc.addImage(logoImg, "PNG", margin, yPos, 30, 10);
-      yPos += 15;
+      doc.addImage(logoImg, "PNG", margin, yPos, 40, 13);
+      yPos += 18;
 
-      // Title
-      doc.setFontSize(24);
+      // Main Title
+      doc.setFontSize(20);
       doc.setFont("helvetica", "bold");
-      doc.text("WISDM Capture Pro", pageWidth / 2, yPos, { align: "center" });
-      yPos += 10;
-      doc.setFontSize(18);
-      doc.text("Security Compliance & Standards", pageWidth / 2, yPos, { align: "center" });
-      yPos += 15;
+      doc.setTextColor(...textColor);
+      doc.text("Security Compliance & Standards", margin, yPos);
+      yPos += 8;
 
-      // Metadata
-      doc.setFontSize(10);
+      // Subtitle
+      doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
-      doc.text("Version 1.0 | Last Updated: October 30, 2025", pageWidth / 2, yPos, { align: "center" });
-      yPos += 15;
-
-      // Executive Summary
-      checkPageBreak(20);
-      addWrappedText("Executive Summary", 16, true);
+      doc.setTextColor(...mutedColor);
+      addWrappedText("Comprehensive overview of security compliance measures, standards, and best practices implemented across our document management system.", 9, false, mutedColor);
       yPos += 5;
-      addWrappedText("This document provides a comprehensive overview of the security compliance measures, standards, and best practices implemented across our document management system. Our platform employs defense-in-depth security architecture with multiple layers of protection at the database, application, and infrastructure levels.", 11);
-      yPos += 10;
 
-      // Database Security
-      checkPageBreak(20);
-      addWrappedText("Database Security", 16, true);
-      yPos += 8;
-      
-      addWrappedText("Row-Level Security (RLS)", 12, true);
-      yPos += 3;
-      addWrappedText("PostgreSQL database enforces Row-Level Security on all sensitive tables, ensuring data access is controlled at the database level rather than relying on application logic.", 10);
-      yPos += 8;
+      // Version badge
+      doc.setFontSize(8);
+      doc.setTextColor(...primaryColor);
+      doc.text("Version 1.0", margin, yPos);
+      doc.setTextColor(...mutedColor);
+      doc.text("| Last Updated: October 30, 2025", margin + 25, yPos);
+      yPos += 12;
 
-      addWrappedText("Security Definer Functions", 12, true);
-      yPos += 3;
-      addWrappedText("All authorization checks utilize SECURITY DEFINER functions including is_admin_jwt(), is_admin_enhanced(), has_role(), and is_system_admin().", 10);
-      yPos += 8;
+      // Executive Summary Card
+      addCard("Executive Summary", "🛡️", () => {
+        addWrappedText("This document provides a comprehensive overview of the security compliance measures, standards, and best practices implemented across our document management system. Our platform employs defense-in-depth security architecture with multiple layers of protection at the database, application, and infrastructure levels.", 10, false, mutedColor);
+        yPos += 8;
+      });
 
-      addWrappedText("Role-Based Access Control", 12, true);
-      yPos += 3;
-      addWrappedText("Roles stored in dedicated user_roles table with hierarchy: system_admin (full access), admin (tenant-scoped), user (limited permissions).", 10);
-      yPos += 10;
+      // Database Security Card
+      addCard("Database Security", "💾", () => {
+        // Row-Level Security
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...textColor);
+        doc.text("✓ Row-Level Security (RLS)", margin + 5, yPos);
+        yPos += 6;
+        
+        addWrappedText("PostgreSQL database enforces Row-Level Security on all sensitive tables, ensuring data access is controlled at the database level rather than relying on application logic.", 9, false, mutedColor);
+        
+        // Code block
+        doc.setFillColor(240, 240, 240);
+        doc.rect(margin + 5, yPos, maxWidth - 10, 15, 'F');
+        doc.setFontSize(8);
+        doc.setFont("courier", "normal");
+        doc.setTextColor(...textColor);
+        doc.text('CREATE POLICY "Users can view own data"', margin + 7, yPos + 4);
+        doc.text('ON public.documents FOR SELECT', margin + 7, yPos + 8);
+        doc.text('USING (auth.uid() = uploaded_by);', margin + 7, yPos + 12);
+        yPos += 20;
+        
+        // Security Definer Functions
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...textColor);
+        doc.text("✓ Security Definer Functions", margin + 5, yPos);
+        yPos += 6;
+        
+        addWrappedText("All authorization checks utilize SECURITY DEFINER functions to prevent infinite recursion and ensure consistent security enforcement.", 9, false, mutedColor);
+        yPos += 5;
+        
+        doc.setFontSize(8);
+        doc.text("• is_admin_jwt() - Verifies admin role from JWT claims", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• is_admin_enhanced() - Combined JWT + database role check", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• has_role(user_id, role) - Checks user roles without RLS recursion", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• is_system_admin(user_id) - Verifies system administrator status", margin + 7, yPos);
+        yPos += 8;
+        
+        // RBAC
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...textColor);
+        doc.text("✓ Role-Based Access Control (RBAC)", margin + 5, yPos);
+        yPos += 6;
+        
+        addWrappedText("Roles are stored in a dedicated user_roles table (NOT on user profiles) to prevent privilege escalation attacks.", 9, false, mutedColor);
+        yPos += 5;
+        
+        doc.setFontSize(8);
+        doc.text("• system_admin: Platform administrators with full access", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• admin: Tenant administrators with customer-scoped access", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• user: Standard users with limited permissions", margin + 7, yPos);
+        yPos += 8;
+      });
 
-      // Application Security
-      checkPageBreak(20);
-      addWrappedText("Application Security", 16, true);
-      yPos += 8;
-      
-      addWrappedText("Defense-in-Depth Authorization", 12, true);
-      yPos += 3;
-      addWrappedText("Three-layer approach - Layer 1: Database RLS (primary), Layer 2: Edge Functions (secondary), Layer 3: Client UI (UX only).", 10);
-      yPos += 8;
+      // Application Security Card
+      addCard("Application Security", "🔒", () => {
+        // Defense-in-Depth
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...textColor);
+        doc.text("✓ Defense-in-Depth Authorization", margin + 5, yPos);
+        yPos += 6;
+        
+        addWrappedText("Three-layer authorization approach ensures comprehensive security:", 9, false, mutedColor);
+        yPos += 4;
+        
+        doc.setFontSize(8);
+        doc.text("• Layer 1: Database RLS (Primary Defense) - Enforces security at database level", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• Layer 2: Edge Functions (Secondary Check) - Verifies authentication on every request", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• Layer 3: Client UI (UX Only) - Display logic only, never trusted for security", margin + 7, yPos);
+        yPos += 8;
+        
+        // Authentication Methods
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...textColor);
+        doc.text("✓ Authentication Methods", margin + 5, yPos);
+        yPos += 6;
+        
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.text("• Email/password authentication with secure password policies", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• Multi-Factor Authentication (MFA/TOTP) available", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• Google OAuth integration", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• Session management via JWT tokens", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• Password hashing using bcrypt", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• Rate limiting on authentication endpoints", margin + 7, yPos);
+        yPos += 8;
+        
+        // Input Validation
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...textColor);
+        doc.text("✓ Input Validation", margin + 5, yPos);
+        yPos += 6;
+        
+        addWrappedText("Client-side validation with Zod schemas and TypeScript, server-side validation in all edge functions, and SQL injection prevention via parameterized queries.", 9, false, mutedColor);
+        yPos += 8;
+      });
 
-      addWrappedText("Authentication Methods", 12, true);
-      yPos += 3;
-      addWrappedText("Email/password with bcrypt hashing, MFA/TOTP support, Google OAuth, JWT session management, rate limiting on authentication endpoints.", 10);
-      yPos += 8;
-
-      addWrappedText("Input Validation", 12, true);
-      yPos += 3;
-      addWrappedText("Client-side with Zod schemas, server-side validation in edge functions, SQL injection prevention via parameterized queries.", 10);
-      yPos += 10;
-
-      // Infrastructure Security
-      checkPageBreak(20);
-      addWrappedText("Infrastructure Security", 16, true);
-      yPos += 8;
-      
-      addWrappedText("Encryption", 12, true);
-      yPos += 3;
-      addWrappedText("AES-256 for stored data, TLS 1.3 for connections, encrypted backups, encrypted API keys.", 10);
-      yPos += 8;
-
-      addWrappedText("Storage Security", 12, true);
-      yPos += 3;
-      addWrappedText("Private buckets with RLS policies ensuring user-specific file access.", 10);
-      yPos += 8;
-
-      addWrappedText("Network Security", 12, true);
-      yPos += 3;
-      addWrappedText("TLS 1.3 encryption, HTTPS-only, CORS policies, rate limiting, DDoS protection.", 10);
-      yPos += 10;
+      // Infrastructure Security Card
+      addCard("Infrastructure Security", "🖥️", () => {
+        // Encryption
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...textColor);
+        doc.text("✓ Encryption", margin + 5, yPos);
+        yPos += 6;
+        
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.text("• AES-256 encryption for all stored data", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• TLS 1.3 for all database connections", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• All backups encrypted with separate keys", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• API keys stored as encrypted secrets", margin + 7, yPos);
+        yPos += 8;
+        
+        // Storage Security
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...textColor);
+        doc.text("✓ Storage Security", margin + 5, yPos);
+        yPos += 6;
+        
+        addWrappedText("All storage buckets are private by default with RLS policies ensuring users can only access their own files.", 9, false, mutedColor);
+        yPos += 8;
+        
+        // Network Security
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(...textColor);
+        doc.text("✓ Network Security", margin + 5, yPos);
+        yPos += 6;
+        
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.text("• TLS 1.3 encryption for all connections", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• HTTPS-only enforcement", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• CORS policies configured", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• Rate limiting on all endpoints", margin + 7, yPos);
+        yPos += 4;
+        doc.text("• DDoS protection at infrastructure level", margin + 7, yPos);
+        yPos += 8;
+      });
 
       // Compliance Standards
-      checkPageBreak(20);
-      addWrappedText("Compliance Standards", 16, true);
-      yPos += 8;
+      checkPageBreak(40);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...primaryColor);
+      doc.text("📋 Compliance Standards", margin, yPos);
+      yPos += 10;
       
-      addWrappedText("SOC 2 Readiness", 12, true);
-      yPos += 3;
-      addWrappedText("Implements Security (CC6), Availability (A1), Confidentiality (C1), and Privacy (P1) criteria.", 10);
-      yPos += 8;
-
-      addWrappedText("GDPR Compliance", 12, true);
-      yPos += 3;
-      addWrappedText("Full data subject rights implementation including access, erasure, rectification, data processing agreement, cookie consent.", 10);
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...textColor);
+      doc.text("✓ SOC 2 Readiness", margin + 5, yPos);
+      yPos += 6;
+      
+      addWrappedText("Implements Security (CC6), Availability (A1), Confidentiality (C1), and Privacy (P1) criteria.", 9, false, mutedColor);
+      yPos += 6;
+      
+      doc.text("✓ GDPR Compliance", margin + 5, yPos);
+      yPos += 6;
+      
+      addWrappedText("Full data subject rights implementation including access, erasure, rectification, data processing agreement, cookie consent.", 9, false, mutedColor);
       yPos += 10;
 
       // Audit & Monitoring
-      checkPageBreak(20);
-      addWrappedText("Audit & Monitoring", 16, true);
-      yPos += 8;
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...primaryColor);
+      doc.text("📊 Audit & Monitoring", margin, yPos);
+      yPos += 10;
       
-      addWrappedText("Comprehensive Audit Logging", 12, true);
-      yPos += 3;
-      addWrappedText("90-day retention: user authentication, admin actions, document access, field changes, exports, configuration changes.", 10);
-      yPos += 8;
-
-      addWrappedText("Error Logging", 12, true);
-      yPos += 3;
-      addWrappedText("All errors logged with PII sanitization and automatic redaction.", 10);
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...textColor);
+      doc.text("✓ Comprehensive Audit Logging", margin + 5, yPos);
+      yPos += 6;
+      
+      addWrappedText("90-day retention: user authentication, admin actions, document access, field changes, exports, configuration changes.", 9, false, mutedColor);
+      yPos += 6;
+      
+      doc.text("✓ Error Logging", margin + 5, yPos);
+      yPos += 6;
+      
+      addWrappedText("All errors logged with PII sanitization and automatic redaction.", 9, false, mutedColor);
       yPos += 10;
 
       // Business Continuity
-      checkPageBreak(20);
-      addWrappedText("Business Continuity", 16, true);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...primaryColor);
+      doc.text("⚡ Business Continuity", margin, yPos);
+      yPos += 10;
+      
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...mutedColor);
+      doc.text("Backup: Continuous point-in-time recovery, 7-day standard / 30-day critical retention", margin + 5, yPos);
       yPos += 5;
-      addWrappedText("Backup: Continuous point-in-time recovery, 7-day standard / 30-day critical retention", 10);
-      yPos += 5;
-      addWrappedText("Recovery: RTO < 4 hours, RPO < 15 minutes", 10);
+      doc.text("Recovery: RTO < 4 hours, RPO < 15 minutes", margin + 5, yPos);
       yPos += 15;
 
       // Contact Information
-      checkPageBreak(20);
-      addWrappedText("Security Contact Information", 14, true);
-      yPos += 5;
-      doc.setFontSize(10);
-      doc.text("Security Team: support@westint.com", margin, yPos);
-      yPos += 6;
-      doc.text("Incident Reporting: support@westint.com", margin, yPos);
-      yPos += 6;
-      doc.text("Response Time: < 24 hours for critical issues", margin, yPos);
-      yPos += 10;
+      checkPageBreak(30);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...primaryColor);
+      doc.text("📧 Security Contact Information", margin, yPos);
+      yPos += 8;
+      
       doc.setFontSize(9);
-      addWrappedText("For security vulnerabilities, please report responsibly to support@westint.com. Do not disclose publicly until we have had a chance to address the issue.", 9);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...textColor);
+      doc.text("Security Team: support@westint.com", margin + 5, yPos);
+      yPos += 5;
+      doc.text("Incident Reporting: support@westint.com", margin + 5, yPos);
+      yPos += 5;
+      doc.text("Response Time: < 24 hours for critical issues", margin + 5, yPos);
+      yPos += 8;
+      
+      doc.setFontSize(8);
+      doc.setTextColor(...mutedColor);
+      addWrappedText("For security vulnerabilities, please report responsibly to support@westint.com. Do not disclose publicly until we have had a chance to address the issue.", 8, false, mutedColor);
 
       // Footer
-      doc.setFontSize(8);
+      doc.setFontSize(7);
+      doc.setTextColor(...mutedColor);
       doc.text("Document Classification: Internal Use | Review Frequency: Quarterly", pageWidth / 2, pageHeight - 10, { align: "center" });
 
       // Save PDF
