@@ -1079,7 +1079,7 @@ const EditProject = () => {
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-base">Validation Lookups</span>
-                    <Badge variant="outline" className="text-xs">FileBound / DocMgt</Badge>
+                    <Badge variant="outline" className="text-xs">ECM / SQL Database</Badge>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
@@ -1096,7 +1096,7 @@ const EditProject = () => {
                         }
                       />
                       <Label htmlFor="enable-validation-lookup" className="text-sm font-medium cursor-pointer">
-                        Enable validation lookups from ECM systems
+                        Enable validation lookups from ECM systems or databases
                       </Label>
                     </div>
                     
@@ -1110,7 +1110,7 @@ const EditProject = () => {
                     )}
                   </Card>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Configure ECM system lookups for validation.
+                    Configure ECM or SQL database lookups for validation. Allows users to search and validate data against external systems during document processing.
                   </p>
                 </AccordionContent>
               </AccordionItem>
