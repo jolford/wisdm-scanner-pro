@@ -52,6 +52,12 @@ export const projectSchema = z.object({
         .max(100, 'Project name must be less than 100 characters')
         .optional(),
       fieldMappings: z.record(z.string()).optional(),
+      // SQL validation fields
+      sqlHost: z.string().max(255).optional(),
+      sqlPort: z.string().max(10).optional(),
+      sqlDatabase: z.string().max(100).optional(),
+      sqlTable: z.string().max(100).optional(),
+      sqlDialect: z.enum(['mysql', 'postgresql', 'sqlserver']).optional(),
     })
     .refine((data) => {
       // If enabled, validate based on whether it's an ECM or file export

@@ -16,13 +16,19 @@ export interface ValidationLookupField {
 
 export interface ValidationLookupConfig {
   enabled: boolean;
-  system: 'filebound' | 'docmgt' | 'none';
+  system: 'filebound' | 'docmgt' | 'sql' | 'none';
   url?: string;
   username?: string;
   password?: string;
   project?: string;
   recordTypeId?: string;
   lookupFields?: ValidationLookupField[];
+  // SQL-specific fields
+  sqlHost?: string;
+  sqlPort?: string;
+  sqlDatabase?: string;
+  sqlTable?: string;
+  sqlDialect?: 'mysql' | 'postgresql' | 'sqlserver';
 }
 
 interface ECMProject {
@@ -59,14 +65,23 @@ export function ValidationLookupConfig({
   const [loadingFields, setLoadingFields] = useState(false);
 
   const testConnection = async () => {
-    if (!config.url || !config.username || !config.password) {
-      toast.error('URL, username, and password are required');
-      return;
-    }
-
     if (config.system === 'none') {
       toast.error('Please select a system first');
       return;
+    }
+
+    // Validate SQL-specific fields
+    if (config.system === 'sql') {
+      if (!config.sqlHost || !config.sqlDatabase || !config.username || !config.password || !config.sqlDialect) {
+        toast.error('Host, database, username, password, and dialect are required for SQL');
+        return;
+      }
+    } else {
+      // Validate ECM fields
+      if (!config.url || !config.username || !config.password) {
+        toast.error('URL, username, and password are required');
+        return;
+      }
     }
 
     setTesting(true);
@@ -76,16 +91,33 @@ export function ValidationLookupConfig({
       const functionMap = {
         'filebound': 'test-filebound-connection',
         'docmgt': 'test-docmgt-connection',
+        'sql': 'test-sql-connection',
       };
       
       const functionName = functionMap[config.system];
       
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        body: { 
+      let requestBody: any;
+      
+      if (config.system === 'sql') {
+        requestBody = {
+          host: config.sqlHost,
+          port: config.sqlPort || (config.sqlDialect === 'postgresql' ? '5432' : config.sqlDialect === 'mysql' ? '3306' : '1433'),
+          database: config.sqlDatabase,
+          username: config.username,
+          password: config.password,
+          dialect: config.sqlDialect,
+          table: config.sqlTable,
+        };
+      } else {
+        requestBody = { 
           url: config.url, 
           username: config.username, 
           password: config.password 
-        },
+        };
+      }
+      
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        body: requestBody,
       });
 
       if (error) throw error;
@@ -93,29 +125,42 @@ export function ValidationLookupConfig({
       if (data.success) {
         setConnectionStatus('success');
         
-        const projects: ECMProject[] = (data.projects || []).map((p: any) => ({
-          id: p.ProjectId?.toString() || p.id?.toString() || p.ID?.toString(),
-          name: p.Name || p.name || p.Title,
-          description: p.Description || p.description || p.Summary
-        }));
-        
-        setAvailableProjects(projects);
-        
-        if (data.projectFields) {
-          const formattedFields: Record<string, ECMField[]> = {};
+        if (config.system === 'sql') {
+          // For SQL, we get columns directly
+          const sqlColumns: ECMField[] = (data.columns || []).map((col: any) => ({
+            name: col.name || col.column_name || col.COLUMN_NAME,
+            type: col.type || col.data_type || col.DATA_TYPE || 'text',
+            required: false
+          }));
+          setEcmFields(sqlColumns);
           
-          Object.entries(data.projectFields).forEach(([projId, fields]) => {
-            formattedFields[projId] = (fields as any[]).map((f: any) => ({
-              name: f.VariableName || f.FieldName || f.name || f.Name || f.Title,
-              type: f.DataType || f.FieldType || f.type || f.Type || 'text',
-              required: f.Required || f.required || false
-            }));
-          });
+          toast.success('Successfully connected to SQL database');
+        } else {
+          // For ECM systems
+          const projects: ECMProject[] = (data.projects || []).map((p: any) => ({
+            id: p.ProjectId?.toString() || p.id?.toString() || p.ID?.toString(),
+            name: p.Name || p.name || p.Title,
+            description: p.Description || p.description || p.Summary
+          }));
           
-          setAllProjectFields(formattedFields);
+          setAvailableProjects(projects);
+          
+          if (data.projectFields) {
+            const formattedFields: Record<string, ECMField[]> = {};
+            
+            Object.entries(data.projectFields).forEach(([projId, fields]) => {
+              formattedFields[projId] = (fields as any[]).map((f: any) => ({
+                name: f.VariableName || f.FieldName || f.name || f.Name || f.Title,
+                type: f.DataType || f.FieldType || f.type || f.Type || 'text',
+                required: f.Required || f.required || false
+              }));
+            });
+            
+            setAllProjectFields(formattedFields);
+          }
+          
+          toast.success(`Successfully connected to ${config.system.toUpperCase()}`);
         }
-        
-        toast.success(`Successfully connected to ${config.system.toUpperCase()}`);
       } else {
         setConnectionStatus('error');
         toast.error(data.error || 'Connection failed');
@@ -238,7 +283,10 @@ export function ValidationLookupConfig({
     });
   };
 
-  const isTestButtonDisabled = disabled || testing || !config.url || !config.username || !config.password || config.system === 'none';
+  const isTestButtonDisabled = disabled || testing || config.system === 'none' || 
+    (config.system === 'sql' 
+      ? !config.sqlHost || !config.sqlDatabase || !config.username || !config.password || !config.sqlDialect
+      : !config.url || !config.username || !config.password);
 
   return (
     <div className="space-y-4">
@@ -249,7 +297,7 @@ export function ValidationLookupConfig({
           </Label>
           <Select
             value={config.system}
-            onValueChange={(value: 'filebound' | 'docmgt' | 'none') => 
+            onValueChange={(value: 'filebound' | 'docmgt' | 'sql' | 'none') => 
               onConfigChange({ ...config, system: value })
             }
             disabled={disabled}
@@ -261,49 +309,157 @@ export function ValidationLookupConfig({
               <SelectItem value="none">-- None --</SelectItem>
               <SelectItem value="filebound">FileBound</SelectItem>
               <SelectItem value="docmgt">DocMgt</SelectItem>
+              <SelectItem value="sql">SQL Database</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        <div>
-          <Label htmlFor="lookup-url" className="text-xs mb-1">
-            ECM URL *
-          </Label>
-          <Input
-            id="lookup-url"
-            value={config.url || ''}
-            onChange={(e) => onConfigChange({ ...config, url: e.target.value })}
-            placeholder="https://ecm.example.com"
-            disabled={disabled || config.system === 'none'}
-          />
-        </div>
+        {config.system === 'sql' ? (
+          <>
+            <div>
+              <Label htmlFor="sql-dialect" className="text-xs mb-1">
+                SQL Dialect *
+              </Label>
+              <Select
+                value={config.sqlDialect || ''}
+                onValueChange={(value: 'mysql' | 'postgresql' | 'sqlserver') => 
+                  onConfigChange({ ...config, sqlDialect: value })
+                }
+                disabled={disabled}
+              >
+                <SelectTrigger id="sql-dialect">
+                  <SelectValue placeholder="Select dialect..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mysql">MySQL</SelectItem>
+                  <SelectItem value="postgresql">PostgreSQL</SelectItem>
+                  <SelectItem value="sqlserver">SQL Server</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div>
-          <Label htmlFor="lookup-username" className="text-xs mb-1">
-            Username *
-          </Label>
-          <Input
-            id="lookup-username"
-            value={config.username || ''}
-            onChange={(e) => onConfigChange({ ...config, username: e.target.value })}
-            placeholder="ECM username"
-            disabled={disabled || config.system === 'none'}
-          />
-        </div>
+            <div>
+              <Label htmlFor="sql-host" className="text-xs mb-1">
+                Host *
+              </Label>
+              <Input
+                id="sql-host"
+                value={config.sqlHost || ''}
+                onChange={(e) => onConfigChange({ ...config, sqlHost: e.target.value })}
+                placeholder="localhost or db.example.com"
+                disabled={disabled}
+              />
+            </div>
 
-        <div>
-          <Label htmlFor="lookup-password" className="text-xs mb-1">
-            Password *
-          </Label>
-          <Input
-            id="lookup-password"
-            type="password"
-            value={config.password || ''}
-            onChange={(e) => onConfigChange({ ...config, password: e.target.value })}
-            placeholder="ECM password"
-            disabled={disabled || config.system === 'none'}
-          />
-        </div>
+            <div>
+              <Label htmlFor="sql-port" className="text-xs mb-1">
+                Port
+              </Label>
+              <Input
+                id="sql-port"
+                value={config.sqlPort || ''}
+                onChange={(e) => onConfigChange({ ...config, sqlPort: e.target.value })}
+                placeholder="3306, 5432, or 1433"
+                disabled={disabled}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="sql-database" className="text-xs mb-1">
+                Database *
+              </Label>
+              <Input
+                id="sql-database"
+                value={config.sqlDatabase || ''}
+                onChange={(e) => onConfigChange({ ...config, sqlDatabase: e.target.value })}
+                placeholder="Database name"
+                disabled={disabled}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="sql-username" className="text-xs mb-1">
+                Username *
+              </Label>
+              <Input
+                id="sql-username"
+                value={config.username || ''}
+                onChange={(e) => onConfigChange({ ...config, username: e.target.value })}
+                placeholder="Database username"
+                disabled={disabled}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="sql-password" className="text-xs mb-1">
+                Password *
+              </Label>
+              <Input
+                id="sql-password"
+                type="password"
+                value={config.password || ''}
+                onChange={(e) => onConfigChange({ ...config, password: e.target.value })}
+                placeholder="Database password"
+                disabled={disabled}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="sql-table" className="text-xs mb-1">
+                Table Name
+              </Label>
+              <Input
+                id="sql-table"
+                value={config.sqlTable || ''}
+                onChange={(e) => onConfigChange({ ...config, sqlTable: e.target.value })}
+                placeholder="Table to query (optional)"
+                disabled={disabled}
+              />
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <Label htmlFor="lookup-url" className="text-xs mb-1">
+                ECM URL *
+              </Label>
+              <Input
+                id="lookup-url"
+                value={config.url || ''}
+                onChange={(e) => onConfigChange({ ...config, url: e.target.value })}
+                placeholder="https://ecm.example.com"
+                disabled={disabled || config.system === 'none'}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="lookup-username" className="text-xs mb-1">
+                Username *
+              </Label>
+              <Input
+                id="lookup-username"
+                value={config.username || ''}
+                onChange={(e) => onConfigChange({ ...config, username: e.target.value })}
+                placeholder="ECM username"
+                disabled={disabled || config.system === 'none'}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="lookup-password" className="text-xs mb-1">
+                Password *
+              </Label>
+              <Input
+                id="lookup-password"
+                type="password"
+                value={config.password || ''}
+                onChange={(e) => onConfigChange({ ...config, password: e.target.value })}
+                placeholder="ECM password"
+                disabled={disabled || config.system === 'none'}
+              />
+            </div>
+          </>
+        )}
 
         <div className="flex items-end col-span-2">
           <Button
@@ -376,7 +532,7 @@ export function ValidationLookupConfig({
         </div>
       )}
 
-      {selectedProjectId && ecmFields.length > 0 && (
+      {((selectedProjectId && ecmFields.length > 0) || (config.system === 'sql' && ecmFields.length > 0)) && (
         <Card className="p-4 bg-muted/30">
           <div className="flex items-center justify-between mb-3">
             <Label className="text-sm font-medium">Lookup Field Configuration</Label>
@@ -425,8 +581,8 @@ export function ValidationLookupConfig({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div>
-                    <Label className="text-xs">ECM Lookup Field</Label>
+                   <div>
+                    <Label className="text-xs">{config.system === 'sql' ? 'SQL Column' : 'ECM Lookup Field'}</Label>
                     <Select
                       value={lookupField.ecmField}
                       onValueChange={(value) => handleUpdateLookupField(index, { ecmField: value })}
