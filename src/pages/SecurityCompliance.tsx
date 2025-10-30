@@ -343,13 +343,13 @@ export default function SecurityCompliance() {
           <Card className="p-6 bg-muted">
             <h3 className="text-lg font-semibold mb-2">Security Contact Information</h3>
             <div className="space-y-2 text-sm">
-              <p><span className="font-semibold">Security Team:</span> security@wisdm.com</p>
-              <p><span className="font-semibold">Incident Reporting:</span> incident@wisdm.com</p>
+              <p><span className="font-semibold">Security Team:</span> support@westint.com</p>
+              <p><span className="font-semibold">Incident Reporting:</span> support@westint.com</p>
               <p><span className="font-semibold">Response Time:</span> &lt; 24 hours for critical issues</p>
             </div>
             <div className="mt-4 pt-4 border-t">
               <p className="text-xs text-muted-foreground">
-                For security vulnerabilities, please report responsibly to security@wisdm.com. Do not disclose publicly until we have had a chance to address the issue.
+                For security vulnerabilities, please report responsibly to support@westint.com. Do not disclose publicly until we have had a chance to address the issue.
               </p>
             </div>
           </Card>
