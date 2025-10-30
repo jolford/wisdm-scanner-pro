@@ -455,7 +455,15 @@ const [isExporting, setIsExporting] = useState(false);
     }
   };
 
-  const saveDocument = async (fileName: string, fileType: string, fileUrl: string, text: string, metadata: any, lineItems: any[] = [], confidence: number = 0) => {
+  const saveDocument = async (
+    fileName: string,
+    fileType: string,
+    fileUrl: string,
+    text: string,
+    metadata: any,
+    lineItems: any[] = [],
+    confidence: number = 0
+  ) => {
     // Check license capacity before saving
     if (!hasCapacity(1)) {
       toast({
@@ -471,18 +479,49 @@ const [isExporting, setIsExporting] = useState(false);
       const namingPattern = (selectedProject as any)?.metadata?.document_naming_pattern;
       const finalFileName = applyDocumentNamingPattern(namingPattern, metadata, fileName);
 
-      const { data, error } = await supabase.from('documents').insert([{
-        project_id: selectedProjectId,
-        batch_id: selectedBatchId,
-        file_name: finalFileName,
-        file_type: fileType,
-        file_url: fileUrl,
-        extracted_text: text,
-        extracted_metadata: metadata,
-        line_items: lineItems,
-        confidence_score: confidence || 0,
-        uploaded_by: user?.id,
-      }]).select().single();
+      // If we received a large inline data URL, upload it to storage and store a URL instead
+      let storedUrl = fileUrl;
+      if (typeof storedUrl === 'string' && storedUrl.startsWith('data:')) {
+        try {
+          const mimeMatch = storedUrl.match(/^data:([^;]+);/);
+          const contentType = mimeMatch?.[1] || (fileType.startsWith('image') ? 'image/png' : 'application/octet-stream');
+          const blob = await (await fetch(storedUrl)).blob();
+          const safeName = finalFileName.replace(/[^\w.\-]+/g, '_');
+          const objectPath = `${selectedBatchId}/${Date.now()}_${safeName}`;
+          const { error: uploadError } = await supabase.storage
+            .from('documents')
+            .upload(objectPath, blob, { contentType, upsert: false });
+          if (uploadError) {
+            throw new Error(`Failed to upload file: ${uploadError.message}`);
+          }
+          const { data: { publicUrl } } = supabase.storage
+            .from('documents')
+            .getPublicUrl(objectPath);
+          storedUrl = publicUrl;
+        } catch (e: any) {
+          console.error('Inline image upload failed:', e);
+          throw e;
+        }
+      }
+
+      const { data, error } = await supabase
+        .from('documents')
+        .insert([
+          {
+            project_id: selectedProjectId,
+            batch_id: selectedBatchId,
+            file_name: finalFileName,
+            file_type: fileType,
+            file_url: storedUrl,
+            extracted_text: text,
+            extracted_metadata: metadata,
+            line_items: lineItems,
+            confidence_score: confidence || 0,
+            uploaded_by: user?.id,
+          },
+        ])
+        .select()
+        .single();
 
       if (error) throw error;
 
@@ -498,7 +537,7 @@ const [isExporting, setIsExporting] = useState(false);
         }
       }
 
-try {
+      try {
         await loadQueueDocuments();
       } catch (e) {
         console.warn('loadQueueDocuments failed post-insert; will refresh later', e);
@@ -507,9 +546,9 @@ try {
       if (selectedBatchId && selectedBatch) {
         await supabase
           .from('batches')
-          .update({ 
+          .update({
             total_documents: (selectedBatch.total_documents || 0) + 1,
-            processed_documents: (selectedBatch.processed_documents || 0) + 1
+            processed_documents: (selectedBatch.processed_documents || 0) + 1,
           })
           .eq('id', selectedBatchId);
       }
