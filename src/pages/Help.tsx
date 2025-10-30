@@ -34,7 +34,8 @@ import {
   Database,
   Cloud,
   Shield,
-  Bot
+  Bot,
+  GraduationCap
 } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { AIAssistant } from '@/components/AIAssistant';
@@ -386,6 +387,10 @@ const Help = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              <Button variant="default" onClick={() => navigate('/training')} className="gap-2">
+                <GraduationCap className="h-4 w-4" />
+                Training Center
+              </Button>
               {isAdmin && (
                 <Button variant="outline" onClick={() => navigate('/admin')} className="gap-2">
                   <Settings className="h-4 w-4" />
