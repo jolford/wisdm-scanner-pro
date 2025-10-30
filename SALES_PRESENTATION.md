@@ -1,7 +1,7 @@
-# WISDM Scanner Pro - Sales & Team Presentation
+# WISDM Capture Pro - Sales & Team Presentation
 ## Executive Summary
 
-WISDM Scanner Pro is a comprehensive, enterprise-grade document processing platform that transforms manual document workflows into intelligent, automated processes. Built with modern web technologies and AI-powered OCR, it delivers exceptional value for organizations managing high-volume document processing.
+WISDM Capture Pro is a comprehensive, enterprise-grade document processing platform that transforms manual document workflows into intelligent, automated processes. Built with modern web technologies and AI-powered OCR, it delivers exceptional value for organizations managing high-volume document processing.
 
 ---
 
@@ -14,7 +14,7 @@ WISDM Scanner Pro is a comprehensive, enterprise-grade document processing platf
 - Cost tracking and budgeting for document processing services is opaque
 
 **Our Solution:**
-WISDM Scanner Pro provides an all-in-one platform that handles document capture, intelligent processing, validation, and automated export to enterprise content management systems.
+WISDM Capture Pro provides an all-in-one platform that handles document capture, intelligent processing, validation, and automated export to enterprise content management systems.
 
 ---
 
@@ -314,7 +314,7 @@ WISDM Scanner Pro provides an all-in-one platform that handles document capture,
 - Rework cost: 500 × 15 minutes × $20/hour = $2,500/month
 - **Total Monthly Cost**: $19,160
 
-**With WISDM Scanner Pro:**
+**With WISDM Capture Pro:**
 - License cost: $1,499/month (Mid-Market package)
 - Processing time: 1 minute per document × 10,000 = 167 hours
 - Labor cost: 167 hours × $20/hour = $3,340/month
@@ -350,7 +350,7 @@ WISDM Scanner Pro provides an all-in-one platform that handles document capture,
 ### 15-Minute Demo Script
 
 **Introduction (2 min)**
-- "WISDM Scanner Pro transforms document chaos into organized, searchable digital assets"
+- "WISDM Capture Pro transforms document chaos into organized, searchable digital assets"
 - Show the dashboard with real-time processing queue
 
 **Document Capture (3 min)**

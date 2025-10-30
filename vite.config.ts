@@ -17,7 +17,7 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'robots.txt'],
       manifest: {
-        name: 'WISDM Scanner Pro',
+        name: 'WISDM Capture Pro',
         short_name: 'WISDM Pro',
         description: 'Advanced AI-powered scanning application for OCR and ICR',
         theme_color: '#ffffff',

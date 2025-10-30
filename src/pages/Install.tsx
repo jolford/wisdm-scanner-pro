@@ -49,7 +49,7 @@ export default function Install() {
       setIsInstalled(true);
       toast({
         title: 'App Installed!',
-        description: 'WISDM Scanner Pro has been added to your home screen.',
+        description: 'WISDM Capture Pro has been added to your home screen.',
       });
     }
     
@@ -63,7 +63,7 @@ export default function Install() {
           <div className="flex justify-center mb-4">
             <img src={wisdmLogo} alt="WISDM Logo" className="h-20 w-auto" />
           </div>
-          <CardTitle className="text-2xl md:text-3xl">Install WISDM Scanner Pro</CardTitle>
+          <CardTitle className="text-2xl md:text-3xl">Install WISDM Capture Pro</CardTitle>
           <CardDescription className="text-base">
             Get the best experience with our mobile app
           </CardDescription>
@@ -79,7 +79,7 @@ export default function Install() {
               <div>
                 <h3 className="text-xl font-semibold mb-2">Already Installed!</h3>
                 <p className="text-muted-foreground">
-                  WISDM Scanner Pro is installed on your device.
+                  WISDM Capture Pro is installed on your device.
                 </p>
               </div>
             </div>

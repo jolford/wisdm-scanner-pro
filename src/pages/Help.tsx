@@ -150,7 +150,7 @@ const Help = () => {
       questions: [
         {
           q: 'What file formats are supported?',
-          a: 'WISDM Scanner Pro supports PDF, JPG, and PNG files. Multi-page PDFs are processed automatically, with each page treated as a separate document.'
+          a: 'WISDM Capture Pro supports PDF, JPG, and PNG files. Multi-page PDFs are processed automatically, with each page treated as a separate document.'
         },
         {
           q: 'How does the license system work?',
@@ -600,7 +600,7 @@ const Help = () => {
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />
-                    <span><strong>Context-aware</strong> - Understands WISDM Scanner Pro features and workflows</span>
+                    <span><strong>Context-aware</strong> - Understands WISDM Capture Pro features and workflows</span>
                   </li>
                   <li className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600 mt-0.5 flex-shrink-0" />

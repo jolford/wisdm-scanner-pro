@@ -21,7 +21,7 @@ export default function SecurityPolicy() {
           <div>
             <h2 className="text-2xl font-semibold mb-3">1. Purpose and Scope</h2>
             <p className="mb-4">
-              This Information Security Policy establishes the framework for protecting WISDM Scanner Pro's information
+              This Information Security Policy establishes the framework for protecting WISDM Capture Pro's information
               assets, including customer data, business information, and system infrastructure.
             </p>
             <p>

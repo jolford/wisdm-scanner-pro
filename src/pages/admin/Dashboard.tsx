@@ -1,7 +1,7 @@
 /**
  * Admin Dashboard Component
  * 
- * Main administrative dashboard that provides an overview of the entire WISDM Scanner Pro system.
+ * Main administrative dashboard that provides an overview of the entire WISDM Capture Pro system.
  * Displays key metrics, statistics, and quick action buttons for system administrators.
  * 
  * Features:

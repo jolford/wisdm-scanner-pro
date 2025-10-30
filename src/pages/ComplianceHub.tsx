@@ -105,7 +105,7 @@ export default function ComplianceHub() {
             <div>
               <h3 className="text-lg font-semibold mb-2">Our Compliance Status</h3>
               <p className="text-muted-foreground mb-4">
-                WISDM Scanner Pro has implemented comprehensive security controls aligned with SOC 2 requirements. While
+                WISDM Capture Pro has implemented comprehensive security controls aligned with SOC 2 requirements. While
                 formal certification requires an independent audit, our platform includes:
               </p>
               <ul className="list-disc pl-6 space-y-2 text-muted-foreground">

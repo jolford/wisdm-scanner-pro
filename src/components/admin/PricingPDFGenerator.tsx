@@ -31,7 +31,7 @@ export function PricingPDFGenerator() {
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(24);
     pdf.setTextColor(31, 41, 55);
-    pdf.text('WISDM Scanner Pro', pageWidth / 2, 45, { align: 'center' });
+    pdf.text('WISDM Capture Pro', pageWidth / 2, 45, { align: 'center' });
     
     pdf.setFontSize(16);
     pdf.setTextColor(107, 114, 128);
@@ -228,7 +228,7 @@ export function PricingPDFGenerator() {
     
     pdf.setFontSize(14);
     pdf.setTextColor(59, 130, 246);
-    pdf.text('Why Choose WISDM Scanner Pro?', 25, yPos + 7);
+    pdf.text('Why Choose WISDM Capture Pro?', 25, yPos + 7);
     
     pdf.setFontSize(10);
     pdf.setTextColor(75, 85, 99);
@@ -273,7 +273,7 @@ export function PricingPDFGenerator() {
         <div className="p-4 bg-muted/50 rounded-lg">
           <h4 className="font-medium mb-2">Document Includes:</h4>
           <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• WISDM Scanner Pro branding and logo</li>
+            <li>• WISDM Capture Pro branding and logo</li>
             <li>• 4 pricing tiers (Starter, Professional, Business, Enterprise)</li>
             <li>• Add-ons and annual contract incentives</li>
             <li>• Key competitive advantages</li>

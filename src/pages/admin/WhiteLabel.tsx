@@ -27,7 +27,7 @@ interface WhiteLabelConfig {
 export default function WhiteLabel() {
   const { toast } = useToast();
   const [config, setConfig] = useState<WhiteLabelConfig>({
-    companyName: 'WISDM Scanner Pro',
+    companyName: 'WISDM Capture Pro',
     companyLogo: '/wisdm-logo.png',
     primaryColor: '#1a56db',
     secondaryColor: '#7c3aed',

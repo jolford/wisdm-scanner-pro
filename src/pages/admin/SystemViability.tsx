@@ -240,7 +240,7 @@ const SystemViability = () => {
               </div>
               <div>
                 <div className="flex justify-between mb-2">
-                  <span className="text-sm text-muted-foreground">WISDM Scanner Pro</span>
+                  <span className="text-sm text-muted-foreground">WISDM Capture Pro</span>
                   <span className="font-bold text-green-600">{formatTime(metrics.avgProcessingTimeSeconds)}</span>
                 </div>
                 <Progress 

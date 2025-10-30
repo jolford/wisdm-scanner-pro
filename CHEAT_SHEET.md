@@ -1,8 +1,8 @@
-# WISDM Scanner Pro - Application Cheat Sheet
+# WISDM Capture Pro - Application Cheat Sheet
 
 ## What is it?
 
-**WISDM Scanner Pro** is a professional document scanning and OCR (Optical Character Recognition) system designed for high-volume document processing with validation workflows.
+**WISDM Capture Pro** is a professional document scanning and OCR (Optical Character Recognition) system designed for high-volume document processing with validation workflows.
 
 ## Key Features
 

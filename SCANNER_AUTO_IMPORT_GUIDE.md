@@ -2,7 +2,7 @@
 
 ## Overview
 
-The WISDM Scanner Pro now includes an **automatic folder monitoring system** that allows network scanners to save files directly to a watched folder, with automatic import into the system every 5 minutes.
+The WISDM Capture Pro now includes an **automatic folder monitoring system** that allows network scanners to save files directly to a watched folder, with automatic import into the system every 5 minutes.
 
 ## How It Works
 
@@ -194,4 +194,4 @@ For issues or questions:
 
 **Version**: 1.0  
 **Last Updated**: January 2025  
-**Requires**: WISDM Scanner Pro v2.0+
+**Requires**: WISDM Capture Pro v2.0+

@@ -11,7 +11,7 @@ import wisdmLogo from "@/assets/wisdm-logo.png";
 
 const slides = [
   {
-    title: "WISDM Scanner Pro",
+    title: "WISDM Capture Pro",
     subtitle: "Enterprise Document Processing Platform",
     image: heroSlide,
     content: (
@@ -439,7 +439,7 @@ const slides = [
             </div>
           </div>
           <div className="space-y-4">
-            <h3 className="text-xl font-bold text-primary">With WISDM Scanner Pro</h3>
+            <h3 className="text-xl font-bold text-primary">With WISDM Capture Pro</h3>
             <div className="space-y-3 text-sm">
               <div className="flex justify-between p-3 border rounded">
                 <span>Validation staff (1 FTE)</span>
@@ -545,7 +545,7 @@ const slides = [
         <div className="text-center space-y-4">
           <h3 className="text-3xl font-bold text-foreground">Let's Get Started</h3>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Schedule a personalized demo to see how WISDM Scanner Pro can transform your document
+            Schedule a personalized demo to see how WISDM Capture Pro can transform your document
             processing workflow and deliver immediate ROI.
           </p>
         </div>
