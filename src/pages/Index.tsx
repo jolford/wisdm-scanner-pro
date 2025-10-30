@@ -169,24 +169,42 @@ const Index = () => {
         
         if (file.type === 'application/pdf') {
           // For PDFs, upload and queue without waiting
+          console.log(`Processing PDF: ${file.name}`);
           await processPdfNoWait(file);
         } else if (file.type.startsWith('image/')) {
           // For images, upload and queue without waiting
+          console.log(`Processing image: ${file.name}`);
           const imageData = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
-            reader.onload = (e) => resolve(e.target?.result as string);
-            reader.onerror = reject;
+            reader.onload = (e) => {
+              console.log(`Image loaded: ${file.name}, size: ${e.target?.result?.toString().length} chars`);
+              resolve(e.target?.result as string);
+            };
+            reader.onerror = (e) => {
+              console.error(`Failed to read file: ${file.name}`, e);
+              reject(e);
+            };
             reader.readAsDataURL(file);
           });
           
           await handleScanCompleteNoWait(imageData, file.name);
+        } else {
+          console.warn(`Unsupported file type: ${file.type} for file: ${file.name}`);
+          throw new Error(`Unsupported file type: ${file.type}`);
         }
         
         successCount++;
-        console.log(`Successfully queued: ${file.name}`);
+        console.log(`✓ Successfully queued: ${file.name} (${successCount}/${files.length})`);
       } catch (error: any) {
         errorCount++;
-        console.error(`Error processing file ${file.name}:`, error);
+        console.error(`✗ Error processing file ${file.name}:`, error);
+        console.error('Error details:', { 
+          message: error.message, 
+          stack: error.stack,
+          fileType: file.type,
+          fileName: file.name,
+          fileSize: file.size
+        });
       }
     });
 
@@ -250,18 +268,28 @@ const Index = () => {
 
   // Non-blocking version that just queues the document for processing
   const handleScanCompleteNoWait = async (imageUrl: string, fileName: string) => {
+    console.log(`Starting handleScanCompleteNoWait for: ${fileName}`);
+    
     const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
       ? selectedProject?.metadata?.table_extraction_config?.fields || []
       : [];
     
     // Compress image before uploading
+    console.log(`Compressing image: ${fileName}`);
     const compressedImage = await compressImage(imageUrl);
+    console.log(`Image compressed: ${fileName}`);
     
     // Create document with pending status
+    console.log(`Saving document: ${fileName}`);
     const doc = await saveDocument(fileName, 'image', compressedImage, '', {}, []);
-    if (!doc) throw new Error('Failed to create document');
+    if (!doc) {
+      console.error(`Failed to save document: ${fileName}`);
+      throw new Error('Failed to create document');
+    }
+    console.log(`Document saved: ${fileName}, ID: ${doc.id}`);
 
     // Create job for OCR processing
+    console.log(`Creating OCR job for document: ${doc.id}`);
     const { error: jobError } = await supabase.from('jobs').insert([{
       job_type: 'ocr_document',
       customer_id: selectedProject?.customer_id || null,
@@ -277,8 +305,11 @@ const Index = () => {
       },
     }]);
 
-    if (jobError) throw jobError;
-    console.log(`Created OCR job for document ${doc.id}`);
+    if (jobError) {
+      console.error(`Failed to create OCR job for document ${doc.id}:`, jobError);
+      throw jobError;
+    }
+    console.log(`✓ OCR job created for document ${doc.id}`);
   };
 
   // Non-blocking PDF processor
