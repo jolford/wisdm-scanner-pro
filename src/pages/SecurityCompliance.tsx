@@ -38,10 +38,16 @@ export default function SecurityCompliance() {
       });
     };
 
+    // Add logo
+    const logoImg = new Image();
+    logoImg.src = wisdmLogo;
+    doc.addImage(logoImg, "PNG", margin, yPos, 30, 10);
+    yPos += 15;
+
     // Title
     doc.setFontSize(22);
     doc.setFont("helvetica", "bold");
-    doc.text("WisdM Capture Pro", pageWidth / 2, yPos, { align: "center" });
+    doc.text("WISDM Capture Pro", pageWidth / 2, yPos, { align: "center" });
     yPos += 10;
     doc.setFontSize(18);
     doc.text("Security Compliance & Standards", pageWidth / 2, yPos, { align: "center" });
