@@ -132,6 +132,16 @@ const Index = () => {
   };
 
   const handleMultipleFiles = async (files: File[]) => {
+    if (!user) {
+      toast({
+        title: 'Authentication Required',
+        description: 'Please sign in to upload documents.',
+        variant: 'destructive',
+      });
+      navigate('/auth');
+      return;
+    }
+
     if (!selectedProjectId || !selectedBatchId) {
       toast({
         title: 'Select Project and Batch',
@@ -141,44 +151,132 @@ const Index = () => {
       return;
     }
 
+    console.log(`Starting batch upload of ${files.length} files`);
     toast({
-      title: 'Processing Multiple Files',
-      description: `Processing ${files.length} files...`,
+      title: 'Uploading Files',
+      description: `Uploading ${files.length} file(s)...`,
     });
 
     setIsProcessing(true);
+    let successCount = 0;
+    let errorCount = 0;
     
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
+    // Process all files in parallel for faster upload
+    const uploadPromises = files.map(async (file) => {
       try {
+        console.log(`Processing file: ${file.name}`);
+        
         if (file.type === 'application/pdf') {
-          await processPdf(file);
+          // For PDFs, upload and queue without waiting
+          await processPdfNoWait(file);
         } else if (file.type.startsWith('image/')) {
-          const reader = new FileReader();
-          await new Promise((resolve, reject) => {
-            reader.onload = async (e) => {
-              try {
-                const imageData = e.target?.result as string;
-                await handleScanComplete('', imageData, file.name);
-                resolve(null);
-              } catch (error) {
-                reject(error);
-              }
-            };
+          // For images, upload and queue without waiting
+          const imageData = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve(e.target?.result as string);
             reader.onerror = reject;
             reader.readAsDataURL(file);
           });
+          
+          await handleScanCompleteNoWait(imageData, file.name);
         }
-      } catch (error) {
+        
+        successCount++;
+        console.log(`Successfully queued: ${file.name}`);
+      } catch (error: any) {
+        errorCount++;
         console.error(`Error processing file ${file.name}:`, error);
       }
-    }
+    });
+
+    await Promise.all(uploadPromises);
     
     setIsProcessing(false);
-    toast({
-      title: 'Batch Complete',
-      description: `Successfully processed ${files.length} files`,
-    });
+    
+    if (errorCount === 0) {
+      toast({
+        title: 'Upload Complete',
+        description: `${successCount} file(s) uploaded. Processing in background - check the Validation or Queue tab.`,
+      });
+    } else {
+      toast({
+        title: 'Upload Completed with Errors',
+        description: `${successCount} succeeded, ${errorCount} failed. Check console for details.`,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Non-blocking version that just queues the document for processing
+  const handleScanCompleteNoWait = async (imageUrl: string, fileName: string) => {
+    const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
+      ? selectedProject?.metadata?.table_extraction_config?.fields || []
+      : [];
+    
+    // Create document with pending status
+    const doc = await saveDocument(fileName, 'image', imageUrl, '', {}, []);
+    if (!doc) throw new Error('Failed to create document');
+
+    // Create job for OCR processing
+    const { error: jobError } = await supabase.from('jobs').insert([{
+      job_type: 'ocr_document',
+      customer_id: selectedProject?.customer_id || null,
+      user_id: user?.id,
+      priority: 'normal',
+      payload: {
+        documentId: doc.id,
+        imageData: imageUrl,
+        isPdf: false,
+        extractionFields: selectedProject?.extraction_fields || [],
+        tableExtractionFields: tableFields,
+        enableCheckScanning: selectedProject?.enable_check_scanning || false,
+      },
+    }]);
+
+    if (jobError) throw jobError;
+    console.log(`Created OCR job for document ${doc.id}`);
+  };
+
+  // Non-blocking PDF processor
+  const processPdfNoWait = async (file: File) => {
+    // Upload PDF to storage first
+    const fileName = `${selectedBatchId}/${Date.now()}_${file.name}`;
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('documents')
+      .upload(fileName, file, { contentType: 'application/pdf' });
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('documents')
+      .getPublicUrl(fileName);
+
+    // Create document with pending status
+    const doc = await saveDocument(file.name, 'application/pdf', publicUrl, '', {}, []);
+    if (!doc) throw new Error('Failed to create document');
+
+    // Create job for OCR processing
+    const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
+      ? selectedProject?.metadata?.table_extraction_config?.fields || []
+      : [];
+
+    const { error: jobError } = await supabase.from('jobs').insert([{
+      job_type: 'ocr_document',
+      customer_id: selectedProject?.customer_id || null,
+      user_id: user?.id,
+      priority: 'normal',
+      payload: {
+        documentId: doc.id,
+        fileUrl: publicUrl,
+        isPdf: true,
+        extractionFields: selectedProject?.extraction_fields || [],
+        tableExtractionFields: tableFields,
+        enableCheckScanning: selectedProject?.enable_check_scanning || false,
+      },
+    }]);
+
+    if (jobError) throw jobError;
+    console.log(`Created OCR job for PDF ${doc.id}`);
   };
 
   const processPdf = async (file: File) => {
