@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Shield, Lock, Database, Server, CheckCircle2, AlertCircle } from "lucide-react";
+import wisdmLogo from "@/assets/wisdm-logo.png";
 
 export default function SecurityCompliance() {
   const navigate = useNavigate();
@@ -15,7 +16,10 @@ export default function SecurityCompliance() {
 
       <div className="max-w-5xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-4">Security Compliance & Standards</h1>
+          <div className="flex items-center gap-4 mb-4">
+            <img src={wisdmLogo} alt="WisdM Logo" className="h-12 w-auto" />
+            <h1 className="text-4xl font-bold">Security Compliance & Standards</h1>
+          </div>
           <p className="text-lg text-muted-foreground">
             Comprehensive overview of security compliance measures, standards, and best practices implemented across our document management system.
           </p>
