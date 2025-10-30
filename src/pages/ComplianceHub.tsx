@@ -1,12 +1,18 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, FileText, Shield, AlertTriangle, Database } from "lucide-react";
+import { ArrowLeft, FileText, Shield, AlertTriangle, Database, FileCheck } from "lucide-react";
 
 export default function ComplianceHub() {
   const navigate = useNavigate();
 
   const documents = [
+    {
+      title: "Security Compliance & Standards",
+      description: "Comprehensive security compliance measures and standards documentation",
+      icon: FileCheck,
+      path: "/security-compliance",
+    },
     {
       title: "Privacy Policy",
       description: "How we collect, use, and protect personal information",

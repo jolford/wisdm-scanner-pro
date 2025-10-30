@@ -51,6 +51,7 @@ import SecurityPolicy from "./pages/SecurityPolicy";
 import IncidentResponse from "./pages/IncidentResponse";
 import BusinessContinuity from "./pages/BusinessContinuity";
 import ComplianceHub from "./pages/ComplianceHub";
+import SecurityCompliance from "./pages/SecurityCompliance";
 import ValidationAnalytics from "./pages/admin/ValidationAnalytics";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
@@ -176,6 +177,7 @@ const App = () => {
             <Route path="/incident-response" element={<IncidentResponse />} />
             <Route path="/business-continuity" element={<BusinessContinuity />} />
             <Route path="/compliance" element={<ComplianceHub />} />
+            <Route path="/security-compliance" element={<SecurityCompliance />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
