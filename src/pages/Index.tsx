@@ -45,10 +45,26 @@ const Index = () => {
   const showValidation = !!currentDocumentId;
 
   useEffect(() => {
+    console.log('Auth state:', { authLoading, user: user?.id, hasUser: !!user });
     if (!authLoading && !user) {
+      console.log('Redirecting to auth - no user found');
       navigate('/auth');
     }
   }, [authLoading, user, navigate]);
+
+  // Reset processing state if user becomes invalid
+  useEffect(() => {
+    if (!authLoading && !user && isProcessing) {
+      console.log('Resetting processing state due to invalid session');
+      setIsProcessing(false);
+      setCurrentDocumentId(null);
+      toast({
+        title: 'Session Expired',
+        description: 'Please sign in again to continue.',
+        variant: 'destructive',
+      });
+    }
+  }, [authLoading, user, isProcessing]);
 
   const saveDocument = async (fileName: string, fileType: string, fileUrl: string, text: string, metadata: any, lineItems: any[] = []) => {
     // Check license capacity before saving
@@ -324,15 +340,29 @@ const Index = () => {
   };
 
   const handleScanComplete = async (text: string, imageUrl: string, fileName = 'scan.jpg') => {
+    if (!user) {
+      console.error('No user authenticated');
+      toast({
+        title: 'Authentication Required',
+        description: 'Please sign in to upload documents.',
+        variant: 'destructive',
+      });
+      setIsProcessing(false);
+      navigate('/auth');
+      return;
+    }
+
     if (!selectedProjectId || !selectedBatchId) {
       toast({
         title: 'Select Project and Batch',
         description: 'Please select both a project and batch before scanning',
         variant: 'destructive',
       });
+      setIsProcessing(false);
       return;
     }
 
+    console.log('Starting upload:', { user: user.id, projectId: selectedProjectId, batchId: selectedBatchId, fileName });
     setCurrentImage(imageUrl);
     setCurrentFileName(fileName);
     setIsProcessing(true);
@@ -379,6 +409,7 @@ const Index = () => {
       const maxAttempts = 30; // 30 seconds max
       const pollInterval = setInterval(async () => {
         attempts++;
+        console.log(`Polling attempt ${attempts}/${maxAttempts} for document ${doc.id}`);
         
         const { data: docData, error: docError } = await supabase
           .from('documents')
@@ -386,15 +417,26 @@ const Index = () => {
           .eq('id', doc.id)
           .single();
 
-        if (docError || attempts >= maxAttempts) {
+        if (docError) {
+          console.error('Error polling document:', docError);
           clearInterval(pollInterval);
-          if (attempts >= maxAttempts) {
-            toast({
-              title: 'OCR Timeout',
-              description: 'Processing is taking longer than expected. Check the Queue tab for status.',
-              variant: 'destructive',
-            });
-          }
+          toast({
+            title: 'Processing Error',
+            description: 'Failed to check document status. Check the Queue tab.',
+            variant: 'destructive',
+          });
+          setIsProcessing(false);
+          return;
+        }
+
+        if (attempts >= maxAttempts) {
+          console.warn('Polling timeout reached');
+          clearInterval(pollInterval);
+          toast({
+            title: 'OCR Timeout',
+            description: 'Processing is taking longer than expected. Check the Queue tab for status.',
+            variant: 'destructive',
+          });
           setIsProcessing(false);
           return;
         }
