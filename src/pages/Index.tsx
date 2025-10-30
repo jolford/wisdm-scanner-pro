@@ -15,6 +15,7 @@ import { LicenseWarning } from '@/components/LicenseWarning';
 import { useLicense } from '@/hooks/use-license';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { applyDocumentNamingPattern } from '@/lib/document-naming';
+import imageCompression from 'browser-image-compression';
 
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
@@ -207,14 +208,57 @@ const Index = () => {
     }
   };
 
+  // Compress image for faster upload and processing
+  const compressImage = async (imageDataUrl: string): Promise<string> => {
+    try {
+      // Convert data URL to blob
+      const response = await fetch(imageDataUrl);
+      const blob = await response.blob();
+      
+      // Skip compression if already small (< 500KB)
+      if (blob.size < 500 * 1024) {
+        console.log('Image already small, skipping compression');
+        return imageDataUrl;
+      }
+
+      const originalSize = (blob.size / 1024 / 1024).toFixed(2);
+      console.log(`Compressing image (${originalSize}MB)...`);
+
+      // Compress image
+      const options = {
+        maxSizeMB: 1, // Max 1MB
+        maxWidthOrHeight: 2048, // Max dimension
+        useWebWorker: true,
+        fileType: 'image/jpeg' as const,
+      };
+      
+      const compressedBlob = await imageCompression(blob as File, options);
+      const compressedSize = (compressedBlob.size / 1024 / 1024).toFixed(2);
+      console.log(`Compressed: ${originalSize}MB -> ${compressedSize}MB`);
+      
+      // Convert back to data URL
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(compressedBlob);
+      });
+    } catch (error) {
+      console.warn('Image compression failed, using original:', error);
+      return imageDataUrl; // Fallback to original
+    }
+  };
+
   // Non-blocking version that just queues the document for processing
   const handleScanCompleteNoWait = async (imageUrl: string, fileName: string) => {
     const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
       ? selectedProject?.metadata?.table_extraction_config?.fields || []
       : [];
     
+    // Compress image before uploading
+    const compressedImage = await compressImage(imageUrl);
+    
     // Create document with pending status
-    const doc = await saveDocument(fileName, 'image', imageUrl, '', {}, []);
+    const doc = await saveDocument(fileName, 'image', compressedImage, '', {}, []);
     if (!doc) throw new Error('Failed to create document');
 
     // Create job for OCR processing
@@ -225,7 +269,7 @@ const Index = () => {
       priority: 'normal',
       payload: {
         documentId: doc.id,
-        imageData: imageUrl,
+        imageData: compressedImage,
         isPdf: false,
         extractionFields: selectedProject?.extraction_fields || [],
         tableExtractionFields: tableFields,
@@ -461,7 +505,11 @@ const Index = () => {
     }
 
     console.log('Starting upload:', { user: user.id, projectId: selectedProjectId, batchId: selectedBatchId, fileName });
-    setCurrentImage(imageUrl);
+    
+    // Compress image before uploading
+    const compressedImage = await compressImage(imageUrl);
+    
+    setCurrentImage(compressedImage);
     setCurrentFileName(fileName);
     setIsProcessing(true);
 
@@ -471,7 +519,7 @@ const Index = () => {
         : [];
       
       // Create document first with pending status
-      const doc = await saveDocument(fileName, 'image', imageUrl, '', {}, []);
+      const doc = await saveDocument(fileName, 'image', compressedImage, '', {}, []);
       if (!doc) throw new Error('Failed to create document');
       setCurrentDocumentId(doc.id);
 
@@ -487,7 +535,7 @@ const Index = () => {
         priority: 'normal',
         payload: {
           documentId: doc.id,
-          imageData: imageUrl,
+          imageData: compressedImage,
           isPdf: false,
           extractionFields: selectedProject?.extraction_fields || [],
           tableExtractionFields: tableFields,
