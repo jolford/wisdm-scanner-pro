@@ -290,3 +290,14 @@ All colors MUST be HSL.
     animation: progress 1.5s ease-in-out infinite;
   }
 }
+
+/* Print styles for exact PDF output */
+@media print {
+  @page { size: A4; margin: 12mm; }
+  :root { color-scheme: light only; }
+  body { background: white !important; color: black !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .no-print { display: none !important; }
+  #pdf-content { max-width: 100% !important; padding: 0 !important; }
+  * { box-shadow: none !important; }
+}
+

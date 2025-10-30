@@ -77,9 +77,17 @@ export default function SecurityCompliance() {
     }
   };
 
+  const handlePrint = () => {
+    const originalTitle = document.title;
+    document.title = "WISDM-Security-Compliance-Standards";
+    window.print();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 500);
+  };
   return (
     <div className="min-h-screen bg-background p-8">
-      <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6">
+      <Button variant="ghost" onClick={() => navigate(-1)} className="mb-6 no-print">
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back
       </Button>
@@ -94,10 +102,15 @@ export default function SecurityCompliance() {
                 <p className="text-lg text-muted-foreground">Security Compliance & Standards</p>
               </div>
             </div>
-            <Button onClick={generatePDF} className="flex items-center gap-2">
-              <Download className="h-4 w-4" />
-              Download PDF
-            </Button>
+            <div className="flex items-center gap-2 no-print">
+              <Button variant="outline" onClick={handlePrint} className="flex items-center gap-2">
+                Print to PDF
+              </Button>
+              <Button onClick={generatePDF} className="flex items-center gap-2">
+                <Download className="h-4 w-4" />
+                Download PDF
+              </Button>
+            </div>
           </div>
           <p className="text-lg text-muted-foreground">
             Comprehensive overview of security compliance measures, standards, and best practices implemented across our document management system.
