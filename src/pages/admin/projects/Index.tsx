@@ -157,7 +157,7 @@ const Projects = () => {
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-1">
-                    <h3 className="font-semibold truncate">{project.name}</h3>
+                    <h3 className="text-base font-semibold truncate">{project.name}</h3>
                     <Badge variant="outline" className="shrink-0">{getCustomerName(project.customer_id)}</Badge>
                     <Badge className="shrink-0">{(project.extraction_fields as any[])?.length || 0} fields</Badge>
                   </div>
@@ -189,7 +189,7 @@ const Projects = () => {
           <Card key={project.id} className="group p-5 bg-gradient-to-br from-card to-card/80 shadow-sm hover:shadow-md transition-all border-l-4 border-l-primary/50 hover:border-l-primary">
             <div className="mb-3">
               <div className="flex items-start justify-between gap-2 mb-2">
-                <h3 className="text-lg font-semibold group-hover:text-primary transition-colors line-clamp-1">
+                <h3 className="text-base font-semibold group-hover:text-primary transition-colors line-clamp-1">
                   {project.name}
                 </h3>
                 <Button
