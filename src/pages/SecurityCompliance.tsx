@@ -1,11 +1,145 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Shield, Lock, Database, Server, CheckCircle2, AlertCircle } from "lucide-react";
+import { ArrowLeft, Shield, Lock, Database, Server, CheckCircle2, AlertCircle, Download } from "lucide-react";
 import wisdmLogo from "@/assets/wisdm-logo.png";
+import jsPDF from "jspdf";
 
 export default function SecurityCompliance() {
   const navigate = useNavigate();
+
+  const generatePDF = () => {
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 20;
+    const maxWidth = pageWidth - 2 * margin;
+    let yPos = margin;
+
+    // Helper to add new page if needed
+    const checkPageBreak = (requiredSpace: number) => {
+      if (yPos + requiredSpace > pageHeight - margin) {
+        doc.addPage();
+        yPos = margin;
+        return true;
+      }
+      return false;
+    };
+
+    // Helper to add text with wrapping
+    const addWrappedText = (text: string, fontSize: number, isBold: boolean = false) => {
+      doc.setFontSize(fontSize);
+      doc.setFont("helvetica", isBold ? "bold" : "normal");
+      const lines = doc.splitTextToSize(text, maxWidth);
+      lines.forEach((line: string) => {
+        checkPageBreak(fontSize / 2);
+        doc.text(line, margin, yPos);
+        yPos += fontSize / 2;
+      });
+    };
+
+    // Title
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("WisdM Capture Pro", pageWidth / 2, yPos, { align: "center" });
+    yPos += 10;
+    doc.setFontSize(18);
+    doc.text("Security Compliance & Standards", pageWidth / 2, yPos, { align: "center" });
+    yPos += 15;
+
+    // Metadata
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("Version 1.0 | Last Updated: October 30, 2025", pageWidth / 2, yPos, { align: "center" });
+    yPos += 15;
+
+    // Executive Summary
+    addWrappedText("Executive Summary", 14, true);
+    yPos += 5;
+    addWrappedText("This document provides a comprehensive overview of the security compliance measures, standards, and best practices implemented across our document management system. Our platform employs defense-in-depth security architecture with multiple layers of protection at the database, application, and infrastructure levels.", 10);
+    yPos += 10;
+
+    // Database Security
+    checkPageBreak(20);
+    addWrappedText("Database Security", 14, true);
+    yPos += 5;
+    addWrappedText("Row-Level Security (RLS): PostgreSQL database enforces Row-Level Security on all sensitive tables, ensuring data access is controlled at the database level rather than relying on application logic.", 10);
+    yPos += 5;
+    addWrappedText("Security Definer Functions: All authorization checks utilize SECURITY DEFINER functions including is_admin_jwt(), is_admin_enhanced(), has_role(), and is_system_admin().", 10);
+    yPos += 5;
+    addWrappedText("Role-Based Access Control: Roles stored in dedicated user_roles table with hierarchy: system_admin (full access), admin (tenant-scoped), user (limited permissions).", 10);
+    yPos += 10;
+
+    // Application Security
+    checkPageBreak(20);
+    addWrappedText("Application Security", 14, true);
+    yPos += 5;
+    addWrappedText("Defense-in-Depth Authorization: Three-layer approach - Layer 1: Database RLS (primary), Layer 2: Edge Functions (secondary), Layer 3: Client UI (UX only).", 10);
+    yPos += 5;
+    addWrappedText("Authentication: Email/password with bcrypt hashing, MFA/TOTP support, Google OAuth, JWT session management, rate limiting.", 10);
+    yPos += 5;
+    addWrappedText("Input Validation: Client-side with Zod schemas, server-side validation in edge functions, SQL injection prevention via parameterized queries.", 10);
+    yPos += 10;
+
+    // Infrastructure Security
+    checkPageBreak(20);
+    addWrappedText("Infrastructure Security", 14, true);
+    yPos += 5;
+    addWrappedText("Encryption: AES-256 for stored data, TLS 1.3 for connections, encrypted backups, encrypted API keys.", 10);
+    yPos += 5;
+    addWrappedText("Storage Security: Private buckets with RLS policies ensuring user-specific file access.", 10);
+    yPos += 5;
+    addWrappedText("Network Security: TLS 1.3 encryption, HTTPS-only, CORS policies, rate limiting, DDoS protection.", 10);
+    yPos += 10;
+
+    // Compliance Standards
+    checkPageBreak(20);
+    addWrappedText("Compliance Standards", 14, true);
+    yPos += 5;
+    addWrappedText("SOC 2 Readiness: Implements Security (CC6), Availability (A1), Confidentiality (C1), and Privacy (P1) criteria.", 10);
+    yPos += 5;
+    addWrappedText("GDPR Compliance: Full data subject rights implementation including access, erasure, rectification, data processing agreement, cookie consent.", 10);
+    yPos += 10;
+
+    // Audit & Monitoring
+    checkPageBreak(20);
+    addWrappedText("Audit & Monitoring", 14, true);
+    yPos += 5;
+    addWrappedText("Comprehensive audit logging with 90-day retention: user authentication, admin actions, document access, field changes, exports, configuration changes.", 10);
+    yPos += 5;
+    addWrappedText("Error Logging: All errors logged with PII sanitization and automatic redaction.", 10);
+    yPos += 10;
+
+    // Business Continuity
+    checkPageBreak(20);
+    addWrappedText("Business Continuity", 14, true);
+    yPos += 5;
+    addWrappedText("Backup: Continuous point-in-time recovery, 7-day standard / 30-day critical retention", 10);
+    yPos += 5;
+    addWrappedText("Recovery: RTO < 4 hours, RPO < 15 minutes", 10);
+    yPos += 15;
+
+    // Contact Information
+    checkPageBreak(20);
+    addWrappedText("Security Contact Information", 14, true);
+    yPos += 5;
+    doc.setFontSize(10);
+    doc.text("Security Team: support@westint.com", margin, yPos);
+    yPos += 6;
+    doc.text("Incident Reporting: support@westint.com", margin, yPos);
+    yPos += 6;
+    doc.text("Response Time: < 24 hours for critical issues", margin, yPos);
+    yPos += 10;
+    doc.setFontSize(8);
+    addWrappedText("For security vulnerabilities, please report responsibly to support@westint.com. Do not disclose publicly until we have had a chance to address the issue.", 8);
+
+    // Footer
+    doc.setFontSize(8);
+    doc.text("Document Classification: Internal Use | Review Frequency: Quarterly", pageWidth / 2, pageHeight - 10, { align: "center" });
+
+    // Save PDF
+    doc.save("WISDM-Security-Compliance-Standards.pdf");
+  };
 
   return (
     <div className="min-h-screen bg-background p-8">
@@ -16,9 +150,15 @@ export default function SecurityCompliance() {
 
       <div className="max-w-5xl mx-auto">
         <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <img src={wisdmLogo} alt="WisdM Logo" className="h-12 w-auto" />
-            <h1 className="text-4xl font-bold">Security Compliance & Standards</h1>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-4">
+              <img src={wisdmLogo} alt="WisdM Logo" className="h-12 w-auto" />
+              <h1 className="text-4xl font-bold">Security Compliance & Standards</h1>
+            </div>
+            <Button onClick={generatePDF} className="flex items-center gap-2">
+              <Download className="h-4 w-4" />
+              Download PDF
+            </Button>
           </div>
           <p className="text-lg text-muted-foreground">
             Comprehensive overview of security compliance measures, standards, and best practices implemented across our document management system.
