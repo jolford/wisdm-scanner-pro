@@ -70,3 +70,9 @@ verify_jwt = true
 
 [functions.smart-validation]
 verify_jwt = true
+
+[functions.parse-excel-columns]
+verify_jwt = true
+
+[functions.validate-excel-lookup]
+verify_jwt = true

@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Check, X, Plus, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -16,7 +17,7 @@ export interface ValidationLookupField {
 
 export interface ValidationLookupConfig {
   enabled: boolean;
-  system: 'filebound' | 'docmgt' | 'sql' | 'none';
+  system: 'filebound' | 'docmgt' | 'sql' | 'excel' | 'none';
   url?: string;
   username?: string;
   password?: string;
@@ -29,6 +30,10 @@ export interface ValidationLookupConfig {
   sqlDatabase?: string;
   sqlTable?: string;
   sqlDialect?: 'mysql' | 'postgresql' | 'sqlserver';
+  // Excel-specific fields
+  excelFileUrl?: string;
+  excelFileName?: string;
+  excelKeyColumn?: string;
 }
 
 interface ECMProject {
@@ -63,10 +68,22 @@ export function ValidationLookupConfig({
   const [allProjectFields, setAllProjectFields] = useState<Record<string, ECMField[]>>({});
   const [selectedProjectId, setSelectedProjectId] = useState<string>(config.project || '');
   const [loadingFields, setLoadingFields] = useState(false);
+  const [uploadingExcel, setUploadingExcel] = useState(false);
 
   const testConnection = async () => {
     if (config.system === 'none') {
       toast.error('Please select a system first');
+      return;
+    }
+
+    // Excel doesn't need connection test
+    if (config.system === 'excel') {
+      if (!config.excelFileUrl) {
+        toast.error('Please upload an Excel file first');
+        return;
+      }
+      toast.success('Excel file is ready for validation');
+      setConnectionStatus('success');
       return;
     }
 
@@ -171,6 +188,62 @@ export function ValidationLookupConfig({
       toast.error(error.message || 'Failed to test connection');
     } finally {
       setTesting(false);
+    }
+  };
+
+  const handleExcelUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.name.match(/\.(xlsx|xls)$/i)) {
+      toast.error('Please upload an Excel file (.xlsx or .xls)');
+      return;
+    }
+
+    setUploadingExcel(true);
+    try {
+      const filePath = `excel-lookups/${Date.now()}-${file.name}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('documents')
+        .getPublicUrl(filePath);
+
+      // Parse Excel to get columns
+      const result = await supabase.functions.invoke('parse-excel-columns', {
+        body: { fileUrl: publicUrl }
+      });
+
+      if (result.error) throw result.error;
+
+      const columns = result.data.columns || [];
+      
+      setEcmFields(columns.map((col: string) => ({
+        name: col,
+        type: 'string'
+      })));
+      
+      setConnectionStatus('success');
+
+      onConfigChange({
+        ...config,
+        excelFileUrl: publicUrl,
+        excelFileName: file.name,
+        excelKeyColumn: columns[0] || 'File Name'
+      });
+
+      toast.success('Excel file uploaded successfully');
+    } catch (error) {
+      console.error('Error uploading Excel:', error);
+      toast.error('Failed to upload Excel file');
+      setConnectionStatus('error');
+    } finally {
+      setUploadingExcel(false);
     }
   };
 
@@ -283,7 +356,7 @@ export function ValidationLookupConfig({
     });
   };
 
-  const isTestButtonDisabled = disabled || testing || config.system === 'none' || 
+  const isTestButtonDisabled = disabled || testing || config.system === 'none' || config.system === 'excel' ||
     (config.system === 'sql' 
       ? !config.sqlHost || !config.sqlDatabase || !config.username || !config.password || !config.sqlDialect
       : !config.url || !config.username || !config.password);
@@ -297,7 +370,7 @@ export function ValidationLookupConfig({
           </Label>
           <Select
             value={config.system}
-            onValueChange={(value: 'filebound' | 'docmgt' | 'sql' | 'none') => 
+            onValueChange={(value: 'filebound' | 'docmgt' | 'sql' | 'excel' | 'none') => 
               onConfigChange({ ...config, system: value })
             }
             disabled={disabled}
@@ -310,6 +383,7 @@ export function ValidationLookupConfig({
               <SelectItem value="filebound">FileBound</SelectItem>
               <SelectItem value="docmgt">DocMgt</SelectItem>
               <SelectItem value="sql">SQL Database</SelectItem>
+              <SelectItem value="excel">Excel Spreadsheet</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -337,86 +411,57 @@ export function ValidationLookupConfig({
                 </SelectContent>
               </Select>
             </div>
-
-            <div>
-              <Label htmlFor="sql-host" className="text-xs mb-1">
-                Host *
-              </Label>
-              <Input
-                id="sql-host"
-                value={config.sqlHost || ''}
-                onChange={(e) => onConfigChange({ ...config, sqlHost: e.target.value })}
-                placeholder="localhost or db.example.com"
-                disabled={disabled}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="sql-port" className="text-xs mb-1">
-                Port
-              </Label>
-              <Input
-                id="sql-port"
-                value={config.sqlPort || ''}
-                onChange={(e) => onConfigChange({ ...config, sqlPort: e.target.value })}
-                placeholder="3306, 5432, or 1433"
-                disabled={disabled}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="sql-database" className="text-xs mb-1">
-                Database *
-              </Label>
-              <Input
-                id="sql-database"
-                value={config.sqlDatabase || ''}
-                onChange={(e) => onConfigChange({ ...config, sqlDatabase: e.target.value })}
-                placeholder="Database name"
-                disabled={disabled}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="sql-username" className="text-xs mb-1">
-                Username *
-              </Label>
-              <Input
-                id="sql-username"
-                value={config.username || ''}
-                onChange={(e) => onConfigChange({ ...config, username: e.target.value })}
-                placeholder="Database username"
-                disabled={disabled}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="sql-password" className="text-xs mb-1">
-                Password *
-              </Label>
-              <Input
-                id="sql-password"
-                type="password"
-                value={config.password || ''}
-                onChange={(e) => onConfigChange({ ...config, password: e.target.value })}
-                placeholder="Database password"
-                disabled={disabled}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="sql-table" className="text-xs mb-1">
-                Table Name
-              </Label>
-              <Input
-                id="sql-table"
-                value={config.sqlTable || ''}
-                onChange={(e) => onConfigChange({ ...config, sqlTable: e.target.value })}
-                placeholder="Table to query (optional)"
-                disabled={disabled}
-              />
-            </div>
+// ... keep existing code
           </>
+        ) : config.system === 'excel' ? (
+          <div className="col-span-2 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="excelFile">Excel File Upload *</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="excelFile"
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleExcelUpload}
+                  disabled={uploadingExcel || disabled}
+                />
+                {uploadingExcel && <Loader2 className="h-4 w-4 animate-spin" />}
+              </div>
+              {config.excelFileName && (
+                <p className="text-xs text-muted-foreground">
+                  Current file: {config.excelFileName}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Upload an Excel file (.xlsx or .xls) containing validation data
+              </p>
+            </div>
+
+            {config.excelFileUrl && ecmFields.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="keyColumn">Key Column (for lookups) *</Label>
+                <Select
+                  value={config.excelKeyColumn || ''}
+                  onValueChange={(value) => onConfigChange({ ...config, excelKeyColumn: value })}
+                  disabled={disabled}
+                >
+                  <SelectTrigger id="keyColumn">
+                    <SelectValue placeholder="Select key column" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ecmFields.map((field) => (
+                      <SelectItem key={field.name} value={field.name}>
+                        {field.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Column to match against document file names (typically "File Name")
+                </p>
+              </div>
+            )}
+          </div>
         ) : (
           <>
             <div>
@@ -477,7 +522,7 @@ export function ValidationLookupConfig({
             ) : connectionStatus === 'success' ? (
               <>
                 <Check className="h-4 w-4 mr-2 text-green-500" />
-                Connected
+                {config.system === 'excel' ? 'Ready' : 'Connected'}
               </>
             ) : connectionStatus === 'error' ? (
               <>
@@ -485,7 +530,7 @@ export function ValidationLookupConfig({
                 Failed
               </>
             ) : (
-              'Test Connection'
+              config.system === 'excel' ? 'Excel Ready' : 'Test Connection'
             )}
           </Button>
         </div>
@@ -532,7 +577,7 @@ export function ValidationLookupConfig({
         </div>
       )}
 
-      {((selectedProjectId && ecmFields.length > 0) || (config.system === 'sql' && ecmFields.length > 0)) && (
+      {((selectedProjectId && ecmFields.length > 0) || (config.system === 'sql' && ecmFields.length > 0) || (config.system === 'excel' && config.excelFileUrl && ecmFields.length > 0)) && (
         <Card className="p-4 bg-muted/30">
           <div className="flex items-center justify-between mb-3">
             <Label className="text-sm font-medium">Lookup Field Configuration</Label>
@@ -549,7 +594,7 @@ export function ValidationLookupConfig({
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mb-3">
-            Configure which fields can be used for validation lookups. When enabled, users can search {config.system.toUpperCase()} during validation.
+            Configure which fields can be used for validation lookups. When enabled, users can search {config.system === 'excel' ? 'the Excel file' : config.system.toUpperCase()} during validation.
           </p>
           
           {(!config.lookupFields || config.lookupFields.length === 0) && (
@@ -582,7 +627,9 @@ export function ValidationLookupConfig({
                     </Select>
                   </div>
                    <div>
-                    <Label className="text-xs">{config.system === 'sql' ? 'SQL Column' : 'ECM Lookup Field'}</Label>
+                    <Label className="text-xs">
+                      {config.system === 'sql' ? 'SQL Column' : config.system === 'excel' ? 'Excel Column' : 'ECM Lookup Field'}
+                    </Label>
                     <Select
                       value={lookupField.ecmField}
                       onValueChange={(value) => handleUpdateLookupField(index, { ecmField: value })}
