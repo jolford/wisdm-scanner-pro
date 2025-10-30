@@ -252,7 +252,7 @@ export function PricingPDFGenerator() {
     pdf.text('Executive Sales Manager Maria Kinney | sales@westint.com', pageWidth / 2, 285, { align: 'center' });
     
     // Save the PDF
-    pdf.save('WISDM-Scanner-Pro-Pricing-2025.pdf');
+    pdf.save('WISDM-Capture-Pro-Pricing-2025.pdf');
   };
   
   return (
