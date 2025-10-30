@@ -5,12 +5,14 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, ArrowLeft, FolderOpen, Edit, Search, SortAsc, FileText, LayoutGrid, Table as TableIcon, List } from 'lucide-react';
+import { Plus, ArrowLeft, FolderOpen, Edit, Search, SortAsc, FileText, LayoutGrid, Table as TableIcon, List, Package } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SkeletonCard } from '@/components/ui/skeleton-card';
+import { EmptyState } from '@/components/ui/empty-state';
 
 interface Project {
   id: string;
@@ -383,27 +385,39 @@ const Projects = () => {
           </div>
         </div>
 
+        {/* Loading State */}
+        {loadingProjects && (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {[...Array(6)].map((_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        )}
+
+        {/* Empty State - No projects at all */}
+        {!loadingProjects && projects.length === 0 && (
+          <EmptyState
+            icon={Package}
+            title="No projects yet"
+            description="Get started by creating your first project to begin processing documents."
+            action={{
+              label: "Create First Project",
+              onClick: () => navigate('/admin/projects/new'),
+            }}
+          />
+        )}
+
+        {/* No Results State - After filtering */}
+        {!loadingProjects && projects.length > 0 && filteredProjects.length === 0 && (
+          <EmptyState
+            icon={Search}
+            title="No projects found"
+            description={`Try adjusting your search${searchQuery ? ` for "${searchQuery}"` : ' or filters'}.`}
+          />
+        )}
+
         {/* Projects Views */}
-        {filteredProjects.length === 0 ? (
-          <Card className="p-12 text-center bg-gradient-to-br from-card to-card/80">
-            <FolderOpen className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-xl font-semibold mb-2">
-              {searchQuery ? 'No Projects Found' : 'No Projects Yet'}
-            </h3>
-            <p className="text-muted-foreground mb-6">
-              {searchQuery 
-                ? `No projects match "${searchQuery}"`
-                : 'Create your first project to start extracting metadata from documents'
-              }
-            </p>
-            {!searchQuery && (
-              <Button onClick={() => navigate('/admin/projects/new')} className="bg-gradient-to-r from-primary to-accent">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Project
-              </Button>
-            )}
-          </Card>
-        ) : groupByCustomer ? (
+        {!loadingProjects && filteredProjects.length > 0 && groupByCustomer ? (
           <div className="space-y-6">
             {/* Unassigned Projects */}
             {filteredProjects.filter(p => !p.customer_id).length > 0 && (

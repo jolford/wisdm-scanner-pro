@@ -23,6 +23,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { PricingPDFGenerator } from '@/components/admin/PricingPDFGenerator';
+import { SkeletonStats } from '@/components/ui/skeleton-card';
 
 const AdminDashboard = () => {
   // Authentication guard - ensures only admins can access this page
@@ -37,6 +38,7 @@ const AdminDashboard = () => {
     licenses: 0,      // Total active licenses
     customers: 0,     // Total customer organizations
   });
+  const [statsLoading, setStatsLoading] = useState(true);
 
   // Load statistics when component mounts and user is authenticated as admin
   useEffect(() => {
@@ -51,6 +53,7 @@ const AdminDashboard = () => {
    * Only fetches counts (head: true) to minimize data transfer
    */
   const loadStats = async () => {
+    setStatsLoading(true);
     try {
       // Execute all stat queries in parallel for better performance
       const [projectsRes, documentsRes, profilesRes, licensesRes, customersRes] = await Promise.all([
@@ -72,6 +75,8 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('Error loading stats:', error);
       // Silently fail - stats will remain at 0
+    } finally {
+      setStatsLoading(false);
     }
   };
 
@@ -88,7 +93,10 @@ const AdminDashboard = () => {
     <AdminLayout title="Admin Dashboard" description="Manage projects, users, and system configuration">
       <div className="space-y-8">
         {/* Stats Cards */}
-        <div className="grid md:grid-cols-5 gap-6">
+        {statsLoading ? (
+          <SkeletonStats />
+        ) : (
+          <div className="grid md:grid-cols-5 gap-6">
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
             <div className="flex items-start gap-4">
               <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -149,6 +157,7 @@ const AdminDashboard = () => {
             </div>
           </Card>
         </div>
+        )}
 
         {/* Quick Actions */}
         <div className="grid md:grid-cols-2 gap-6">

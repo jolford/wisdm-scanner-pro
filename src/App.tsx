@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useKeyboardShortcuts, GLOBAL_SHORTCUTS } from "@/hooks/use-keyboard-shortcuts";
 import { KeyboardShortcutsDialog } from "@/components/KeyboardShortcutsDialog";
+import { CommandPalette } from "@/components/CommandPalette";
 import { BrowserRouter, Routes, Route, useLocation, Navigate, useNavigate } from "react-router-dom";
 import Index from "./pages/Index";
 import Queue from "./pages/Queue";
@@ -123,6 +124,7 @@ const App = () => {
           <div className="flex flex-col min-h-screen">
             <Toaster />
             <Sonner />
+            <CommandPalette />
             <KeyboardShortcutsDialog open={showShortcuts} onOpenChange={setShowShortcuts} />
           <BrowserRouter>
             <GlobalKeyboardShortcuts onShowShortcuts={() => setShowShortcuts(true)} />
