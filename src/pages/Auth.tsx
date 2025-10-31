@@ -53,6 +53,7 @@ const AuthPage = () => {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [mfaFactorId, setMfaFactorId] = useState<string | null>(null);
   const [showMfaChallenge, setShowMfaChallenge] = useState(false);
+  const [establishingSession, setEstablishingSession] = useState(false);
   const authFlowRef = useRef(false); // Prevent redirects during MFA flow
 
   // Password strength checks
@@ -95,34 +96,72 @@ const AuthPage = () => {
     const blockRedirect = isRecoveryParam || hasAccessToken;
 
     // Surface any auth errors from the recovery link
-    try {
-      const hashParams = new URLSearchParams(locationHash.startsWith('#') ? locationHash.slice(1) : locationHash);
-      const authError = hashParams.get('error_description') || hashParams.get('error');
-      const accessToken = hashParams.get('access_token');
-      const refreshToken = hashParams.get('refresh_token');
-      const codeParam = searchParams.get('code') || hashParams.get('code');
-      if (authError) {
-        toast({ 
-          title: 'Recovery Link Error', 
-          description: decodeURIComponent(authError), 
-          variant: 'destructive' 
-        });
+    const handleRecoverySession = async () => {
+      try {
+        const hashParams = new URLSearchParams(locationHash.startsWith('#') ? locationHash.slice(1) : locationHash);
+        const authError = hashParams.get('error_description') || hashParams.get('error');
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+        const codeParam = searchParams.get('code') || hashParams.get('code');
+        
+        if (authError) {
+          toast({ 
+            title: 'Recovery Link Error', 
+            description: decodeURIComponent(authError), 
+            variant: 'destructive' 
+          });
+          return;
+        }
+        
+        // Ensure a valid session exists when arriving from the reset link
+        if (codeParam) {
+          setEstablishingSession(true);
+          console.log('Exchanging code for session...');
+          const { data, error } = await supabase.auth.exchangeCodeForSession(codeParam);
+          if (error) {
+            console.error('Failed to exchange code:', error);
+            toast({
+              title: 'Session Error',
+              description: 'Failed to establish recovery session. Please request a new reset link.',
+              variant: 'destructive'
+            });
+          } else {
+            console.log('Session established successfully');
+            // Verify session is active
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) {
+              console.log('Active session confirmed');
+            }
+          }
+          setEstablishingSession(false);
+        } else if (accessToken && refreshToken) {
+          setEstablishingSession(true);
+          console.log('Setting session from tokens...');
+          const { data, error } = await supabase.auth.setSession({ 
+            access_token: accessToken, 
+            refresh_token: refreshToken 
+          });
+          if (error) {
+            console.error('Failed to set session:', error);
+            toast({
+              title: 'Session Error',
+              description: 'Failed to establish recovery session. Please request a new reset link.',
+              variant: 'destructive'
+            });
+          } else {
+            console.log('Session established successfully');
+          }
+          setEstablishingSession(false);
+        }
+      } catch (e) {
+        console.error('Recovery session error:', e);
+        setEstablishingSession(false);
       }
-      // Ensure a valid session exists when arriving from the reset link
-      if (codeParam) {
-        setTimeout(() => {
-          supabase.auth
-            .exchangeCodeForSession(codeParam)
-            .catch((e) => console.error('Failed to exchange code for session', e));
-        }, 0);
-      } else if (accessToken && refreshToken) {
-        setTimeout(() => {
-          supabase.auth
-            .setSession({ access_token: accessToken, refresh_token: refreshToken })
-            .catch((e) => console.error('Failed to set session from recovery tokens', e));
-        }, 0);
-      }
-    } catch {}
+    };
+
+    if (blockRedirect) {
+      handleRecoverySession();
+    }
 
     // Listen for auth changes FIRST to catch PASSWORD_RECOVERY
     const {
@@ -396,26 +435,55 @@ const AuthPage = () => {
     setLoading(true);
 
     try {
+      // Verify we have an active session before attempting update
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session) {
+        console.error('No active session:', sessionError);
+        toast({
+          title: 'Session Expired',
+          description: 'Your recovery link has expired. Please request a new password reset.',
+          variant: 'destructive',
+        });
+        setIsUpdatingPassword(false);
+        setIsResetPassword(true);
+        return;
+      }
+
+      console.log('Active session found, updating password...');
       const { error } = await supabase.auth.updateUser({
         password: password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Password update error:', error);
+        throw error;
+      }
 
       toast({
         title: 'Password Updated',
-        description: 'Your password has been successfully updated.',
+        description: 'Your password has been successfully updated. You can now sign in.',
       });
 
       setIsUpdatingPassword(false);
+      setPassword('');
       const startingPage = await getUserStartingPage();
       navigate(startingPage);
     } catch (error: any) {
+      console.error('Update password failed:', error);
       toast({
         title: 'Update Failed',
-        description: error.message || 'Failed to update password',
+        description: error.message === 'Auth session missing!'
+          ? 'Your recovery session has expired. Please request a new password reset link.'
+          : error.message || 'Failed to update password',
         variant: 'destructive',
       });
+      
+      // If session is missing, switch back to reset mode
+      if (error.message?.includes('session')) {
+        setIsUpdatingPassword(false);
+        setIsResetPassword(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -605,10 +673,10 @@ const AuthPage = () => {
           <Button
             type="submit"
             className="w-full mt-6 h-11 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-            disabled={loading || (isSignUp && !tosAccepted)}
+            disabled={loading || establishingSession || (isSignUp && !tosAccepted)}
           >
-            {loading 
-              ? 'Please wait...' 
+            {loading || establishingSession 
+              ? establishingSession ? 'Establishing Session...' : 'Please wait...'
               : isUpdatingPassword 
               ? 'Update Password' 
               : isResetPassword 
