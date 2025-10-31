@@ -13,6 +13,46 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SkeletonCard } from '@/components/ui/skeleton-card';
 import { EmptyState } from '@/components/ui/empty-state';
+import invoiceIcon from '@/assets/project-icons/invoice.png';
+import checkIcon from '@/assets/project-icons/check.png';
+import purchaseOrderIcon from '@/assets/project-icons/purchase-order.png';
+import contractIcon from '@/assets/project-icons/contract.png';
+import receiptIcon from '@/assets/project-icons/receipt.png';
+import formIcon from '@/assets/project-icons/form.png';
+import mapIcon from '@/assets/project-icons/map.png';
+import petitionIcon from '@/assets/project-icons/petition.png';
+
+const PRELOADED_ICON_MAP: Record<string, string> = {
+  invoice: invoiceIcon,
+  check: checkIcon,
+  'purchase-order': purchaseOrderIcon,
+  contract: contractIcon,
+  receipt: receiptIcon,
+  form: formIcon,
+  map: mapIcon,
+  petition: petitionIcon,
+};
+
+const resolveIconUrl = (iconUrl: string | null): string | null => {
+  if (!iconUrl) return null;
+  const lower = iconUrl.toLowerCase();
+
+  // Explicit preloaded identifier (future-proof)
+  if (lower.startsWith('preloaded:')) {
+    const key = lower.replace('preloaded:', '').trim();
+    return PRELOADED_ICON_MAP[key] || null;
+  }
+
+  // If this was a Vite-hashed asset from a previous build, map heuristically
+  for (const key of Object.keys(PRELOADED_ICON_MAP)) {
+    if (lower.includes(key)) {
+      return PRELOADED_ICON_MAP[key];
+    }
+  }
+
+  // Likely a storage/external URL – use as-is
+  return iconUrl;
+};
 
 interface Project {
   id: string;
@@ -146,17 +186,21 @@ const Projects = () => {
               {projectsList.map((project) => (
                 <TableRow key={project.id} className="cursor-pointer hover:bg-muted/50">
                   <TableCell className="w-12">
-                    {project.icon_url ? (
-                      <img 
-                        src={project.icon_url} 
-                        alt={`${project.name} icon`}
-                        className="h-8 w-8 object-contain rounded"
-                      />
-                    ) : (
-                      <div className="h-8 w-8 bg-muted rounded flex items-center justify-center">
-                        <Package className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    )}
+{resolveIconUrl(project.icon_url) ? (
+  <img 
+    src={resolveIconUrl(project.icon_url)!} 
+    alt={`${project.name} icon`}
+    className="h-8 w-8 object-contain rounded"
+    onError={(e) => {
+      (e.currentTarget as HTMLImageElement).onerror = null;
+      e.currentTarget.src = formIcon;
+    }}
+  />
+) : (
+  <div className="h-8 w-8 bg-muted rounded flex items-center justify-center">
+    <Package className="h-4 w-4 text-muted-foreground" />
+  </div>
+)}
                   </TableCell>
                   <TableCell className="font-medium">{project.name}</TableCell>
                   <TableCell>
@@ -194,17 +238,21 @@ const Projects = () => {
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-1">
-                    {project.icon_url ? (
-                      <img 
-                        src={project.icon_url} 
-                        alt={`${project.name} icon`}
-                        className="h-6 w-6 object-contain rounded flex-shrink-0"
-                      />
-                    ) : (
-                      <div className="h-6 w-6 bg-muted rounded flex items-center justify-center flex-shrink-0">
-                        <FolderOpen className="h-4 w-4 text-muted-foreground" />
-                      </div>
-                    )}
+{resolveIconUrl(project.icon_url) ? (
+  <img 
+    src={resolveIconUrl(project.icon_url)!} 
+    alt={`${project.name} icon`}
+    className="h-6 w-6 object-contain rounded flex-shrink-0"
+    onError={(e) => {
+      (e.currentTarget as HTMLImageElement).onerror = null;
+      e.currentTarget.src = formIcon;
+    }}
+  />
+) : (
+  <div className="h-6 w-6 bg-muted rounded flex items-center justify-center flex-shrink-0">
+    <FolderOpen className="h-4 w-4 text-muted-foreground" />
+  </div>
+)}
                     <h3 className="text-base font-semibold truncate">{project.name}</h3>
                     <Badge variant="outline" className="shrink-0">{getCustomerName(project.customer_id)}</Badge>
                     <Badge className="shrink-0">{(project.extraction_fields as any[])?.length || 0} fields</Badge>
@@ -238,17 +286,21 @@ const Projects = () => {
             <div className="mb-3">
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  {project.icon_url ? (
-                    <img 
-                      src={project.icon_url} 
-                      alt={`${project.name} icon`}
-                      className="h-8 w-8 object-contain rounded flex-shrink-0"
-                    />
-                  ) : (
-                    <div className="h-8 w-8 bg-muted rounded flex items-center justify-center flex-shrink-0">
-                      <FolderOpen className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  )}
+{resolveIconUrl(project.icon_url) ? (
+  <img 
+    src={resolveIconUrl(project.icon_url)!} 
+    alt={`${project.name} icon`}
+    className="h-8 w-8 object-contain rounded flex-shrink-0"
+    onError={(e) => {
+      (e.currentTarget as HTMLImageElement).onerror = null;
+      e.currentTarget.src = formIcon;
+    }}
+  />
+) : (
+  <div className="h-8 w-8 bg-muted rounded flex items-center justify-center flex-shrink-0">
+    <FolderOpen className="h-5 w-5 text-muted-foreground" />
+  </div>
+)}
                   <h3 className="text-base font-semibold group-hover:text-primary transition-colors line-clamp-1">
                     {project.name}
                   </h3>
