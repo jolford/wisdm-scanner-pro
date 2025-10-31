@@ -1366,6 +1366,16 @@ useEffect(() => {
           )}
           
           {/* Line Item Validation for Petitions */}
+          {(() => {
+            console.log('LineItemValidation check:', {
+              hasLineItems: lineItems && lineItems.length > 0,
+              lineItemsCount: lineItems?.length,
+              hasValidationConfig: !!validationLookupConfig,
+              validationSystem: validationLookupConfig?.system,
+              validationEnabled: validationLookupConfig?.enabled
+            });
+            return null;
+          })()}
           {lineItems && lineItems.length > 0 && validationLookupConfig && 
            (validationLookupConfig.system === 'excel' || validationLookupConfig.system === 'csv') && (
             <div className="mb-6">
