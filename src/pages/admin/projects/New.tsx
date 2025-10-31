@@ -672,21 +672,19 @@ const NewProject = () => {
               </p>
             </div>
 
-            {/* Line Item Extraction - only for invoice projects */}
-            {projectName.toLowerCase().includes('invoice') && (
-              <div>
-                <Label className="mb-4 block">Line Item Table Extraction</Label>
-                <Card className="p-4 bg-muted/50">
-                  <TableExtractionConfig
-                    config={tableExtractionConfig}
-                    onConfigChange={setTableExtractionConfig}
-                  />
-                </Card>
-                <p className="text-sm text-muted-foreground mt-2">
-                  Extract line item tables from invoices with columns like Description, Quantity, Unit Price, Total.
-                </p>
-              </div>
-            )}
+            {/* Table Extraction - for invoices, petitions, and other structured documents */}
+            <div>
+              <Label className="mb-4 block">Table Extraction</Label>
+              <Card className="p-4 bg-muted/50">
+                <TableExtractionConfig
+                  config={tableExtractionConfig}
+                  onConfigChange={setTableExtractionConfig}
+                />
+              </Card>
+              <p className="text-sm text-muted-foreground mt-2">
+                Extract repeating rows from structured documents like invoices, petitions, or forms. Configure column names and data types for automatic table extraction.
+              </p>
+            </div>
 
             <div>
               <Label className="mb-4 block">Processing Queues</Label>
