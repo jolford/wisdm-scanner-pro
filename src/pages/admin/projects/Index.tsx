@@ -174,12 +174,16 @@ const Projects = () => {
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-1">
-                    {project.icon_url && (
+                    {project.icon_url ? (
                       <img 
                         src={project.icon_url} 
                         alt={`${project.name} icon`}
                         className="h-6 w-6 object-contain rounded flex-shrink-0"
                       />
+                    ) : (
+                      <div className="h-6 w-6 bg-muted rounded flex items-center justify-center flex-shrink-0">
+                        <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                      </div>
                     )}
                     <h3 className="text-base font-semibold truncate">{project.name}</h3>
                     <Badge variant="outline" className="shrink-0">{getCustomerName(project.customer_id)}</Badge>
@@ -214,12 +218,16 @@ const Projects = () => {
             <div className="mb-3">
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  {project.icon_url && (
+                  {project.icon_url ? (
                     <img 
                       src={project.icon_url} 
                       alt={`${project.name} icon`}
                       className="h-8 w-8 object-contain rounded flex-shrink-0"
                     />
+                  ) : (
+                    <div className="h-8 w-8 bg-muted rounded flex items-center justify-center flex-shrink-0">
+                      <FolderOpen className="h-5 w-5 text-muted-foreground" />
+                    </div>
                   )}
                   <h3 className="text-base font-semibold group-hover:text-primary transition-colors line-clamp-1">
                     {project.name}
