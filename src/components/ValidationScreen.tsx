@@ -15,6 +15,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { ImageRegionSelector } from './ImageRegionSelector';
 import { RedactionTool } from './RedactionTool';
 import { InteractiveDocumentViewer } from './InteractiveDocumentViewer';
+import { LineItemValidation } from './LineItemValidation';
 import { useAuth } from '@/hooks/use-auth';
 import { useSignedUrl } from '@/hooks/use-signed-url';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
@@ -97,6 +98,8 @@ export const ValidationScreen = ({
   const [entityIdField, setEntityIdField] = useState<string>('');
   const [referencePreviewUrl, setReferencePreviewUrl] = useState<string>('');
   const [selectedReferenceMeta, setSelectedReferenceMeta] = useState<any>(null);
+  const [lineItems, setLineItems] = useState<Array<Record<string, any>>>([]);
+  const [validationLookupConfig, setValidationLookupConfig] = useState<any>(null);
   const { toast } = useToast();
   const { isAdmin } = useAuth();
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
@@ -197,25 +200,44 @@ export const ValidationScreen = ({
       .filter(Boolean);
   };
 
-  // Load field confidence from document
+  // Load field confidence, line items, and validation config from document and project
   useEffect(() => {
-    const loadConfidence = async () => {
+    const loadDocumentData = async () => {
       if (!documentId) return;
       
       const { data, error } = await supabase
         .from('documents')
-        .select('field_confidence, validation_suggestions')
+        .select('field_confidence, validation_suggestions, line_items')
         .eq('id', documentId)
         .single();
       
       if (!error && data) {
         setFieldConfidence((data.field_confidence as Record<string, number>) || {});
         setValidationSuggestions((data.validation_suggestions as Record<string, any>) || {});
+        setLineItems((data.line_items as Array<Record<string, any>>) || []);
+      }
+    };
+
+    const loadProjectConfig = async () => {
+      if (!projectId) return;
+      
+      const { data, error } = await supabase
+        .from('projects')
+        .select('metadata')
+        .eq('id', projectId)
+        .single();
+      
+      if (!error && data?.metadata) {
+        const metadata = data.metadata as any;
+        if (metadata.validation_lookup_config) {
+          setValidationLookupConfig(metadata.validation_lookup_config);
+        }
       }
     };
     
-    loadConfidence();
-  }, [documentId]);
+    loadDocumentData();
+    loadProjectConfig();
+  }, [documentId, projectId]);
   
   // Smart validation function
   const validateField = async (fieldName: string, fieldValue: any) => {
@@ -1340,6 +1362,18 @@ useEffect(() => {
                 <span className="font-medium">Calculation verified</span>
                 <span className="font-mono ml-auto">${editedMetadata['_calculatedLineItemsTotal']}</span>
               </div>
+            </div>
+          )}
+          
+          {/* Line Item Validation for Petitions */}
+          {lineItems && lineItems.length > 0 && validationLookupConfig && 
+           (validationLookupConfig.system === 'excel' || validationLookupConfig.system === 'csv') && (
+            <div className="mb-6">
+              <LineItemValidation
+                lineItems={lineItems}
+                lookupConfig={validationLookupConfig}
+                keyField="Printed_Name"
+              />
             </div>
           )}
           
