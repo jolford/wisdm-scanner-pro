@@ -1000,6 +1000,24 @@ const { toast } = useToast();
             validation_status: status
           }))
         );
+        
+        // Feed corrections to ML learning system
+        try {
+          await supabase.functions.invoke('learn-from-corrections', {
+            body: {
+              documentId: doc.id,
+              projectId: doc.project_id,
+              corrections: changedFields.map(cf => ({
+                field_name: cf.field_name,
+                original_value: cf.old_value,
+                corrected_value: cf.new_value
+              }))
+            }
+          });
+          console.log('✓ ML system learned from', changedFields.length, 'corrections');
+        } catch (mlError) {
+          console.error('ML learning failed (non-critical):', mlError);
+        }
       }
 
       if (error) throw error;
