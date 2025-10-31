@@ -58,7 +58,6 @@ const menuItems = [
   { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
   { title: 'Projects', url: '/admin/projects', icon: FolderOpen },
   { title: 'Batch Templates', url: '/admin/batch-templates', icon: LayoutDashboard },
-  { title: 'ML Templates', url: '/admin/ml-templates', icon: Sparkles },
   { title: 'Documents', url: '/admin/documents', icon: FileText },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
   { title: 'Validation Analytics', url: '/admin/validation-analytics', icon: Activity },
@@ -70,6 +69,7 @@ const adminToolsItems = [
   { title: 'Customers', url: '/admin/customers', icon: Building2 },
   { title: 'Users', url: '/admin/users', icon: Users },
   { title: 'Licenses', url: '/admin/licenses', icon: Key },
+  { title: 'ML Templates', url: '/admin/ml-templates', icon: Sparkles },
   { title: 'Error Logs', url: '/admin/error-logs', icon: AlertCircle },
 ];
 
