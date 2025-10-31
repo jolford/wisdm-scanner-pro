@@ -36,9 +36,6 @@ export function AdvancedAIConfig({
             <Sparkles className="h-5 w-5 text-primary" />
             Advanced AI Capabilities
           </h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            FormXtra.AI-level features powered by Lovable AI
-          </p>
         </div>
         <Badge variant="outline" className="bg-primary/10">
           Enterprise
