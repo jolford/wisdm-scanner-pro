@@ -80,16 +80,59 @@ export function ValidationLookupConfig({
 
       try {
         setLoadingFields(true);
+
+        // Helper to split CSV header correctly (handles quoted commas)
+        const splitCsvHeader = (row: string): string[] => {
+          const out: string[] = [];
+          let cur = '';
+          let inQuotes = false;
+          for (let i = 0; i < row.length; i++) {
+            const ch = row[i];
+            if (ch === '"') {
+              // toggle quotes, handle doubled quotes
+              if (inQuotes && row[i + 1] === '"') {
+                cur += '"';
+                i++; // skip escaped quote
+              } else {
+                inQuotes = !inQuotes;
+              }
+            } else if (ch === ',' && !inQuotes) {
+              out.push(cur);
+              cur = '';
+            } else {
+              cur += ch;
+            }
+          }
+          out.push(cur);
+          return out.map((c) => c.trim().replace(/^"(.*)"$/, '$1'));
+        };
+
         if (config.system === 'csv') {
-          const resp = await fetch(config.excelFileUrl);
-          if (!resp.ok) throw new Error('Failed to fetch CSV');
-          const text = await resp.text();
+          let text: string | null = null;
+
+          // If this is a Lovable Cloud storage URL, prefer using the storage client to avoid CORS/encoding issues
+          try {
+            const match = config.excelFileUrl.match(/\/storage\/v1\/object\/(?:public|sign)\/([^/]+)\/(.+)$/);
+            if (match) {
+              const bucket = match[1];
+              const path = decodeURIComponent(match[2]);
+              const { data, error } = await supabase.storage.from(bucket).download(path);
+              if (error) throw error;
+              if (data) text = await data.text();
+            }
+          } catch (e) {
+            // Fall back to direct fetch below
+          }
+
+          if (!text) {
+            const resp = await fetch(config.excelFileUrl);
+            if (!resp.ok) throw new Error('Failed to fetch CSV');
+            text = await resp.text();
+          }
+
           const first = (text.split(/\r?\n/)[0] || '').trim();
           if (!first) return;
-          const cols = first
-            .split(',')
-            .map((c) => c.trim().replace(/^"(.*)"$/, '$1'))
-            .filter(Boolean);
+          const cols = splitCsvHeader(first).filter(Boolean);
           setEcmFields(cols.map((name) => ({ name, type: 'string' })));
           setConnectionStatus('success');
         } else {
