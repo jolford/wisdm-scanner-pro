@@ -94,7 +94,10 @@ function GlobalKeyboardShortcuts({ onShowShortcuts, onFilesLaunched }: {
 }) {
   const navigate = useNavigate();
   
-  useFileLaunch(onFilesLaunched);
+  useFileLaunch((files) => {
+    navigate('/');
+    onFilesLaunched(files);
+  });
   
   useKeyboardShortcuts({
     shortcuts: [
