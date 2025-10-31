@@ -115,6 +115,8 @@ export const BatchValidationScreen = ({
 }: BatchValidationScreenProps) => {
   // Check if this is an AB1466 batch
   const isAB1466Batch = batchName?.includes('AB1466');
+  // Check if this is a petition processing project (AB1466 or contains "petition" in name)
+  const isPetitionProject = batchName?.toLowerCase().includes('petition') || isAB1466Batch;
   // Track which document cards are expanded (showing details)
   const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
   
@@ -1448,8 +1450,8 @@ const { toast } = useToast();
                               </DialogContent>
                             </Dialog>
 
-                            {/* Petition Validation Warnings */}
-                            {doc.line_items && doc.line_items.length > 0 && (
+                            {/* Petition Validation Warnings - Only show for petition projects */}
+                            {isPetitionProject && doc.line_items && doc.line_items.length > 0 && (
                               <div className="mb-6">
                                 <PetitionValidationWarnings
                                   documentId={doc.id}
