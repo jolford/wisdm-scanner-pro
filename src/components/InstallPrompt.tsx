@@ -14,6 +14,7 @@ export function InstallPrompt() {
   const [isDismissed, setIsDismissed] = useState(false);
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const navigate = useNavigate();
+  const isEmbedded = typeof window !== 'undefined' && window.self !== window.top;
 
   useEffect(() => {
     // Check if already installed
@@ -75,14 +76,26 @@ export function InstallPrompt() {
             Get faster access and work offline. Install our app on your device.
           </p>
           
-          <Button
-            onClick={handleInstallClick}
-            size="sm"
-            className="gap-2"
-          >
-            <Download className="h-4 w-4" />
-            {deferredPrompt ? 'Install Now' : 'View Instructions'}
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              onClick={handleInstallClick}
+              size="sm"
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              {deferredPrompt ? 'Install Now' : 'View Instructions'}
+            </Button>
+            {isEmbedded && !deferredPrompt && (
+              <Button
+                variant="link"
+                size="sm"
+                className="px-1"
+                onClick={() => window.open('/install', '_blank', 'noopener')}
+              >
+                Open in new tab to install
+              </Button>
+            )}
+          </div>
         </div>
 
         <Button
