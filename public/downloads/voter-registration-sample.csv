@@ -1,0 +1,21 @@
+Voter_Name,Address,City,Zip,Registration_Status,County,Registration_Date
+John Smith,123 Main Street,Sacramento,95814,Active,Sacramento,2020-01-15
+Mary Johnson,456 Oak Avenue,San Francisco,94102,Active,San Francisco,2019-05-22
+Robert Williams,789 Pine Road,Los Angeles,90001,Active,Los Angeles,2018-11-30
+Patricia Brown,321 Elm Street,San Diego,92101,Active,San Diego,2021-03-10
+Michael Davis,654 Maple Drive,Sacramento,95816,Active,Sacramento,2017-08-05
+Jennifer Garcia,987 Cedar Lane,San Francisco,94103,Active,San Francisco,2020-09-18
+William Rodriguez,147 Birch Court,Los Angeles,90002,Active,Los Angeles,2019-12-01
+Elizabeth Martinez,258 Walnut Place,San Diego,92102,Active,San Diego,2021-06-25
+David Anderson,369 Cherry Boulevard,Sacramento,95818,Active,Sacramento,2018-04-12
+Sarah Taylor,741 Spruce Way,San Francisco,94104,Active,San Francisco,2020-02-28
+James Wilson,852 Ash Circle,Los Angeles,90003,Inactive,Los Angeles,2016-07-19
+Linda Moore,963 Hickory Path,San Diego,92103,Active,San Diego,2021-01-08
+Richard Jackson,159 Redwood Avenue,Sacramento,95820,Active,Sacramento,2019-10-14
+Barbara White,357 Sycamore Street,San Francisco,94105,Active,San Francisco,2020-11-30
+Thomas Harris,486 Magnolia Drive,Los Angeles,90004,Active,Los Angeles,2018-05-17
+Nancy Martin,624 Willow Road,San Diego,92104,Active,San Diego,2021-08-22
+Christopher Thompson,735 Poplar Lane,Sacramento,95822,Active,Sacramento,2017-12-03
+Jessica Lee,846 Cottonwood Court,San Francisco,94106,Active,San Francisco,2020-03-15
+Daniel Walker,957 Dogwood Place,Los Angeles,90005,Active,Los Angeles,2019-07-28
+Karen Hall,168 Juniper Way,San Diego,92105,Active,San Diego,2021-04-19
