@@ -13,6 +13,7 @@ interface BeforeInstallPromptEvent extends Event {
 export default function Install() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [isInstalled, setIsInstalled] = useState(false);
+  const isEmbedded = typeof window !== 'undefined' && window.self !== window.top;
   const { toast } = useToast();
 
   useEffect(() => {
@@ -87,6 +88,12 @@ export default function Install() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {isEmbedded && (
+            <div className="rounded-md border border-border/60 p-3 bg-muted/30 flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">Chrome hides install in embedded previews. Open in a new tab to install.</p>
+              <Button variant="outline" size="sm" onClick={() => window.open(window.location.href, '_blank', 'noopener')}>Open in new tab</Button>
+            </div>
+          )}
           {isInstalled ? (
             <div className="text-center space-y-4">
               <div className="flex justify-center">

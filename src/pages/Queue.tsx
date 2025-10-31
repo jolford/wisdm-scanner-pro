@@ -1567,6 +1567,10 @@ const [isExporting, setIsExporting] = useState(false);
                 <HelpCircle className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Help</span>
               </Button>
+              <Button variant="outline" size="sm" onClick={() => navigate('/install')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
+                <Download className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Install</span>
+              </Button>
               {isAdmin && (
                 <Button variant="outline" size="sm" onClick={() => navigate('/admin')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
                   <Settings className="h-4 w-4 sm:mr-2" />
