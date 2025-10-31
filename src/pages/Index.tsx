@@ -12,6 +12,7 @@ import { Sparkles, Upload, ScanLine, LogOut, FileText, Settings, FolderOpen } fr
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LicenseWarning } from '@/components/LicenseWarning';
+import { InstallPrompt } from '@/components/InstallPrompt';
 import { useLicense } from '@/hooks/use-license';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { applyDocumentNamingPattern } from '@/lib/document-naming';
@@ -774,6 +775,7 @@ const Index = () => {
 
       <main className="container mx-auto px-4 py-12">
         <LicenseWarning />
+        <InstallPrompt />
         
         {!showValidation ? (
           <div className="max-w-4xl mx-auto">
