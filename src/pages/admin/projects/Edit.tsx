@@ -515,7 +515,7 @@ const EditProject = () => {
             </div>
 
             <Tabs defaultValue="basic" className="mt-8">
-              <TabsList className="grid w-full grid-cols-6 h-auto gap-1 p-1">
+              <TabsList className="w-full h-auto p-0 gap-0 flex flex-row">
                 <TabsTrigger value="basic" className="py-3 px-3">Basic Settings</TabsTrigger>
                 <TabsTrigger value="import" className="py-3 px-3">Import & Capture</TabsTrigger>
                 <TabsTrigger value="processing" className="py-3 px-3">Processing & AI</TabsTrigger>
