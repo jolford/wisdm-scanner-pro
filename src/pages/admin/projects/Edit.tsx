@@ -606,33 +606,19 @@ const EditProject = () => {
               <AccordionItem value="table" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-base">Line Item Table Extraction</span>
-                    {projectName.toLowerCase().includes('invoice') ? (
-                      <Badge variant="outline" className="text-xs">Invoice Projects</Badge>
-                    ) : (
-                      <Badge variant="secondary" className="text-xs">Not Available</Badge>
-                    )}
+                    <span className="font-medium text-base">Table Extraction</span>
                   </div>
                 </AccordionTrigger>
                 <AccordionContent>
-                  {projectName.toLowerCase().includes('invoice') ? (
-                    <>
-                      <Card className="p-4 bg-muted/50">
-                        <TableExtractionConfig
-                          config={tableExtractionConfig}
-                          onConfigChange={setTableExtractionConfig}
-                        />
-                      </Card>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Extract line item tables from invoices with columns like Description, Quantity, Unit Price, Total.
-                      </p>
-                    </>
-                  ) : (
-                    <div className="text-sm text-muted-foreground p-4 bg-muted/30 rounded-lg">
-                      Line item extraction is only available for invoice processing projects. 
-                      To enable this feature, include "invoice" in your project name.
-                    </div>
-                  )}
+                  <Card className="p-4 bg-muted/50">
+                    <TableExtractionConfig
+                      config={tableExtractionConfig}
+                      onConfigChange={setTableExtractionConfig}
+                    />
+                  </Card>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Extract repeating rows from structured documents like petitions, invoices, or forms. Configure column names and data types for automatic table extraction.
+                  </p>
                 </AccordionContent>
               </AccordionItem>
 

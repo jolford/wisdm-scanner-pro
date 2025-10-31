@@ -64,14 +64,14 @@ export const TableExtractionConfig = ({ config, onConfigChange }: TableExtractio
             checked={config.enabled}
             onCheckedChange={(checked) => onConfigChange({ ...config, enabled: checked })}
           />
-          <Label className="text-base font-semibold">Enable Line Item Table Extraction</Label>
+          <Label className="text-base font-semibold">Enable Table Extraction</Label>
         </div>
       </div>
 
       {config.enabled && (
         <>
           <p className="text-sm text-muted-foreground">
-            Configure fields to extract from invoice line item tables. Common fields include product name, quantity, unit price, and total.
+            Configure columns to extract from repeating tables (e.g., petition signer rows, invoice line items, form grids).
           </p>
 
           <div className="flex justify-between items-center">
