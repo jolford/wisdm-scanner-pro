@@ -514,18 +514,18 @@ const EditProject = () => {
               </p>
             </div>
 
-            <Tabs defaultValue="basic" className="mt-6">
-              <TabsList className="grid w-full grid-cols-6 bg-muted/50">
-                <TabsTrigger value="basic">Basic Settings</TabsTrigger>
-                <TabsTrigger value="import">Import & Capture</TabsTrigger>
-                <TabsTrigger value="processing">Processing & AI</TabsTrigger>
-                <TabsTrigger value="advanced-ai">Advanced AI</TabsTrigger>
-                <TabsTrigger value="export">Export & Integration</TabsTrigger>
-                <TabsTrigger value="signatures">Signatures</TabsTrigger>
+            <Tabs defaultValue="basic" className="mt-8">
+              <TabsList className="grid w-full grid-cols-6 bg-muted/50 h-auto">
+                <TabsTrigger value="basic" className="py-3">Basic Settings</TabsTrigger>
+                <TabsTrigger value="import" className="py-3">Import & Capture</TabsTrigger>
+                <TabsTrigger value="processing" className="py-3">Processing & AI</TabsTrigger>
+                <TabsTrigger value="advanced-ai" className="py-3">Advanced AI</TabsTrigger>
+                <TabsTrigger value="export" className="py-3">Export & Integration</TabsTrigger>
+                <TabsTrigger value="signatures" className="py-3">Signatures</TabsTrigger>
               </TabsList>
 
               {/* Basic Settings Tab */}
-              <TabsContent value="basic" className="mt-6 space-y-6">
+              <TabsContent value="basic" className="mt-8 space-y-6">
                 <Accordion type="multiple" defaultValue={[]} className="space-y-4">
               <AccordionItem value="fields" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">
