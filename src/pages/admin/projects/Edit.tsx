@@ -515,13 +515,13 @@ const EditProject = () => {
             </div>
 
             <Tabs defaultValue="basic" className="mt-8">
-              <TabsList className="grid w-full grid-cols-6 bg-muted/50 h-auto">
-                <TabsTrigger value="basic" className="py-3">Basic Settings</TabsTrigger>
-                <TabsTrigger value="import" className="py-3">Import & Capture</TabsTrigger>
-                <TabsTrigger value="processing" className="py-3">Processing & AI</TabsTrigger>
-                <TabsTrigger value="advanced-ai" className="py-3">Advanced AI</TabsTrigger>
-                <TabsTrigger value="export" className="py-3">Export & Integration</TabsTrigger>
-                <TabsTrigger value="signatures" className="py-3">Signatures</TabsTrigger>
+              <TabsList className="grid w-full grid-cols-6 bg-muted/50 h-auto gap-0">
+                <TabsTrigger value="basic" className="py-3 px-4">Basic Settings</TabsTrigger>
+                <TabsTrigger value="import" className="py-3 px-4">Import & Capture</TabsTrigger>
+                <TabsTrigger value="processing" className="py-3 px-4">Processing & AI</TabsTrigger>
+                <TabsTrigger value="advanced-ai" className="py-3 px-4">Advanced AI</TabsTrigger>
+                <TabsTrigger value="export" className="py-3 px-4">Export & Integration</TabsTrigger>
+                <TabsTrigger value="signatures" className="py-3 px-4">Signatures</TabsTrigger>
               </TabsList>
 
               {/* Basic Settings Tab */}
