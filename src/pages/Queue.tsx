@@ -14,6 +14,7 @@ import { useContextualToast } from '@/lib/toast-helper';
 import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText, FolderOpen, Cloud, Database, HelpCircle, User } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { LicenseWarning } from '@/components/LicenseWarning';
+import { InstallPrompt } from '@/components/InstallPrompt';
 import { useLicense } from '@/hooks/use-license';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Progress } from '@/components/ui/progress';
@@ -1591,6 +1592,7 @@ const [isExporting, setIsExporting] = useState(false);
 
       <main className="container mx-auto px-2 sm:px-4 py-4 sm:py-8">
         <LicenseWarning />
+        <InstallPrompt />
         
         <div className="space-y-3 sm:space-y-6 mb-4 sm:mb-6">
           <ProjectSelector
