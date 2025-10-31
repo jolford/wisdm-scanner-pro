@@ -371,10 +371,12 @@ export function ValidationLookupConfig({
     });
   };
 
-  const isTestButtonDisabled = disabled || testing || config.system === 'none' || config.system === 'excel' || config.system === 'csv' ||
-    (config.system === 'sql' 
+  const isTestButtonDisabled = disabled || testing || config.system === 'none' ||
+    (config.system === 'sql'
       ? !config.sqlHost || !config.sqlDatabase || !config.username || !config.password || !config.sqlDialect
-      : !config.url || !config.username || !config.password);
+      : (config.system === 'excel' || config.system === 'csv')
+        ? !config.excelFileUrl
+        : (!config.url || !config.username || !config.password));
 
   return (
     <div className="space-y-4">
@@ -447,7 +449,7 @@ export function ValidationLookupConfig({
               </div>
               {config.excelFileName && (
                 <p className="text-xs text-muted-foreground">
-                  Current file: {config.excelFileName}
+                  Current file: <a href={config.excelFileUrl} target="_blank" rel="noreferrer" className="underline">{config.excelFileName}</a>
                 </p>
               )}
               <p className="text-xs text-muted-foreground">
@@ -540,7 +542,7 @@ export function ValidationLookupConfig({
             ) : connectionStatus === 'success' ? (
               <>
                 <Check className="h-4 w-4 mr-2 text-green-500" />
-                {config.system === 'excel' ? 'Ready' : 'Connected'}
+                {(config.system === 'excel' || config.system === 'csv') ? 'File Ready' : 'Connected'}
               </>
             ) : connectionStatus === 'error' ? (
               <>
@@ -548,7 +550,7 @@ export function ValidationLookupConfig({
                 Failed
               </>
             ) : (
-              config.system === 'excel' ? 'Excel Ready' : 'Test Connection'
+              (config.system === 'excel' || config.system === 'csv') ? (config.excelFileUrl ? 'File Ready' : 'Upload a file to continue') : 'Test Connection'
             )}
           </Button>
         </div>
