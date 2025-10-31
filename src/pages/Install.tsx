@@ -151,8 +151,10 @@ export default function Install() {
 
               <div className="text-xs text-muted-foreground text-center space-y-2">
                 <p className="font-medium">Manual Installation:</p>
-                <p><strong>iOS:</strong> Tap Share <span className="mx-1">→</span> Add to Home Screen</p>
-                <p><strong>Android:</strong> Tap Menu <span className="mx-1">→</span> Install App</p>
+                <p><strong>Desktop Chrome:</strong> Menu (⋮) → Save and share → Install page as app</p>
+                <p><strong>Microsoft Edge:</strong> Menu (⋮) → Apps → Install this site as an app</p>
+                <p><strong>iOS (Safari):</strong> Tap Share <span className="mx-1">→</span> Add to Home Screen</p>
+                <p><strong>Android (Chrome):</strong> Menu (⋮) <span className="mx-1">→</span> Install app</p>
               </div>
             </>
           )}
