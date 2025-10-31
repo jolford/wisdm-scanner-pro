@@ -87,12 +87,27 @@ export function PetitionValidationWarnings({
   const validateAddress = async () => {
     setChecking('address');
     try {
+      // For petitions, validate addresses from line items instead of top-level metadata
+      const lineItems = metadata.line_items || [];
+      
+      if (lineItems.length === 0) {
+        console.warn('No line items found for address validation');
+        return;
+      }
+
+      // Validate the first line item's address (could be enhanced to validate all)
+      const firstItem = lineItems[0];
       const address = [
-        metadata.Address || metadata.address || '',
-        metadata.City || metadata.city || '',
-        metadata.State || metadata.state || '',
-        metadata.Zip || metadata.zip || ''
+        firstItem.Address || firstItem.address || '',
+        firstItem.City || firstItem.city || '',
+        firstItem.State || firstItem.state || '',
+        firstItem.Zip || firstItem.zip || firstItem['Zip Code'] || ''
       ].filter(Boolean).join(', ');
+
+      if (!address) {
+        console.warn('No address data found in line items');
+        return;
+      }
 
       const { data, error } = await supabase.functions.invoke('validate-address', {
         body: {
