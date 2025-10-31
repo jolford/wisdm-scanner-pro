@@ -1558,6 +1558,7 @@ export type Database = {
           enable_signature_verification: boolean | null
           export_types: string[] | null
           extraction_fields: Json
+          icon_url: string | null
           id: string
           is_active: boolean | null
           metadata: Json | null
@@ -1575,6 +1576,7 @@ export type Database = {
           enable_signature_verification?: boolean | null
           export_types?: string[] | null
           extraction_fields?: Json
+          icon_url?: string | null
           id?: string
           is_active?: boolean | null
           metadata?: Json | null
@@ -1592,6 +1594,7 @@ export type Database = {
           enable_signature_verification?: boolean | null
           export_types?: string[] | null
           extraction_fields?: Json
+          icon_url?: string | null
           id?: string
           is_active?: boolean | null
           metadata?: Json | null

@@ -49,6 +49,9 @@ const NewProject = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [iconFile, setIconFile] = useState<File | null>(null);
+  const [iconPreview, setIconPreview] = useState<string>('');
   
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
@@ -106,6 +109,36 @@ const NewProject = () => {
     lookupFields: [],
   });
 
+  const handleIconUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Invalid File',
+        description: 'Please select an image file (PNG, JPG, GIF, or WEBP)',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: 'File Too Large',
+        description: 'Image must be under 2MB',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIconFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setIconPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
   const addField = () => {
     setFields([...fields, { name: '', description: '' }]);
   };
@@ -160,6 +193,29 @@ const NewProject = () => {
 
     setSaving(true);
     try {
+      let iconUrl = '';
+
+      // Upload icon if provided
+      if (iconFile) {
+        setUploading(true);
+        const fileExt = iconFile.name.split('.').pop();
+        const fileName = `${crypto.randomUUID()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('project-icons')
+          .upload(filePath, iconFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('project-icons')
+          .getPublicUrl(filePath);
+
+        iconUrl = publicUrl;
+        setUploading(false);
+      }
+
       const selectedExportTypes = Object.entries(exportConfig)
         .filter(([_, config]) => config.enabled)
         .map(([type]) => type);
@@ -167,6 +223,7 @@ const NewProject = () => {
       const { error } = await supabase.from('projects').insert([{
         name: projectName,
         description: projectDescription,
+        icon_url: iconUrl || null,
         enable_check_scanning: enableCheckScanning,
         enable_signature_verification: enableSignatureVerification,
         extraction_fields: validFields as any,
@@ -242,6 +299,49 @@ const NewProject = () => {
                 placeholder="e.g., Invoice Processing"
                 required
               />
+            </div>
+
+            {/* Project Icon */}
+            <div className="space-y-2">
+              <Label htmlFor="icon">Project Icon (Optional)</Label>
+              <p className="text-sm text-muted-foreground">
+                Upload a small image or icon to help identify this project visually
+              </p>
+              <div className="flex items-center gap-4">
+                {iconPreview && (
+                  <div className="relative">
+                    <img 
+                      src={iconPreview} 
+                      alt="Icon preview" 
+                      className="h-16 w-16 object-contain rounded border"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full"
+                      onClick={() => {
+                        setIconFile(null);
+                        setIconPreview('');
+                      }}
+                    >
+                      ×
+                    </Button>
+                  </div>
+                )}
+                <div className="flex-1">
+                  <Input
+                    id="icon"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleIconUpload}
+                    disabled={uploading}
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    PNG, JPG, GIF, or WEBP • Max 2MB
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div>
