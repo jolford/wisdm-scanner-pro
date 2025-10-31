@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -70,6 +70,46 @@ export function ValidationLookupConfig({
   const [loadingFields, setLoadingFields] = useState(false);
   const [uploadingExcel, setUploadingExcel] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Auto-load columns when returning to the page with an existing file
+  useEffect(() => {
+    const loadColumns = async () => {
+      if (!config.excelFileUrl) return;
+      if (!(config.system === 'csv' || config.system === 'excel')) return;
+      if (ecmFields.length > 0) return; // already loaded
+
+      try {
+        setLoadingFields(true);
+        if (config.system === 'csv') {
+          const resp = await fetch(config.excelFileUrl);
+          if (!resp.ok) throw new Error('Failed to fetch CSV');
+          const text = await resp.text();
+          const first = (text.split(/\r?\n/)[0] || '').trim();
+          if (!first) return;
+          const cols = first
+            .split(',')
+            .map((c) => c.trim().replace(/^"(.*)"$/, '$1'))
+            .filter(Boolean);
+          setEcmFields(cols.map((name) => ({ name, type: 'string' })));
+          setConnectionStatus('success');
+        } else {
+          const { data, error } = await supabase.functions.invoke('parse-excel-columns', {
+            body: { fileUrl: config.excelFileUrl },
+          });
+          if (error) throw error;
+          const cols: string[] = (data?.columns || []) as string[];
+          setEcmFields(cols.map((name) => ({ name, type: 'string' })));
+          setConnectionStatus('success');
+        }
+      } catch (e) {
+        console.error('Failed to auto-load lookup columns:', e);
+      } finally {
+        setLoadingFields(false);
+      }
+    };
+
+    loadColumns();
+  }, [config.system, config.excelFileUrl]);
 
   const testConnection = async () => {
     if (config.system === 'none') {
