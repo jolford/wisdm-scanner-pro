@@ -46,23 +46,23 @@ Set up these fields to extract from each petition row:
 
 ---
 
-## Step 3: Set Up Excel Validation Lookup
+## Step 3: Set Up Validation Lookup (Excel or CSV)
 
 ### Prepare Voter Registration Database
 
 1. **Download Sample Template:**
-   - Sample file available at: `/downloads/voter-registration-sample.csv`
+   - Sample CSV file available at: `/downloads/voter-registration-sample.csv`
    - Contains columns: `Voter_Name`, `Address`, `City`, `Zip`, `Registration_Status`, `County`, `Registration_Date`
 
 2. **Upload Your Voter Database:**
    - Go to **Project Settings → Validation Lookup**
-   - Select **Excel** as validation source
-   - Upload your voter registration Excel/CSV file
+   - Select **CSV** or **Excel** as validation source
+   - Upload your voter registration CSV/Excel file
    - Map the columns:
-     - WISDM `Printed_Name` → Excel `Voter_Name`
-     - WISDM `Address` → Excel `Address`
-     - WISDM `City` → Excel `City`
-     - WISDM `Zip` → Excel `Zip`
+     - WISDM `Printed_Name` → Database `Voter_Name`
+     - WISDM `Address` → Database `Address`
+     - WISDM `City` → Database `City`
+     - WISDM `Zip` → Database `Zip`
 
 3. **Validation Logic:**
    - System will auto-validate each extracted name against the database
@@ -131,6 +131,7 @@ For petition signature verification, you can:
 ### Export Options:
 - **CSV Export:** All extracted data with validation results
 - **Excel Export:** Formatted spreadsheet with signature status
+- **JSON/XML Export:** Structured data for system integration
 - **PDF Report:** Summary of validated vs. rejected signatures
 - **Database Export:** Push to SQL Server, FileBound, SharePoint, or DocMgt
 
@@ -218,7 +219,7 @@ For petition signature verification, you can:
 ## Sample Files
 
 - **Sample Petition:** `/downloads/sample-petition.pdf`
-- **Voter Database Template:** `/downloads/voter-registration-sample.csv`
+- **Voter Database Template (CSV):** `/downloads/voter-registration-sample.csv`
 - **Setup Guide:** This document
 
 ---
@@ -235,7 +236,7 @@ For petition signature verification, you can:
 ## Next Steps
 
 1. ✅ Create the Petition Processing project
-2. ✅ Upload the voter registration database
+2. ✅ Upload the voter registration database (CSV or Excel)
 3. ✅ Configure signature verification settings
 4. ✅ Process a test petition batch
 5. ✅ Review validation results

@@ -7,6 +7,30 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Parse CSV text into JSON
+function parseCSV(csvText: string): any[] {
+  const lines = csvText.trim().split('\n');
+  if (lines.length === 0) return [];
+  
+  // Parse header
+  const headers = lines[0].split(',').map(h => h.trim().replace(/^"(.*)"$/, '$1'));
+  
+  // Parse rows
+  const data: any[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(',').map(v => v.trim().replace(/^"(.*)"$/, '$1'));
+    if (values.length === headers.length) {
+      const row: any = {};
+      headers.forEach((header, index) => {
+        row[header] = values[index];
+      });
+      data.push(row);
+    }
+  }
+  
+  return data;
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -30,25 +54,31 @@ serve(async (req) => {
       throw new Error('Missing required parameters');
     }
 
-    console.log('Excel lookup request:', { keyColumn, keyValue, lookupFields });
+    console.log('File lookup request:', { fileUrl, keyColumn, keyValue, lookupFields });
 
-    // Fetch the Excel file
+    // Fetch the file
     const fileResponse = await fetch(fileUrl);
     if (!fileResponse.ok) {
-      throw new Error(`Failed to fetch Excel file: ${fileResponse.statusText}`);
+      throw new Error(`Failed to fetch file: ${fileResponse.statusText}`);
     }
 
-    const arrayBuffer = await fileResponse.arrayBuffer();
+    let data: any[];
     
-    // Parse Excel file
-    const workbook = read(new Uint8Array(arrayBuffer), { type: 'array' });
-    const firstSheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[firstSheetName];
-    
-    // Convert to JSON
-    const data = utils.sheet_to_json(worksheet);
-    
-    console.log(`Parsed ${data.length} rows from Excel`);
+    // Determine file type and parse accordingly
+    if (fileUrl.toLowerCase().endsWith('.csv')) {
+      // Parse CSV
+      const csvText = await fileResponse.text();
+      data = parseCSV(csvText);
+      console.log(`Parsed ${data.length} rows from CSV`);
+    } else {
+      // Parse Excel
+      const arrayBuffer = await fileResponse.arrayBuffer();
+      const workbook = read(new Uint8Array(arrayBuffer), { type: 'array' });
+      const firstSheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheetName];
+      data = utils.sheet_to_json(worksheet);
+      console.log(`Parsed ${data.length} rows from Excel`);
+    }
 
     // Find matching record
     const matchingRecord = data.find((row: any) => {
@@ -106,7 +136,7 @@ serve(async (req) => {
     );
 
   } catch (error: any) {
-    console.error('Error in Excel lookup:', error);
+    console.error('Error in file lookup:', error);
     return new Response(
       JSON.stringify({ error: error?.message || 'Unknown error' }),
       { 

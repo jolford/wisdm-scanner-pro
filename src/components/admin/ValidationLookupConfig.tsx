@@ -17,7 +17,7 @@ export interface ValidationLookupField {
 
 export interface ValidationLookupConfig {
   enabled: boolean;
-  system: 'filebound' | 'docmgt' | 'sql' | 'excel' | 'none';
+  system: 'filebound' | 'docmgt' | 'sql' | 'excel' | 'csv' | 'none';
   url?: string;
   username?: string;
   password?: string;
@@ -30,7 +30,7 @@ export interface ValidationLookupConfig {
   sqlDatabase?: string;
   sqlTable?: string;
   sqlDialect?: 'mysql' | 'postgresql' | 'sqlserver';
-  // Excel-specific fields
+  // Excel/CSV-specific fields
   excelFileUrl?: string;
   excelFileName?: string;
   excelKeyColumn?: string;
@@ -76,13 +76,13 @@ export function ValidationLookupConfig({
       return;
     }
 
-    // Excel doesn't need connection test
-    if (config.system === 'excel') {
+    // Excel/CSV doesn't need connection test
+    if (config.system === 'excel' || config.system === 'csv') {
       if (!config.excelFileUrl) {
-        toast.error('Please upload an Excel file first');
+        toast.error(`Please upload ${config.system === 'csv' ? 'a CSV' : 'an Excel'} file first`);
         return;
       }
-      toast.success('Excel file is ready for validation');
+      toast.success(`${config.system.toUpperCase()} file is ready for validation`);
       setConnectionStatus('success');
       return;
     }
@@ -191,18 +191,22 @@ export function ValidationLookupConfig({
     }
   };
 
-  const handleExcelUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.match(/\.(xlsx|xls)$/i)) {
-      toast.error('Please upload an Excel file (.xlsx or .xls)');
+    const isCSV = config.system === 'csv';
+    const expectedExtension = isCSV ? /\.csv$/i : /\.(xlsx|xls)$/i;
+    const fileType = isCSV ? 'CSV' : 'Excel';
+
+    if (!file.name.match(expectedExtension)) {
+      toast.error(`Please upload ${isCSV ? 'a CSV file (.csv)' : 'an Excel file (.xlsx or .xls)'}`);
       return;
     }
 
     setUploadingExcel(true);
     try {
-      const filePath = `excel-lookups/${Date.now()}-${file.name}`;
+      const filePath = `${isCSV ? 'csv' : 'excel'}-lookups/${Date.now()}-${file.name}`;
       
       const { error: uploadError } = await supabase.storage
         .from('documents')
@@ -214,14 +218,25 @@ export function ValidationLookupConfig({
         .from('documents')
         .getPublicUrl(filePath);
 
-      // Parse Excel to get columns
-      const result = await supabase.functions.invoke('parse-excel-columns', {
-        body: { fileUrl: publicUrl }
-      });
+      let columns: string[] = [];
 
-      if (result.error) throw result.error;
+      if (isCSV) {
+        // Parse CSV directly in browser
+        const text = await file.text();
+        const lines = text.split('\n');
+        if (lines.length > 0) {
+          // Get header row (first line)
+          columns = lines[0].split(',').map(col => col.trim().replace(/^"(.*)"$/, '$1'));
+        }
+      } else {
+        // Parse Excel using edge function
+        const result = await supabase.functions.invoke('parse-excel-columns', {
+          body: { fileUrl: publicUrl }
+        });
 
-      const columns = result.data.columns || [];
+        if (result.error) throw result.error;
+        columns = result.data.columns || [];
+      }
       
       setEcmFields(columns.map((col: string) => ({
         name: col,
@@ -237,10 +252,10 @@ export function ValidationLookupConfig({
         excelKeyColumn: columns[0] || 'File Name'
       });
 
-      toast.success('Excel file uploaded successfully');
+      toast.success(`${fileType} file uploaded successfully`);
     } catch (error) {
-      console.error('Error uploading Excel:', error);
-      toast.error('Failed to upload Excel file');
+      console.error(`Error uploading ${fileType}:`, error);
+      toast.error(`Failed to upload ${fileType} file`);
       setConnectionStatus('error');
     } finally {
       setUploadingExcel(false);
@@ -356,7 +371,7 @@ export function ValidationLookupConfig({
     });
   };
 
-  const isTestButtonDisabled = disabled || testing || config.system === 'none' || config.system === 'excel' ||
+  const isTestButtonDisabled = disabled || testing || config.system === 'none' || config.system === 'excel' || config.system === 'csv' ||
     (config.system === 'sql' 
       ? !config.sqlHost || !config.sqlDatabase || !config.username || !config.password || !config.sqlDialect
       : !config.url || !config.username || !config.password);
@@ -370,7 +385,7 @@ export function ValidationLookupConfig({
           </Label>
           <Select
             value={config.system}
-            onValueChange={(value: 'filebound' | 'docmgt' | 'sql' | 'excel' | 'none') => 
+            onValueChange={(value: 'filebound' | 'docmgt' | 'sql' | 'excel' | 'csv' | 'none') => 
               onConfigChange({ ...config, system: value })
             }
             disabled={disabled}
@@ -384,6 +399,7 @@ export function ValidationLookupConfig({
               <SelectItem value="docmgt">DocMgt</SelectItem>
               <SelectItem value="sql">SQL Database</SelectItem>
               <SelectItem value="excel">Excel Spreadsheet</SelectItem>
+              <SelectItem value="csv">CSV File</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -413,16 +429,18 @@ export function ValidationLookupConfig({
             </div>
 // ... keep existing code
           </>
-        ) : config.system === 'excel' ? (
+        ) : (config.system === 'excel' || config.system === 'csv') ? (
           <div className="col-span-2 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="excelFile">Excel File Upload *</Label>
+              <Label htmlFor="dataFile">
+                {config.system === 'csv' ? 'CSV' : 'Excel'} File Upload *
+              </Label>
               <div className="flex items-center gap-2">
                 <Input
-                  id="excelFile"
+                  id="dataFile"
                   type="file"
-                  accept=".xlsx,.xls"
-                  onChange={handleExcelUpload}
+                  accept={config.system === 'csv' ? '.csv' : '.xlsx,.xls'}
+                  onChange={handleFileUpload}
                   disabled={uploadingExcel || disabled}
                 />
                 {uploadingExcel && <Loader2 className="h-4 w-4 animate-spin" />}
@@ -433,7 +451,7 @@ export function ValidationLookupConfig({
                 </p>
               )}
               <p className="text-xs text-muted-foreground">
-                Upload an Excel file (.xlsx or .xls) containing validation data
+                Upload {config.system === 'csv' ? 'a CSV file (.csv)' : 'an Excel file (.xlsx or .xls)'} containing validation data
               </p>
             </div>
 
