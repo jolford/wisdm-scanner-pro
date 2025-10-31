@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -6,6 +6,8 @@ import { useKeyboardShortcuts, GLOBAL_SHORTCUTS } from "@/hooks/use-keyboard-sho
 import { KeyboardShortcutsDialog } from "@/components/KeyboardShortcutsDialog";
 import { CommandPalette } from "@/components/CommandPalette";
 import { BrowserRouter, Routes, Route, useLocation, Navigate, useNavigate } from "react-router-dom";
+import { useFileLaunch } from "@/hooks/use-file-launch";
+import { toast } from "sonner";
 import Index from "./pages/Index";
 import Queue from "./pages/Queue";
 import Auth from "./pages/Auth";
@@ -86,8 +88,13 @@ const RecoveryRedirect: React.FC = () => {
   return null;
 };
 
-function GlobalKeyboardShortcuts({ onShowShortcuts }: { onShowShortcuts: () => void }) {
+function GlobalKeyboardShortcuts({ onShowShortcuts, onFilesLaunched }: { 
+  onShowShortcuts: () => void;
+  onFilesLaunched: (files: File[]) => void;
+}) {
   const navigate = useNavigate();
+  
+  useFileLaunch(onFilesLaunched);
   
   useKeyboardShortcuts({
     shortcuts: [
@@ -119,6 +126,22 @@ function GlobalKeyboardShortcuts({ onShowShortcuts }: { onShowShortcuts: () => v
 
 const App = () => {
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [launchedFiles, setLaunchedFiles] = useState<File[]>([]);
+
+  const handleFilesLaunched = useCallback((files: File[]) => {
+    setLaunchedFiles(files);
+    toast.success(`${files.length} file(s) ready to import`, {
+      description: "Opening Queue page..."
+    });
+  }, []);
+
+  // Clear launched files after they've been handled
+  useEffect(() => {
+    if (launchedFiles.length > 0) {
+      const timer = setTimeout(() => setLaunchedFiles([]), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [launchedFiles]);
   
   return (
     <ErrorBoundary>
@@ -130,11 +153,14 @@ const App = () => {
             <KeyboardShortcutsDialog open={showShortcuts} onOpenChange={setShowShortcuts} />
           <BrowserRouter>
             <CommandPalette />
-            <GlobalKeyboardShortcuts onShowShortcuts={() => setShowShortcuts(true)} />
+            <GlobalKeyboardShortcuts 
+              onShowShortcuts={() => setShowShortcuts(true)}
+              onFilesLaunched={handleFilesLaunched}
+            />
           <RecoveryRedirect />
           <div className="flex-1">
           <Routes>
-            <Route path="/" element={<Queue />} />
+            <Route path="/" element={<Queue launchedFiles={launchedFiles} />} />
             <Route path="/old" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/install" element={<Install />} />

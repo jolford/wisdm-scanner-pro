@@ -41,6 +41,19 @@ export default defineConfig(({ mode }) => ({
             type: 'image/png',
             purpose: 'any maskable'
           }
+        ],
+        file_handlers: [
+          {
+            action: '/',
+            accept: {
+              'application/pdf': ['.pdf'],
+              'image/png': ['.png'],
+              'image/jpeg': ['.jpg', '.jpeg'],
+              'image/tiff': ['.tif', '.tiff'],
+              'image/bmp': ['.bmp'],
+              'image/webp': ['.webp']
+            }
+          }
         ]
       },
       workbox: {

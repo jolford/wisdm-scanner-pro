@@ -43,7 +43,7 @@ import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
 
 // PDF.js worker is initialized lazily inside the Queue component to avoid errors on non-queue routes.
 
-const Queue = () => {
+const Queue = ({ launchedFiles }: { launchedFiles?: File[] }) => {
   // Lazily initialize PDF.js worker to prevent global crashes on auth pages
   useEffect(() => {
     try {
@@ -398,6 +398,24 @@ const [isExporting, setIsExporting] = useState(false);
       })();
     }
   }, [isReadyForExport, readyNotified, selectedBatch?.status, selectedBatchId]);
+
+  // Handle files launched via drag & drop on app icon
+  useEffect(() => {
+    if (!launchedFiles || launchedFiles.length === 0) return;
+    
+    // If project and batch are selected, immediately process the files
+    if (selectedProjectId && selectedBatchId) {
+      handleMultipleFiles(launchedFiles);
+    } else {
+      // Show a toast prompting user to select project/batch
+      toast({
+        title: 'Files Ready to Import',
+        description: `${launchedFiles.length} file(s) ready. Please select a project and batch first.`,
+        duration: 5000,
+      });
+    }
+  }, [launchedFiles]);
+
 
   const loadQueueDocuments = async () => {
     if (!selectedBatchId) return;
