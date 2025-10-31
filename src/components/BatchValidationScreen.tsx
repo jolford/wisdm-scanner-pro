@@ -152,6 +152,8 @@ export const BatchValidationScreen = ({
   // Track AI validation state for each document and field
   const [validatingFields, setValidatingFields] = useState<Set<string>>(new Set());
   const [fieldConfidence, setFieldConfidence] = useState<Record<string, Record<string, number>>>({});
+  // Translated text cache per document
+  const [translatedTexts, setTranslatedTexts] = useState<Record<string, string>>({});
   
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -1674,12 +1676,45 @@ const { toast } = useToast();
                           
                           <TabsContent value="text" className="mt-4">
                             <div className="space-y-2">
-                              <Label className="text-sm">Raw Extracted Text</Label>
+                              <div className="flex items-center justify-between">
+                                <Label className="text-sm">Raw Extracted Text</Label>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={async () => {
+                                    try {
+                                      if (!doc.extracted_text) return;
+                                      const { data, error } = await supabase.functions.invoke('translate-text', {
+                                        body: { text: doc.extracted_text }
+                                      });
+                                      if (error) throw error;
+                                      if (data?.text) {
+                                        setTranslatedTexts(prev => ({ ...prev, [doc.id]: data.text }));
+                                        toast({ title: 'Translated', description: 'Non-English text translated to English.' });
+                                      }
+                                    } catch (e: any) {
+                                      toast({ title: 'Translation failed', description: e.message || 'Please try again later', variant: 'destructive' });
+                                    }
+                                  }}
+                                >
+                                  Translate to English
+                                </Button>
+                              </div>
                               <Textarea
                                 value={doc.extracted_text || 'No text extracted'}
                                 readOnly
                                 className="min-h-[400px] font-mono text-sm"
                               />
+                              {translatedTexts[doc.id] && (
+                                <div className="space-y-2">
+                                  <Label className="text-sm">Translated (English)</Label>
+                                  <Textarea
+                                    value={translatedTexts[doc.id]}
+                                    readOnly
+                                    className="min-h-[300px] font-mono text-sm"
+                                  />
+                                </div>
+                              )}
                             </div>
                           </TabsContent>
                         </Tabs>

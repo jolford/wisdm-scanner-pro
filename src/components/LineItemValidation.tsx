@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, XCircle, AlertCircle, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getSignedUrl } from '@/hooks/use-signed-url';
 
 interface LineItemValidationProps {
   lineItems: Array<Record<string, any>>;
@@ -78,10 +79,11 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField }: LineIt
             wisdmValue: lineItem[f.wisdmField] || lineItem[f.wisdmField.toLowerCase()] || '',
           }));
 
-        // Call validate-excel-lookup
+        // Call validate-excel-lookup with a signed URL (works for private buckets)
+        const signedUrl = await getSignedUrl(lookupConfig.excelFileUrl);
         const { data, error } = await supabase.functions.invoke('validate-excel-lookup', {
           body: {
-            fileUrl: lookupConfig.excelFileUrl,
+            fileUrl: signedUrl,
             keyColumn: lookupConfig.excelKeyColumn,
             keyValue: keyValue,
             lookupFields: lookupFields,
