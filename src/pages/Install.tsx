@@ -35,21 +35,39 @@ export default function Install() {
 
   const handleInstall = async () => {
     if (!deferredPrompt) {
+      // Detect platform for better instructions
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const isAndroid = /Android/.test(navigator.userAgent);
+      
       toast({
-        title: 'Install Instructions',
-        description: 'On iOS: Tap Share → Add to Home Screen. On Android: Use your browser menu.',
+        title: isIOS ? 'iOS Installation' : isAndroid ? 'Android Installation' : 'Installation Instructions',
+        description: isIOS 
+          ? 'Tap the Share button (□↑) at the bottom, then select "Add to Home Screen"'
+          : isAndroid
+          ? 'Tap the menu (⋮) in your browser, then select "Install app" or "Add to Home Screen"'
+          : 'Use your browser menu to install this app',
+        duration: 8000,
       });
       return;
     }
 
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    
-    if (outcome === 'accepted') {
-      setIsInstalled(true);
+    try {
+      await deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      
+      if (outcome === 'accepted') {
+        setIsInstalled(true);
+        toast({
+          title: 'App Installed!',
+          description: 'WISDM Capture Pro has been added to your home screen.',
+        });
+      }
+    } catch (error) {
+      console.error('Install prompt failed:', error);
       toast({
-        title: 'App Installed!',
-        description: 'WISDM Capture Pro has been added to your home screen.',
+        title: 'Installation Failed',
+        description: 'Please try installing manually from your browser menu.',
+        variant: 'destructive',
       });
     }
     

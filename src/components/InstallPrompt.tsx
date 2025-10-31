@@ -4,9 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Download, X, Smartphone } from 'lucide-react';
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 export function InstallPrompt() {
   const [isInstalled, setIsInstalled] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -20,6 +26,18 @@ export function InstallPrompt() {
     if (dismissed === 'true') {
       setIsDismissed(true);
     }
+
+    // Capture install prompt event
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+    };
   }, []);
 
   const handleDismiss = () => {
@@ -28,7 +46,13 @@ export function InstallPrompt() {
   };
 
   const handleInstallClick = () => {
-    navigate('/install');
+    // If we have the prompt ready, trigger it
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+    } else {
+      // Otherwise navigate to install page with instructions
+      navigate('/install');
+    }
   };
 
   // Don't show if installed or dismissed
@@ -57,7 +81,7 @@ export function InstallPrompt() {
             className="gap-2"
           >
             <Download className="h-4 w-4" />
-            Install Now
+            {deferredPrompt ? 'Install Now' : 'View Instructions'}
           </Button>
         </div>
 
