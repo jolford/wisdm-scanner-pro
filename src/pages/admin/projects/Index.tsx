@@ -24,6 +24,15 @@ interface Project {
   icon_url: string | null;
 }
 
+// Extend the RPC return type to include icon_url
+interface ProjectSafeResult extends Project {
+  enable_check_scanning?: boolean;
+  enable_signature_verification?: boolean;
+  export_types?: string[];
+  queues?: any;
+  metadata?: any;
+}
+
 interface Customer {
   id: string;
   company_name: string;
@@ -71,7 +80,18 @@ const Projects = () => {
         const results = await Promise.all(projectPromises);
         const projects = results
           .filter(r => !r.error && r.data)
-          .map(r => r.data as unknown as Project);
+          .map(r => {
+            const data = r.data as unknown as ProjectSafeResult;
+            return {
+              id: data.id,
+              name: data.name,
+              description: data.description,
+              extraction_fields: data.extraction_fields,
+              created_at: data.created_at,
+              customer_id: data.customer_id,
+              icon_url: data.icon_url || null,
+            } as Project;
+          });
         setProjects(projects);
       } else {
         setProjects([]);
