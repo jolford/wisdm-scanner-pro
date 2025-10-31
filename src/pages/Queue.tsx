@@ -403,17 +403,71 @@ const [isExporting, setIsExporting] = useState(false);
   useEffect(() => {
     if (!launchedFiles || launchedFiles.length === 0) return;
     
-    // If project and batch are selected, immediately process the files
-    if (selectedProjectId && selectedBatchId) {
-      handleMultipleFiles(launchedFiles);
-    } else {
-      // Show a toast prompting user to select project/batch
-      toast({
-        title: 'Files Ready to Import',
-        description: `${launchedFiles.length} file(s) ready. Please select a project and batch first.`,
-        duration: 5000,
-      });
-    }
+    const autoCreateBatchAndImport = async () => {
+      // If no project selected, prompt user
+      if (!selectedProjectId) {
+        toast({
+          title: 'Select Project First',
+          description: `${launchedFiles.length} file(s) ready. Please select a project to continue.`,
+          duration: 5000,
+        });
+        return;
+      }
+
+      // If project is selected but no batch, auto-create one
+      if (selectedProjectId && !selectedBatchId) {
+        const timestamp = new Date().toLocaleString('en-US', {
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          hour12: true
+        });
+        const batchName = `Import ${timestamp}`;
+        
+        try {
+          const { data: newBatch, error } = await supabase
+            .from('batches')
+            .insert({
+              batch_name: batchName,
+              project_id: selectedProjectId,
+              status: 'scanning',
+              created_by: user?.id,
+              priority: 'medium',
+            } as any)
+            .select()
+            .single();
+
+          if (error) throw error;
+
+          setSelectedBatchId(newBatch.id);
+          setSelectedBatch(newBatch);
+          sessionStorage.setItem('selectedBatchId', newBatch.id);
+          
+          toast({
+            title: 'Batch Created',
+            description: `Auto-created "${batchName}" and importing ${launchedFiles.length} file(s)...`,
+          });
+
+          // Wait a moment for state to settle, then process files
+          setTimeout(() => {
+            handleMultipleFiles(launchedFiles);
+          }, 100);
+        } catch (err: any) {
+          toast({
+            title: 'Failed to Create Batch',
+            description: err.message || 'Could not auto-create batch',
+            variant: 'destructive',
+          });
+        }
+      } else if (selectedProjectId && selectedBatchId) {
+        // Both project and batch are selected, immediately process
+        handleMultipleFiles(launchedFiles);
+      }
+    };
+
+    autoCreateBatchAndImport();
   }, [launchedFiles]);
 
 
