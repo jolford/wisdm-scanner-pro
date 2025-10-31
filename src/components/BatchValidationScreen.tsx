@@ -28,6 +28,7 @@ import { BulkActionsToolbar } from './BulkActionsToolbar';
 import { SearchFilterBar, DocumentFilters } from './SearchFilterBar';
 import { ProgressTrackingDashboard } from './ProgressTrackingDashboard';
 import { SmartSuggestionsPanel } from './SmartSuggestionsPanel';
+import { PetitionValidationWarnings } from './PetitionValidationWarnings';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { useBulkSelection } from '@/hooks/use-bulk-selection';
 
@@ -1444,6 +1445,17 @@ const { toast } = useToast();
                                 />
                               </DialogContent>
                             </Dialog>
+
+                            {/* Petition Validation Warnings */}
+                            {doc.line_items && doc.line_items.length > 0 && (
+                              <div className="mb-6">
+                                <PetitionValidationWarnings
+                                  documentId={doc.id}
+                                  batchId={batchId}
+                                  metadata={getMetadataForDoc(doc)}
+                                />
+                              </div>
+                            )}
 
                             {projectFields.map((field) => {
                               const fieldValue = getMetadataValue(metadata, field.name);
