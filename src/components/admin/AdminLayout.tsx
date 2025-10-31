@@ -21,6 +21,7 @@ import {
   Trophy,
   Palette,
   Activity,
+  Sparkles,
 } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { supabase } from '@/integrations/supabase/client';
@@ -57,6 +58,7 @@ const menuItems = [
   { title: 'Dashboard', url: '/admin', icon: LayoutDashboard },
   { title: 'Projects', url: '/admin/projects', icon: FolderOpen },
   { title: 'Batch Templates', url: '/admin/batch-templates', icon: LayoutDashboard },
+  { title: 'ML Templates', url: '/admin/ml-templates', icon: Sparkles },
   { title: 'Documents', url: '/admin/documents', icon: FileText },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
   { title: 'Validation Analytics', url: '/admin/validation-analytics', icon: Activity },
