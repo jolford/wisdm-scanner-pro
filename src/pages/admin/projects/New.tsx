@@ -16,6 +16,7 @@ import { projectSchema } from '@/lib/validation-schemas';
 import { safeErrorMessage } from '@/lib/error-handler';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { ECMExportConfig } from '@/components/admin/ECMExportConfig';
+import { ProjectIconSelector } from '@/components/ProjectIconSelector';
 import { DocumentSeparationConfig, SeparationConfig } from '@/components/admin/DocumentSeparationConfig';
 import { FolderPicker } from '@/components/admin/FolderPicker';
 import { TableExtractionConfig, TableExtractionConfig as TableConfig } from '@/components/admin/TableExtractionConfig';
@@ -193,9 +194,9 @@ const NewProject = () => {
 
     setSaving(true);
     try {
-      let iconUrl = '';
+      let iconUrl = iconPreview; // Use the preview URL which could be a preloaded icon
 
-      // Upload icon if provided
+      // Upload custom icon if provided
       if (iconFile) {
         setUploading(true);
         const fileExt = iconFile.name.split('.').pop();
@@ -301,48 +302,16 @@ const NewProject = () => {
               />
             </div>
 
-            {/* Project Icon */}
-            <div className="space-y-2">
-              <Label htmlFor="icon">Project Icon (Optional)</Label>
-              <p className="text-sm text-muted-foreground">
-                Upload a small image or icon to help identify this project visually
-              </p>
-              <div className="flex items-center gap-4">
-                {iconPreview && (
-                  <div className="relative">
-                    <img 
-                      src={iconPreview} 
-                      alt="Icon preview" 
-                      className="h-16 w-16 object-contain rounded border"
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="destructive"
-                      className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full"
-                      onClick={() => {
-                        setIconFile(null);
-                        setIconPreview('');
-                      }}
-                    >
-                      ×
-                    </Button>
-                  </div>
-                )}
-                <div className="flex-1">
-                  <Input
-                    id="icon"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleIconUpload}
-                    disabled={uploading}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    PNG, JPG, GIF, or WEBP • Max 2MB
-                  </p>
-                </div>
-              </div>
-            </div>
+            {/* Project Icon Selector */}
+            <ProjectIconSelector
+              selectedIcon={iconPreview}
+              onIconSelect={(url) => {
+                setIconPreview(url);
+                setIconFile(null);
+              }}
+              onCustomUpload={handleIconUpload}
+              uploading={uploading}
+            />
 
             <div>
               <Label htmlFor="description">Description</Label>

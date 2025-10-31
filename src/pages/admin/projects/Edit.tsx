@@ -19,6 +19,7 @@ import { projectSchema } from '@/lib/validation-schemas';
 import { safeErrorMessage } from '@/lib/error-handler';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { ECMExportConfig } from '@/components/admin/ECMExportConfig';
+import { ProjectIconSelector } from '@/components/ProjectIconSelector';
 import { DocumentSeparationConfig, SeparationConfig } from '@/components/admin/DocumentSeparationConfig';
 import { FolderPicker } from '@/components/admin/FolderPicker';
 import { ScheduledExportConfig } from '@/components/admin/ScheduledExportConfig';
@@ -372,14 +373,14 @@ const EditProject = () => {
 
     setSaving(true);
     try {
-      let iconUrl = currentIconUrl;
+      let iconUrl = iconPreview; // Use preview which could be preloaded or custom
 
-      // Upload new icon if provided
+      // Upload new custom icon if provided
       if (iconFile) {
         setUploading(true);
         
-        // Delete old icon if exists
-        if (currentIconUrl) {
+        // Delete old custom icon if exists (not preloaded)
+        if (currentIconUrl && !currentIconUrl.includes('/assets/')) {
           const oldPath = currentIconUrl.split('/project-icons/')[1];
           if (oldPath) {
             await supabase.storage
@@ -615,49 +616,20 @@ const EditProject = () => {
               />
             </div>
 
-            {/* Project Icon */}
-            <div className="space-y-2">
-              <Label htmlFor="icon">Project Icon (Optional)</Label>
-              <p className="text-sm text-muted-foreground">
-                Upload a small image or icon to help identify this project visually
-              </p>
-              <div className="flex items-center gap-4">
-                {iconPreview && (
-                  <div className="relative">
-                    <img 
-                      src={iconPreview} 
-                      alt="Icon preview" 
-                      className="h-16 w-16 object-contain rounded border"
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="destructive"
-                      className="absolute -top-2 -right-2 h-6 w-6 p-0 rounded-full"
-                      onClick={() => {
-                        setIconFile(null);
-                        setIconPreview('');
-                        setCurrentIconUrl('');
-                      }}
-                    >
-                      ×
-                    </Button>
-                  </div>
-                )}
-                <div className="flex-1">
-                  <Input
-                    id="icon"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleIconUpload}
-                    disabled={uploading}
-                  />
-                  <p className="text-xs text-muted-foreground mt-1">
-                    PNG, JPG, GIF, or WEBP • Max 2MB
-                  </p>
-                </div>
-              </div>
-            </div>
+            {/* Project Icon Selector */}
+            <ProjectIconSelector
+              selectedIcon={iconPreview}
+              onIconSelect={(url) => {
+                setIconPreview(url);
+                setIconFile(null);
+                // If selecting a preloaded icon, clear the currentIconUrl
+                if (url.includes('/assets/')) {
+                  setCurrentIconUrl('');
+                }
+              }}
+              onCustomUpload={handleIconUpload}
+              uploading={uploading}
+            />
 
             <div className="flex items-center space-x-2 p-4 border border-border rounded-lg bg-muted/30 mb-6">
               <Checkbox
