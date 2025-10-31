@@ -451,6 +451,47 @@ export type Database = {
         }
         Relationships: []
       }
+      detected_fields: {
+        Row: {
+          auto_detected: boolean | null
+          bounding_box: Json | null
+          confidence: number | null
+          created_at: string | null
+          document_id: string
+          field_name: string
+          field_type: string
+          id: string
+        }
+        Insert: {
+          auto_detected?: boolean | null
+          bounding_box?: Json | null
+          confidence?: number | null
+          created_at?: string | null
+          document_id: string
+          field_name: string
+          field_type: string
+          id?: string
+        }
+        Update: {
+          auto_detected?: boolean | null
+          bounding_box?: Json | null
+          confidence?: number | null
+          created_at?: string | null
+          document_id?: string
+          field_name?: string
+          field_type?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "detected_fields_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_cache: {
         Row: {
           cache_key: string
@@ -929,6 +970,44 @@ export type Database = {
         }
         Relationships: []
       }
+      extraction_confidence: {
+        Row: {
+          confidence_score: number
+          created_at: string | null
+          document_id: string
+          extracted_value: string | null
+          field_name: string
+          id: string
+          needs_review: boolean | null
+        }
+        Insert: {
+          confidence_score: number
+          created_at?: string | null
+          document_id: string
+          extracted_value?: string | null
+          field_name: string
+          id?: string
+          needs_review?: boolean | null
+        }
+        Update: {
+          confidence_score?: number
+          created_at?: string | null
+          document_id?: string
+          extracted_value?: string | null
+          field_name?: string
+          id?: string
+          needs_review?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "extraction_confidence_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       field_changes: {
         Row: {
           change_type: string
@@ -969,6 +1048,53 @@ export type Database = {
             columns: ["document_id"]
             isOneToOne: false
             referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      field_learning_data: {
+        Row: {
+          confidence_score: number | null
+          corrected_value: string
+          correction_count: number | null
+          created_at: string | null
+          document_type: string | null
+          field_name: string
+          id: string
+          original_value: string | null
+          project_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          confidence_score?: number | null
+          corrected_value: string
+          correction_count?: number | null
+          created_at?: string | null
+          document_type?: string | null
+          field_name: string
+          id?: string
+          original_value?: string | null
+          project_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          confidence_score?: number | null
+          corrected_value?: string
+          correction_count?: number | null
+          created_at?: string | null
+          document_type?: string | null
+          field_name?: string
+          id?: string
+          original_value?: string | null
+          project_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "field_learning_data_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -1176,6 +1302,53 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ml_document_templates: {
+        Row: {
+          accuracy_rate: number | null
+          created_at: string | null
+          document_type: string
+          field_patterns: Json
+          id: string
+          is_active: boolean | null
+          project_id: string
+          template_name: string
+          training_data_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          accuracy_rate?: number | null
+          created_at?: string | null
+          document_type: string
+          field_patterns: Json
+          id?: string
+          is_active?: boolean | null
+          project_id: string
+          template_name: string
+          training_data_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          accuracy_rate?: number | null
+          created_at?: string | null
+          document_type?: string
+          field_patterns?: Json
+          id?: string
+          is_active?: boolean | null
+          project_id?: string
+          template_name?: string
+          training_data_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ml_document_templates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -2000,6 +2173,14 @@ export type Database = {
           _old_value: string
         }
         Returns: string
+      }
+      update_ml_template_accuracy: {
+        Args: {
+          _correct_predictions: number
+          _template_id: string
+          _total_predictions: number
+        }
+        Returns: undefined
       }
       update_tenant_usage: {
         Args: {
