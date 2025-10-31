@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -69,6 +69,7 @@ export function ValidationLookupConfig({
   const [selectedProjectId, setSelectedProjectId] = useState<string>(config.project || '');
   const [loadingFields, setLoadingFields] = useState(false);
   const [uploadingExcel, setUploadingExcel] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const testConnection = async () => {
     if (config.system === 'none') {
@@ -440,11 +441,24 @@ export function ValidationLookupConfig({
               <div className="flex items-center gap-2">
                 <Input
                   id="dataFile"
+                  ref={fileInputRef}
                   type="file"
                   accept={config.system === 'csv' ? '.csv' : '.xlsx,.xls'}
                   onChange={handleFileUpload}
                   disabled={uploadingExcel || disabled}
+                  className="hidden"
                 />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={uploadingExcel || disabled}
+                >
+                  {config.excelFileName ? 'Replace file' : `Upload ${config.system === 'csv' ? 'CSV' : 'Excel'} file`}
+                </Button>
+                {config.excelFileName && (
+                  <Badge variant="outline">{config.excelFileName}</Badge>
+                )}
                 {uploadingExcel && <Loader2 className="h-4 w-4 animate-spin" />}
               </div>
               {config.excelFileName && (
