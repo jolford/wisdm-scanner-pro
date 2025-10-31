@@ -514,7 +514,7 @@ const EditProject = () => {
               </p>
             </div>
 
-            <Tabs defaultValue="basic" className="space-y-6">
+            <Tabs defaultValue="basic" className="mt-6">
               <TabsList className="grid w-full grid-cols-6 bg-muted/50">
                 <TabsTrigger value="basic">Basic Settings</TabsTrigger>
                 <TabsTrigger value="import">Import & Capture</TabsTrigger>
@@ -525,7 +525,7 @@ const EditProject = () => {
               </TabsList>
 
               {/* Basic Settings Tab */}
-              <TabsContent value="basic" className="space-y-4">
+              <TabsContent value="basic" className="mt-6 space-y-6">
                 <Accordion type="multiple" defaultValue={[]} className="space-y-4">
               <AccordionItem value="fields" className="border rounded-lg px-4 bg-muted/20">
                 <AccordionTrigger className="hover:no-underline">

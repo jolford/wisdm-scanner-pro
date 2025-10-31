@@ -16,6 +16,7 @@ import { ImageRegionSelector } from './ImageRegionSelector';
 import { RedactionTool } from './RedactionTool';
 import { InteractiveDocumentViewer } from './InteractiveDocumentViewer';
 import { LineItemValidation } from './LineItemValidation';
+import { PetitionValidationWarnings } from './PetitionValidationWarnings';
 import { useAuth } from '@/hooks/use-auth';
 import { useSignedUrl } from '@/hooks/use-signed-url';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
@@ -1301,6 +1302,17 @@ useEffect(() => {
                 </div>
               )}
             </div>
+          </div>
+        )}
+
+        {/* Petition Validation Warnings */}
+        {documentId && (
+          <div className="mb-4">
+            <PetitionValidationWarnings
+              documentId={documentId}
+              batchId={documentId}
+              metadata={editedMetadata}
+            />
           </div>
         )}
         
