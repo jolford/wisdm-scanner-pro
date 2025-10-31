@@ -611,7 +611,7 @@ export function ValidationLookupConfig({
         </div>
       )}
 
-      {((selectedProjectId && ecmFields.length > 0) || (config.system === 'sql' && ecmFields.length > 0) || (config.system === 'excel' && config.excelFileUrl && ecmFields.length > 0)) && (
+      {((selectedProjectId && ecmFields.length > 0) || (config.system === 'sql' && ecmFields.length > 0) || ((config.system === 'excel' || config.system === 'csv') && config.excelFileUrl && ecmFields.length > 0)) && (
         <Card className="p-4 bg-muted/30">
           <div className="flex items-center justify-between mb-3">
             <Label className="text-sm font-medium">Lookup Field Configuration</Label>
