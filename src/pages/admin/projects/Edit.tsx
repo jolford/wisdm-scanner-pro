@@ -124,6 +124,14 @@ const EditProject = () => {
     password: '',
     project: '',
     lookupFields: [],
+    excelFileUrl: '',
+    excelFileName: '',
+    excelKeyColumn: '',
+    sqlHost: '',
+    sqlPort: '',
+    sqlDatabase: '',
+    sqlTable: '',
+    sqlDialect: undefined,
   });
 
   useEffect(() => {
@@ -230,6 +238,7 @@ const EditProject = () => {
 
         // Set validation lookup config from metadata
         if (projectData.metadata?.validation_lookup_config) {
+          console.log('Loading validation lookup config:', projectData.metadata.validation_lookup_config);
           setValidationLookupConfig(projectData.metadata.validation_lookup_config);
         }
 
@@ -323,18 +332,31 @@ const EditProject = () => {
       
       // Update metadata separately if needed
       if (!error) {
+        console.log('Saving validation lookup config:', validationLookupConfig);
+        
+        // Merge with existing metadata to preserve other fields
+        const { data: currentProject } = await supabase
+          .from('projects')
+          .select('metadata')
+          .eq('id', id)
+          .maybeSingle();
+        
+        const existingMetadata = (currentProject?.metadata as Record<string, any>) || {};
+        const updatedMetadata = {
+          ...existingMetadata,
+          export_config: exportConfig,
+          separation_config: separationConfig,
+          document_naming_pattern: documentNamingPattern,
+          table_extraction_config: tableExtractionConfig,
+          validation_lookup_config: validationLookupConfig,
+          classification: classificationConfig
+        };
+        
+        console.log('Merged metadata:', updatedMetadata);
+        
         await supabase
           .from('projects')
-          .update({ 
-            metadata: { 
-              export_config: exportConfig,
-              separation_config: separationConfig,
-              document_naming_pattern: documentNamingPattern,
-              table_extraction_config: tableExtractionConfig,
-              validation_lookup_config: validationLookupConfig,
-              classification: classificationConfig
-            } 
-          } as any)
+          .update({ metadata: updatedMetadata } as any)
           .eq('id', id);
       }
 
