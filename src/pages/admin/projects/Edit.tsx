@@ -28,6 +28,7 @@ import { ValidationLookupConfig, ValidationLookupConfig as VLConfig } from '@/co
 import { BarcodeConfig } from '@/components/admin/BarcodeConfig';
 import { HotFolderSetupWizard } from '@/components/admin/HotFolderSetupWizard';
 import { SignatureReferencesManager } from '@/components/admin/SignatureReferencesManager';
+import { AdvancedAIConfig } from '@/components/admin/AdvancedAIConfig';
 
 interface ExtractionField {
   name: string;
@@ -132,6 +133,20 @@ const EditProject = () => {
     sqlDatabase: '',
     sqlTable: '',
     sqlDialect: undefined,
+  });
+
+  const [advancedAISettings, setAdvancedAISettings] = useState<{
+    enableConfidenceScoring?: boolean;
+    enableHandwritingMode?: boolean;
+    enableSmartDetection?: boolean;
+    enableSelfLearning?: boolean;
+    enableMLTemplates?: boolean;
+  }>({
+    enableConfidenceScoring: false,
+    enableHandwritingMode: false,
+    enableSmartDetection: false,
+    enableSelfLearning: false,
+    enableMLTemplates: false,
   });
 
   useEffect(() => {
@@ -246,6 +261,11 @@ const EditProject = () => {
         if (projectData.metadata?.classification) {
           setClassificationConfig(projectData.metadata.classification);
         }
+
+        // Set advanced AI settings from metadata
+        if (projectData.metadata?.advanced_ai_settings) {
+          setAdvancedAISettings(projectData.metadata.advanced_ai_settings);
+        }
       }
     } catch (error) {
       console.error('Error loading project:', error);
@@ -349,7 +369,8 @@ const EditProject = () => {
           document_naming_pattern: documentNamingPattern,
           table_extraction_config: tableExtractionConfig,
           validation_lookup_config: validationLookupConfig,
-          classification: classificationConfig
+          classification: classificationConfig,
+          advanced_ai_settings: advancedAISettings
         };
         
         console.log('Merged metadata:', updatedMetadata);
@@ -494,10 +515,11 @@ const EditProject = () => {
             </div>
 
             <Tabs defaultValue="basic" className="space-y-6">
-              <TabsList className="grid w-full grid-cols-5 bg-muted/50">
+              <TabsList className="grid w-full grid-cols-6 bg-muted/50">
                 <TabsTrigger value="basic">Basic Settings</TabsTrigger>
                 <TabsTrigger value="import">Import & Capture</TabsTrigger>
                 <TabsTrigger value="processing">Processing & AI</TabsTrigger>
+                <TabsTrigger value="advanced-ai">Advanced AI</TabsTrigger>
                 <TabsTrigger value="export">Export & Integration</TabsTrigger>
                 <TabsTrigger value="signatures">Signatures</TabsTrigger>
               </TabsList>
@@ -840,6 +862,15 @@ const EditProject = () => {
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
+            </TabsContent>
+
+            {/* Advanced AI Tab */}
+            <TabsContent value="advanced-ai" className="space-y-4">
+              <AdvancedAIConfig
+                settings={advancedAISettings}
+                onSettingsChange={setAdvancedAISettings}
+                disabled={saving}
+              />
             </TabsContent>
 
             {/* Export & Integration Tab */}

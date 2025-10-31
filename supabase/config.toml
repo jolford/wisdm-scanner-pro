@@ -76,3 +76,13 @@ verify_jwt = true
 
 [functions.validate-excel-lookup]
 verify_jwt = true
+
+# Advanced AI capabilities - FormXtra.AI competitors
+[functions.ocr-scan-enhanced]
+verify_jwt = true
+
+[functions.smart-field-detection]
+verify_jwt = true
+
+[functions.learn-from-corrections]
+verify_jwt = true
