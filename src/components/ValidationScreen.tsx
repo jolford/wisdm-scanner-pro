@@ -1315,6 +1315,19 @@ useEffect(() => {
             />
           </div>
         )}
+
+        {/* Fraud Detection - Coming in Phase 2
+        {documentId && lineItems && lineItems.length > 0 && (
+          <div className="mb-4">
+            <FraudDetectionPanel
+              documentId={documentId}
+              batchId={documentId}
+              lineItems={lineItems}
+              metadata={editedMetadata}
+            />
+          </div>
+        )}
+        */}
         
         <div className="flex-1 overflow-auto">
           {/* Document Classification */}

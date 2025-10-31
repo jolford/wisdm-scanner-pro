@@ -93,3 +93,6 @@ verify_jwt = true
 
 [functions.detect-duplicates]
 verify_jwt = true
+
+[functions.detect-fraud-patterns]
+verify_jwt = true

@@ -1210,6 +1210,66 @@ export type Database = {
           },
         ]
       }
+      fraud_detections: {
+        Row: {
+          batch_id: string | null
+          created_at: string
+          description: string
+          details: string | null
+          document_id: string | null
+          fraud_type: string
+          id: string
+          metadata: Json | null
+          reviewed_by: string | null
+          severity: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          batch_id?: string | null
+          created_at?: string
+          description: string
+          details?: string | null
+          document_id?: string | null
+          fraud_type: string
+          id?: string
+          metadata?: Json | null
+          reviewed_by?: string | null
+          severity: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string | null
+          created_at?: string
+          description?: string
+          details?: string | null
+          document_id?: string | null
+          fraud_type?: string
+          id?: string
+          metadata?: Json | null
+          reviewed_by?: string | null
+          severity?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fraud_detections_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fraud_detections_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_metrics: {
         Row: {
           avg_processing_time_ms: number | null
