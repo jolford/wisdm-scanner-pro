@@ -86,3 +86,10 @@ verify_jwt = true
 
 [functions.learn-from-corrections]
 verify_jwt = true
+
+# Petition Processing - Best-in-class features
+[functions.validate-address]
+verify_jwt = true
+
+[functions.detect-duplicates]
+verify_jwt = true

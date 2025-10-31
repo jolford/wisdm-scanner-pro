@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      address_validations: {
+        Row: {
+          confidence_score: number | null
+          created_at: string | null
+          document_id: string
+          id: string
+          normalized_address: Json | null
+          original_address: Json
+          validation_details: Json | null
+          validation_provider: string | null
+          validation_status: string
+        }
+        Insert: {
+          confidence_score?: number | null
+          created_at?: string | null
+          document_id: string
+          id?: string
+          normalized_address?: Json | null
+          original_address: Json
+          validation_details?: Json | null
+          validation_provider?: string | null
+          validation_status: string
+        }
+        Update: {
+          confidence_score?: number | null
+          created_at?: string | null
+          document_id?: string
+          id?: string
+          normalized_address?: Json | null
+          original_address?: Json
+          validation_details?: Json | null
+          validation_provider?: string | null
+          validation_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "address_validations_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_trail: {
         Row: {
           action_type: string
@@ -782,6 +826,73 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      duplicate_detections: {
+        Row: {
+          batch_id: string
+          created_at: string | null
+          document_id: string
+          duplicate_document_id: string | null
+          duplicate_fields: Json | null
+          duplicate_type: string
+          id: string
+          metadata: Json | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          similarity_score: number
+          status: string | null
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string | null
+          document_id: string
+          duplicate_document_id?: string | null
+          duplicate_fields?: Json | null
+          duplicate_type: string
+          id?: string
+          metadata?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          similarity_score: number
+          status?: string | null
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string | null
+          document_id?: string
+          duplicate_document_id?: string | null
+          duplicate_fields?: Json | null
+          duplicate_type?: string
+          id?: string
+          metadata?: Json | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          similarity_score?: number
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "duplicate_detections_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "duplicate_detections_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "duplicate_detections_duplicate_document_id_fkey"
+            columns: ["duplicate_document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
             referencedColumns: ["id"]
           },
         ]
@@ -1647,6 +1758,51 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      signature_comparisons: {
+        Row: {
+          comparison_details: Json | null
+          created_at: string | null
+          document_id: string
+          id: string
+          recommendation: string
+          reference_signature_id: string | null
+          similarity_score: number
+        }
+        Insert: {
+          comparison_details?: Json | null
+          created_at?: string | null
+          document_id: string
+          id?: string
+          recommendation: string
+          reference_signature_id?: string | null
+          similarity_score: number
+        }
+        Update: {
+          comparison_details?: Json | null
+          created_at?: string | null
+          document_id?: string
+          id?: string
+          recommendation?: string
+          reference_signature_id?: string | null
+          similarity_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "signature_comparisons_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "signature_comparisons_reference_signature_id_fkey"
+            columns: ["reference_signature_id"]
+            isOneToOne: false
+            referencedRelation: "signature_references"
             referencedColumns: ["id"]
           },
         ]
