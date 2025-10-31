@@ -2352,6 +2352,7 @@ export type Database = {
           enable_signature_verification: boolean
           export_types: string[]
           extraction_fields: Json
+          icon_url: string
           id: string
           is_active: boolean
           metadata: Json
