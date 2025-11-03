@@ -435,29 +435,50 @@ const AuthPage = () => {
     setLoading(true);
 
     try {
-      // Verify we have an active session before attempting update
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      // First, try to refresh the session to ensure it's still valid
+      const { data: { session: currentSession }, error: refreshError } = await supabase.auth.refreshSession();
       
-      if (sessionError || !session) {
-        console.error('No active session:', sessionError);
-        toast({
-          title: 'Session Expired',
-          description: 'Your recovery link has expired. Please request a new password reset.',
-          variant: 'destructive',
-        });
-        setIsUpdatingPassword(false);
-        setIsResetPassword(true);
-        return;
+      if (refreshError) {
+        console.error('Session refresh failed:', refreshError);
+        // If refresh fails, try to get the existing session one more time
+        const { data: { session: existingSession }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError || !existingSession) {
+          console.error('No active session after refresh attempt:', sessionError);
+          toast({
+            title: 'Recovery Link Expired',
+            description: 'Your password recovery link has expired or is invalid. Please request a new one.',
+            variant: 'destructive',
+          });
+          setIsUpdatingPassword(false);
+          setIsResetPassword(true);
+          return;
+        }
       }
 
-      console.log('Active session found, updating password...');
-      const { error } = await supabase.auth.updateUser({
+      console.log('Session is valid, updating password...');
+      const { error: updateError } = await supabase.auth.updateUser({
         password: password,
       });
 
-      if (error) {
-        console.error('Password update error:', error);
-        throw error;
+      if (updateError) {
+        console.error('Password update error:', updateError);
+        
+        // Handle specific error cases
+        if (updateError.message?.toLowerCase().includes('invalid') || 
+            updateError.message?.toLowerCase().includes('expired') ||
+            updateError.message?.toLowerCase().includes('session')) {
+          toast({
+            title: 'Recovery Link Error',
+            description: 'Your password recovery link has expired or is invalid. Please request a new password reset.',
+            variant: 'destructive',
+          });
+          setIsUpdatingPassword(false);
+          setIsResetPassword(true);
+          return;
+        }
+        
+        throw updateError;
       }
 
       toast({
@@ -467,23 +488,19 @@ const AuthPage = () => {
 
       setIsUpdatingPassword(false);
       setPassword('');
+      
+      // Clear URL parameters
+      window.history.replaceState({}, document.title, window.location.pathname);
+      
       const startingPage = await getUserStartingPage();
       navigate(startingPage);
     } catch (error: any) {
       console.error('Update password failed:', error);
       toast({
         title: 'Update Failed',
-        description: error.message === 'Auth session missing!'
-          ? 'Your recovery session has expired. Please request a new password reset link.'
-          : error.message || 'Failed to update password',
+        description: error.message || 'An unexpected error occurred. Please try again.',
         variant: 'destructive',
       });
-      
-      // If session is missing, switch back to reset mode
-      if (error.message?.includes('session')) {
-        setIsUpdatingPassword(false);
-        setIsResetPassword(true);
-      }
     } finally {
       setLoading(false);
     }
