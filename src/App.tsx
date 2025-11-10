@@ -64,6 +64,7 @@ import WebhookConfig from "./pages/admin/WebhookConfig";
 import DuplicateDetections from "./pages/admin/DuplicateDetections";
 import ValidationRules from "./pages/admin/ValidationRules";
 import ScheduledBatches from "./pages/admin/ScheduledBatches";
+import ReleaseNotes from "./pages/ReleaseNotes";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -212,6 +213,7 @@ const App = () => {
             <Route path="/admin/validation-rules" element={<ValidationRules />} />
             <Route path="/admin/scheduled-batches" element={<ScheduledBatches />} />
             <Route path="/help" element={<Help />} />
+            <Route path="/release-notes" element={<ReleaseNotes />} />
             <Route path="/api-docs" element={<ApiDocs />} />
             <Route path="/settings" element={<UserSettings />} />
             <Route path="/presentation" element={<Presentation />} />

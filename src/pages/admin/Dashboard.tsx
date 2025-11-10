@@ -18,7 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, FolderOpen, FileText, Users, Key, Building2, BarChart3, TestTube2, AlertTriangle, Target, Webhook, Copy, Shield, Clock } from 'lucide-react';
+import { Plus, FolderOpen, FileText, Users, Key, Building2, BarChart3, TestTube2, AlertTriangle, Target, Webhook, Copy, Shield, Clock, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -330,6 +330,63 @@ const AdminDashboard = () => {
         {/* Sales Tools */}
         <div className="grid md:grid-cols-1 gap-6">
           <PricingPDFGenerator />
+        </div>
+
+        {/* Documentation & Resources */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Documentation & Resources</h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Release Notes
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                View latest features, improvements, and updates to the system
+              </p>
+              <Button
+                onClick={() => navigate('/release-notes')}
+                variant="outline"
+                className="w-full"
+              >
+                View Release Notes
+              </Button>
+            </Card>
+
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                Help Center
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Access documentation, FAQs, and troubleshooting guides
+              </p>
+              <Button
+                onClick={() => navigate('/help')}
+                variant="outline"
+                className="w-full"
+              >
+                View Help Center
+              </Button>
+            </Card>
+
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                API Documentation
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Integration guides and API reference for developers
+              </p>
+              <Button
+                onClick={() => navigate('/api-docs')}
+                variant="outline"
+                className="w-full"
+              >
+                View API Docs
+              </Button>
+            </Card>
+          </div>
         </div>
       </div>
     </AdminLayout>

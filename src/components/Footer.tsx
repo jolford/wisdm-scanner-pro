@@ -9,6 +9,7 @@ export const Footer = () => {
           <p>© 2025 Western Integrated Systems. All rights reserved.</p>
           <div className="flex items-center gap-4 flex-wrap justify-center">
             <Link to="/help" className="hover:underline">Help Center</Link>
+            <Link to="/release-notes" className="hover:underline">Release Notes</Link>
             <Link to="/api-docs" className="hover:underline">API Docs</Link>
             <Link to="/compliance" className="hover:underline font-semibold">Compliance Hub</Link>
           </div>

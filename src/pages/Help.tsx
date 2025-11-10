@@ -391,6 +391,10 @@ const Help = () => {
                 <GraduationCap className="h-4 w-4" />
                 Training Center
               </Button>
+              <Button variant="outline" onClick={() => navigate('/release-notes')} className="gap-2">
+                <FileText className="h-4 w-4" />
+                Release Notes
+              </Button>
               {isAdmin && (
                 <Button variant="outline" onClick={() => navigate('/admin')} className="gap-2">
                   <Settings className="h-4 w-4" />
