@@ -2247,6 +2247,39 @@ export type Database = {
           },
         ]
       }
+      user_dashboard_widgets: {
+        Row: {
+          config: Json | null
+          created_at: string | null
+          id: string
+          is_visible: boolean | null
+          position: number
+          updated_at: string | null
+          user_id: string
+          widget_type: string
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          is_visible?: boolean | null
+          position?: number
+          updated_at?: string | null
+          user_id: string
+          widget_type: string
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string | null
+          id?: string
+          is_visible?: boolean | null
+          position?: number
+          updated_at?: string | null
+          user_id?: string
+          widget_type?: string
+        }
+        Relationships: []
+      }
       user_permissions: {
         Row: {
           can_export: boolean | null
