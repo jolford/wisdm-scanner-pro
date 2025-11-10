@@ -58,6 +58,7 @@ import ComplianceHub from "./pages/ComplianceHub";
 import SecurityCompliance from "./pages/SecurityCompliance";
 import ValidationAnalytics from "./pages/admin/ValidationAnalytics";
 import MLTemplates from "./pages/admin/MLTemplates";
+import ValidationLookups from "./pages/admin/ValidationLookups";
 import ConfidenceDashboard from "./pages/admin/ConfidenceDashboard";
 import ExceptionQueue from "./pages/admin/ExceptionQueue";
 import WebhookConfig from "./pages/admin/WebhookConfig";
@@ -210,6 +211,7 @@ const App = () => {
             <Route path="/admin/batch-templates" element={<BatchTemplates />} />
             <Route path="/admin/validation-analytics" element={<ValidationAnalytics />} />
             <Route path="/admin/ml-templates" element={<MLTemplates />} />
+            <Route path="/admin/validation-lookups" element={<ValidationLookups />} />
             <Route path="/admin/confidence" element={<ConfidenceDashboard />} />
             <Route path="/admin/exceptions" element={<ExceptionQueue />} />
             <Route path="/admin/webhooks" element={<WebhookConfig />} />

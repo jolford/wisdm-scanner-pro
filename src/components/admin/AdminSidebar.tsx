@@ -45,6 +45,7 @@ const menuItems = [
   {
     title: 'Quality & Monitoring',
     items: [
+      { title: 'Validation Lookups', url: '/admin/validation-lookups', icon: Database },
       { title: 'Confidence Scoring', url: '/admin/confidence', icon: Target },
       { title: 'Exception Queue', url: '/admin/exceptions', icon: AlertTriangle },
       { title: 'Webhooks', url: '/admin/webhooks', icon: Webhook },
