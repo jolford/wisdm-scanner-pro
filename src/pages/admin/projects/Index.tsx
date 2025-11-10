@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, ArrowLeft, FolderOpen, Edit, Search, SortAsc, FileText, LayoutGrid, Table as TableIcon, List, Package, Folder, Star, Bookmark, Briefcase, Layers, Box, Grid3x3, LucideIcon } from 'lucide-react';
+import { Plus, ArrowLeft, FolderOpen, Edit, Search, SortAsc, FileText, LayoutGrid, Table as TableIcon, List, Package, Folder, Star, Bookmark, Briefcase, Layers, Box, Grid3x3, LucideIcon, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SkeletonCard } from '@/components/ui/skeleton-card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ZoneTemplateManager } from '@/components/zonal/ZoneTemplateManager';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const LUCIDE_ICON_MAP: Record<string, LucideIcon> = {
   folder: Folder,
@@ -74,10 +75,12 @@ const Projects = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'table' | 'list'>('grid');
   const [groupByCustomer, setGroupByCustomer] = useState(false);
   const [selectedProjectForZones, setSelectedProjectForZones] = useState<string | null>(null);
+  const [projectsWithBadDocs, setProjectsWithBadDocs] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!loading) {
       loadProjects();
+      loadBadDocumentsCounts();
     }
   }, [loading]);
 
@@ -129,6 +132,27 @@ const Projects = () => {
     }
   };
 
+  const loadBadDocumentsCounts = async () => {
+    try {
+      // Query for documents with null or empty extracted_metadata, grouped by project
+      const { data: badDocs, error } = await supabase
+        .from('documents')
+        .select('project_id')
+        .or('extracted_metadata.is.null,extracted_metadata.eq.{}');
+
+      if (error) throw error;
+
+      // Create a set of project IDs that have bad documents
+      const projectIdsWithBadDocs = new Set(
+        badDocs?.map(doc => doc.project_id).filter(Boolean) || []
+      );
+      
+      setProjectsWithBadDocs(projectIdsWithBadDocs);
+    } catch (error) {
+      console.error('Error loading bad documents count:', error);
+    }
+  };
+
   // Filter and sort projects
   const filteredProjects = projects
     .filter(project => 
@@ -169,8 +193,24 @@ const Projects = () => {
             </TableHeader>
             <TableBody>
               {projectsList.map((project) => (
-                <TableRow key={project.id} className="cursor-pointer hover:bg-muted/50">
-                  <TableCell className="font-medium">{project.name}</TableCell>
+              <TableRow key={project.id} className="cursor-pointer hover:bg-muted/50">
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {project.name}
+                      {projectsWithBadDocs.has(project.id) && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <AlertCircle className="h-4 w-4 text-destructive cursor-help" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Documents pending re-processing</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>
                     <Badge variant="outline">{getCustomerName(project.customer_id)}</Badge>
                   </TableCell>
@@ -207,6 +247,18 @@ const Projects = () => {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-1">
                     <h3 className="text-base font-semibold truncate">{project.name}</h3>
+                    {projectsWithBadDocs.has(project.id) && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Documents pending re-processing</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    )}
                     <Badge variant="outline" className="shrink-0">{getCustomerName(project.customer_id)}</Badge>
                     <Badge className="shrink-0">{(project.extraction_fields as any[])?.length || 0} fields</Badge>
                   </div>
@@ -238,9 +290,23 @@ const Projects = () => {
           <Card key={project.id} className="group p-5 bg-gradient-to-br from-card to-card/80 shadow-sm hover:shadow-md transition-all border-l-4 border-l-primary/50 hover:border-l-primary">
             <div className="mb-3">
               <div className="flex items-start justify-between gap-2 mb-2">
-                <h3 className="text-base font-semibold group-hover:text-primary transition-colors line-clamp-1 flex-1">
-                  {project.name}
-                </h3>
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <h3 className="text-base font-semibold group-hover:text-primary transition-colors line-clamp-1">
+                    {project.name}
+                  </h3>
+                  {projectsWithBadDocs.has(project.id) && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Documents pending re-processing</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
                 <Button
                   size="sm"
                   variant="ghost"
