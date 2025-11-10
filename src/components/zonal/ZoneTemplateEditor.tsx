@@ -49,6 +49,8 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
       selection: false,
     });
 
+    setFabricCanvas(canvas);
+
     // Load background image
     FabricImage.fromURL(imageUrl).then((img) => {
       const canvasWidth = 1000;
@@ -68,41 +70,50 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
       });
       
       canvas.backgroundImage = img;
-      canvas.renderAll();
       setImageSize({ width: img.width! * scale, height: img.height! * scale });
-
-      // Load initial zones if provided
-      if (initialZones.length > 0) {
-        const loadedZones = initialZones.map((zone) => {
-          const rect = new Rect({
-            left: zone.x,
-            top: zone.y,
-            width: zone.width,
-            height: zone.height,
-            fill: 'rgba(59, 130, 246, 0.2)',
-            stroke: 'rgb(59, 130, 246)',
-            strokeWidth: 2,
-            selectable: true,
-          });
-          
-          canvas.add(rect);
-          
-          return {
-            ...zone,
-            rect,
-          };
-        });
-        
-        setZones(loadedZones);
-      }
+      canvas.renderAll();
     });
-
-    setFabricCanvas(canvas);
 
     return () => {
       canvas.dispose();
     };
-  }, [imageUrl, initialZones]);
+  }, [imageUrl]);
+
+  // Load initial zones when provided and canvas is ready
+  useEffect(() => {
+    if (!fabricCanvas || initialZones.length === 0) return;
+    
+    // Clear existing zones first
+    const objects = fabricCanvas.getObjects();
+    objects.forEach(obj => {
+      if (obj instanceof Rect && obj !== fabricCanvas.backgroundImage) {
+        fabricCanvas.remove(obj);
+      }
+    });
+
+    const loadedZones = initialZones.map((zone) => {
+      const rect = new Rect({
+        left: zone.x,
+        top: zone.y,
+        width: zone.width,
+        height: zone.height,
+        fill: 'rgba(59, 130, 246, 0.2)',
+        stroke: 'rgb(59, 130, 246)',
+        strokeWidth: 2,
+        selectable: true,
+      });
+      
+      fabricCanvas.add(rect);
+      
+      return {
+        ...zone,
+        rect,
+      };
+    });
+    
+    setZones(loadedZones);
+    fabricCanvas.renderAll();
+  }, [fabricCanvas]);
 
   const startDrawing = () => {
     if (!fabricCanvas) return;
