@@ -30,7 +30,7 @@ interface ZoneTemplateEditorProps {
 export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = [] }: ZoneTemplateEditorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [fabricCanvas, setFabricCanvas] = useState<FabricCanvas | null>(null);
-  const [zones, setZones] = useState<Zone[]>(initialZones);
+  const [zones, setZones] = useState<Zone[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [editingZone, setEditingZone] = useState<Zone | null>(null);
   const [showNameDialog, setShowNameDialog] = useState(false);
@@ -70,6 +70,31 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
       canvas.backgroundImage = img;
       canvas.renderAll();
       setImageSize({ width: img.width! * scale, height: img.height! * scale });
+
+      // Load initial zones if provided
+      if (initialZones.length > 0) {
+        const loadedZones = initialZones.map((zone) => {
+          const rect = new Rect({
+            left: zone.x,
+            top: zone.y,
+            width: zone.width,
+            height: zone.height,
+            fill: 'rgba(59, 130, 246, 0.2)',
+            stroke: 'rgb(59, 130, 246)',
+            strokeWidth: 2,
+            selectable: true,
+          });
+          
+          canvas.add(rect);
+          
+          return {
+            ...zone,
+            rect,
+          };
+        });
+        
+        setZones(loadedZones);
+      }
     });
 
     setFabricCanvas(canvas);
@@ -77,7 +102,7 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
     return () => {
       canvas.dispose();
     };
-  }, [imageUrl]);
+  }, [imageUrl, initialZones]);
 
   const startDrawing = () => {
     if (!fabricCanvas) return;

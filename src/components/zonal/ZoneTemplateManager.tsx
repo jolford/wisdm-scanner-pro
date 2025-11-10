@@ -37,6 +37,8 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>('');
   const [templateName, setTemplateName] = useState('');
   const [templateDescription, setTemplateDescription] = useState('');
+  const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
+  const [initialZones, setInitialZones] = useState<any[]>([]);
 
   useEffect(() => {
     if (open) {
@@ -121,51 +123,129 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
     if (!user) return;
 
     try {
-      // Get image dimensions (simplified for now)
-      const img = new Image();
-      img.src = uploadedImageUrl;
-      await new Promise((resolve) => { img.onload = resolve; });
+      if (editingTemplateId) {
+        // Update existing template
+        const { error: templateError } = await supabase
+          .from('zone_templates')
+          .update({
+            name: templateName,
+            description: templateDescription,
+            sample_image_url: uploadedImageUrl,
+          })
+          .eq('id', editingTemplateId);
 
-      const { data: template, error: templateError } = await supabase
-        .from('zone_templates')
-        .insert({
-          project_id: projectId,
-          name: templateName,
-          description: templateDescription,
-          sample_image_url: uploadedImageUrl,
-          created_by: user.id,
-        })
-        .select()
-        .single();
+        if (templateError) throw templateError;
 
-      if (templateError) throw templateError;
+        // Delete old zones
+        const { error: deleteError } = await supabase
+          .from('zone_definitions')
+          .delete()
+          .eq('template_id', editingTemplateId);
 
-      const zoneInserts = zones.map((zone, index) => ({
-        template_id: template.id,
-        field_name: zone.fieldName,
-        x: zone.x,
-        y: zone.y,
-        width: zone.width,
-        height: zone.height,
-        field_type: zone.fieldType,
-        sort_order: index,
-      }));
+        if (deleteError) throw deleteError;
 
-      const { error: zonesError } = await supabase
-        .from('zone_definitions')
-        .insert(zoneInserts);
+        // Insert new zones
+        const zoneInserts = zones.map((zone, index) => ({
+          template_id: editingTemplateId,
+          field_name: zone.fieldName,
+          x: zone.x,
+          y: zone.y,
+          width: zone.width,
+          height: zone.height,
+          field_type: zone.fieldType,
+          sort_order: index,
+        }));
 
-      if (zonesError) throw zonesError;
+        const { error: zonesError } = await supabase
+          .from('zone_definitions')
+          .insert(zoneInserts);
 
-      toast.success('Zone template created successfully');
+        if (zonesError) throw zonesError;
+
+        toast.success('Zone template updated successfully');
+      } else {
+        // Create new template
+        const img = new Image();
+        img.src = uploadedImageUrl;
+        await new Promise((resolve) => { img.onload = resolve; });
+
+        const { data: template, error: templateError } = await supabase
+          .from('zone_templates')
+          .insert({
+            project_id: projectId,
+            name: templateName,
+            description: templateDescription,
+            sample_image_url: uploadedImageUrl,
+            created_by: user.id,
+          })
+          .select()
+          .single();
+
+        if (templateError) throw templateError;
+
+        const zoneInserts = zones.map((zone, index) => ({
+          template_id: template.id,
+          field_name: zone.fieldName,
+          x: zone.x,
+          y: zone.y,
+          width: zone.width,
+          height: zone.height,
+          field_type: zone.fieldType,
+          sort_order: index,
+        }));
+
+        const { error: zonesError } = await supabase
+          .from('zone_definitions')
+          .insert(zoneInserts);
+
+        if (zonesError) throw zonesError;
+
+        toast.success('Zone template created successfully');
+      }
+      
       setShowEditor(false);
       setTemplateName('');
       setTemplateDescription('');
       setSelectedFile(null);
       setUploadedImageUrl('');
+      setEditingTemplateId(null);
+      setInitialZones([]);
       loadTemplates();
     } catch (error: any) {
       toast.error('Failed to save template: ' + error.message);
+    }
+  };
+
+  const editTemplate = async (template: ZoneTemplate) => {
+    try {
+      // Load zone definitions
+      const { data: zones, error } = await supabase
+        .from('zone_definitions')
+        .select('*')
+        .eq('template_id', template.id)
+        .order('sort_order');
+
+      if (error) throw error;
+
+      // Convert database zones to editor format
+      const editorZones = zones.map((zone, index) => ({
+        id: `zone-${index}`,
+        fieldName: zone.field_name,
+        fieldType: zone.field_type,
+        x: zone.x,
+        y: zone.y,
+        width: zone.width,
+        height: zone.height,
+      }));
+
+      setEditingTemplateId(template.id);
+      setTemplateName(template.name);
+      setTemplateDescription(template.description || '');
+      setUploadedImageUrl(template.sample_image_url);
+      setInitialZones(editorZones);
+      setShowEditor(true);
+    } catch (error: any) {
+      toast.error('Failed to load template: ' + error.message);
     }
   };
 
@@ -226,6 +306,14 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
                         </p>
                       </div>
                       <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => editTemplate(template)}
+                        >
+                          <Edit2 className="h-4 w-4 mr-1" />
+                          Edit
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -289,7 +377,10 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
             onCancel={() => {
               setShowEditor(false);
               setShowUpload(false);
+              setEditingTemplateId(null);
+              setInitialZones([]);
             }}
+            initialZones={initialZones}
           />
         )}
       </DialogContent>
