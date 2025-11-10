@@ -90,296 +90,101 @@ const AdminDashboard = () => {
   }
 
   return (
-    <AdminLayout title="Admin Dashboard" description="Manage projects, users, and system configuration">
+    <AdminLayout title="Admin Dashboard" description="System overview and quick actions">
       <div className="space-y-8">
         {/* Stats Cards */}
         {statsLoading ? (
           <SkeletonStats />
         ) : (
           <div className="grid md:grid-cols-5 gap-6">
-          <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-            <div className="flex items-start gap-4">
-              <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <FolderOpen className="h-6 w-6 text-primary" />
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 bg-primary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <FolderOpen className="h-6 w-6 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm text-muted-foreground">Projects</p>
+                  <p className="text-2xl font-bold">{stats.projects}</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-sm text-muted-foreground">Projects</p>
-                <p className="text-2xl font-bold">{stats.projects}</p>
-              </div>
-            </div>
-          </Card>
+            </Card>
 
-          <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-            <div className="flex items-start gap-4">
-              <div className="h-12 w-12 bg-accent/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <FileText className="h-6 w-6 text-primary" />
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 bg-accent/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <FileText className="h-6 w-6 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm text-muted-foreground">Documents</p>
+                  <p className="text-2xl font-bold">{stats.documents}</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-sm text-muted-foreground">Documents</p>
-                <p className="text-2xl font-bold">{stats.documents}</p>
-              </div>
-            </div>
-          </Card>
+            </Card>
 
-          <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-            <div className="flex items-start gap-4">
-              <div className="h-12 w-12 bg-secondary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Building2 className="h-6 w-6 text-primary" />
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 bg-secondary/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Users className="h-6 w-6 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm text-muted-foreground">Users</p>
+                  <p className="text-2xl font-bold">{stats.users}</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-sm text-muted-foreground">Customers</p>
-                <p className="text-2xl font-bold">{stats.customers}</p>
-              </div>
-            </div>
-          </Card>
+            </Card>
 
-          <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-            <div className="flex items-start gap-4">
-              <div className="h-12 w-12 bg-secondary/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Users className="h-6 w-6 text-primary" />
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 bg-muted/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Key className="h-6 w-6 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm text-muted-foreground">Licenses</p>
+                  <p className="text-2xl font-bold">{stats.licenses}</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-sm text-muted-foreground">Users</p>
-                <p className="text-2xl font-bold">{stats.users}</p>
-              </div>
-            </div>
-          </Card>
+            </Card>
 
-          <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-            <div className="flex items-start gap-4">
-              <div className="h-12 w-12 bg-accent/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Key className="h-6 w-6 text-primary" />
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <div className="flex items-start gap-4">
+                <div className="h-12 w-12 bg-accent/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Building2 className="h-6 w-6 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm text-muted-foreground">Customers</p>
+                  <p className="text-2xl font-bold">{stats.customers}</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-sm text-muted-foreground">Licenses</p>
-                <p className="text-2xl font-bold">{stats.licenses}</p>
-              </div>
-            </div>
-          </Card>
-        </div>
+            </Card>
+          </div>
         )}
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-3 gap-6">
-          <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-            <h3 className="text-xl font-semibold mb-4">Projects</h3>
-            <p className="text-muted-foreground mb-4">
-              Create and manage document processing projects
-            </p>
-            <div className="flex gap-3">
-              <Button
-                onClick={() => navigate('/admin/projects/new')}
-                className="bg-gradient-to-r from-primary to-accent"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                New Project
-              </Button>
-              <Button variant="outline" onClick={() => navigate('/admin/projects')}>
-                View All
-              </Button>
-            </div>
-          </Card>
-
-          <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-            <h3 className="text-xl font-semibold mb-4">Analytics</h3>
-            <p className="text-muted-foreground mb-4">
-              Track performance metrics and system usage
-            </p>
-            <div className="flex gap-3">
-              <Button
-                onClick={() => navigate('/admin/analytics')}
-                variant="outline"
-              >
-                <BarChart3 className="h-4 w-4 mr-2" />
-                View Reports
-              </Button>
-            </div>
-          </Card>
-
-          <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-            <h3 className="text-xl font-semibold mb-4">Testing Tools</h3>
-            <p className="text-muted-foreground mb-4">
-              Test barcode detection and document processing
-            </p>
-            <div className="flex gap-3">
-              <Button
-                onClick={() => navigate('/admin/barcode-test')}
-                variant="outline"
-              >
-                <TestTube2 className="h-4 w-4 mr-2" />
-                Barcode Test
-              </Button>
-            </div>
-          </Card>
-        </div>
-
-        {/* Quality & Monitoring */}
         <div>
-          <h2 className="text-2xl font-bold mb-4">Quality & Monitoring</h2>
+          <h2 className="text-2xl font-bold mb-4">Quick Actions</h2>
           <div className="grid md:grid-cols-3 gap-6">
-            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                Confidence Scoring
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Monitor OCR confidence levels and identify low-quality extractions
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)] hover:shadow-xl transition-shadow cursor-pointer" onClick={() => navigate('/admin/projects/new')}>
+              <Plus className="h-8 w-8 text-primary mb-3" />
+              <h3 className="text-xl font-semibold mb-2">New Project</h3>
+              <p className="text-muted-foreground">
+                Create a new document processing project
               </p>
-              <Button
-                onClick={() => navigate('/admin/confidence')}
-                variant="outline"
-                className="w-full"
-              >
-                View Dashboard
-              </Button>
             </Card>
 
-            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5" />
-                Exception Queue
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Review and resolve documents that failed validation
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)] hover:shadow-xl transition-shadow cursor-pointer" onClick={() => navigate('/admin/batches/new')}>
+              <FolderOpen className="h-8 w-8 text-primary mb-3" />
+              <h3 className="text-xl font-semibold mb-2">New Batch</h3>
+              <p className="text-muted-foreground">
+                Start a new document batch for processing
               </p>
-              <Button
-                onClick={() => navigate('/admin/exceptions')}
-                variant="outline"
-                className="w-full"
-              >
-                View Exceptions
-              </Button>
             </Card>
 
-            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Webhook className="h-5 w-5" />
-                Webhooks
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Configure real-time notifications for batch and validation events
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)] hover:shadow-xl transition-shadow cursor-pointer" onClick={() => navigate('/admin/users/new')}>
+              <Users className="h-8 w-8 text-primary mb-3" />
+              <h3 className="text-xl font-semibold mb-2">New User</h3>
+              <p className="text-muted-foreground">
+                Add a new user to the system
               </p>
-              <Button
-                onClick={() => navigate('/admin/webhooks')}
-                variant="outline"
-                className="w-full"
-              >
-                Manage Webhooks
-              </Button>
-            </Card>
-          </div>
-        </div>
-
-        {/* Automation & Rules */}
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Automation & Rules</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Copy className="h-5 w-5" />
-                Duplicate Detection
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Identify and manage potential duplicate documents across batches
-              </p>
-              <Button
-                onClick={() => navigate('/admin/duplicates')}
-                variant="outline"
-                className="w-full"
-              >
-                View Duplicates
-              </Button>
-            </Card>
-
-            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Shield className="h-5 w-5" />
-                Validation Rules
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Configure custom field-level validation rules for document types
-              </p>
-              <Button
-                onClick={() => navigate('/admin/validation-rules')}
-                variant="outline"
-                className="w-full"
-              >
-                Manage Rules
-              </Button>
-            </Card>
-
-            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Scheduled Processing
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Automate batch processing at specific times and frequencies
-              </p>
-              <Button
-                onClick={() => navigate('/admin/scheduled-batches')}
-                variant="outline"
-                className="w-full"
-              >
-                Manage Schedules
-              </Button>
-            </Card>
-          </div>
-        </div>
-
-        {/* Phase 3: Bulk Operations & QA */}
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Phase 3: Bulk Operations & QA</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Edit3 className="h-5 w-5" />
-                Bulk Edit Mode
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Edit multiple document fields simultaneously for efficient data updates
-              </p>
-              <Button
-                onClick={() => navigate('/admin/bulk-edit')}
-                variant="outline"
-                className="w-full"
-              >
-                Open Bulk Editor
-              </Button>
-            </Card>
-
-            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <GitCompare className="h-5 w-5" />
-                Document Comparison
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Side-by-side view of before and after validation changes
-              </p>
-              <Button
-                onClick={() => navigate('/admin/document-comparison')}
-                variant="outline"
-                className="w-full"
-              >
-                Compare Documents
-              </Button>
-            </Card>
-
-            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Target className="h-5 w-5" />
-                QA Metrics Dashboard
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Track validation accuracy, processing times, and error rates
-              </p>
-              <Button
-                onClick={() => navigate('/admin/qa-metrics')}
-                variant="outline"
-                className="w-full"
-              >
-                View QA Metrics
-              </Button>
             </Card>
           </div>
         </div>
@@ -388,83 +193,10 @@ const AdminDashboard = () => {
         <div className="grid md:grid-cols-1 gap-6">
           <PricingPDFGenerator />
         </div>
-
-        {/* Documentation & Resources */}
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Documentation & Resources</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Release Notes
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                View latest features, improvements, and updates to the system
-              </p>
-              <Button
-                onClick={() => navigate('/release-notes')}
-                variant="outline"
-                className="w-full"
-              >
-                View Release Notes
-              </Button>
-            </Card>
-
-            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Release Notes
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Manage version releases and feature announcements visible to all users
-              </p>
-              <Button
-                onClick={() => navigate('/admin/release-notes')}
-                variant="outline"
-                className="w-full"
-              >
-                Manage Release Notes
-              </Button>
-            </Card>
-
-            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <Settings className="h-5 w-5" />
-                Help Center
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Access documentation, FAQs, and troubleshooting guides
-              </p>
-              <Button
-                onClick={() => navigate('/help')}
-                variant="outline"
-                className="w-full"
-              >
-                View Help Center
-              </Button>
-            </Card>
-
-            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
-              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                <BarChart3 className="h-5 w-5" />
-                API Documentation
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Integration guides and API reference for developers
-              </p>
-              <Button
-                onClick={() => navigate('/api-docs')}
-                variant="outline"
-                className="w-full"
-              >
-                View API Docs
-              </Button>
-            </Card>
-          </div>
-        </div>
       </div>
     </AdminLayout>
   );
 };
 
 export default AdminDashboard;
+
