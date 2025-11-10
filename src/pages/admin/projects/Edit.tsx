@@ -1163,7 +1163,7 @@ const EditProject = () => {
                     <div className="space-y-2">
                       <Label className="text-sm font-medium text-muted-foreground">ECM Systems</Label>
                       <div className="grid grid-cols-2 gap-2">
-                        {['filebound', 'docmgt', 'documentum', 'sharepoint'].map((type) => {
+                        {['filebound', 'documentum', 'sharepoint'].map((type) => {
                           const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
                           return (
                             <div key={type} className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
@@ -1215,7 +1215,7 @@ const EditProject = () => {
 
                     {/* Configuration sections for enabled exports */}
                     {Object.entries(exportConfig)
-                      .filter(([type]) => !['filebound', 'docmgt', 'documentum', 'sharepoint', 'quickbooks', 'greatplains'].includes(type) && exportConfig[type].enabled)
+                      .filter(([type]) => !['filebound', 'documentum', 'sharepoint', 'quickbooks', 'greatplains'].includes(type) && exportConfig[type].enabled)
                       .map(([type, config]) => (
                         <Card key={type} className="p-4 bg-muted/50 mt-4">
                           <h4 className="text-sm font-medium mb-3 uppercase">{type} Settings</h4>
@@ -1269,12 +1269,12 @@ const EditProject = () => {
 
                     {/* ECM & Accounting Configuration */}
                     {Object.entries(exportConfig)
-                      .filter(([type]) => ['filebound', 'docmgt', 'documentum', 'sharepoint', 'quickbooks', 'greatplains'].includes(type) && exportConfig[type].enabled)
+                      .filter(([type]) => ['filebound', 'documentum', 'sharepoint', 'quickbooks', 'greatplains'].includes(type) && exportConfig[type].enabled)
                       .map(([type, config]) => (
                         <Card key={type} className="p-4 bg-muted/50 mt-4">
                           <h4 className="text-sm font-medium mb-3 uppercase">{type} Configuration</h4>
                           <ECMExportConfig
-                            type={type as 'filebound' | 'docmgt' | 'documentum' | 'sharepoint' | 'quickbooks' | 'greatplains'}
+                            type={type as 'filebound' | 'documentum' | 'sharepoint' | 'quickbooks' | 'greatplains'}
                             config={config}
                             extractionFields={fields}
                             onConfigChange={(newConfig) => 
