@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-const APP_VERSION = '1.1';
+const APP_VERSION = '2.2.0';
 
 export const Footer = () => {
   return (
