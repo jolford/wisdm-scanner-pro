@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, ArrowLeft, FolderOpen, Edit, Search, SortAsc, FileText, LayoutGrid, Table as TableIcon, List, Package } from 'lucide-react';
+import { Plus, ArrowLeft, FolderOpen, Edit, Search, SortAsc, FileText, LayoutGrid, Table as TableIcon, List, Package, Folder, Star, Bookmark, Briefcase, Layers, Box, Grid3x3, LucideIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -13,45 +13,29 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SkeletonCard } from '@/components/ui/skeleton-card';
 import { EmptyState } from '@/components/ui/empty-state';
-import invoiceIcon from '@/assets/project-icons/invoice.png';
-import checkIcon from '@/assets/project-icons/check.png';
-import purchaseOrderIcon from '@/assets/project-icons/purchase-order.png';
-import contractIcon from '@/assets/project-icons/contract.png';
-import receiptIcon from '@/assets/project-icons/receipt.png';
-import formIcon from '@/assets/project-icons/form.png';
-import mapIcon from '@/assets/project-icons/map.png';
-import petitionIcon from '@/assets/project-icons/petition.png';
 
-const PRELOADED_ICON_MAP: Record<string, string> = {
-  invoice: invoiceIcon,
-  check: checkIcon,
-  'purchase-order': purchaseOrderIcon,
-  contract: contractIcon,
-  receipt: receiptIcon,
-  form: formIcon,
-  map: mapIcon,
-  petition: petitionIcon,
+const LUCIDE_ICON_MAP: Record<string, LucideIcon> = {
+  folder: Folder,
+  star: Star,
+  bookmark: Bookmark,
+  briefcase: Briefcase,
+  layers: Layers,
+  box: Box,
+  grid: Grid3x3,
+  package: Package,
 };
 
-const resolveIconUrl = (iconUrl: string | null): string | null => {
+// Returns either a Lucide icon ID or a custom URL
+const resolveIcon = (iconUrl: string | null): { type: 'lucide' | 'url', value: string } | null => {
   if (!iconUrl) return null;
-  const lower = iconUrl.toLowerCase();
-
-  // Explicit preloaded identifier (future-proof)
-  if (lower.startsWith('preloaded:')) {
-    const key = lower.replace('preloaded:', '').trim();
-    return PRELOADED_ICON_MAP[key] || null;
+  
+  // Check if it's a Lucide icon ID
+  if (LUCIDE_ICON_MAP[iconUrl.toLowerCase()]) {
+    return { type: 'lucide', value: iconUrl.toLowerCase() };
   }
-
-  // If this was a Vite-hashed asset from a previous build, map heuristically
-  for (const key of Object.keys(PRELOADED_ICON_MAP)) {
-    if (lower.includes(key)) {
-      return PRELOADED_ICON_MAP[key];
-    }
-  }
-
-  // Likely a storage/external URL – use as-is
-  return iconUrl;
+  
+  // Otherwise it's a custom uploaded URL
+  return { type: 'url', value: iconUrl };
 };
 
 interface Project {
@@ -186,21 +170,31 @@ const Projects = () => {
               {projectsList.map((project) => (
                 <TableRow key={project.id} className="cursor-pointer hover:bg-muted/50">
                   <TableCell className="w-12">
-{resolveIconUrl(project.icon_url) ? (
-  <img 
-    src={resolveIconUrl(project.icon_url)!} 
-    alt={`${project.name} icon`}
-    className="h-8 w-8 object-contain rounded"
-    onError={(e) => {
-      (e.currentTarget as HTMLImageElement).onerror = null;
-      e.currentTarget.src = formIcon;
-    }}
-  />
-) : (
-  <div className="h-8 w-8 bg-muted rounded flex items-center justify-center">
-    <Package className="h-4 w-4 text-muted-foreground" />
-  </div>
-)}
+                    {(() => {
+                      const icon = resolveIcon(project.icon_url);
+                      if (!icon) {
+                        return (
+                          <div className="h-8 w-8 bg-muted rounded flex items-center justify-center">
+                            <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        );
+                      }
+                      if (icon.type === 'lucide') {
+                        const IconComponent = LUCIDE_ICON_MAP[icon.value];
+                        return (
+                          <div className="h-8 w-8 bg-primary/10 rounded flex items-center justify-center">
+                            <IconComponent className="h-5 w-5 text-primary" />
+                          </div>
+                        );
+                      }
+                      return (
+                        <img 
+                          src={icon.value} 
+                          alt={`${project.name} icon`}
+                          className="h-8 w-8 object-contain rounded"
+                        />
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="font-medium">{project.name}</TableCell>
                   <TableCell>
@@ -238,21 +232,31 @@ const Projects = () => {
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-3 mb-1">
-{resolveIconUrl(project.icon_url) ? (
-  <img 
-    src={resolveIconUrl(project.icon_url)!} 
-    alt={`${project.name} icon`}
-    className="h-6 w-6 object-contain rounded flex-shrink-0"
-    onError={(e) => {
-      (e.currentTarget as HTMLImageElement).onerror = null;
-      e.currentTarget.src = formIcon;
-    }}
-  />
-) : (
-  <div className="h-6 w-6 bg-muted rounded flex items-center justify-center flex-shrink-0">
-    <FolderOpen className="h-4 w-4 text-muted-foreground" />
-  </div>
-)}
+                    {(() => {
+                      const icon = resolveIcon(project.icon_url);
+                      if (!icon) {
+                        return (
+                          <div className="h-6 w-6 bg-muted rounded flex items-center justify-center flex-shrink-0">
+                            <FolderOpen className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        );
+                      }
+                      if (icon.type === 'lucide') {
+                        const IconComponent = LUCIDE_ICON_MAP[icon.value];
+                        return (
+                          <div className="h-6 w-6 bg-primary/10 rounded flex items-center justify-center flex-shrink-0">
+                            <IconComponent className="h-4 w-4 text-primary" />
+                          </div>
+                        );
+                      }
+                      return (
+                        <img 
+                          src={icon.value} 
+                          alt={`${project.name} icon`}
+                          className="h-6 w-6 object-contain rounded flex-shrink-0"
+                        />
+                      );
+                    })()}
                     <h3 className="text-base font-semibold truncate">{project.name}</h3>
                     <Badge variant="outline" className="shrink-0">{getCustomerName(project.customer_id)}</Badge>
                     <Badge className="shrink-0">{(project.extraction_fields as any[])?.length || 0} fields</Badge>
@@ -286,21 +290,31 @@ const Projects = () => {
             <div className="mb-3">
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-{resolveIconUrl(project.icon_url) ? (
-  <img 
-    src={resolveIconUrl(project.icon_url)!} 
-    alt={`${project.name} icon`}
-    className="h-8 w-8 object-contain rounded flex-shrink-0"
-    onError={(e) => {
-      (e.currentTarget as HTMLImageElement).onerror = null;
-      e.currentTarget.src = formIcon;
-    }}
-  />
-) : (
-  <div className="h-8 w-8 bg-muted rounded flex items-center justify-center flex-shrink-0">
-    <FolderOpen className="h-5 w-5 text-muted-foreground" />
-  </div>
-)}
+                  {(() => {
+                    const icon = resolveIcon(project.icon_url);
+                    if (!icon) {
+                      return (
+                        <div className="h-8 w-8 bg-muted rounded flex items-center justify-center flex-shrink-0">
+                          <FolderOpen className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      );
+                    }
+                    if (icon.type === 'lucide') {
+                      const IconComponent = LUCIDE_ICON_MAP[icon.value];
+                      return (
+                        <div className="h-8 w-8 bg-primary/10 rounded flex items-center justify-center flex-shrink-0">
+                          <IconComponent className="h-5 w-5 text-primary" />
+                        </div>
+                      );
+                    }
+                    return (
+                      <img 
+                        src={icon.value} 
+                        alt={`${project.name} icon`}
+                        className="h-8 w-8 object-contain rounded flex-shrink-0"
+                      />
+                    );
+                  })()}
                   <h3 className="text-base font-semibold group-hover:text-primary transition-colors line-clamp-1">
                     {project.name}
                   </h3>

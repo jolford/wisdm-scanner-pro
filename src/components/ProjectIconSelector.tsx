@@ -2,15 +2,8 @@ import { useState } from 'react';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Upload } from 'lucide-react';
-import invoiceIcon from '@/assets/project-icons/invoice.png';
-import checkIcon from '@/assets/project-icons/check.png';
-import purchaseOrderIcon from '@/assets/project-icons/purchase-order.png';
-import contractIcon from '@/assets/project-icons/contract.png';
-import receiptIcon from '@/assets/project-icons/receipt.png';
-import formIcon from '@/assets/project-icons/form.png';
-import mapIcon from '@/assets/project-icons/map.png';
-import petitionIcon from '@/assets/project-icons/petition.png';
+import { Upload, Folder, Star, Bookmark, Briefcase, Layers, Box, Grid3x3, Package } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 
 interface ProjectIconSelectorProps {
   selectedIcon: string;
@@ -19,15 +12,15 @@ interface ProjectIconSelectorProps {
   uploading?: boolean;
 }
 
-const preloadedIcons = [
-  { name: 'Invoice', url: invoiceIcon, description: 'Invoice processing' },
-  { name: 'Check', url: checkIcon, description: 'Check scanning' },
-  { name: 'Purchase Order', url: purchaseOrderIcon, description: 'Purchase orders' },
-  { name: 'Contract', url: contractIcon, description: 'Contracts & agreements' },
-  { name: 'Receipt', url: receiptIcon, description: 'Receipts & expenses' },
-  { name: 'Form', url: formIcon, description: 'Forms & applications' },
-  { name: 'Map', url: mapIcon, description: 'Maps & locations' },
-  { name: 'Petition', url: petitionIcon, description: 'Petitions & signatures' },
+const preloadedIcons: { name: string; icon: LucideIcon; id: string; description: string }[] = [
+  { name: 'Folder', icon: Folder, id: 'folder', description: 'General projects' },
+  { name: 'Star', icon: Star, id: 'star', description: 'Featured projects' },
+  { name: 'Bookmark', icon: Bookmark, id: 'bookmark', description: 'Saved items' },
+  { name: 'Briefcase', icon: Briefcase, id: 'briefcase', description: 'Business projects' },
+  { name: 'Layers', icon: Layers, id: 'layers', description: 'Multi-part projects' },
+  { name: 'Box', icon: Box, id: 'box', description: 'Archive projects' },
+  { name: 'Grid', icon: Grid3x3, id: 'grid', description: 'Organized projects' },
+  { name: 'Package', icon: Package, id: 'package', description: 'Packaged projects' },
 ];
 
 export function ProjectIconSelector({ 
@@ -38,7 +31,7 @@ export function ProjectIconSelector({
 }: ProjectIconSelectorProps) {
   const [showCustomUpload, setShowCustomUpload] = useState(false);
 
-  const isPreloadedIcon = preloadedIcons.some(icon => icon.url === selectedIcon);
+  const isPreloadedIcon = preloadedIcons.some(icon => icon.id === selectedIcon);
 
   return (
     <div className="space-y-4">
@@ -51,36 +44,35 @@ export function ProjectIconSelector({
 
       {/* Preloaded Icons Grid */}
       <div className="grid grid-cols-4 gap-3">
-        {preloadedIcons.map((icon) => (
-          <button
-            key={icon.name}
-            type="button"
-            onClick={() => {
-              onIconSelect(icon.url);
-              setShowCustomUpload(false);
-            }}
-            className={`group relative flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all hover:border-primary hover:shadow-md ${
-              selectedIcon === icon.url
-                ? 'border-primary bg-primary/5 shadow-md'
-                : 'border-border bg-card'
-            }`}
-            title={icon.description}
-          >
-            <img 
-              src={icon.url} 
-              alt={icon.name}
-              className="h-12 w-12 object-contain"
-            />
-            <span className="text-xs font-medium text-center line-clamp-1">
-              {icon.name}
-            </span>
-            {selectedIcon === icon.url && (
-              <div className="absolute -top-1 -right-1 h-5 w-5 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-primary-foreground text-xs">✓</span>
-              </div>
-            )}
-          </button>
-        ))}
+        {preloadedIcons.map((iconItem) => {
+          const IconComponent = iconItem.icon;
+          return (
+            <button
+              key={iconItem.id}
+              type="button"
+              onClick={() => {
+                onIconSelect(iconItem.id);
+                setShowCustomUpload(false);
+              }}
+              className={`group relative flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all hover:border-primary hover:shadow-md ${
+                selectedIcon === iconItem.id
+                  ? 'border-primary bg-primary/5 shadow-md'
+                  : 'border-border bg-card'
+              }`}
+              title={iconItem.description}
+            >
+              <IconComponent className="h-12 w-12 text-foreground" />
+              <span className="text-xs font-medium text-center line-clamp-1">
+                {iconItem.name}
+              </span>
+              {selectedIcon === iconItem.id && (
+                <div className="absolute -top-1 -right-1 h-5 w-5 bg-primary rounded-full flex items-center justify-center">
+                  <span className="text-primary-foreground text-xs">✓</span>
+                </div>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Custom Upload Section */}
