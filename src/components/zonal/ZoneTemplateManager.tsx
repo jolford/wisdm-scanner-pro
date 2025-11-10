@@ -35,6 +35,7 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
   const [showEditor, setShowEditor] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadedImageUrl, setUploadedImageUrl] = useState<string>('');
+  const [sampleImagePath, setSampleImagePath] = useState<string>('');
   const [templateName, setTemplateName] = useState('');
   const [templateDescription, setTemplateDescription] = useState('');
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
@@ -95,11 +96,14 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
 
       if (uploadError) throw uploadError;
 
-      const { data: { publicUrl } } = supabase.storage
+      // Create a signed URL for previewing (bucket is private)
+      const { data: signed, error: signErr } = await supabase.storage
         .from('documents')
-        .getPublicUrl(fileName);
+        .createSignedUrl(data!.path, 3600);
+      if (signErr) throw signErr;
 
-      setUploadedImageUrl(publicUrl);
+      setUploadedImageUrl(signed.signedUrl);
+      setSampleImagePath(data!.path);
       toast.success('Sample document uploaded');
     } catch (error: any) {
       toast.error('Upload failed: ' + error.message);
@@ -130,7 +134,7 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
           .update({
             name: templateName,
             description: templateDescription,
-            sample_image_url: uploadedImageUrl,
+            sample_image_url: sampleImagePath || uploadedImageUrl, // store storage path if available
           })
           .eq('id', editingTemplateId);
 
@@ -175,7 +179,7 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
             project_id: projectId,
             name: templateName,
             description: templateDescription,
-            sample_image_url: uploadedImageUrl,
+            sample_image_url: sampleImagePath || uploadedImageUrl,
             created_by: user.id,
           })
           .select()
@@ -208,6 +212,7 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
       setTemplateDescription('');
       setSelectedFile(null);
       setUploadedImageUrl('');
+      setSampleImagePath('');
       setEditingTemplateId(null);
       setInitialZones([]);
       loadTemplates();
@@ -218,6 +223,26 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
 
   const editTemplate = async (template: ZoneTemplate) => {
     try {
+      // Resolve storage path and sign it (bucket is private)
+      const maybeUrl = template.sample_image_url || '';
+      const lastIdx = maybeUrl.lastIndexOf('documents/');
+      const pathMatch = lastIdx >= 0
+        ? maybeUrl.substring(lastIdx + 'documents/'.length)
+        : (maybeUrl.startsWith('http') ? '' : maybeUrl); // if it's a full http URL but not a storage URL, leave blank
+
+      if (pathMatch) {
+        const { data: signed, error: signErr } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(pathMatch, 3600);
+        if (signErr) throw signErr;
+        setUploadedImageUrl(signed.signedUrl);
+        setSampleImagePath(pathMatch);
+      } else {
+        // If we couldn't parse a storage path but have a direct URL, use it directly
+        if (maybeUrl) setUploadedImageUrl(maybeUrl);
+        setSampleImagePath('');
+      }
+
       // Load zone definitions
       const { data: zones, error } = await supabase
         .from('zone_definitions')
@@ -241,9 +266,9 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
       setEditingTemplateId(template.id);
       setTemplateName(template.name);
       setTemplateDescription(template.description || '');
-      setUploadedImageUrl(template.sample_image_url);
-      setInitialZones(editorZones);
       setShowEditor(true);
+      setShowUpload(false);
+      setInitialZones(editorZones);
     } catch (error: any) {
       toast.error('Failed to load template: ' + error.message);
     }
