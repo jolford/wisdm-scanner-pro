@@ -92,16 +92,15 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
 
   const checkForBadDocuments = async () => {
     try {
-      const { data, error } = await supabase
+      const { count, error } = await supabase
         .from('documents')
         .select('id', { count: 'exact', head: true })
-        .or('extracted_metadata.is.null,extracted_metadata.eq.{}')
-        .limit(1);
+        .or('extracted_metadata.is.null,extracted_metadata.eq.{}');
 
       if (error) throw error;
       
-      // If we get any results, there are bad documents
-      setHasBadDocs(data && data.length > 0);
+      // If count is greater than 0, there are bad documents
+      setHasBadDocs(count !== null && count > 0);
     } catch (error) {
       console.error('Error checking for bad documents:', error);
     }
