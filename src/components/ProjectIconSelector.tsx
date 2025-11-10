@@ -32,6 +32,11 @@ export function ProjectIconSelector({
   const [showCustomUpload, setShowCustomUpload] = useState(false);
 
   const isPreloadedIcon = preloadedIcons.some(icon => icon.id === selectedIcon);
+  const isValidCustomImageSrc = !!(
+    selectedIcon &&
+    !isPreloadedIcon &&
+    /^(data:|blob:|https?:\/\/|\/|\.\/)/i.test(selectedIcon)
+  );
 
   return (
     <div className="space-y-4">
@@ -77,7 +82,7 @@ export function ProjectIconSelector({
 
       {/* Custom Upload Section */}
       <div className="pt-3 border-t">
-        {!showCustomUpload && !selectedIcon || (selectedIcon && isPreloadedIcon) ? (
+        {(!showCustomUpload && (!selectedIcon || isPreloadedIcon)) ? (
           <Button
             type="button"
             variant="outline"
@@ -91,12 +96,16 @@ export function ProjectIconSelector({
         ) : (
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              {selectedIcon && !isPreloadedIcon && (
+              {isValidCustomImageSrc && (
                 <div className="relative">
                   <img 
                     src={selectedIcon} 
-                    alt="Custom icon" 
+                    alt="Custom icon preview" 
                     className="h-16 w-16 object-contain rounded border-2 border-primary"
+                    onError={(e) => {
+                      // Hide broken preview without crashing UX
+                      (e.currentTarget as HTMLImageElement).style.display = 'none';
+                    }}
                   />
                   <Button
                     type="button"
