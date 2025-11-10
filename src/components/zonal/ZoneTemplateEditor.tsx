@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Trash2, Edit2, Save, X } from 'lucide-react';
+import { REGEX_PATTERNS, type PatternName } from '@/lib/regex-patterns';
 
 interface Zone {
   id: string;
@@ -18,6 +19,8 @@ interface Zone {
   width: number;
   height: number;
   rect?: Rect;
+  validation_pattern?: string;
+  validation_flags?: string;
 }
 
 interface ZoneTemplateEditorProps {
@@ -36,6 +39,8 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
   const [showNameDialog, setShowNameDialog] = useState(false);
   const [tempFieldName, setTempFieldName] = useState('');
   const [tempFieldType, setTempFieldType] = useState('text');
+  const [tempPattern, setTempPattern] = useState('');
+  const [tempFlags, setTempFlags] = useState('i');
   const [pendingZone, setPendingZone] = useState<Rect | null>(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
 
@@ -204,6 +209,8 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
       width: Math.round(pendingZone.width!),
       height: Math.round(pendingZone.height!),
       rect: pendingZone,
+      validation_pattern: tempPattern || undefined,
+      validation_flags: tempFlags || 'i',
     };
 
     pendingZone.set({ selectable: true });
@@ -212,6 +219,8 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
     setShowNameDialog(false);
     setTempFieldName('');
     setTempFieldType('text');
+    setTempPattern('');
+    setTempFlags('i');
     setPendingZone(null);
     toast.success(`Zone "${tempFieldName}" created`);
   };
@@ -231,13 +240,15 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
       return;
     }
 
-    const zonesToSave = zones.map(({ fieldName, fieldType, x, y, width, height }) => ({
+    const zonesToSave = zones.map(({ fieldName, fieldType, x, y, width, height, validation_pattern, validation_flags }) => ({
       fieldName,
       fieldType,
       x,
       y,
       width,
       height,
+      validation_pattern,
+      validation_flags,
     }));
 
     await onSave(zonesToSave);
@@ -274,6 +285,11 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
                   <p className="text-xs text-muted-foreground">
                     Type: {zone.fieldType}
                   </p>
+                  {zone.validation_pattern && (
+                    <p className="text-xs text-muted-foreground">
+                      Pattern: <code className="bg-background px-1 py-0.5 rounded">{zone.validation_pattern.substring(0, 30)}{zone.validation_pattern.length > 30 ? '...' : ''}</code>
+                    </p>
+                  )}
                   <p className="text-xs text-muted-foreground">
                     Position: {zone.x}, {zone.y}
                   </p>
@@ -319,6 +335,52 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
                   <SelectItem value="number">Number</SelectItem>
                   <SelectItem value="date">Date</SelectItem>
                   <SelectItem value="currency">Currency</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Validation Pattern (Optional)</Label>
+              <Select value={tempPattern} onValueChange={setTempPattern}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a pattern or leave blank" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  <SelectItem value="">None</SelectItem>
+                  {Object.entries(REGEX_PATTERNS).map(([name, pattern]) => (
+                    <SelectItem key={name} value={pattern}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                  <SelectItem value="custom">Custom Pattern...</SelectItem>
+                </SelectContent>
+              </Select>
+              {tempPattern === 'custom' && (
+                <Input
+                  placeholder="Enter regex pattern"
+                  value={tempPattern}
+                  onChange={(e) => setTempPattern(e.target.value)}
+                  className="mt-2"
+                />
+              )}
+              {tempPattern && tempPattern !== 'custom' && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Pattern: <code className="bg-muted px-1 py-0.5 rounded">{tempPattern}</code>
+                </p>
+              )}
+            </div>
+
+            <div>
+              <Label>Pattern Flags</Label>
+              <Select value={tempFlags} onValueChange={setTempFlags}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="i">Case Insensitive (i)</SelectItem>
+                  <SelectItem value="">Case Sensitive</SelectItem>
+                  <SelectItem value="gi">Global + Case Insensitive (gi)</SelectItem>
+                  <SelectItem value="g">Global (g)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

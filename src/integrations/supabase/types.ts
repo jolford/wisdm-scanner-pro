@@ -2297,6 +2297,8 @@ export type Database = {
           preprocessing: Json | null
           sort_order: number | null
           template_id: string
+          validation_flags: string | null
+          validation_pattern: string | null
           validation_rules: Json | null
           width: number
           x: number
@@ -2312,6 +2314,8 @@ export type Database = {
           preprocessing?: Json | null
           sort_order?: number | null
           template_id: string
+          validation_flags?: string | null
+          validation_pattern?: string | null
           validation_rules?: Json | null
           width: number
           x: number
@@ -2327,6 +2331,8 @@ export type Database = {
           preprocessing?: Json | null
           sort_order?: number | null
           template_id?: string
+          validation_flags?: string | null
+          validation_pattern?: string | null
           validation_rules?: Json | null
           width?: number
           x?: number

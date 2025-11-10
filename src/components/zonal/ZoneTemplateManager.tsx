@@ -158,6 +158,8 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
           height: zone.height,
           field_type: zone.fieldType,
           sort_order: index,
+          validation_pattern: zone.validation_pattern || null,
+          validation_flags: zone.validation_flags || 'i',
         }));
 
         const { error: zonesError } = await supabase
@@ -196,6 +198,8 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
           height: zone.height,
           field_type: zone.fieldType,
           sort_order: index,
+          validation_pattern: zone.validation_pattern || null,
+          validation_flags: zone.validation_flags || 'i',
         }));
 
         const { error: zonesError } = await supabase
@@ -261,6 +265,8 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
         y: zone.y,
         width: zone.width,
         height: zone.height,
+        validation_pattern: zone.validation_pattern,
+        validation_flags: zone.validation_flags,
       }));
 
       setEditingTemplateId(template.id);
