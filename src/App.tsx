@@ -61,6 +61,9 @@ import MLTemplates from "./pages/admin/MLTemplates";
 import ConfidenceDashboard from "./pages/admin/ConfidenceDashboard";
 import ExceptionQueue from "./pages/admin/ExceptionQueue";
 import WebhookConfig from "./pages/admin/WebhookConfig";
+import DuplicateDetections from "./pages/admin/DuplicateDetections";
+import ValidationRules from "./pages/admin/ValidationRules";
+import ScheduledBatches from "./pages/admin/ScheduledBatches";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -205,6 +208,9 @@ const App = () => {
             <Route path="/admin/confidence" element={<ConfidenceDashboard />} />
             <Route path="/admin/exceptions" element={<ExceptionQueue />} />
             <Route path="/admin/webhooks" element={<WebhookConfig />} />
+            <Route path="/admin/duplicates" element={<DuplicateDetections />} />
+            <Route path="/admin/validation-rules" element={<ValidationRules />} />
+            <Route path="/admin/scheduled-batches" element={<ScheduledBatches />} />
             <Route path="/help" element={<Help />} />
             <Route path="/api-docs" element={<ApiDocs />} />
             <Route path="/settings" element={<UserSettings />} />

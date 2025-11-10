@@ -18,7 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, FolderOpen, FileText, Users, Key, Building2, BarChart3, TestTube2, AlertTriangle, Target, Webhook } from 'lucide-react';
+import { Plus, FolderOpen, FileText, Users, Key, Building2, BarChart3, TestTube2, AlertTriangle, Target, Webhook, Copy, Shield, Clock } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -265,6 +265,63 @@ const AdminDashboard = () => {
                 className="w-full"
               >
                 Manage Webhooks
+              </Button>
+            </Card>
+          </div>
+        </div>
+
+        {/* Automation & Rules */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Automation & Rules</h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Copy className="h-5 w-5" />
+                Duplicate Detection
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Identify and manage potential duplicate documents across batches
+              </p>
+              <Button
+                onClick={() => navigate('/admin/duplicates')}
+                variant="outline"
+                className="w-full"
+              >
+                View Duplicates
+              </Button>
+            </Card>
+
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Shield className="h-5 w-5" />
+                Validation Rules
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Configure custom field-level validation rules for document types
+              </p>
+              <Button
+                onClick={() => navigate('/admin/validation-rules')}
+                variant="outline"
+                className="w-full"
+              >
+                Manage Rules
+              </Button>
+            </Card>
+
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Clock className="h-5 w-5" />
+                Scheduled Processing
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Automate batch processing at specific times and frequencies
+              </p>
+              <Button
+                onClick={() => navigate('/admin/scheduled-batches')}
+                variant="outline"
+                className="w-full"
+              >
+                Manage Schedules
               </Button>
             </Card>
           </div>

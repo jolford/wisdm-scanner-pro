@@ -2352,6 +2352,66 @@ export type Database = {
           },
         ]
       }
+      validation_rules: {
+        Row: {
+          created_at: string
+          created_by: string
+          document_class_id: string | null
+          error_message: string
+          field_name: string
+          id: string
+          is_active: boolean
+          project_id: string
+          rule_config: Json
+          rule_type: string
+          severity: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          document_class_id?: string | null
+          error_message: string
+          field_name: string
+          id?: string
+          is_active?: boolean
+          project_id: string
+          rule_config?: Json
+          rule_type: string
+          severity?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          document_class_id?: string | null
+          error_message?: string
+          field_name?: string
+          id?: string
+          is_active?: boolean
+          project_id?: string
+          rule_config?: Json
+          rule_type?: string
+          severity?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "validation_rules_document_class_id_fkey"
+            columns: ["document_class_id"]
+            isOneToOne: false
+            referencedRelation: "document_classes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "validation_rules_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhook_configs: {
         Row: {
           created_at: string
