@@ -355,6 +355,23 @@ const AdminDashboard = () => {
 
             <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
               <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Release Notes
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Manage version releases and feature announcements visible to all users
+              </p>
+              <Button
+                onClick={() => navigate('/admin/release-notes')}
+                variant="outline"
+                className="w-full"
+              >
+                Manage Release Notes
+              </Button>
+            </Card>
+
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
                 <Settings className="h-5 w-5" />
                 Help Center
               </h3>

@@ -1679,6 +1679,54 @@ export type Database = {
           },
         ]
       }
+      release_notes: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string
+          features: Json
+          highlights: Json
+          id: string
+          is_latest: boolean
+          release_date: string
+          status: string
+          technical_info: Json | null
+          updated_at: string
+          version: string
+          version_name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description: string
+          features?: Json
+          highlights?: Json
+          id?: string
+          is_latest?: boolean
+          release_date?: string
+          status?: string
+          technical_info?: Json | null
+          updated_at?: string
+          version: string
+          version_name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string
+          features?: Json
+          highlights?: Json
+          id?: string
+          is_latest?: boolean
+          release_date?: string
+          status?: string
+          technical_info?: Json | null
+          updated_at?: string
+          version?: string
+          version_name?: string
+        }
+        Relationships: []
+      }
       reporting_snapshots: {
         Row: {
           created_at: string | null
