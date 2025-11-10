@@ -210,7 +210,7 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
       height: Math.round(pendingZone.height!),
       rect: pendingZone,
       validation_pattern: tempPattern || undefined,
-      validation_flags: tempFlags || 'i',
+      validation_flags: tempFlags === 'none' ? '' : (tempFlags || 'i'),
     };
 
     pendingZone.set({ selectable: true });
@@ -330,7 +330,7 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background z-50">
                   <SelectItem value="text">Text</SelectItem>
                   <SelectItem value="number">Number</SelectItem>
                   <SelectItem value="date">Date</SelectItem>
@@ -372,15 +372,15 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
 
             <div>
               <Label>Pattern Flags</Label>
-              <Select value={tempFlags} onValueChange={setTempFlags}>
+              <Select value={tempFlags || 'none'} onValueChange={(val) => setTempFlags(val)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="bg-background z-50">
                   <SelectItem value="i">Case Insensitive (i)</SelectItem>
-                  <SelectItem value="">Case Sensitive</SelectItem>
                   <SelectItem value="gi">Global + Case Insensitive (gi)</SelectItem>
                   <SelectItem value="g">Global (g)</SelectItem>
+                  <SelectItem value="none">Case Sensitive (no flags)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
