@@ -85,7 +85,6 @@ const menuItems = [
   {
     title: 'Configuration',
     items: [
-      { title: 'Validation Lookups', url: '/admin/validation-lookups', icon: Database },
       { title: 'White Label', url: '/admin/white-label', icon: Palette },
       { title: 'System Viability', url: '/admin/system-viability', icon: Settings },
     ],
