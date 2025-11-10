@@ -18,7 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, FolderOpen, FileText, Users, Key, Building2, BarChart3, TestTube2 } from 'lucide-react';
+import { Plus, FolderOpen, FileText, Users, Key, Building2, BarChart3, TestTube2, AlertTriangle, Target, Webhook } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -211,6 +211,63 @@ const AdminDashboard = () => {
               </Button>
             </div>
           </Card>
+        </div>
+
+        {/* Quality & Monitoring */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Quality & Monitoring</h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                Confidence Scoring
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Monitor OCR confidence levels and identify low-quality extractions
+              </p>
+              <Button
+                onClick={() => navigate('/admin/confidence')}
+                variant="outline"
+                className="w-full"
+              >
+                View Dashboard
+              </Button>
+            </Card>
+
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Exception Queue
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Review and resolve documents that failed validation
+              </p>
+              <Button
+                onClick={() => navigate('/admin/exceptions')}
+                variant="outline"
+                className="w-full"
+              >
+                View Exceptions
+              </Button>
+            </Card>
+
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Webhook className="h-5 w-5" />
+                Webhooks
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Configure real-time notifications for batch and validation events
+              </p>
+              <Button
+                onClick={() => navigate('/admin/webhooks')}
+                variant="outline"
+                className="w-full"
+              >
+                Manage Webhooks
+              </Button>
+            </Card>
+          </div>
         </div>
 
         {/* Sales Tools */}
