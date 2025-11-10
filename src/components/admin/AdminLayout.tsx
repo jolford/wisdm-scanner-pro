@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -84,6 +84,28 @@ const salesToolsItems = [
 export function AdminLayout({ children, title, description }: AdminLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const [hasBadDocs, setHasBadDocs] = useState(false);
+
+  useEffect(() => {
+    checkForBadDocuments();
+  }, []);
+
+  const checkForBadDocuments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('documents')
+        .select('id', { count: 'exact', head: true })
+        .or('extracted_metadata.is.null,extracted_metadata.eq.{}')
+        .limit(1);
+
+      if (error) throw error;
+      
+      // If we get any results, there are bad documents
+      setHasBadDocs(data && data.length > 0);
+    } catch (error) {
+      console.error('Error checking for bad documents:', error);
+    }
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -129,6 +151,9 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
                       >
                         <item.icon className="h-4 w-4 mr-2" />
                         <span>{item.title}</span>
+                        {item.title === 'Reprocess Docs' && hasBadDocs && (
+                          <AlertCircle className="h-4 w-4 ml-auto text-destructive" />
+                        )}
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   ))}
