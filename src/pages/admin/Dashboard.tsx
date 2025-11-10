@@ -18,7 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, FolderOpen, FileText, Users, Key, Building2, BarChart3, TestTube2, AlertTriangle, Target, Webhook, Copy, Shield, Clock, Settings } from 'lucide-react';
+import { Plus, FolderOpen, FileText, Users, Key, Building2, BarChart3, TestTube2, AlertTriangle, Target, Webhook, Copy, Shield, Clock, Settings, Edit3, GitCompare } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -322,6 +322,63 @@ const AdminDashboard = () => {
                 className="w-full"
               >
                 Manage Schedules
+              </Button>
+            </Card>
+          </div>
+        </div>
+
+        {/* Phase 3: Bulk Operations & QA */}
+        <div>
+          <h2 className="text-2xl font-bold mb-4">Phase 3: Bulk Operations & QA</h2>
+          <div className="grid md:grid-cols-3 gap-6">
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Edit3 className="h-5 w-5" />
+                Bulk Edit Mode
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Edit multiple document fields simultaneously for efficient data updates
+              </p>
+              <Button
+                onClick={() => navigate('/admin/bulk-edit')}
+                variant="outline"
+                className="w-full"
+              >
+                Open Bulk Editor
+              </Button>
+            </Card>
+
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <GitCompare className="h-5 w-5" />
+                Document Comparison
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Side-by-side view of before and after validation changes
+              </p>
+              <Button
+                onClick={() => navigate('/admin/document-comparison')}
+                variant="outline"
+                className="w-full"
+              >
+                Compare Documents
+              </Button>
+            </Card>
+
+            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                QA Metrics Dashboard
+              </h3>
+              <p className="text-muted-foreground mb-4">
+                Track validation accuracy, processing times, and error rates
+              </p>
+              <Button
+                onClick={() => navigate('/admin/qa-metrics')}
+                variant="outline"
+                className="w-full"
+              >
+                View QA Metrics
               </Button>
             </Card>
           </div>

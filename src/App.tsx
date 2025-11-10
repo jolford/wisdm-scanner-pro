@@ -66,6 +66,9 @@ import ValidationRules from "./pages/admin/ValidationRules";
 import ScheduledBatches from "./pages/admin/ScheduledBatches";
 import ReleaseNotes from "./pages/ReleaseNotes";
 import ReleaseNotesManager from "./pages/admin/ReleaseNotesManager";
+import BulkEdit from "./pages/admin/BulkEdit";
+import DocumentComparison from "./pages/admin/DocumentComparison";
+import QAMetrics from "./pages/admin/QAMetrics";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -212,8 +215,13 @@ const App = () => {
             <Route path="/admin/webhooks" element={<WebhookConfig />} />
             <Route path="/admin/duplicates" element={<DuplicateDetections />} />
             <Route path="/admin/validation-rules" element={<ValidationRules />} />
-            <Route path="/admin/scheduled-batches" element={<ScheduledBatches />} />
-            <Route path="/admin/release-notes" element={<ReleaseNotesManager />} />
+          <Route path="/admin/scheduled-batches" element={<ScheduledBatches />} />
+          <Route path="/admin/release-notes" element={<ReleaseNotesManager />} />
+          
+          {/* Phase 3: Bulk Operations & QA */}
+          <Route path="/admin/bulk-edit" element={<BulkEdit />} />
+          <Route path="/admin/document-comparison" element={<DocumentComparison />} />
+          <Route path="/admin/qa-metrics" element={<QAMetrics />} />
             <Route path="/help" element={<Help />} />
             <Route path="/release-notes" element={<ReleaseNotes />} />
             <Route path="/api-docs" element={<ApiDocs />} />
