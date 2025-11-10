@@ -32,6 +32,7 @@ import NewUser from "./pages/admin/users/New";
 import DocumentsAdmin from "./pages/admin/Documents";
 import CostTracking from "./pages/admin/CostTracking";
 import Analytics from "./pages/admin/Analytics";
+import BarcodeTest from "./pages/admin/BarcodeTest";
 import SystemViability from "./pages/admin/SystemViability";
 import ErrorLogs from "./pages/admin/ErrorLogs";
 import AdvancedReports from "./pages/admin/AdvancedReports";
@@ -187,6 +188,7 @@ const App = () => {
             <Route path="/admin/documents" element={<DocumentsAdmin />} />
             <Route path="/admin/cost-tracking" element={<CostTracking />} />
             <Route path="/admin/analytics" element={<Analytics />} />
+            <Route path="/admin/barcode-test" element={<BarcodeTest />} />
             <Route path="/admin/viability" element={<SystemViability />} />
             <Route path="/admin/advanced-reports" element={<AdvancedReports />} />
             <Route path="/admin/error-logs" element={<ErrorLogs />} />

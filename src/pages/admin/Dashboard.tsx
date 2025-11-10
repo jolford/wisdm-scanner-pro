@@ -18,7 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { Plus, FolderOpen, FileText, Users, Key, Building2, BarChart3 } from 'lucide-react';
+import { Plus, FolderOpen, FileText, Users, Key, Building2, BarChart3, TestTube2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -160,7 +160,7 @@ const AdminDashboard = () => {
         )}
 
         {/* Quick Actions */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-3 gap-6">
           <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
             <h3 className="text-xl font-semibold mb-4">Projects</h3>
             <p className="text-muted-foreground mb-4">
@@ -192,6 +192,22 @@ const AdminDashboard = () => {
               >
                 <BarChart3 className="h-4 w-4 mr-2" />
                 View Reports
+              </Button>
+            </div>
+          </Card>
+
+          <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
+            <h3 className="text-xl font-semibold mb-4">Testing Tools</h3>
+            <p className="text-muted-foreground mb-4">
+              Test barcode detection and document processing
+            </p>
+            <div className="flex gap-3">
+              <Button
+                onClick={() => navigate('/admin/barcode-test')}
+                variant="outline"
+              >
+                <TestTube2 className="h-4 w-4 mr-2" />
+                Barcode Test
               </Button>
             </div>
           </Card>
