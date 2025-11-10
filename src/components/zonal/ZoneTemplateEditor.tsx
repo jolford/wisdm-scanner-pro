@@ -341,12 +341,12 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
 
             <div>
               <Label>Validation Pattern (Optional)</Label>
-              <Select value={tempPattern} onValueChange={setTempPattern}>
+              <Select value={tempPattern || 'none'} onValueChange={(val) => setTempPattern(val === 'none' ? '' : val)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a pattern or leave blank" />
                 </SelectTrigger>
-                <SelectContent className="max-h-[300px]">
-                  <SelectItem value="">None</SelectItem>
+                <SelectContent className="max-h-[300px] bg-background z-50">
+                  <SelectItem value="none">None</SelectItem>
                   {Object.entries(REGEX_PATTERNS).map(([name, pattern]) => (
                     <SelectItem key={name} value={pattern}>
                       {name}
@@ -363,7 +363,7 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
                   className="mt-2"
                 />
               )}
-              {tempPattern && tempPattern !== 'custom' && (
+              {tempPattern && tempPattern !== 'custom' && tempPattern !== 'none' && (
                 <p className="text-xs text-muted-foreground mt-1">
                   Pattern: <code className="bg-muted px-1 py-0.5 rounded">{tempPattern}</code>
                 </p>
