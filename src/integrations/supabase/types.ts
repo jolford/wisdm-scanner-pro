@@ -2286,6 +2286,109 @@ export type Database = {
           },
         ]
       }
+      zone_definitions: {
+        Row: {
+          created_at: string | null
+          field_name: string
+          field_type: string
+          height: number
+          id: string
+          page_number: number | null
+          preprocessing: Json | null
+          sort_order: number | null
+          template_id: string
+          validation_rules: Json | null
+          width: number
+          x: number
+          y: number
+        }
+        Insert: {
+          created_at?: string | null
+          field_name: string
+          field_type?: string
+          height: number
+          id?: string
+          page_number?: number | null
+          preprocessing?: Json | null
+          sort_order?: number | null
+          template_id: string
+          validation_rules?: Json | null
+          width: number
+          x: number
+          y: number
+        }
+        Update: {
+          created_at?: string | null
+          field_name?: string
+          field_type?: string
+          height?: number
+          id?: string
+          page_number?: number | null
+          preprocessing?: Json | null
+          sort_order?: number | null
+          template_id?: string
+          validation_rules?: Json | null
+          width?: number
+          x?: number
+          y?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zone_definitions_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "zone_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zone_templates: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          name: string
+          project_id: string
+          sample_image_url: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name: string
+          project_id: string
+          sample_image_url: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name?: string
+          project_id?: string
+          sample_image_url?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zone_templates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never

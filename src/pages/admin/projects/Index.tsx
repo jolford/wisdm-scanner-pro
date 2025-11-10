@@ -13,6 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { SkeletonCard } from '@/components/ui/skeleton-card';
 import { EmptyState } from '@/components/ui/empty-state';
+import { ZoneTemplateManager } from '@/components/zonal/ZoneTemplateManager';
 
 const LUCIDE_ICON_MAP: Record<string, LucideIcon> = {
   folder: Folder,
@@ -72,6 +73,7 @@ const Projects = () => {
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'fields'>('date');
   const [viewMode, setViewMode] = useState<'grid' | 'table' | 'list'>('grid');
   const [groupByCustomer, setGroupByCustomer] = useState(false);
+  const [selectedProjectForZones, setSelectedProjectForZones] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading) {
@@ -281,14 +283,25 @@ const Projects = () => {
               <p className="text-xs text-muted-foreground">
                 {new Date(project.created_at).toLocaleDateString()}
               </p>
-              <Button
-                size="sm"
-                onClick={() => navigate(`/admin/projects/${project.id}/edit`)}
-                className="h-7 text-xs"
-              >
-                <Edit className="h-3 w-3 mr-1" />
-                Edit
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSelectedProjectForZones(project.id)}
+                  className="h-7 text-xs"
+                >
+                  <LayoutGrid className="h-3 w-3 mr-1" />
+                  Zones
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={() => navigate(`/admin/projects/${project.id}/edit`)}
+                  className="h-7 text-xs"
+                >
+                  <Edit className="h-3 w-3 mr-1" />
+                  Edit
+                </Button>
+              </div>
             </div>
           </Card>
         ))}
@@ -497,6 +510,14 @@ const Projects = () => {
           renderProjectsView(filteredProjects)
         )}
       </main>
+
+      {selectedProjectForZones && (
+        <ZoneTemplateManager
+          projectId={selectedProjectForZones}
+          open={!!selectedProjectForZones}
+          onClose={() => setSelectedProjectForZones(null)}
+        />
+      )}
     </div>
   );
 };
