@@ -2288,6 +2288,10 @@ export type Database = {
       }
       zone_definitions: {
         Row: {
+          anchor_offset_x: number | null
+          anchor_offset_y: number | null
+          anchor_search_radius: number | null
+          anchor_text: string | null
           created_at: string | null
           field_name: string
           field_type: string
@@ -2305,6 +2309,10 @@ export type Database = {
           y: number
         }
         Insert: {
+          anchor_offset_x?: number | null
+          anchor_offset_y?: number | null
+          anchor_search_radius?: number | null
+          anchor_text?: string | null
           created_at?: string | null
           field_name: string
           field_type?: string
@@ -2322,6 +2330,10 @@ export type Database = {
           y: number
         }
         Update: {
+          anchor_offset_x?: number | null
+          anchor_offset_y?: number | null
+          anchor_search_radius?: number | null
+          anchor_text?: string | null
           created_at?: string | null
           field_name?: string
           field_type?: string

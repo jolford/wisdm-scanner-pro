@@ -21,6 +21,9 @@ interface Zone {
   rect?: Rect;
   validation_pattern?: string;
   validation_flags?: string;
+  anchor_text?: string;
+  anchor_offset_x?: number;
+  anchor_offset_y?: number;
 }
 
 interface ZoneTemplateEditorProps {
@@ -41,6 +44,7 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
   const [tempFieldType, setTempFieldType] = useState('text');
   const [tempPattern, setTempPattern] = useState('');
   const [tempFlags, setTempFlags] = useState('i');
+  const [tempAnchorText, setTempAnchorText] = useState('');
   const [pendingZone, setPendingZone] = useState<Rect | null>(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
 
@@ -211,6 +215,9 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
       rect: pendingZone,
       validation_pattern: tempPattern || undefined,
       validation_flags: tempFlags === 'none' ? '' : (tempFlags || 'i'),
+      anchor_text: tempAnchorText || undefined,
+      anchor_offset_x: tempAnchorText ? Math.round(pendingZone.left!) : undefined,
+      anchor_offset_y: tempAnchorText ? Math.round(pendingZone.top!) : undefined,
     };
 
     pendingZone.set({ selectable: true });
@@ -221,6 +228,7 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
     setTempFieldType('text');
     setTempPattern('');
     setTempFlags('i');
+    setTempAnchorText('');
     setPendingZone(null);
     toast.success(`Zone "${tempFieldName}" created`);
   };
@@ -240,7 +248,7 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
       return;
     }
 
-    const zonesToSave = zones.map(({ fieldName, fieldType, x, y, width, height, validation_pattern, validation_flags }) => ({
+    const zonesToSave = zones.map(({ fieldName, fieldType, x, y, width, height, validation_pattern, validation_flags, anchor_text, anchor_offset_x, anchor_offset_y }) => ({
       fieldName,
       fieldType,
       x,
@@ -249,6 +257,9 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
       height,
       validation_pattern,
       validation_flags,
+      anchor_text,
+      anchor_offset_x,
+      anchor_offset_y,
     }));
 
     await onSave(zonesToSave);
@@ -280,11 +291,16 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
           <div className="space-y-2">
             {zones.map((zone) => (
               <div key={zone.id} className="p-3 bg-muted rounded flex justify-between items-start">
-                <div>
+                 <div>
                   <p className="font-medium">{zone.fieldName}</p>
                   <p className="text-xs text-muted-foreground">
                     Type: {zone.fieldType}
                   </p>
+                  {zone.anchor_text && (
+                    <p className="text-xs text-primary font-medium">
+                      ⚓ Anchor: "{zone.anchor_text.substring(0, 20)}{zone.anchor_text.length > 20 ? '...' : ''}"
+                    </p>
+                  )}
                   {zone.validation_pattern && (
                     <p className="text-xs text-muted-foreground">
                       Pattern: <code className="bg-background px-1 py-0.5 rounded">{zone.validation_pattern.substring(0, 30)}{zone.validation_pattern.length > 30 ? '...' : ''}</code>
@@ -383,6 +399,18 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
                   <SelectItem value="none">Case Sensitive (no flags)</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            <div>
+              <Label>Anchor Text (Optional)</Label>
+              <Input
+                value={tempAnchorText}
+                onChange={(e) => setTempAnchorText(e.target.value)}
+                placeholder="e.g., Total:, Name:, Invoice #"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                ⚓ Enter text to use as an anchor point. The zone will be positioned relative to this text, making it resilient to document shifts.
+              </p>
             </div>
           </div>
           <DialogFooter>
