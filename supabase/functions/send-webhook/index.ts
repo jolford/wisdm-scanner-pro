@@ -16,6 +16,7 @@ interface WebhookConfig {
   url: string;
   secret?: string;
   headers?: Record<string, string>;
+  webhook_type?: string;
   retry_config?: {
     max_retries: number;
     retry_delay_seconds: number;
@@ -101,6 +102,18 @@ async function sendWebhook(
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
+      // Format payload based on webhook type
+      let formattedPayload;
+      if (webhook.webhook_type === 'teams') {
+        formattedPayload = formatTeamsMessage(event_type, payload);
+      } else {
+        formattedPayload = {
+          event_type,
+          payload,
+          timestamp: new Date().toISOString(),
+        };
+      }
+
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         'X-Webhook-Event': event_type,
@@ -108,8 +121,8 @@ async function sendWebhook(
         ...(webhook.headers || {}),
       };
 
-      // Add HMAC signature if secret is configured
-      if (webhook.secret) {
+      // Add HMAC signature if secret is configured (not for Teams)
+      if (webhook.secret && webhook.webhook_type !== 'teams') {
         const signature = await generateSignature(webhook.secret, payload);
         headers['X-Webhook-Signature'] = signature;
       }
@@ -117,11 +130,7 @@ async function sendWebhook(
       const response = await fetch(webhook.url, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          event_type,
-          payload,
-          timestamp: new Date().toISOString(),
-        }),
+        body: JSON.stringify(formattedPayload),
       });
 
       const responseBody = await response.text();
@@ -165,6 +174,105 @@ async function sendWebhook(
       }
     }
   }
+}
+
+function formatTeamsMessage(event_type: string, data: any): any {
+  const card = {
+    type: 'message',
+    attachments: [{
+      contentType: 'application/vnd.microsoft.card.adaptive',
+      content: {
+        type: 'AdaptiveCard',
+        version: '1.4',
+        body: [
+          {
+            type: 'TextBlock',
+            text: getEventTitle(event_type),
+            weight: 'Bolder',
+            size: 'Large',
+            color: getEventColor(event_type)
+          },
+          {
+            type: 'FactSet',
+            facts: formatEventFacts(event_type, data)
+          }
+        ],
+        actions: getEventActions(event_type, data)
+      }
+    }]
+  };
+
+  return card;
+}
+
+function getEventTitle(eventType: string): string {
+  const titles: Record<string, string> = {
+    'batch.completed': '✅ Batch Processing Complete',
+    'batch.failed': '❌ Batch Processing Failed',
+    'document.validation_failed': '⚠️ Document Validation Failed',
+    'document.low_confidence': '📊 Low Confidence Detection',
+    'document.duplicate_detected': '🔍 Duplicate Document Detected',
+    'export.completed': '📤 Export Complete',
+    'export.failed': '❌ Export Failed'
+  };
+  return titles[eventType] || '📄 Document Processing Event';
+}
+
+function getEventColor(eventType: string): string {
+  if (eventType.includes('failed')) return 'Attention';
+  if (eventType.includes('completed')) return 'Good';
+  if (eventType.includes('low_confidence') || eventType.includes('validation')) return 'Warning';
+  return 'Default';
+}
+
+function formatEventFacts(eventType: string, data: any): any[] {
+  const facts = [];
+  
+  if (data.batch_name) {
+    facts.push({ title: 'Batch', value: data.batch_name });
+  }
+  if (data.document_name) {
+    facts.push({ title: 'Document', value: data.document_name });
+  }
+  if (data.project_name) {
+    facts.push({ title: 'Project', value: data.project_name });
+  }
+  if (data.documents_processed !== undefined) {
+    facts.push({ title: 'Documents Processed', value: data.documents_processed.toString() });
+  }
+  if (data.confidence_score !== undefined) {
+    facts.push({ title: 'Confidence', value: `${Math.round(data.confidence_score * 100)}%` });
+  }
+  if (data.error_message) {
+    facts.push({ title: 'Error', value: data.error_message });
+  }
+  
+  facts.push({ title: 'Time', value: new Date().toLocaleString() });
+  
+  return facts;
+}
+
+function getEventActions(eventType: string, data: any): any[] {
+  const actions = [];
+  const siteUrl = Deno.env.get('SITE_URL') || 'https://app.example.com';
+  
+  if (data.batch_id) {
+    actions.push({
+      type: 'Action.OpenUrl',
+      title: 'View Batch',
+      url: `${siteUrl}/batches/${data.batch_id}`
+    });
+  }
+  
+  if (data.document_id) {
+    actions.push({
+      type: 'Action.OpenUrl',
+      title: 'View Document',
+      url: `${siteUrl}/admin/documents?doc=${data.document_id}`
+    });
+  }
+  
+  return actions;
 }
 
 async function generateSignature(secret: string, payload: any): Promise<string> {
