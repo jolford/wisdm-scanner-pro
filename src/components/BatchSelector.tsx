@@ -30,6 +30,7 @@
 
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '@/integrations/supabase/client';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -49,6 +50,7 @@ interface BatchSelectorProps {
 }
 
 export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: BatchSelectorProps) => {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { user } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -78,8 +80,8 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
   const handleCreateBatch = async () => {
     if (!batchName.trim()) {
       toast({
-        title: 'Batch Name Required',
-        description: 'Please enter a name for the batch',
+        title: t('batch.batchNameRequired'),
+        description: t('batch.enterBatchName'),
         variant: 'destructive',
       });
       return;
@@ -101,8 +103,8 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
       if (error) throw error;
 
       toast({
-        title: 'Batch Created',
-        description: 'New batch created successfully',
+        title: t('batch.batchCreated'),
+        description: t('batch.batchCreatedSuccess'),
       });
 
       setBatchName('');
@@ -116,8 +118,8 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
     } catch (error: any) {
       console.error('Error creating batch:', error);
       toast({
-        title: 'Creation Failed',
-        description: error.message || 'Failed to create batch',
+        title: t('batch.creationFailed'),
+        description: error.message || t('batch.failedToCreateBatch'),
         variant: 'destructive',
       });
     } finally {
@@ -132,28 +134,28 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
       <div className="flex items-center justify-between">
         <Label className="flex items-center gap-2">
           <FolderOpen className="h-4 w-4" />
-          Select Batch
+          {t('batch.selectBatch')}
         </Label>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button size="sm" variant="outline">
               <Plus className="h-4 w-4 mr-1" />
-              New Batch
+              {t('batch.newBatch')}
             </Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create New Batch</DialogTitle>
+              <DialogTitle>{t('batch.createNew')}</DialogTitle>
               <DialogDescription>
-                Create a new document processing batch for the selected project
+                {t('batch.createNewBatchFor')}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="space-y-2">
-                <Label htmlFor="batch-name">Batch Name</Label>
+                <Label htmlFor="batch-name">{t('batch.name')}</Label>
                 <Input
                   id="batch-name"
-                  placeholder="e.g., Invoice Batch - January 2025"
+                  placeholder={t('batch.batchNamePlaceholder')}
                   value={batchName}
                   onChange={(e) => setBatchName(e.target.value)}
                   onKeyDown={(e) => {
@@ -166,7 +168,7 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
               <div className="space-y-2">
                 <Label htmlFor="priority" className="flex items-center gap-2">
                   <Zap className="h-4 w-4" />
-                  Priority (for load balancing)
+                  {t('batch.priorityLabel')}
                 </Label>
                 <Select
                   value={priority.toString()}
@@ -176,10 +178,10 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="0">Low (0)</SelectItem>
-                    <SelectItem value="5">Normal (5)</SelectItem>
-                    <SelectItem value="10">High (10)</SelectItem>
-                    <SelectItem value="20">Urgent (20)</SelectItem>
+                    <SelectItem value="0">{t('batch.low')} (0)</SelectItem>
+                    <SelectItem value="5">{t('batch.normal')} (5)</SelectItem>
+                    <SelectItem value="10">{t('batch.high')} (10)</SelectItem>
+                    <SelectItem value="20">{t('batch.urgent')} (20)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -193,10 +195,10 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
                   setPriority(5);
                 }}
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button onClick={handleCreateBatch} disabled={isCreating}>
-                {isCreating ? 'Creating...' : 'Create Batch'}
+                {isCreating ? t('batch.creating') : t('batch.createBatch')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -212,9 +214,9 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
       >
         <SelectTrigger>
           <SelectValue placeholder={
-            isLoading ? 'Loading batches...' :
-            !batches || batches.length === 0 ? 'No active batches - create one above' :
-            'Select a batch'
+            isLoading ? t('batch.loadingBatches') :
+            !batches || batches.length === 0 ? t('batch.noActiveBatches') :
+            t('batch.selectABatch')
           } />
         </SelectTrigger>
         <SelectContent>
