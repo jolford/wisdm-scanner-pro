@@ -1185,6 +1185,130 @@ export type Database = {
           },
         ]
       }
+      fax_import_configs: {
+        Row: {
+          auto_create_batch: boolean | null
+          batch_name_template: string | null
+          created_at: string | null
+          created_by: string
+          customer_id: string | null
+          id: string
+          is_active: boolean | null
+          project_id: string
+          twilio_phone_number: string
+          updated_at: string | null
+        }
+        Insert: {
+          auto_create_batch?: boolean | null
+          batch_name_template?: string | null
+          created_at?: string | null
+          created_by: string
+          customer_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          project_id: string
+          twilio_phone_number: string
+          updated_at?: string | null
+        }
+        Update: {
+          auto_create_batch?: boolean | null
+          batch_name_template?: string | null
+          created_at?: string | null
+          created_by?: string
+          customer_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          project_id?: string
+          twilio_phone_number?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fax_import_configs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fax_import_configs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fax_logs: {
+        Row: {
+          batch_id: string | null
+          config_id: string | null
+          document_id: string | null
+          error_message: string | null
+          from_number: string
+          id: string
+          media_url: string | null
+          metadata: Json | null
+          num_pages: number | null
+          received_at: string | null
+          status: string
+          to_number: string
+          twilio_sid: string
+        }
+        Insert: {
+          batch_id?: string | null
+          config_id?: string | null
+          document_id?: string | null
+          error_message?: string | null
+          from_number: string
+          id?: string
+          media_url?: string | null
+          metadata?: Json | null
+          num_pages?: number | null
+          received_at?: string | null
+          status: string
+          to_number: string
+          twilio_sid: string
+        }
+        Update: {
+          batch_id?: string | null
+          config_id?: string | null
+          document_id?: string | null
+          error_message?: string | null
+          from_number?: string
+          id?: string
+          media_url?: string | null
+          metadata?: Json | null
+          num_pages?: number | null
+          received_at?: string | null
+          status?: string
+          to_number?: string
+          twilio_sid?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fax_logs_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fax_logs_config_id_fkey"
+            columns: ["config_id"]
+            isOneToOne: false
+            referencedRelation: "fax_import_configs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fax_logs_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       field_changes: {
         Row: {
           change_type: string
