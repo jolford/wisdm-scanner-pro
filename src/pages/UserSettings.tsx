@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { useUserPreferences } from '@/hooks/use-user-preferences';
+import { LanguageSelector } from '@/components/LanguageSelector';
 
 const UserSettings = () => {
   const navigate = useNavigate();
@@ -233,6 +234,17 @@ const UserSettings = () => {
                         </Select>
                         <p className="text-sm text-muted-foreground">
                           Choose how batches are displayed by default
+                        </p>
+                      </div>
+
+                      {/* Language Selection */}
+                      <div className="space-y-3">
+                        <Label htmlFor="language" className="flex items-center gap-2">
+                          Language
+                        </Label>
+                        <LanguageSelector variant="select" />
+                        <p className="text-sm text-muted-foreground">
+                          Choose your preferred language for the interface
                         </p>
                       </div>
 

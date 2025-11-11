@@ -15,6 +15,7 @@ import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye,
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { LicenseWarning } from '@/components/LicenseWarning';
 import { InstallPrompt } from '@/components/InstallPrompt';
+import { LanguageSelector } from '@/components/LanguageSelector';
 import { useLicense } from '@/hooks/use-license';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Progress } from '@/components/ui/progress';
@@ -1657,6 +1658,7 @@ const [isExporting, setIsExporting] = useState(false);
                 <User className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Settings</span>
               </Button>
+              <LanguageSelector variant="dropdown" />
               <Button variant="outline" size="sm" onClick={signOut} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
                 <LogOut className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Sign Out</span>
