@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -58,6 +59,7 @@ const Queue = ({ launchedFiles }: { launchedFiles?: File[] }) => {
 
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { t } = useTranslation();
   const { user, isAdmin, loading: authLoading, signOut } = useAuth();
   const { toast } = useContextualToast();
   const { license, hasCapacity, consumeDocuments } = useLicense();
@@ -1619,9 +1621,9 @@ const [isExporting, setIsExporting] = useState(false);
               <div className="h-8 w-px bg-border hidden sm:block" />
               <div className="min-w-0">
                 <h1 className="text-base sm:text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent truncate">
-                  Document Processing
+                  {t('nav.documentProcessing')}
                 </h1>
-                <p className="text-xs text-muted-foreground hidden sm:block">Scan → Extract → Validate → Export</p>
+                <p className="text-xs text-muted-foreground hidden sm:block">{t('nav.subtitle')}</p>
               </div>
               <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
                 <span className="text-xs font-semibold text-primary">⚡ AI</span>
@@ -1638,30 +1640,30 @@ const [isExporting, setIsExporting] = useState(false);
                 className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3"
               >
                 <HelpCircle className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Help</span>
+                <span className="hidden sm:inline">{t('common.help')}</span>
               </Button>
               <Button variant="outline" size="sm" onClick={() => navigate('/install')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
                 <Download className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Install</span>
+                <span className="hidden sm:inline">{t('common.install')}</span>
               </Button>
               {isAdmin && (
                 <Button variant="outline" size="sm" onClick={() => navigate('/admin')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
                   <Settings className="h-4 w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">Admin</span>
+                  <span className="hidden sm:inline">{t('common.admin')}</span>
                 </Button>
               )}
               <Button variant="outline" size="sm" onClick={() => navigate('/batches')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
                 <FolderOpen className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Batches</span>
+                <span className="hidden sm:inline">{t('nav.batches')}</span>
               </Button>
               <Button variant="outline" size="sm" onClick={() => navigate('/settings')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
                 <User className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Settings</span>
+                <span className="hidden sm:inline">{t('common.settings')}</span>
               </Button>
               <LanguageSelector variant="dropdown" />
               <Button variant="outline" size="sm" onClick={signOut} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
                 <LogOut className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Sign Out</span>
+                <span className="hidden sm:inline">{t('common.signOut')}</span>
               </Button>
             </div>
           </div>
@@ -1707,12 +1709,12 @@ const [isExporting, setIsExporting] = useState(false);
             <TabsList className="grid w-full grid-cols-4 mb-4 sm:mb-6 h-auto sm:h-12 bg-muted/50 p-1 backdrop-blur-sm">
               <TabsTrigger value="scan" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-0 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
                 <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="font-medium">Scan</span>
+                <span className="font-medium">{t('document.scan')}</span>
               </TabsTrigger>
               <TabsTrigger value="validation" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-0 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
                 <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="font-medium hidden sm:inline">Validation</span>
-                <span className="font-medium sm:hidden">Valid</span>
+                <span className="font-medium hidden sm:inline">{t('validation.title')}</span>
+                <span className="font-medium sm:hidden">{t('validation.title').substring(0, 5)}</span>
                 <Badge variant="secondary" className="text-xs sm:ml-1 bg-primary/10 text-primary border-0">
                   {validationQueue.length}
                 </Badge>
@@ -1727,7 +1729,7 @@ const [isExporting, setIsExporting] = useState(false);
               </TabsTrigger>
               <TabsTrigger value="export" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-0 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
                 <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                <span className="font-medium">Export</span>
+                <span className="font-medium">{t('common.export')}</span>
               </TabsTrigger>
             </TabsList>
             
@@ -1743,11 +1745,11 @@ const [isExporting, setIsExporting] = useState(false);
                 <TabsList className="grid w-full grid-cols-2 mb-4 sm:mb-6">
                   <TabsTrigger value="upload" className="gap-1 sm:gap-2 text-xs sm:text-sm">
                     <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
-                    Upload
+                    {t('document.uploadFiles')}
                   </TabsTrigger>
                   <TabsTrigger value="scanner" className="gap-1 sm:gap-2 text-xs sm:text-sm">
                     <ScanLine className="h-3 w-3 sm:h-4 sm:w-4" />
-                    Scanner
+                    {t('document.physicalScanner')}
                   </TabsTrigger>
                 </TabsList>
                 

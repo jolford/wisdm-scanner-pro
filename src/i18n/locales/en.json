@@ -24,7 +24,19 @@
     "settings": "Settings",
     "logout": "Logout",
     "login": "Login",
-    "signUp": "Sign Up"
+    "signUp": "Sign Up",
+    "signOut": "Sign Out",
+    "install": "Install",
+    "help": "Help",
+    "admin": "Admin",
+    "continue": "Continue",
+    "apply": "Apply",
+    "clear": "Clear",
+    "view": "View",
+    "open": "Open",
+    "add": "Add",
+    "remove": "Remove",
+    "submit": "Submit"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -37,7 +49,9 @@
     "customers": "Customers",
     "licenses": "Licenses",
     "analytics": "Analytics",
-    "reports": "Reports"
+    "reports": "Reports",
+    "documentProcessing": "Document Processing",
+    "subtitle": "Scan → Extract → Validate → Export"
   },
   "batch": {
     "title": "Batches",
@@ -53,7 +67,11 @@
     "failed": "Failed",
     "delete": "Delete Batch",
     "export": "Export Batch",
-    "validate": "Validate"
+    "validate": "Validate",
+    "selectProject": "Select Project",
+    "selectBatch": "Select Batch",
+    "createBatch": "Create Batch",
+    "newBatch": "New Batch"
   },
   "document": {
     "title": "Document",
@@ -68,7 +86,11 @@
     "upload": "Upload Document",
     "processing": "Processing...",
     "validated": "Validated",
-    "needsReview": "Needs Review"
+    "needsReview": "Needs Review",
+    "scan": "Scan",
+    "uploadFiles": "Upload Files",
+    "dropFiles": "Drop files here or click to upload",
+    "physicalScanner": "Physical Scanner"
   },
   "validation": {
     "title": "Validation",
@@ -78,7 +100,9 @@
     "confidence": "Confidence Score",
     "suggestions": "Suggestions",
     "approve": "Approve All",
-    "reject": "Reject All"
+    "reject": "Reject All",
+    "validateDocuments": "Validate Documents",
+    "reviewAndApprove": "Review and approve extracted data"
   },
   "settings": {
     "title": "Settings",

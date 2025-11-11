@@ -24,7 +24,19 @@
     "settings": "Configuración",
     "logout": "Cerrar Sesión",
     "login": "Iniciar Sesión",
-    "signUp": "Registrarse"
+    "signUp": "Registrarse",
+    "signOut": "Cerrar Sesión",
+    "install": "Instalar",
+    "help": "Ayuda",
+    "admin": "Administrador",
+    "continue": "Continuar",
+    "apply": "Aplicar",
+    "clear": "Limpiar",
+    "view": "Ver",
+    "open": "Abrir",
+    "add": "Añadir",
+    "remove": "Eliminar",
+    "submit": "Enviar"
   },
   "nav": {
     "dashboard": "Panel",
@@ -37,7 +49,9 @@
     "customers": "Clientes",
     "licenses": "Licencias",
     "analytics": "Analíticas",
-    "reports": "Informes"
+    "reports": "Informes",
+    "documentProcessing": "Procesamiento de Documentos",
+    "subtitle": "Escanear → Extraer → Validar → Exportar"
   },
   "batch": {
     "title": "Lotes",
@@ -53,7 +67,11 @@
     "failed": "Fallido",
     "delete": "Eliminar Lote",
     "export": "Exportar Lote",
-    "validate": "Validar"
+    "validate": "Validar",
+    "selectProject": "Seleccionar Proyecto",
+    "selectBatch": "Seleccionar Lote",
+    "createBatch": "Crear Lote",
+    "newBatch": "Nuevo Lote"
   },
   "document": {
     "title": "Documento",
@@ -68,7 +86,11 @@
     "upload": "Subir Documento",
     "processing": "Procesando...",
     "validated": "Validado",
-    "needsReview": "Necesita Revisión"
+    "needsReview": "Necesita Revisión",
+    "scan": "Escanear",
+    "uploadFiles": "Subir Archivos",
+    "dropFiles": "Suelta archivos aquí o haz clic para subir",
+    "physicalScanner": "Escáner Físico"
   },
   "validation": {
     "title": "Validación",
@@ -78,7 +100,9 @@
     "confidence": "Puntuación de Confianza",
     "suggestions": "Sugerencias",
     "approve": "Aprobar Todo",
-    "reject": "Rechazar Todo"
+    "reject": "Rechazar Todo",
+    "validateDocuments": "Validar Documentos",
+    "reviewAndApprove": "Revisar y aprobar datos extraídos"
   },
   "settings": {
     "title": "Configuración",

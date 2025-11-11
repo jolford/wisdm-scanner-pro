@@ -24,7 +24,19 @@
     "settings": "Paramètres",
     "logout": "Déconnexion",
     "login": "Connexion",
-    "signUp": "S'inscrire"
+    "signUp": "S'inscrire",
+    "signOut": "Se Déconnecter",
+    "install": "Installer",
+    "help": "Aide",
+    "admin": "Administrateur",
+    "continue": "Continuer",
+    "apply": "Appliquer",
+    "clear": "Effacer",
+    "view": "Voir",
+    "open": "Ouvrir",
+    "add": "Ajouter",
+    "remove": "Retirer",
+    "submit": "Soumettre"
   },
   "nav": {
     "dashboard": "Tableau de Bord",
@@ -37,7 +49,9 @@
     "customers": "Clients",
     "licenses": "Licences",
     "analytics": "Analytiques",
-    "reports": "Rapports"
+    "reports": "Rapports",
+    "documentProcessing": "Traitement des Documents",
+    "subtitle": "Scanner → Extraire → Valider → Exporter"
   },
   "batch": {
     "title": "Lots",
@@ -53,7 +67,11 @@
     "failed": "Échoué",
     "delete": "Supprimer le Lot",
     "export": "Exporter le Lot",
-    "validate": "Valider"
+    "validate": "Valider",
+    "selectProject": "Sélectionner un Projet",
+    "selectBatch": "Sélectionner un Lot",
+    "createBatch": "Créer un Lot",
+    "newBatch": "Nouveau Lot"
   },
   "document": {
     "title": "Document",
@@ -68,7 +86,11 @@
     "upload": "Télécharger un Document",
     "processing": "Traitement...",
     "validated": "Validé",
-    "needsReview": "Nécessite un Examen"
+    "needsReview": "Nécessite un Examen",
+    "scan": "Scanner",
+    "uploadFiles": "Télécharger des Fichiers",
+    "dropFiles": "Déposez des fichiers ici ou cliquez pour télécharger",
+    "physicalScanner": "Scanner Physique"
   },
   "validation": {
     "title": "Validation",
@@ -78,7 +100,9 @@
     "confidence": "Score de Confiance",
     "suggestions": "Suggestions",
     "approve": "Tout Approuver",
-    "reject": "Tout Rejeter"
+    "reject": "Tout Rejeter",
+    "validateDocuments": "Valider les Documents",
+    "reviewAndApprove": "Examiner et approuver les données extraites"
   },
   "settings": {
     "title": "Paramètres",

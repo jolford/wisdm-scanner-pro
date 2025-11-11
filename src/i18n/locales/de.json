@@ -24,7 +24,19 @@
     "settings": "Einstellungen",
     "logout": "Abmelden",
     "login": "Anmelden",
-    "signUp": "Registrieren"
+    "signUp": "Registrieren",
+    "signOut": "Abmelden",
+    "install": "Installieren",
+    "help": "Hilfe",
+    "admin": "Administrator",
+    "continue": "Weiter",
+    "apply": "Anwenden",
+    "clear": "Löschen",
+    "view": "Ansehen",
+    "open": "Öffnen",
+    "add": "Hinzufügen",
+    "remove": "Entfernen",
+    "submit": "Absenden"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -37,7 +49,9 @@
     "customers": "Kunden",
     "licenses": "Lizenzen",
     "analytics": "Analytics",
-    "reports": "Berichte"
+    "reports": "Berichte",
+    "documentProcessing": "Dokumentenverarbeitung",
+    "subtitle": "Scannen → Extrahieren → Validieren → Exportieren"
   },
   "batch": {
     "title": "Stapel",
@@ -53,7 +67,11 @@
     "failed": "Fehlgeschlagen",
     "delete": "Stapel Löschen",
     "export": "Stapel Exportieren",
-    "validate": "Validieren"
+    "validate": "Validieren",
+    "selectProject": "Projekt Auswählen",
+    "selectBatch": "Stapel Auswählen",
+    "createBatch": "Stapel Erstellen",
+    "newBatch": "Neuer Stapel"
   },
   "document": {
     "title": "Dokument",
@@ -68,7 +86,11 @@
     "upload": "Dokument Hochladen",
     "processing": "Wird verarbeitet...",
     "validated": "Validiert",
-    "needsReview": "Überprüfung Erforderlich"
+    "needsReview": "Überprüfung Erforderlich",
+    "scan": "Scannen",
+    "uploadFiles": "Dateien Hochladen",
+    "dropFiles": "Dateien hier ablegen oder klicken zum Hochladen",
+    "physicalScanner": "Physischer Scanner"
   },
   "validation": {
     "title": "Validierung",
@@ -78,7 +100,9 @@
     "confidence": "Vertrauenswert",
     "suggestions": "Vorschläge",
     "approve": "Alle Genehmigen",
-    "reject": "Alle Ablehnen"
+    "reject": "Alle Ablehnen",
+    "validateDocuments": "Dokumente Validieren",
+    "reviewAndApprove": "Extrahierte Daten überprüfen und genehmigen"
   },
   "settings": {
     "title": "Einstellungen",
