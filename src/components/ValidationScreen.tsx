@@ -831,7 +831,11 @@ useEffect(() => {
             validated_by: user?.id,
           })
           .eq('id', documentId)
-          .select('*, batch:batches(batch_name), project:projects(name, customer_id)')
+          .select(`
+            *,
+            batch:batches!inner(batch_name),
+            project:projects!inner(name, customer_id)
+          `)
           .single();
 
         if (error) throw error;
