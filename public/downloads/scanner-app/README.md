@@ -22,35 +22,28 @@ Desktop application for scanning documents with Ricoh/Fujitsu scanners and uploa
 
 ## Installation
 
-### Development Setup
+### For End-Users
 
-1. **Install Visual Studio Build Tools**
-   ```bash
-   npm install --global windows-build-tools
-   ```
+**Simply download and run the pre-built installer:**
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+1. Download `WISDM-Scanner-Setup.exe` from the WISDM web application
+2. Run the installer and follow the wizard
+3. App will launch automatically in system tray
 
-3. **Build native Ricoh SDK addon**
-   ```bash
-   npm run rebuild
-   ```
+**See [INSTALLATION.md](./INSTALLATION.md) for detailed end-user installation guide.**
 
-4. **Run in development mode**
-   ```bash
-   npm start
-   ```
+### For Developers/Administrators
 
-### Build Installer
+**To build the installer yourself for distribution:**
 
+See [BUILD_AND_DEPLOY.md](./BUILD_AND_DEPLOY.md) for complete build and deployment instructions.
+
+Quick build commands:
 ```bash
-npm run build:win
+npm install              # Install dependencies
+npm run rebuild          # Build native Ricoh SDK addon
+npm run build:win        # Create installer in dist/ folder
 ```
-
-This will create an installer in the `dist/` folder.
 
 ## Ricoh SDK Configuration
 

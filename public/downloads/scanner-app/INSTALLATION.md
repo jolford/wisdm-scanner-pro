@@ -1,271 +1,65 @@
-# WISDM Scanner Desktop App - Installation Guide
+# WISDM Scanner Desktop App - End-User Installation Guide
 
-Complete step-by-step installation guide for the WISDM Desktop Scanner application.
+Simple installation guide for end-users who want to use the WISDM Desktop Scanner application.
 
-## Table of Contents
+## For End-Users (Quick Start)
 
-1. [System Requirements](#system-requirements)
-2. [Pre-Installation Setup](#pre-installation-setup)
-3. [Building the Application](#building-the-application)
-4. [Creating the Installer](#creating-the-installer)
-5. [End-User Installation](#end-user-installation)
-6. [Troubleshooting](#troubleshooting)
+**You do NOT need to build the scanner app yourself!** Simply download the pre-built installer and run it.
 
----
+### System Requirements
 
-## System Requirements
-
-### Development Machine
-- **OS**: Windows 10/11 (64-bit)
-- **Node.js**: v18.x or later
-- **npm**: v9.x or later
-- **Visual Studio**: Build Tools 2019 or later
-- **Ricoh Scanner SDK**: Installed at `C:\Ricoh SDK`
-
-### End-User Machine
 - **OS**: Windows 10/11 (64-bit)
 - **Scanner**: Ricoh/Fujitsu scanner connected via USB
 - **Ricoh Drivers**: Scanner drivers installed
 - **.NET Framework**: 4.7.2 or later (usually pre-installed on Windows 10/11)
 
----
+### Installation Steps
 
-## Pre-Installation Setup
+1. **Download the installer:**
+   - From WISDM web application → Click "Download Scanner App"
+   - Or download directly: `WISDM-Scanner-Setup.exe`
 
-### 1. Install Development Tools
-
-#### Install Node.js
-```bash
-# Download from nodejs.org and install
-# Verify installation
-node --version
-npm --version
-```
-
-#### Install Visual Studio Build Tools
-
-**IMPORTANT:** The old `windows-build-tools` npm package is deprecated and no longer works.
-
-**Recommended Method - Download Visual Studio Build Tools:**
-
-1. Download from: https://visualstudio.microsoft.com/downloads/
-2. Select **"Build Tools for Visual Studio 2022"** (free)
-3. During installation, check **"Desktop development with C++"**
-4. Install location: Default is fine
-5. Restart your computer after installation
-
-**Alternative - Use Chocolatey (if you have it):**
-```bash
-choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools"
-```
-
-**Verify Installation:**
-```bash
-# Should show version info
-where cl.exe
-```
-
-### 2. Verify Ricoh SDK Installation
-
-Ensure the Ricoh Scanner SDK is installed at:
-```
-C:\Ricoh SDK\
-├── include\
-│   ├── PfuSsApi.h
-│   └── ... (other headers)
-└── lib\
-    └── x64\
-        └── PfuSsApiLib.lib
-```
-
-**If SDK is at a different location:**
-Edit `native/binding.gyp` and update paths:
-```json
-"include_dirs": [
-  "C:/YOUR_CUSTOM_PATH/include"
-],
-"libraries": [
-  "C:/YOUR_CUSTOM_PATH/lib/x64/PfuSsApiLib.lib"
-]
-```
-
----
-
-## Building the Application
-
-### 1. Clone/Copy Project Files
-
-```bash
-# Navigate to scanner-app directory
-cd C:\path\to\scanner-app
-
-# Verify all files are present
-dir
-```
-
-### 2. Install Dependencies
-
-```bash
-npm install
-```
-
-This will install:
-- Electron runtime
-- Supabase client
-- Native build tools
-- Development dependencies
-
-### 3. Build Native Addon
-
-```bash
-# Build the Ricoh SDK native addon
-npm run rebuild
-```
-
-Expected output:
-```
-> ricoh-scanner@1.0.0 rebuild
-> electron-rebuild -f -w ricoh-scanner
-
-✔ Rebuild Complete
-```
-
-**If build fails**, check:
-- Visual Studio Build Tools are installed
-- Ricoh SDK paths in `binding.gyp` are correct
-- Node version is compatible (v18+)
-
-### 4. Test in Development Mode
-
-```bash
-npm start
-```
-
-This will:
-- Launch Electron app
-- Create system tray icon
-- Initialize scanner detection
-
-**Verify:**
-- System tray icon appears (bottom-right, near clock)
-- Right-click tray icon shows menu
-- Console logs show "Ricoh SDK initialized successfully"
-
----
-
-## Creating the Installer
-
-### 1. Prepare Assets
-
-Create icon files (required):
-```
-scanner-app/
-└── assets/
-    ├── icon.ico       # Windows installer icon (256x256)
-    └── tray-icon.png  # System tray icon (16x16 or 32x32)
-```
-
-**Generate icons:**
-- Use online tools like [icoconvert.com](https://icoconvert.com/)
-- Or use your company logo
-
-### 2. Configure Installer
-
-Edit `package.json` if needed:
-```json
-{
-  "build": {
-    "appId": "com.yourcompany.scanner",
-    "productName": "WISDM Scanner",
-    "win": {
-      "target": ["nsis"],
-      "icon": "assets/icon.ico"
-    },
-    "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true
-    }
-  }
-}
-```
-
-### 3. Build Installer
-
-```bash
-npm run build:win
-```
-
-This will:
-- Compile application
-- Package with Electron
-- Create NSIS installer
-- Output to `dist/` folder
-
-**Build output:**
-```
-dist/
-├── WISDM-Scanner-Setup-1.0.0.exe  (Installer)
-└── win-unpacked/                   (Unpacked files)
-```
-
-### 4. Test Installer
-
-```bash
-# Run the installer
-.\dist\WISDM-Scanner-Setup-1.0.0.exe
-```
-
-Follow installation wizard and verify:
-- Installation completes successfully
-- App launches and appears in system tray
-- Protocol handler registers (`wisdm-scan://`)
-
----
-
-## End-User Installation
-
-### Distribution
-
-**Option 1: Direct Download**
-1. Upload `WISDM-Scanner-Setup.exe` to your web server
-2. Place in `public/downloads/scanner-app/`
-3. Users download from WISDM web app
-
-**Option 2: Network Share**
-1. Place installer on network share
-2. Provide users with share path
-3. Run from network location
-
-### User Installation Steps
-
-1. **Download Installer**
-   - From WISDM web app: Click "Download Scanner App"
-   - Or access installer from network share
-
-2. **Run Installer**
+2. **Run the installer:**
    - Double-click `WISDM-Scanner-Setup.exe`
-   - Windows may show security warning - click "More info" → "Run anyway"
+   - Windows may show security warning → Click "More info" → "Run anyway"
 
-3. **Installation Wizard**
+3. **Follow installation wizard:**
    - Choose installation directory (default: `C:\Program Files\WISDM Scanner`)
    - Click "Install"
    - Wait for installation to complete
 
-4. **First Launch**
-   - App will launch automatically
-   - Look for system tray icon (bottom-right)
-   - Right-click to access menu
+4. **First launch:**
+   - App launches automatically after install
+   - Look for system tray icon (bottom-right corner, near clock)
+   - Right-click tray icon to access menu
 
-5. **Scanner Detection**
-   - Connect Ricoh/Fujitsu scanner via USB
-   - Ensure scanner is powered on
+5. **Connect scanner:**
+   - Ensure Ricoh/Fujitsu scanner is connected via USB
+   - Power on scanner
    - Right-click tray icon → "Refresh Scanners"
 
-6. **Web App Integration**
+6. **Start scanning:**
    - Open WISDM web application
-   - Navigate to document upload
+   - Navigate to document upload/batch
    - Click "Scan Document" button
-   - Desktop app will activate and scan
+   - Desktop app will activate and scan automatically
+
+**That's it!** No technical setup required.
+
+---
+
+## For Developers/Administrators
+
+**If you need to BUILD the scanner app installer yourself** (for example, to customize it or create your own distribution), see the [BUILD_AND_DEPLOY.md](./BUILD_AND_DEPLOY.md) guide.
+
+This section is ONLY for developers/administrators who manage the scanner app deployment. End-users should use the pre-built installer above.
+
+---
+
+## Table of Contents
+
+1. [Troubleshooting](#troubleshooting)
+2. [Support](#support)
 
 ---
 
