@@ -69,27 +69,68 @@ const Index = () => {
     }
   }, [authLoading, user, isProcessing]);
 
-  // Handle files dropped on PWA icon
   useFileLaunch(async (files) => {
-    if (!selectedProjectId) {
-      toast({
-        title: 'Select a Project',
-        description: 'Please select a project before importing documents.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     try {
+      // Ensure a project is selected: try current state, sessionStorage, then localStorage
+      let projectId =
+        selectedProjectId ||
+        sessionStorage.getItem('selectedProjectId') ||
+        localStorage.getItem('lastSelectedProjectId');
+
+      // If still not available, auto-select when there's exactly one accessible project
+      if (!projectId) {
+        try {
+          const { data: projList } = await supabase
+            .from('projects')
+            .select('id, customer_id')
+            .eq('is_active', true)
+            .order('name')
+            .limit(2);
+          if (projList && projList.length === 1) {
+            projectId = projList[0].id;
+            setSelectedProjectId(projectId);
+            setSelectedProject(projList[0]);
+            sessionStorage.setItem('selectedProjectId', projectId);
+            localStorage.setItem('lastSelectedProjectId', projectId);
+          }
+        } catch {}
+      }
+
+      if (!projectId) {
+        toast({
+          title: 'Select a Project',
+          description: 'Please select a project before importing documents.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Ensure we have project details (for customer_id)
+      if (!selectedProject || selectedProject?.id !== projectId) {
+        try {
+          const { data: proj } = await supabase
+            .from('projects')
+            .select('*')
+            .eq('id', projectId)
+            .single();
+          if (proj) {
+            setSelectedProject(proj);
+          }
+        } catch {}
+      }
+
       // Auto-create batch with timestamp
       const batchName = `Import ${new Date().toLocaleString()}`;
-      
+
       const { data: newBatch, error: batchError } = await supabase
         .from('batches')
         .insert({
-          project_id: selectedProjectId,
+          project_id: projectId,
           batch_name: batchName,
-          customer_id: selectedProject?.customer_id,
+          customer_id:
+            (selectedProject && selectedProject.id === projectId
+              ? selectedProject.customer_id
+              : null) || undefined,
           created_by: user?.id,
           status: 'new',
         })
@@ -99,6 +140,10 @@ const Index = () => {
       if (batchError || !newBatch) {
         throw batchError || new Error('Failed to create batch');
       }
+
+      setSelectedProjectId(projectId);
+      sessionStorage.setItem('selectedProjectId', projectId);
+      localStorage.setItem('lastSelectedProjectId', projectId);
 
       setSelectedBatchId(newBatch.id);
       setSelectedBatch(newBatch);
@@ -845,6 +890,8 @@ const Index = () => {
                 selectedProjectId={selectedProjectId}
                 onProjectSelect={async (id, project) => {
                   setSelectedProjectId(id);
+                  sessionStorage.setItem('selectedProjectId', id);
+                  localStorage.setItem('lastSelectedProjectId', id);
                   setSelectedBatchId(null);
                   setSelectedBatch(null);
                   try {
