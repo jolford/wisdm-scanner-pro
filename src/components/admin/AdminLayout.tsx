@@ -6,6 +6,8 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { AdminSidebar } from './AdminSidebar';
+import { LanguageSelector } from '@/components/LanguageSelector';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -35,6 +37,10 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
                       <p className="text-sm text-muted-foreground">{description}</p>
                     )}
                   </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <LanguageSelector variant="dropdown" />
+                  <ThemeToggle />
                 </div>
               </div>
             </div>
