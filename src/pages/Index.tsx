@@ -8,6 +8,7 @@ import { BatchSelector } from '@/components/BatchSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useContextualToast } from '@/lib/toast-helper';
 import { useAuth } from '@/hooks/use-auth';
+import { useFileLaunch } from '@/hooks/use-file-launch';
 import { Sparkles, Upload, ScanLine, LogOut, FileText, Settings, FolderOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -67,6 +68,57 @@ const Index = () => {
       });
     }
   }, [authLoading, user, isProcessing]);
+
+  // Handle files dropped on PWA icon
+  useFileLaunch(async (files) => {
+    if (!selectedProjectId) {
+      toast({
+        title: 'Select a Project',
+        description: 'Please select a project before importing documents.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    try {
+      // Auto-create batch with timestamp
+      const batchName = `Import ${new Date().toLocaleString()}`;
+      
+      const { data: newBatch, error: batchError } = await supabase
+        .from('batches')
+        .insert({
+          project_id: selectedProjectId,
+          batch_name: batchName,
+          customer_id: selectedProject?.customer_id,
+          created_by: user?.id,
+          status: 'new',
+        })
+        .select()
+        .single();
+
+      if (batchError || !newBatch) {
+        throw batchError || new Error('Failed to create batch');
+      }
+
+      setSelectedBatchId(newBatch.id);
+      setSelectedBatch(newBatch);
+
+      toast({
+        title: 'Batch Created',
+        description: `Created "${batchName}" and importing ${files.length} file(s)...`,
+      });
+
+      // Process all dropped files
+      await handleMultipleFiles(files);
+    } catch (error: any) {
+      console.error('Error handling file launch:', error);
+      toast({
+        title: 'Import Failed',
+        description: error.message || 'Failed to import documents',
+        variant: 'destructive',
+      });
+    }
+  });
 
   const saveDocument = async (
     fileName: string,

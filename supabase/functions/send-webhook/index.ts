@@ -238,27 +238,23 @@ async function sendWebhook(
 }
 
 function formatTeamsMessage(event_type: string, data: any): any {
-  // Power Automate expects the Adaptive Card content directly
-  const card = {
-    type: 'AdaptiveCard',
-    version: '1.4',
-    body: [
-      {
-        type: 'TextBlock',
-        text: getEventTitle(event_type),
-        weight: 'Bolder',
-        size: 'Large',
-        color: getEventColor(event_type)
-      },
-      {
-        type: 'FactSet',
-        facts: formatEventFacts(event_type, data)
-      }
-    ],
-    actions: getEventActions(event_type, data)
+  // Power Automate needs simple JSON that can be parsed and used in dynamic content
+  const message = {
+    title: getEventTitle(event_type),
+    event_type: event_type,
+    timestamp: new Date().toISOString(),
+    batch_name: data.batch_name || '',
+    document_name: data.document_name || '',
+    project_name: data.project_name || '',
+    documents_processed: data.documents_processed || 0,
+    confidence_score: data.confidence_score ? Math.round(data.confidence_score * 100) : null,
+    error_message: data.error_message || '',
+    batch_id: data.batch_id || '',
+    document_id: data.document_id || '',
+    metadata: data.metadata || {}
   };
 
-  return card;
+  return message;
 }
 
 function getEventTitle(eventType: string): string {
