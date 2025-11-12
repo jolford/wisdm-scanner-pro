@@ -246,6 +246,35 @@ const Help = () => {
         },
       ]
     },
+    {
+      category: 'System Administration',
+      questions: [
+        {
+          q: 'What is Rate Limit Monitoring?',
+          a: 'The system automatically monitors job processing rates and displays warnings when approaching limits. At 80% capacity, you\'ll see a warning. At 100%, a critical alert appears. Rate limits include concurrent jobs, jobs per minute, and jobs per hour. Admins can configure tenant-specific limits in the database.'
+        },
+        {
+          q: 'How do I monitor webhook deliveries?',
+          a: 'Navigate to Admin → Webhooks to view delivery logs. The system tracks all webhook attempts, response codes, error messages, and retry counts. Failed webhooks are automatically retried with exponential backoff. Check the webhook_logs table for detailed delivery history.'
+        },
+        {
+          q: 'How are errors logged in edge functions?',
+          a: 'All edge functions include enhanced error logging with request validation, per-operation error tracking, and detailed stack traces. Logs are prefixed by function (e.g., [Webhook]) for easy filtering. Access logs through Lovable Cloud → Edge Functions → [Function] → Logs.'
+        },
+        {
+          q: 'What backup strategy does WISDM use?',
+          a: 'WISDM uses a multi-layered backup approach: Automated Lovable Cloud backups (7-day PITR, 30-day daily snapshots, 90-day weekly backups) plus manual exports for critical data. See DATABASE_BACKUP_GUIDE.md for complete procedures including emergency recovery and restore testing.'
+        },
+        {
+          q: 'How do I restore from backup?',
+          a: 'For Point-in-Time Recovery (last 7 days), contact Lovable support or access Supabase dashboard → Database → Backups → PITR. For manual backup restores, use supabase db reset or psql commands. Always test restores in non-production first. Full procedures in DATABASE_BACKUP_GUIDE.md.'
+        },
+        {
+          q: 'How do I check system health?',
+          a: 'Monitor key areas: Edge Function logs (Lovable Cloud UI), Database performance (query pg_stat_activity), Job Queue status (jobs table), and Webhook delivery rates (webhook_logs). The system automatically tracks metrics and provides proactive warnings for issues.'
+        },
+      ]
+    },
   ];
 
   const troubleshooting = [
