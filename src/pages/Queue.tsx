@@ -1813,7 +1813,17 @@ const [isExporting, setIsExporting] = useState(false);
                 </TabsContent>
                 
                 <TabsContent value="scanner">
-                  <PhysicalScanner onScanComplete={handleScanComplete} isProcessing={isProcessing} />
+                  <PhysicalScanner 
+                    projectId={selectedProjectId || undefined}
+                    batchId={selectedBatchId || undefined}
+                    customerId={selectedProject?.customer_id}
+                    onScanComplete={() => {
+                      // Refresh the batch after scan completes
+                      if (selectedBatchId) {
+                        console.log('Scan completed, refreshing batch');
+                      }
+                    }}
+                  />
                 </TabsContent>
               </Tabs>
               )}

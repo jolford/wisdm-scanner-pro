@@ -1,0 +1,47 @@
+{
+  "name": "wisdm-scanner",
+  "version": "1.0.0",
+  "description": "WISDM Desktop Scanner Application with Ricoh SDK Integration",
+  "main": "electron/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "rebuild": "electron-rebuild -f -w ricoh-scanner"
+  },
+  "author": "WISDM",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.75.0",
+    "electron-store": "^8.1.0",
+    "node-addon-api": "^7.1.0"
+  },
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1",
+    "electron-rebuild": "^3.2.9",
+    "node-gyp": "^10.0.1"
+  },
+  "build": {
+    "appId": "com.wisdm.scanner",
+    "productName": "WISDM Scanner",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": ["nsis"],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true,
+      "shortcutName": "WISDM Scanner"
+    },
+    "protocols": {
+      "name": "wisdm-scan",
+      "schemes": ["wisdm-scan"]
+    }
+  }
+}

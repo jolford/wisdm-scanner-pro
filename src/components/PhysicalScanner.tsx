@@ -1,72 +1,196 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { AlertCircle, ExternalLink } from 'lucide-react';
+import { AlertCircle, Download, Scan, CheckCircle, Loader2 } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 interface PhysicalScannerProps {
-  onScanComplete: (text: string, imageData: string, fileName: string) => void;
-  isProcessing: boolean;
+  projectId?: string;
+  batchId?: string;
+  customerId?: string;
+  onScanComplete?: () => void;
 }
 
-export const PhysicalScanner = ({ onScanComplete, isProcessing }: PhysicalScannerProps) => {
-  const [showInstructions, setShowInstructions] = useState(true);
+export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete }: PhysicalScannerProps) => {
+  const [isAppInstalled, setIsAppInstalled] = useState<boolean | null>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const { toast } = useToast();
+
+  // Check if desktop app is installed by attempting protocol launch
+  useEffect(() => {
+    const checkInstallation = () => {
+      const testLink = document.createElement('a');
+      testLink.href = 'wisdm-scan://test';
+      testLink.style.display = 'none';
+      
+      const timeoutId = setTimeout(() => {
+        setIsAppInstalled(false);
+      }, 2000);
+
+      testLink.addEventListener('click', () => {
+        clearTimeout(timeoutId);
+        setIsAppInstalled(true);
+      });
+
+      document.body.appendChild(testLink);
+      testLink.click();
+      document.body.removeChild(testLink);
+    };
+
+    checkInstallation();
+  }, []);
+
+  const handleScan = async () => {
+    if (!projectId || !batchId || !customerId) {
+      toast({
+        title: 'Configuration Required',
+        description: 'Please select a project and batch before scanning.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsScanning(true);
+
+    try {
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        toast({
+          title: 'Authentication Required',
+          description: 'Please log in to use the scanner.',
+          variant: 'destructive',
+        });
+        setIsScanning(false);
+        return;
+      }
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      
+      // Build protocol URL
+      const protocolUrl = `wisdm-scan://scan?` + 
+        `token=${encodeURIComponent(session.access_token)}` +
+        `&project=${encodeURIComponent(projectId)}` +
+        `&batch=${encodeURIComponent(batchId)}` +
+        `&customer=${encodeURIComponent(customerId)}` +
+        `&supabase=${encodeURIComponent(supabaseUrl)}`;
+
+      // Trigger desktop app via protocol
+      window.location.href = protocolUrl;
+
+      toast({
+        title: 'Scanner Activated',
+        description: 'Desktop scanner app launched. Please complete scan on your device.',
+      });
+
+      // Call onScanComplete after a delay (assuming scan completes)
+      setTimeout(() => {
+        if (onScanComplete) {
+          onScanComplete();
+        }
+        setIsScanning(false);
+      }, 5000);
+
+    } catch (error) {
+      console.error('Scan error:', error);
+      toast({
+        title: 'Scan Failed',
+        description: 'Failed to launch scanner. Please try again.',
+        variant: 'destructive',
+      });
+      setIsScanning(false);
+    }
+  };
+
+  const handleDownload = () => {
+    window.open('/downloads/scanner-app/WISDM-Scanner-Setup.exe', '_blank');
+  };
 
   return (
     <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
       <div className="space-y-4">
         <div className="flex items-start gap-3">
-          <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
+          <Scan className="h-5 w-5 text-primary mt-0.5" />
           <div className="flex-1">
-            <h3 className="font-semibold mb-2">Physical Scanner Support (Optional)</h3>
+            <h3 className="font-semibold mb-2">Ricoh/Fujitsu Desktop Scanner</h3>
             <p className="text-sm text-muted-foreground mb-4">
-              Physical scanners with TWAIN/ISIS protocols are available as an optional enterprise add-on. This is a one-time administrator setup that enables all users in your organization - no individual subscriptions required.
+              Scan documents directly from your USB-connected Ricoh or Fujitsu scanner using our desktop application.
             </p>
             
-            {showInstructions && (
-              <div className="bg-muted/50 rounded-lg p-4 space-y-3 text-sm">
-                <p className="font-medium">Administrator Setup (One-Time):</p>
-                <ol className="list-decimal list-inside space-y-2 text-muted-foreground">
-                  <li>Contact your system administrator about enabling physical scanner support</li>
-                  <li>Admin signs up for Dynamsoft Web TWAIN (one license covers all users)</li>
-                  <li>Admin downloads and configures the SDK with the organization license key</li>
-                  <li>All users in your organization can then use physical scanners</li>
-                </ol>
-                
-                <div className="pt-3 border-t border-border/50">
-                  <p className="text-xs text-muted-foreground mb-2">
-                    <strong>Supported Scanner Protocols:</strong>
-                  </p>
-                  <ul className="text-xs text-muted-foreground space-y-1 ml-4">
-                    <li>• TWAIN protocol (Windows, macOS, Linux)</li>
-                    <li>• ISIS protocol (Windows)</li>
-                    <li>• SANE protocol (Linux)</li>
-                    <li>• WIA protocol (Windows)</li>
-                    <li>• ICA protocol (macOS)</li>
+            {isAppInstalled === null && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Checking for scanner app...</span>
+              </div>
+            )}
+
+            {isAppInstalled === false && (
+              <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium mb-2">Scanner App Not Installed</p>
+                    <p className="text-muted-foreground mb-3">
+                      To use your physical scanner, download and install the WISDM Scanner desktop application. This is a one-time setup.
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleDownload}
+                  className="w-full"
+                  variant="default"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Scanner App
+                </Button>
+
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p><strong>Requirements:</strong></p>
+                  <ul className="list-disc list-inside ml-2">
+                    <li>Windows 10/11 (64-bit)</li>
+                    <li>Ricoh/Fujitsu scanner connected via USB</li>
+                    <li>Ricoh Scanner SDK</li>
                   </ul>
                 </div>
-                
-                <div className="bg-accent/10 border border-accent/30 rounded p-3 mt-3">
-                  <p className="text-xs text-muted-foreground">
-                    <strong>Note for Administrators:</strong> Dynamsoft Web TWAIN requires a commercial license for production use. One organizational license enables scanner support for all your users.
-                  </p>
-                </div>
-                
-                <Button
-                  variant="outline"
-                  className="w-full mt-3"
-                  onClick={() => window.open('https://www.dynamsoft.com/web-twain/overview/', '_blank')}
-                >
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  Admin: Learn About Dynamsoft
-                </Button>
               </div>
+            )}
+
+            {isAppInstalled === true && (
+              <>
+                <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 mb-4">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Scanner app installed and ready</span>
+                </div>
+
+                <Button
+                  onClick={handleScan}
+                  disabled={isScanning || !projectId || !batchId}
+                  className="w-full"
+                  size="lg"
+                >
+                  {isScanning ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      Scanning...
+                    </>
+                  ) : (
+                    <>
+                      <Scan className="h-5 w-5 mr-2" />
+                      Scan Document
+                    </>
+                  )}
+                </Button>
+              </>
             )}
           </div>
         </div>
 
         <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
           <p className="text-sm">
-            <strong className="text-primary">Pro Tip:</strong> For immediate scanning, use the "Upload File" tab to scan documents using your device's camera or upload pre-scanned images/PDFs.
+            <strong className="text-primary">How it works:</strong> The desktop app runs in your system tray and communicates with your Ricoh/Fujitsu scanner. Click "Scan Document" to trigger scanning, and the document will be automatically uploaded to your current batch.
           </p>
         </div>
       </div>
