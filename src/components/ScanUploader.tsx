@@ -1,8 +1,10 @@
 import { useState, useRef } from 'react';
-import { Upload, Scan, FileText, Loader2 } from 'lucide-react';
+import { Upload, Scan, FileText, Loader2, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { isTiffFile, convertTiffToPngDataUrl } from '@/lib/image-utils';
+import { MobileCapture } from '@/components/MobileCapture';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ScanUploaderProps {
   onScanComplete: (text: string, imageUrl: string, fileName: string) => void;
@@ -13,8 +15,10 @@ interface ScanUploaderProps {
 
 export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUpload, isProcessing }: ScanUploaderProps) => {
   const [isDragging, setIsDragging] = useState(false);
+  const [showMobileCapture, setShowMobileCapture] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const handleFile = async (file: File) => {
     // Handle PDFs separately
@@ -143,11 +147,31 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
         </div>
 
         {!isProcessing && (
-          <Button variant="outline" className="mt-2">
-            Select File
-          </Button>
+          <div className="flex gap-2 mt-2">
+            <Button variant="outline">
+              Select File
+            </Button>
+            {isMobile && (
+              <Button
+                variant="outline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowMobileCapture(true);
+                }}
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                Take Photo
+              </Button>
+            )}
+          </div>
         )}
       </div>
+
+      <MobileCapture
+        open={showMobileCapture}
+        onClose={() => setShowMobileCapture(false)}
+        onCapture={handleFile}
+      />
     </div>
   );
 };
