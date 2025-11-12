@@ -822,7 +822,7 @@ useEffect(() => {
           
         const { data: { user } } = await supabase.auth.getUser();
         
-        const { error } = await supabase
+        const { error, data: updatedDoc } = await supabase
           .from('documents')
           .update({
             extracted_metadata: finalMetadata,
@@ -830,9 +830,35 @@ useEffect(() => {
             validated_at: new Date().toISOString(),
             validated_by: user?.id,
           })
-          .eq('id', documentId);
+          .eq('id', documentId)
+          .select('*, batch:batches(batch_name), project:projects(name, customer_id)')
+          .single();
 
         if (error) throw error;
+
+        // Trigger webhook notification for document validation
+        if (updatedDoc && status === 'validated') {
+          try {
+            await supabase.functions.invoke('send-webhook', {
+              body: {
+                customer_id: updatedDoc.project?.customer_id,
+                event_type: 'document.validated',
+                payload: {
+                  document_id: documentId,
+                  document_name: fileName,
+                  batch_name: updatedDoc.batch?.batch_name,
+                  project_name: updatedDoc.project?.name,
+                  validated_by: user?.id,
+                  validated_at: new Date().toISOString(),
+                  metadata: finalMetadata,
+                }
+              }
+            });
+          } catch (webhookError) {
+            console.error('Webhook notification failed:', webhookError);
+            // Don't fail validation if webhook fails
+          }
+        }
       }
 
       toast({
