@@ -38,6 +38,7 @@ const WebhookConfig = () => {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingWebhook, setEditingWebhook] = useState<any>(null);
+  const [diagWebhookId, setDiagWebhookId] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -212,6 +213,61 @@ const WebhookConfig = () => {
       is_active: webhook.is_active,
     });
     setDialogOpen(true);
+  };
+
+  // Minimal diagnostics helper for common webhook issues
+  const getDiagnostics = (log: any | undefined) => {
+    if (!log) {
+      return {
+        title: 'No deliveries yet',
+        details: 'No recent attempts found for this endpoint.',
+        suggestion:
+          'Click “Send Test”. If using Microsoft Teams, create a Workflow with “When a HTTP request is received” and paste the HTTP POST URL here (type: Generic).',
+      };
+    }
+
+    const status = log.response_status as number | null;
+    const error: string = (log.error_message || log.response_body || '') as string;
+
+    if (status === 401 && (error.includes('DirectApiAuthorizationRequired') || error.toLowerCase().includes('oauth'))) {
+      return {
+        title: '401 Unauthorized: Direct API authorization required',
+        details:
+          'This URL likely points to a Power Automate manual trigger or requires OAuth. Incoming requests without OAuth are rejected.',
+        suggestion:
+          'In Microsoft Teams, use a Workflow with the “When a HTTP request is received” trigger. Copy its HTTP POST URL and use it here (webhook type: Generic), then click “Send Test”.',
+      };
+    }
+
+    if (status === 403) {
+      return {
+        title: '403 Forbidden',
+        details: 'The endpoint refused the request due to insufficient permissions.',
+        suggestion: 'Ensure the endpoint is public or provides a token-based mechanism that you can include in custom headers.',
+      };
+    }
+
+    if (status === 404) {
+      return {
+        title: '404 Not Found',
+        details: 'The endpoint URL path may be incorrect or the resource does not exist.',
+        suggestion: 'Verify the exact URL copied from the destination service and update the webhook configuration.',
+      };
+    }
+
+    if (status && status >= 500) {
+      return {
+        title: 'Server error at destination (5xx)',
+        details: 'The destination service encountered an error while processing the request.',
+        suggestion: 'Retry later or check the destination service logs for details.',
+      };
+    }
+
+    return {
+      title: status ? `Status ${status}` : 'No status available',
+      details: error ? error.slice(0, 300) : 'No response body provided by destination.',
+      suggestion: 'Use “Send Test” to validate connectivity. Review destination logs if issues persist.',
+    };
   };
 
   if (loading) {
@@ -390,6 +446,46 @@ const WebhookConfig = () => {
                     >
                       <Send className="h-4 w-4" />
                     </Button>
+
+                    <Dialog open={diagWebhookId === webhook.id} onOpenChange={(o) => setDiagWebhookId(o ? webhook.id : null)}>
+                      <DialogTrigger asChild>
+                        <Button size="sm" variant="outline">Diagnostics</Button>
+                      </DialogTrigger>
+                      <DialogContent className="max-w-xl">
+                        <DialogHeader>
+                          <DialogTitle>Diagnostics: {webhook.name}</DialogTitle>
+                          <DialogDescription>Latest delivery analysis and next steps</DialogDescription>
+                        </DialogHeader>
+                        {(() => {
+                          const last: any | undefined = recentLogs?.find((l: any) => l.webhook_config_id === webhook.id);
+                          const d = getDiagnostics(last);
+                          return (
+                            <div className="space-y-3">
+                              {last && (
+                                <div className="text-xs text-muted-foreground">
+                                  Status: {last.response_status ?? '—'} • Attempt {last.attempt_number} • {new Date(last.created_at).toLocaleString()}
+                                </div>
+                              )}
+                              <div>
+                                <p className="font-medium">{d.title}</p>
+                                <p className="text-sm text-muted-foreground mt-1">{d.details}</p>
+                              </div>
+                              <div>
+                                <p className="font-medium">Suggested fix</p>
+                                <p className="text-sm text-muted-foreground mt-1">{d.suggestion}</p>
+                              </div>
+                            </div>
+                          );
+                        })()}
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setDiagWebhookId(null)}>Close</Button>
+                          <Button onClick={() => testWebhookMutation.mutate(webhook.id)} disabled={testWebhookMutation.isPending}>
+                            {testWebhookMutation.isPending ? 'Validating...' : 'Validate URL'}
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+
                     <Button
                       size="sm"
                       variant="outline"
