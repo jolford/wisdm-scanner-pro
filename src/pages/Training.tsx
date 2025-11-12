@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 export default function Training() {
   const navigate = useNavigate();
   const [completedModules, setCompletedModules] = useState<Set<string>>(new Set());
+  const [activeTab, setActiveTab] = useState("overview");
 
   const modules = [
     {
@@ -205,6 +206,19 @@ export default function Training() {
     });
   };
 
+  const startModule = (moduleId: string) => {
+    // Switch to the module's tab
+    setActiveTab(moduleId);
+    
+    // Scroll to the detailed content section
+    setTimeout(() => {
+      const detailedContent = document.getElementById('training-content');
+      if (detailedContent) {
+        detailedContent.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 100);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -274,7 +288,7 @@ export default function Training() {
                     <Button
                       variant={isCompleted ? "outline" : "default"}
                       size="sm"
-                      onClick={() => toggleModuleComplete(module.id)}
+                      onClick={() => startModule(module.id)}
                     >
                       {isCompleted ? 'Review' : 'Start'}
                       <PlayCircle className="ml-2 h-4 w-4" />
@@ -287,7 +301,7 @@ export default function Training() {
         </div>
 
         {/* Detailed Content */}
-        <Card>
+        <Card id="training-content">
           <CardHeader>
             <CardTitle>Training Modules</CardTitle>
             <CardDescription>
@@ -295,7 +309,7 @@ export default function Training() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <Tabs defaultValue="overview" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
               <TabsList className="grid grid-cols-2 lg:grid-cols-6 gap-2 h-auto p-1">
                 {modules.map((module) => {
                   const Icon = module.icon;
