@@ -226,7 +226,7 @@ export default function Training() {
         <div className="mb-8">
           <Button
             variant="ghost"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/help")}
             className="mb-4"
           >
             <ChevronLeft className="mr-2 h-4 w-4" />
