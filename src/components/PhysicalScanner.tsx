@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { AlertCircle, Download, Scan, CheckCircle, Loader2 } from 'lucide-react';
@@ -16,6 +17,7 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
   const [isAppInstalled, setIsAppInstalled] = useState<boolean | null>(null);
   const [isScanning, setIsScanning] = useState(false);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Check if desktop app is installed by attempting protocol launch
   useEffect(() => {
@@ -105,7 +107,7 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
   };
 
   const handleDownload = () => {
-    window.location.href = '/downloads';
+    navigate('/downloads');
   };
 
   return (
