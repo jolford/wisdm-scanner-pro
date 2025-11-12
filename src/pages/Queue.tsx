@@ -1628,26 +1628,26 @@ const [isExporting, setIsExporting] = useState(false);
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/10">
       <header className="border-b bg-card/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
+        <div className="container mx-auto px-2 sm:px-4">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
               <img 
                 src={wisdmLogo} 
                 alt="WISDM Logo" 
-                className="h-10 w-auto transition-transform duration-300 hover:scale-105" 
+                className="h-8 sm:h-10 w-auto transition-transform duration-300 hover:scale-105 flex-shrink-0" 
               />
               <div className="h-8 w-px bg-border hidden sm:block" />
-              <div className="min-w-0">
-                <h1 className="text-base sm:text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent truncate">
+              <div className="min-w-0 flex-1">
+                <h1 className="text-sm sm:text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent truncate">
                   {t('nav.documentProcessing')}
                 </h1>
                 <p className="text-xs text-muted-foreground hidden sm:block">{t('nav.subtitle')}</p>
               </div>
-              <div className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
+              <div className="hidden sm:flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
                 <span className="text-xs font-semibold text-primary">⚡ AI</span>
               </div>
             </div>
-            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            <div className="flex items-center gap-0.5 sm:gap-2 flex-shrink-0">
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -1655,7 +1655,7 @@ const [isExporting, setIsExporting] = useState(false);
                   console.log('Help button clicked - navigating to /help');
                   navigate('/help');
                 }} 
-                className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3"
+                className="h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
               >
                 <HelpCircle className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">{t('common.help')}</span>
@@ -1688,7 +1688,7 @@ const [isExporting, setIsExporting] = useState(false);
         </div>
       </header>
 
-      <main className="w-full max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+      <main className="w-full max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-8">
         <LicenseWarning />
         <InstallPrompt />
         
@@ -1726,29 +1726,29 @@ const [isExporting, setIsExporting] = useState(false);
 
         {selectedProjectId && selectedBatchId && (
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-4 sm:mb-6 h-auto sm:h-12 bg-muted/50 p-1 backdrop-blur-sm">
-              <TabsTrigger value="scan" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-0 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
-                <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
+            <TabsList className="grid w-full grid-cols-4 mb-3 sm:mb-6 h-auto sm:h-12 bg-muted/50 p-0.5 sm:p-1 backdrop-blur-sm">
+              <TabsTrigger value="scan" className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 py-1.5 sm:py-0 text-[10px] sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
+                <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span className="font-medium">{t('document.scan')}</span>
               </TabsTrigger>
-              <TabsTrigger value="validation" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-0 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
-                <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
+              <TabsTrigger value="validation" className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 py-1.5 sm:py-0 text-[10px] sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
+                <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span className="font-medium hidden sm:inline">{t('validation.title')}</span>
-                <span className="font-medium sm:hidden">{t('validation.title').substring(0, 5)}</span>
-                <Badge variant="secondary" className="text-xs sm:ml-1 bg-primary/10 text-primary border-0">
+                <span className="font-medium sm:hidden">Valid</span>
+                <Badge variant="secondary" className="text-[9px] sm:text-xs sm:ml-1 bg-primary/10 text-primary border-0 h-4 sm:h-5 min-w-[16px] sm:min-w-[20px] px-1">
                   {validationQueue.length}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="validated" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-0 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
-                <CheckCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+              <TabsTrigger value="validated" className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 py-1.5 sm:py-0 text-[10px] sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
+                <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span className="font-medium hidden sm:inline">Quality Control</span>
                 <span className="font-medium sm:hidden">QC</span>
-                <Badge variant="secondary" className="text-xs sm:ml-1 bg-success/10 text-success border-0">
+                <Badge variant="secondary" className="text-[9px] sm:text-xs sm:ml-1 bg-success/10 text-success border-0 h-4 sm:h-5 min-w-[16px] sm:min-w-[20px] px-1">
                   {validatedDocs.length}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="export" className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 py-2 sm:py-0 text-xs sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
-                <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+              <TabsTrigger value="export" className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 py-1.5 sm:py-0 text-[10px] sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
+                <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span className="font-medium">{t('common.export')}</span>
               </TabsTrigger>
             </TabsList>

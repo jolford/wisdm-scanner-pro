@@ -532,16 +532,16 @@ const AuthPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 flex items-center justify-center p-4 animate-in fade-in duration-500">
-      <Card className="w-full max-w-md p-8 bg-card/95 backdrop-blur-xl border-2 shadow-2xl animate-in slide-in-from-bottom-4 duration-700 hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-shadow">
-        <div className="text-center mb-8 animate-in zoom-in duration-500">
-          <div className="relative inline-block mb-4">
-            <img src={wisdmLogo} alt="WISDM Logo" className="h-14 w-auto mx-auto transition-transform hover:scale-110 duration-300" />
+    <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-500">
+      <Card className="w-full max-w-md p-4 sm:p-8 bg-card/95 backdrop-blur-xl border-2 shadow-2xl animate-in slide-in-from-bottom-4 duration-700 hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-shadow">
+        <div className="text-center mb-6 sm:mb-8 animate-in zoom-in duration-500">
+          <div className="relative inline-block mb-3 sm:mb-4">
+            <img src={wisdmLogo} alt="WISDM Logo" className="h-12 sm:h-14 w-auto mx-auto transition-transform hover:scale-110 duration-300" />
             <div className="absolute -top-1 -right-1 animate-pulse">
               <Sparkles className="h-4 w-4 text-primary" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
             WISDM Capture Pro
           </h1>
           <p className="text-muted-foreground text-sm">
@@ -555,7 +555,7 @@ const AuthPage = () => {
           </p>
         </div>
 
-        <form onSubmit={isUpdatingPassword ? handleUpdatePassword : isResetPassword ? handleResetPassword : isSignUp ? handleSignUp : handleSignIn} className="space-y-5">
+        <form onSubmit={isUpdatingPassword ? handleUpdatePassword : isResetPassword ? handleResetPassword : isSignUp ? handleSignUp : handleSignIn} className="space-y-4 sm:space-y-5">
           {isSignUp && !isUpdatingPassword && (
             <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
               <Label htmlFor="fullName" className="text-sm font-medium">Full Name</Label>
