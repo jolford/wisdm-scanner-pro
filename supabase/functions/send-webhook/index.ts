@@ -59,8 +59,8 @@ Deno.serve(async (req) => {
     for (const webhook of webhooks) {
       const events = webhook.events as string[];
       
-      // Check if this webhook subscribes to this event type
-      if (!events.includes(event_type) && !events.includes('*')) {
+      // Allow test webhooks to always be sent, or check if webhook subscribes to this event type
+      if (event_type !== 'test.webhook' && !events.includes(event_type) && !events.includes('*')) {
         continue;
       }
 
@@ -213,7 +213,8 @@ function getEventTitle(eventType: string): string {
     'document.low_confidence': '📊 Low Confidence Detection',
     'document.duplicate_detected': '🔍 Duplicate Document Detected',
     'export.completed': '📤 Export Complete',
-    'export.failed': '❌ Export Failed'
+    'export.failed': '❌ Export Failed',
+    'test.webhook': '🧪 Test Webhook Notification'
   };
   return titles[eventType] || '📄 Document Processing Event';
 }
