@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Webhook, Plus, Trash2, CheckCircle2, XCircle, ExternalLink } from 'lucide-react';
+import { Webhook, Plus, Trash2, CheckCircle2, XCircle, ExternalLink, Send } from 'lucide-react';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import {
@@ -155,6 +155,39 @@ const WebhookConfig = () => {
     },
     onError: (error: any) => {
       toast.error('Failed to update webhook: ' + error.message);
+    },
+  });
+
+  const testWebhookMutation = useMutation({
+    mutationFn: async (webhookId: string) => {
+      const { data: webhook } = await supabase
+        .from('webhook_configs')
+        .select('customer_id')
+        .eq('id', webhookId)
+        .single();
+
+      if (!webhook) throw new Error('Webhook not found');
+
+      const { error } = await supabase.functions.invoke('send-webhook', {
+        body: {
+          customer_id: webhook.customer_id,
+          event_type: 'test.webhook',
+          payload: {
+            message: 'This is a test webhook notification',
+            timestamp: new Date().toISOString(),
+            webhook_id: webhookId,
+            test: true,
+          }
+        }
+      });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Test notification sent! Check your endpoint.');
+    },
+    onError: (error: any) => {
+      toast.error('Test failed: ' + error.message);
     },
   });
 
@@ -348,6 +381,15 @@ const WebhookConfig = () => {
                         toggleActiveMutation.mutate({ id: webhook.id, is_active: checked })
                       }
                     />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => testWebhookMutation.mutate(webhook.id)}
+                      disabled={testWebhookMutation.isPending}
+                      title="Send test notification"
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
