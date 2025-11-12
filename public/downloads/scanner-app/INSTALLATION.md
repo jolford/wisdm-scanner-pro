@@ -43,14 +43,26 @@ npm --version
 ```
 
 #### Install Visual Studio Build Tools
-```bash
-# Option 1: Via npm (recommended)
-npm install --global windows-build-tools
 
-# Option 2: Manual download
-# Download from: https://visualstudio.microsoft.com/downloads/
-# Select "Build Tools for Visual Studio"
-# During installation, check "Desktop development with C++"
+**IMPORTANT:** The old `windows-build-tools` npm package is deprecated and no longer works.
+
+**Recommended Method - Download Visual Studio Build Tools:**
+
+1. Download from: https://visualstudio.microsoft.com/downloads/
+2. Select **"Build Tools for Visual Studio 2022"** (free)
+3. During installation, check **"Desktop development with C++"**
+4. Install location: Default is fine
+5. Restart your computer after installation
+
+**Alternative - Use Chocolatey (if you have it):**
+```bash
+choco install visualstudio2022buildtools --package-parameters "--add Microsoft.VisualStudio.Workload.VCTools"
+```
+
+**Verify Installation:**
+```bash
+# Should show version info
+where cl.exe
 ```
 
 ### 2. Verify Ricoh SDK Installation
@@ -268,10 +280,10 @@ npm run rebuild
 ```
 
 **Error: "MSBuild not found"**
-```bash
-# Install Visual Studio Build Tools
-npm install --global windows-build-tools
-```
+- Install Visual Studio Build Tools 2022 from https://visualstudio.microsoft.com/downloads/
+- During install, select "Desktop development with C++"
+- Restart your computer after installation
+- Do NOT use `windows-build-tools` npm package (it's deprecated)
 
 **Error: "Cannot find PfuSsApi.h"**
 - Verify Ricoh SDK installed at `C:\Ricoh SDK`
