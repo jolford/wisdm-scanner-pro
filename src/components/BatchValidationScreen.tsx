@@ -975,8 +975,8 @@ const { toast } = useToast();
         }
       });
 
-      // Update the document in the database
-      const { error } = await supabase
+      // Update the document in the database and fetch related batch/project
+      const { error, data: updatedDoc } = await supabase
         .from('documents')
         .update({
           extracted_metadata: normalizedMetadata,
@@ -985,7 +985,13 @@ const { toast } = useToast();
           validated_at: new Date().toISOString(),
           validated_by: user?.id,
         })
-        .eq('id', doc.id);
+        .eq('id', doc.id)
+        .select(`
+          id, file_name,
+          batch:batches(batch_name),
+          project:projects(name, customer_id)
+        `)
+        .single();
       
       // Log field changes
       if (!error && user && changedFields.length > 0) {
@@ -1021,6 +1027,39 @@ const { toast } = useToast();
       }
 
       if (error) throw error;
+
+      // Trigger webhook notification for document validation
+      if (updatedDoc && status === 'validated') {
+        try {
+          let targetCustomerId = (updatedDoc as any).project?.customer_id as string | null | undefined;
+          if (!targetCustomerId && user?.id) {
+            const { data: uc } = await supabase
+              .from('user_customers')
+              .select('customer_id')
+              .eq('user_id', user.id)
+              .limit(1);
+            targetCustomerId = uc?.[0]?.customer_id ?? null;
+          }
+
+          await supabase.functions.invoke('send-webhook', {
+            body: {
+              customer_id: targetCustomerId,
+              event_type: 'document.validated',
+              payload: {
+                document_id: doc.id,
+                document_name: doc.file_name,
+                batch_name: (updatedDoc as any).batch?.batch_name,
+                project_name: (updatedDoc as any).project?.name,
+                validated_by: user?.id,
+                validated_at: new Date().toISOString(),
+                metadata: normalizedMetadata,
+              }
+            }
+          });
+        } catch (webhookError) {
+          console.error('Webhook notification failed:', webhookError);
+        }
+      }
 
       // Update batch validated count (only for validated documents)
       if (status === 'validated') {
