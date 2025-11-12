@@ -72,6 +72,7 @@ import ReleaseNotesManager from "./pages/admin/ReleaseNotesManager";
 import BulkEdit from "./pages/admin/BulkEdit";
 import DocumentComparison from "./pages/admin/DocumentComparison";
 import QAMetrics from "./pages/admin/QAMetrics";
+import Downloads from "./pages/Downloads";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -231,6 +232,7 @@ const App = () => {
             <Route path="/release-notes" element={<ReleaseNotes />} />
             <Route path="/api-docs" element={<ApiDocs />} />
             <Route path="/settings" element={<UserSettings />} />
+            <Route path="/downloads" element={<Downloads />} />
             <Route path="/presentation" element={<Presentation />} />
             <Route path="/training" element={<Training />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
