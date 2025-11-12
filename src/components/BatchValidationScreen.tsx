@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { SignatureValidator } from './SignatureValidator';
 
 // Icon imports from lucide-react
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles } from 'lucide-react';
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles, FileText } from 'lucide-react';
 
 // Backend and utility imports
 import { supabase } from '@/integrations/supabase/client';
@@ -1324,27 +1324,27 @@ const { toast } = useToast();
 
                 {/* Expanded content: image viewer and editable fields */}
                 <CollapsibleContent>
-                  <div className="p-4 space-y-4 border-t">
-                     <div className="grid grid-cols-2 gap-4">
+                  <div className="p-2 sm:p-4 space-y-4 border-t">
+                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {/* Left column: Image with controls */}
                       <div className="space-y-3">
                         {/* Document Controls */}
-                        <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                           <h4 className="font-semibold text-sm">Document Preview</h4>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
                             {/* Zoom Controls */}
-                            <div className="flex items-center gap-1 border rounded-md">
+                            <div className="flex items-center gap-0.5 sm:gap-1 border rounded-md">
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleZoomOut(doc.id)}
                                 disabled={(documentZoom[doc.id] || 1) <= 0.5}
-                                className="h-8 px-2"
+                                className="h-7 sm:h-8 px-1 sm:px-2"
                                 title="Zoom Out"
                               >
-                                <ZoomOut className="h-4 w-4" />
+                                <ZoomOut className="h-3 w-3 sm:h-4 sm:w-4" />
                               </Button>
-                              <span className="text-xs font-medium px-2 min-w-[3rem] text-center">
+                              <span className="text-[10px] sm:text-xs font-medium px-1 sm:px-2 min-w-[2.5rem] sm:min-w-[3rem] text-center">
                                 {Math.round((documentZoom[doc.id] || 1) * 100)}%
                               </span>
                               <Button
@@ -1352,57 +1352,57 @@ const { toast } = useToast();
                                 size="sm"
                                 onClick={() => handleZoomIn(doc.id)}
                                 disabled={(documentZoom[doc.id] || 1) >= 3}
-                                className="h-8 px-2"
+                                className="h-7 sm:h-8 px-1 sm:px-2"
                                 title="Zoom In"
                               >
-                                <ZoomIn className="h-4 w-4" />
+                                <ZoomIn className="h-3 w-3 sm:h-4 sm:w-4" />
                               </Button>
                             </div>
                             
                             {/* Additional Controls */}
-                            <div className="flex items-center gap-1 border rounded-md">
+                            <div className="flex items-center gap-0.5 sm:gap-1 border rounded-md">
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleRotate(doc.id)}
-                                className="h-8 px-2"
+                                className="h-7 sm:h-8 px-1 sm:px-2"
                                 title="Rotate 90°"
                               >
-                                <RotateCw className="h-4 w-4" />
+                                <RotateCw className="h-3 w-3 sm:h-4 sm:w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleReset(doc.id)}
-                                className="h-8 px-2"
+                                className="h-7 sm:h-8 px-1 sm:px-2"
                                 title="Reset View"
                               >
-                                <RefreshCw className="h-4 w-4" />
+                                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handlePrint(doc.id, doc.file_url)}
-                                className="h-8 px-2"
+                                className="h-7 sm:h-8 px-1 sm:px-2"
                                 title="Print"
                               >
-                                <Printer className="h-4 w-4" />
+                                <Printer className="h-3 w-3 sm:h-4 sm:w-4" />
                               </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleDownload(doc.file_url, doc.file_name)}
-                                className="h-8 px-2"
+                                className="h-7 sm:h-8 px-1 sm:px-2"
                                 title="Download"
                               >
-                                <Download className="h-4 w-4" />
+                                <Download className="h-3 w-3 sm:h-4 sm:w-4" />
                               </Button>
                             </div>
                           </div>
                         </div>
                         
                         {/* Image Preview with Zoom and Rotation */}
-                        <div className="overflow-auto max-h-[400px] bg-muted/30 rounded-lg p-4">
+                        <div className="overflow-auto max-h-[300px] sm:max-h-[400px] bg-muted/30 rounded-lg p-2 sm:p-4">
                           <FullImageWithSignedUrl
                             url={doc.file_url}
                             alt={doc.file_name}
@@ -1445,40 +1445,49 @@ const { toast } = useToast();
                       {/* Right column: Editable metadata fields */}
                       <div className="space-y-4">
                         <Tabs defaultValue="fields" className="w-full">
-                          <TabsList className={`w-full grid ${isAB1466Batch ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                            <TabsTrigger value="fields">Edit Fields</TabsTrigger>
+                          <TabsList className={`w-full grid ${isAB1466Batch ? 'grid-cols-3' : 'grid-cols-2'} p-0.5 sm:p-1 h-auto`}>
+                            <TabsTrigger value="fields" className="text-[10px] sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 data-[state=active]:text-xs sm:data-[state=active]:text-sm">
+                              <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
+                              Edit Fields
+                            </TabsTrigger>
                             {isAB1466Batch && (
-                              <TabsTrigger value="image">Sensitive Areas</TabsTrigger>
+                              <TabsTrigger value="image" className="text-[10px] sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 data-[state=active]:text-xs sm:data-[state=active]:text-sm">
+                                <ImageIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
+                                Sensitive
+                              </TabsTrigger>
                             )}
-                            <TabsTrigger value="text">Extracted Text</TabsTrigger>
+                            <TabsTrigger value="text" className="text-[10px] sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 data-[state=active]:text-xs sm:data-[state=active]:text-sm">
+                              <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
+                              Extracted Text
+                            </TabsTrigger>
                           </TabsList>
                           
                           <TabsContent value="fields" className="space-y-4 mt-4">
                             {/* AI Smart Validation Banner */}
-                            <div className="p-3 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg mb-4">
-                              <div className="flex items-center justify-between gap-2">
+                            <div className="p-2 sm:p-3 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg mb-4">
+                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                                 <div className="flex items-start gap-2 flex-1">
-                                  <span className="text-2xl animate-pulse">✨</span>
+                                  <span className="text-xl sm:text-2xl animate-pulse">✨</span>
                                   <div className="flex-1">
-                                    <div className="text-sm font-medium mb-1">AI Smart Validation</div>
-                                    <div className="text-xs text-muted-foreground space-y-1">
+                                    <div className="text-xs sm:text-sm font-medium mb-1">AI Smart Validation</div>
+                                    <div className="text-[10px] sm:text-xs text-muted-foreground space-y-0.5 sm:space-y-1">
                                       <div className="flex items-center gap-1">
                                         <span className="text-amber-500">💡</span>
                                         <span>Click 💡 next to any field or use Validate All</span>
                                       </div>
-                                      <div>1. Fill in field values (e.g., Invoice Total)</div>
-                                      <div>2. Click the 💡 lightbulb icon next to the field</div>
-                                      <div>3. AI will validate and suggest corrections if needed</div>
+                                      <div className="hidden sm:block">1. Fill in field values (e.g., Invoice Total)</div>
+                                      <div className="hidden sm:block">2. Click the 💡 lightbulb icon next to the field</div>
+                                      <div className="hidden sm:block">3. AI will validate and suggest corrections if needed</div>
                                     </div>
                                   </div>
                                 </div>
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 w-full sm:w-auto">
                                   <Button
                                     size="sm"
                                     onClick={() => validateAllFieldsForDoc(doc.id)}
-                                    className="bg-primary hover:bg-primary/90"
+                                    className="bg-primary hover:bg-primary/90 flex-1 sm:flex-none h-8 text-xs sm:text-sm"
                                   >
-                                    <Sparkles className="h-4 w-4 mr-1.5" />
+                                    <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
                                     Validate All
                                   </Button>
                                   {enableSignatureVerification && (
@@ -1486,8 +1495,10 @@ const { toast } = useToast();
                                       size="sm"
                                       variant="outline"
                                       onClick={() => setSignatureDialogDocId(doc.id)}
+                                      className="flex-1 sm:flex-none h-8 text-xs sm:text-sm"
                                     >
-                                      ✍️ Signature Check
+                                      <span className="hidden sm:inline">✍️ Signature</span>
+                                      <span className="sm:hidden">✍️</span>
                                     </Button>
                                   )}
                                 </div>
