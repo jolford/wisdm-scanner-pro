@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // Icon imports for visual indicators
 import { Eraser, Save, Undo, X, Wand2, AlertTriangle } from 'lucide-react';
@@ -70,6 +71,7 @@ export const RedactionTool = ({
   // Keyword detection state
   const [detectedKeywords, setDetectedKeywords] = useState<DetectedKeyword[]>([]);
   const [showKeywordAlert, setShowKeywordAlert] = useState(false);
+  const [enablePIIDetection, setEnablePIIDetection] = useState(true); // PII detection enabled by default
   
   // Redaction settings
   const [redactionMode, setRedactionMode] = useState<'permanent' | 'version'>('version'); // Permanent or create version
@@ -78,15 +80,15 @@ export const RedactionTool = ({
   const { toast } = useToast();
 
   /**
-   * Detect keywords in OCR data when component mounts
+   * Detect keywords in OCR data when component mounts or PII detection setting changes
    */
   useEffect(() => {
     if (ocrText && ocrText.length > 0) {
-      const detected = detectKeywords(ocrText, ocrMetadata);
+      const detected = detectKeywords(ocrText, ocrMetadata, [], enablePIIDetection);
       setDetectedKeywords(detected);
       setShowKeywordAlert(detected.length > 0);
     }
-  }, [ocrText, ocrMetadata]);
+  }, [ocrText, ocrMetadata, enablePIIDetection]);
 
   /**
    * Load image onto canvas when component mounts or imageUrl changes
@@ -404,14 +406,24 @@ export const RedactionTool = ({
             <AlertDescription className="ml-2">
               <div className="flex items-start justify-between gap-2">
                 <div className="flex-1">
-                  <p className="font-semibold mb-2">⚠️ Sensitive Keywords Detected (AB 1466)</p>
+                  <p className="font-semibold mb-2">
+                    ⚠️ Sensitive Information Detected
+                  </p>
                   <p className="text-sm mb-2">
-                    Found {detectedKeywords.length} potentially discriminatory term(s) requiring redaction per California fair housing laws:
+                    Found {detectedKeywords.length} term(s) requiring redaction:
                   </p>
                   <div className="flex flex-wrap gap-1 mb-2">
                     {detectedKeywords.slice(0, 10).map((kw, idx) => (
                       <Badge key={idx} variant="outline" className="text-xs">
-                        {kw.term} ({kw.matches.length}x)
+                        {kw.category === 'ssn' && 'SSN'}
+                        {kw.category === 'credit_card' && 'Credit Card'}
+                        {kw.category === 'email' && 'Email'}
+                        {kw.category === 'phone' && 'Phone'}
+                        {kw.category === 'dob' && 'Date of Birth'}
+                        {kw.category === 'drivers_license' && 'Driver License'}
+                        {kw.category === 'passport' && 'Passport'}
+                        {!['ssn', 'credit_card', 'email', 'phone', 'dob', 'drivers_license', 'passport'].includes(kw.category) && kw.term}
+                        {' '}({kw.matches.length}x)
                       </Badge>
                     ))}
                     {detectedKeywords.length > 10 && (
@@ -423,7 +435,7 @@ export const RedactionTool = ({
                   <p className="text-xs text-muted-foreground">
                     {detectedKeywords.some(kw => kw.matches.some(m => m.boundingBox)) 
                       ? 'Click Auto-Redact to automatically cover these terms.' 
-                      : 'Draw redaction boxes manually over highlighted terms (automatic positioning unavailable).'}
+                      : 'Draw redaction boxes manually over detected terms (automatic positioning unavailable).'}
                   </p>
                 </div>
                 <Button
@@ -438,6 +450,19 @@ export const RedactionTool = ({
             </AlertDescription>
           </Alert>
         )}
+        
+        {/* PII Detection Toggle */}
+        <div className="flex items-center space-x-2 p-3 border border-border rounded-lg bg-muted/30">
+          <Checkbox
+            id="pii-detection"
+            checked={enablePIIDetection}
+            onCheckedChange={(checked) => setEnablePIIDetection(checked as boolean)}
+          />
+          <Label htmlFor="pii-detection" className="cursor-pointer text-sm">
+            Enable PII Detection (SSN, Credit Cards, Email, Phone, DOB)
+          </Label>
+        </div>
+        
         <div>
           <Label className="text-sm font-medium mb-2 block">Redaction Mode</Label>
           <RadioGroup

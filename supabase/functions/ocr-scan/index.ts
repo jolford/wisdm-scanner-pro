@@ -198,9 +198,18 @@ RESPONSE REQUIREMENTS:
           ? `, "lineItems": [{${tableExtractionFields.map((f: any) => `"${f.name}": "value"`).join(', ')}}]`
           : '';
         
-        // Add field-specific extraction guidance
-        const fieldGuidance = fieldNames.map((fname: string) => {
-          const lowerName = fname.toLowerCase();
+        // Add field-specific extraction guidance with custom descriptions
+        const fieldGuidance = extractionFields.map((field: any) => {
+          const fname = field.name || field;
+          const fdesc = typeof field === 'object' ? field.description : '';
+          const lowerName = String(fname).toLowerCase();
+          
+          // If custom description provided, use it as the primary guidance
+          if (fdesc && fdesc.trim()) {
+            return `\n- ${fname}: ${fdesc}`;
+          }
+          
+          // Fallback to built-in heuristics
           if (lowerName.includes('invoice') && lowerName.includes('number')) {
             return `\n- ${fname}: CRITICAL - Find the number DIRECTLY ADJACENT to the label "INVOICE NO", "INVOICE NUMBER", "INVOICE #", or "INV#" (usually upper right corner). DO NOT confuse with "CUSTOMER NO", "ACCOUNT NO", or "PURCHASE ORDER". The invoice number is the identifier specifically labeled as "INVOICE". Read ALL digits with extreme precision.`;
           }

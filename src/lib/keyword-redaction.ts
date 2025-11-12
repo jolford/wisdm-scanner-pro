@@ -24,6 +24,35 @@ export interface DetectedKeyword {
 }
 
 /**
+ * PII detection patterns for automatic redaction
+ * Detects personally identifiable information that should be redacted
+ */
+export const PII_KEYWORDS: RedactionKeyword[] = [
+  // Social Security Numbers (SSN)
+  { term: '\\b\\d{3}-\\d{2}-\\d{4}\\b', category: 'ssn', caseSensitive: false },
+  { term: '\\b\\d{9}\\b', category: 'ssn', caseSensitive: false },
+  
+  // Credit Card Numbers (basic pattern)
+  { term: '\\b\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}\\b', category: 'credit_card', caseSensitive: false },
+  
+  // Email addresses
+  { term: '\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b', category: 'email', caseSensitive: false },
+  
+  // Phone numbers (various formats)
+  { term: '\\b\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4}\\b', category: 'phone', caseSensitive: false },
+  
+  // Driver's License patterns (state-specific can be added)
+  { term: '\\b[A-Z]{1,2}\\d{6,8}\\b', category: 'drivers_license', caseSensitive: false },
+  
+  // Passport numbers
+  { term: '\\b[A-Z]{1,2}\\d{6,9}\\b', category: 'passport', caseSensitive: false },
+  
+  // Date of Birth patterns
+  { term: '\\b(0?[1-9]|1[0-2])/(0?[1-9]|[12][0-9]|3[01])/(19|20)\\d{2}\\b', category: 'dob', caseSensitive: false },
+  { term: '\\b(19|20)\\d{2}-(0?[1-9]|1[0-2])-(0?[1-9]|[12][0-9]|3[01])\\b', category: 'dob', caseSensitive: false },
+];
+
+/**
  * Default keywords based on AB 1466 protected characteristics
  * These are unlawfully restrictive covenant terms that should be redacted
  */
@@ -74,9 +103,14 @@ export const DEFAULT_REDACTION_KEYWORDS: RedactionKeyword[] = [
 export const detectKeywords = (
   ocrText: string,
   ocrMetadata: any,
-  customKeywords: RedactionKeyword[] = []
+  customKeywords: RedactionKeyword[] = [],
+  includePII: boolean = false
 ): DetectedKeyword[] => {
-  const keywords = [...DEFAULT_REDACTION_KEYWORDS, ...customKeywords];
+  const keywords = [
+    ...DEFAULT_REDACTION_KEYWORDS, 
+    ...(includePII ? PII_KEYWORDS : []),
+    ...customKeywords
+  ];
   const detected: DetectedKeyword[] = [];
   
   if (!ocrText || ocrText.length === 0) {
@@ -102,11 +136,27 @@ export const detectKeywords = (
 
     const matches: Array<{ text: string; boundingBox?: any }> = [];
 
-    // 1) Fast textual scan to count occurrences (for UX info)
-    const regex = new RegExp(`\\b${escapeRegex(searchTerm)}\\b`, 'gi');
-    let textMatch;
-    while ((textMatch = regex.exec(keyword.caseSensitive ? ocrText : searchText)) !== null) {
-      matches.push({ text: ocrText.substring(textMatch.index, textMatch.index + textMatch[0].length) });
+    // Check if this is a regex pattern (PII detection)
+    const isRegexPattern = searchTerm.includes('\\b') || searchTerm.includes('\\d') || searchTerm.includes('[');
+    
+    if (isRegexPattern) {
+      // Use regex directly for PII patterns
+      try {
+        const regex = new RegExp(searchTerm, keyword.caseSensitive ? 'g' : 'gi');
+        let textMatch;
+        while ((textMatch = regex.exec(ocrText)) !== null) {
+          matches.push({ text: textMatch[0] });
+        }
+      } catch (e) {
+        console.warn(`Invalid regex pattern: ${searchTerm}`, e);
+      }
+    } else {
+      // 1) Fast textual scan to count occurrences (for UX info)
+      const regex = new RegExp(`\\b${escapeRegex(searchTerm)}\\b`, 'gi');
+      let textMatch;
+      while ((textMatch = regex.exec(keyword.caseSensitive ? ocrText : searchText)) !== null) {
+        matches.push({ text: ocrText.substring(textMatch.index, textMatch.index + textMatch[0].length) });
+      }
     }
 
     // 2) Try to locate geometry from words (handles single and multi-word phrases)
