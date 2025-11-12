@@ -238,29 +238,24 @@ async function sendWebhook(
 }
 
 function formatTeamsMessage(event_type: string, data: any): any {
+  // Power Automate expects the Adaptive Card content directly
   const card = {
-    type: 'message',
-    attachments: [{
-      contentType: 'application/vnd.microsoft.card.adaptive',
-      content: {
-        type: 'AdaptiveCard',
-        version: '1.4',
-        body: [
-          {
-            type: 'TextBlock',
-            text: getEventTitle(event_type),
-            weight: 'Bolder',
-            size: 'Large',
-            color: getEventColor(event_type)
-          },
-          {
-            type: 'FactSet',
-            facts: formatEventFacts(event_type, data)
-          }
-        ],
-        actions: getEventActions(event_type, data)
+    type: 'AdaptiveCard',
+    version: '1.4',
+    body: [
+      {
+        type: 'TextBlock',
+        text: getEventTitle(event_type),
+        weight: 'Bolder',
+        size: 'Large',
+        color: getEventColor(event_type)
+      },
+      {
+        type: 'FactSet',
+        facts: formatEventFacts(event_type, data)
       }
-    }]
+    ],
+    actions: getEventActions(event_type, data)
   };
 
   return card;
