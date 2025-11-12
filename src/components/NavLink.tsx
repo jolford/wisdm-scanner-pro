@@ -25,6 +25,7 @@ export function NavLink({
     <Link
       to={to}
       className={cn(className, isActive && activeClassName)}
+      aria-current={isActive ? 'page' : undefined}
       {...props}
     >
       {children}

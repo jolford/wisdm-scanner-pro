@@ -76,6 +76,7 @@ import Downloads from "./pages/Downloads";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { SkipToContent } from "./components/SkipToContent";
 
 const queryClient = new QueryClient();
 
@@ -168,6 +169,7 @@ const App = () => {
         <QueryClientProvider client={queryClient}>
           <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light">{/* Force light mode only */}
             <div className="flex flex-col min-h-screen">
+            <SkipToContent />
             <Toaster />
             <Sonner />
             <KeyboardShortcutsDialog open={showShortcuts} onOpenChange={setShowShortcuts} />
@@ -178,7 +180,7 @@ const App = () => {
               onFilesLaunched={handleFilesLaunched}
             />
           <RecoveryRedirect />
-          <div className="flex-1">
+          <div id="main-content" className="flex-1" role="main">
           <Routes>
             <Route path="/" element={<Queue launchedFiles={launchedFiles} />} />
             <Route path="/old" element={<Index />} />

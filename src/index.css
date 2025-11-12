@@ -166,6 +166,43 @@ All colors MUST be HSL.
     @apply bg-background text-foreground antialiased;
   }
 
+  /* Enhanced focus indicators for accessibility */
+  *:focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
+
+  /* Screen reader only content */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+
+  .sr-only-focusable:focus,
+  .sr-only-focusable:active {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+
+  /* Ensure sufficient color contrast */
+  a {
+    @apply underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  button:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
+
   /* Typography Scale */
   h1 {
     @apply text-4xl font-bold tracking-tight leading-tight;
