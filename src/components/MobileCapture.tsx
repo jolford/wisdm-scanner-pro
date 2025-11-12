@@ -1,8 +1,12 @@
 import { useState, useRef } from 'react';
-import { Camera, X, Check, RotateCw } from 'lucide-react';
+import { Camera, X, Check, RotateCw, Wand2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
+import { enhanceImage, type EnhancementOptions } from '@/lib/image-enhancement';
 
 interface MobileCaptureProps {
   onCapture: (file: File) => void;
@@ -14,8 +18,16 @@ export function MobileCapture({ onCapture, onClose, open }: MobileCaptureProps) 
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('environment');
+  const [showEnhancement, setShowEnhancement] = useState(false);
+  const [enhancementOptions, setEnhancementOptions] = useState<EnhancementOptions>({
+    autoCrop: true,
+    perspectiveCorrection: true,
+    contrastAdjustment: 20,
+    brightnessAdjustment: 10,
+  });
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const originalCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const startCamera = async () => {
     try {
@@ -53,9 +65,20 @@ export function MobileCapture({ onCapture, onClose, open }: MobileCaptureProps) 
     canvas.height = video.videoHeight;
     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    const imageData = canvas.toDataURL('image/jpeg', 0.9);
-    setCapturedImage(imageData);
+    // Store original canvas for enhancement
+    originalCanvasRef.current = canvas;
+
+    // Apply enhancements by default
+    applyEnhancements();
     stopCamera();
+  };
+
+  const applyEnhancements = () => {
+    if (!originalCanvasRef.current) return;
+
+    const enhancedCanvas = enhanceImage(originalCanvasRef.current, enhancementOptions);
+    const imageData = enhancedCanvas.toDataURL('image/jpeg', 0.9);
+    setCapturedImage(imageData);
   };
 
   const confirmCapture = () => {
@@ -77,6 +100,8 @@ export function MobileCapture({ onCapture, onClose, open }: MobileCaptureProps) 
 
   const retakePhoto = () => {
     setCapturedImage(null);
+    originalCanvasRef.current = null;
+    setShowEnhancement(false);
     startCamera();
   };
 
@@ -88,6 +113,8 @@ export function MobileCapture({ onCapture, onClose, open }: MobileCaptureProps) 
   const handleClose = () => {
     stopCamera();
     setCapturedImage(null);
+    originalCanvasRef.current = null;
+    setShowEnhancement(false);
     onClose();
   };
 
@@ -146,7 +173,87 @@ export function MobileCapture({ onCapture, onClose, open }: MobileCaptureProps) 
                 className="w-full h-full object-contain"
               />
               
-              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-4 px-4">
+              {showEnhancement && (
+                <div className="absolute top-4 left-4 right-4 bg-background/95 backdrop-blur-sm border rounded-lg p-4 space-y-4 max-h-[60vh] overflow-y-auto">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold">Enhancement Filters</h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowEnhancement(false)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="auto-crop" className="text-xs">Auto-Crop</Label>
+                      <Switch
+                        id="auto-crop"
+                        checked={enhancementOptions.autoCrop}
+                        onCheckedChange={(checked) => {
+                          setEnhancementOptions({ ...enhancementOptions, autoCrop: checked });
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="perspective" className="text-xs">Perspective Correction</Label>
+                      <Switch
+                        id="perspective"
+                        checked={enhancementOptions.perspectiveCorrection}
+                        onCheckedChange={(checked) => {
+                          setEnhancementOptions({ ...enhancementOptions, perspectiveCorrection: checked });
+                        }}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="contrast" className="text-xs">
+                        Contrast: {enhancementOptions.contrastAdjustment}
+                      </Label>
+                      <Slider
+                        id="contrast"
+                        min={-50}
+                        max={50}
+                        step={5}
+                        value={[enhancementOptions.contrastAdjustment || 0]}
+                        onValueChange={([value]) => {
+                          setEnhancementOptions({ ...enhancementOptions, contrastAdjustment: value });
+                        }}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="brightness" className="text-xs">
+                        Brightness: {enhancementOptions.brightnessAdjustment}
+                      </Label>
+                      <Slider
+                        id="brightness"
+                        min={-50}
+                        max={50}
+                        step={5}
+                        value={[enhancementOptions.brightnessAdjustment || 0]}
+                        onValueChange={([value]) => {
+                          setEnhancementOptions({ ...enhancementOptions, brightnessAdjustment: value });
+                        }}
+                      />
+                    </div>
+
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={applyEnhancements}
+                      className="w-full"
+                    >
+                      Apply Filters
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 px-4">
                 <Button
                   variant="secondary"
                   size="lg"
@@ -155,6 +262,17 @@ export function MobileCapture({ onCapture, onClose, open }: MobileCaptureProps) 
                   <X className="mr-2 h-5 w-5" />
                   Retake
                 </Button>
+
+                {!showEnhancement && (
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={() => setShowEnhancement(true)}
+                  >
+                    <Wand2 className="mr-2 h-5 w-5" />
+                    Enhance
+                  </Button>
+                )}
                 
                 <Button
                   size="lg"
