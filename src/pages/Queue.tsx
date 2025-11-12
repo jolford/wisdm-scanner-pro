@@ -17,6 +17,7 @@ import wisdmLogo from '@/assets/wisdm-logo.png';
 import { LicenseWarning } from '@/components/LicenseWarning';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { RateLimitWarning } from '@/components/RateLimitWarning';
 import { useLicense } from '@/hooks/use-license';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Progress } from '@/components/ui/progress';
@@ -223,6 +224,7 @@ const Queue = ({ launchedFiles }: { launchedFiles?: File[] }) => {
   const [selectedProject, setSelectedProject] = useState<any>(null);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
+  const [customerId, setCustomerId] = useState<string | null>(null);
   
   // Helper to check if current batch is processing
   const isProcessing = selectedBatchId ? processingBatches.has(selectedBatchId) : false;
@@ -300,9 +302,25 @@ const [isExporting, setIsExporting] = useState(false);
         console.error('Error checking MFA level:', error);
       }
     };
+    
+    // Fetch user's customer ID for rate limit warnings
+    const fetchCustomerId = async () => {
+      if (user?.id) {
+        const { data } = await supabase
+          .from('user_customers')
+          .select('customer_id')
+          .eq('user_id', user.id)
+          .maybeSingle();
+        
+        if (data?.customer_id) {
+          setCustomerId(data.customer_id);
+        }
+      }
+    };
 
     if (user) {
       checkMFALevel();
+      fetchCustomerId();
     }
   }, [authLoading, user, navigate]);
 
@@ -1703,6 +1721,8 @@ const [isExporting, setIsExporting] = useState(false);
             />
           )}
         </div>
+        
+        {customerId && <RateLimitWarning customerId={customerId} />}
 
         {selectedProjectId && selectedBatchId && (
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">

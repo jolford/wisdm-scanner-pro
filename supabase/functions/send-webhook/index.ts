@@ -29,60 +29,121 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { customer_id, event_type, payload }: WebhookPayload = await req.json();
+    // Parse request payload with validation
+    let customer_id: string, event_type: string, payload: any;
+    try {
+      const body = await req.json();
+      customer_id = body.customer_id;
+      event_type = body.event_type;
+      payload = body.payload;
+      
+      if (!customer_id || !event_type) {
+        throw new Error('Missing required fields: customer_id, event_type');
+      }
+    } catch (parseError: any) {
+      console.error('Request parsing error:', parseError);
+      return new Response(
+        JSON.stringify({ success: false, error: 'Invalid request payload' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    console.log(`Triggering webhooks for customer ${customer_id}, event: ${event_type}`);
+    console.log(`[Webhook] Triggering for customer ${customer_id}, event: ${event_type}`);
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    // Initialize Supabase client
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('[Webhook] Missing Supabase configuration');
+      throw new Error('Service configuration error');
+    }
+    
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get all active webhooks for this customer that subscribe to this event
-    const { data: webhooks, error: fetchError } = await supabase
-      .from('webhook_configs')
-      .select('*')
-      .eq('customer_id', customer_id)
-      .eq('is_active', true);
+    let webhooks;
+    try {
+      const { data, error: fetchError } = await supabase
+        .from('webhook_configs')
+        .select('*')
+        .eq('customer_id', customer_id)
+        .eq('is_active', true);
 
-    if (fetchError) throw fetchError;
+      if (fetchError) {
+        console.error('[Webhook] Database query error:', fetchError);
+        throw new Error(`Failed to fetch webhook configs: ${fetchError.message}`);
+      }
+      
+      webhooks = data;
+    } catch (dbError: any) {
+      console.error('[Webhook] Database error:', dbError);
+      throw dbError;
+    }
 
     if (!webhooks || webhooks.length === 0) {
-      console.log('No active webhooks found');
+      console.log('[Webhook] No active webhooks found for customer');
       return new Response(JSON.stringify({ success: true, sent: 0 }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
     let sentCount = 0;
+    let failedCount = 0;
 
     // Send webhook to each matching endpoint
     for (const webhook of webhooks) {
-      const events = webhook.events as string[];
-      
-      // Allow test webhooks to always be sent, or check if webhook subscribes to this event type
-      if (event_type !== 'test.webhook' && !events.includes(event_type) && !events.includes('*')) {
-        continue;
+      try {
+        const events = webhook.events as string[];
+        
+        // Allow test webhooks to always be sent, or check if webhook subscribes to this event type
+        if (event_type !== 'test.webhook' && !events.includes(event_type) && !events.includes('*')) {
+          console.log(`[Webhook] Skipping ${webhook.url} - not subscribed to ${event_type}`);
+          continue;
+        }
+
+        console.log(`[Webhook] Sending to ${webhook.url}...`);
+        await sendWebhook(supabase, webhook as WebhookConfig, event_type, payload);
+        sentCount++;
+
+        // Update last triggered timestamp
+        try {
+          await supabase
+            .from('webhook_configs')
+            .update({ last_triggered_at: new Date().toISOString() })
+            .eq('id', webhook.id);
+        } catch (updateError: any) {
+          console.error(`[Webhook] Failed to update timestamp for ${webhook.id}:`, updateError);
+        }
+      } catch (webhookError: any) {
+        console.error(`[Webhook] Failed to send to ${webhook.url}:`, webhookError);
+        failedCount++;
       }
-
-      await sendWebhook(supabase, webhook as WebhookConfig, event_type, payload);
-      sentCount++;
-
-      // Update last triggered timestamp
-      await supabase
-        .from('webhook_configs')
-        .update({ last_triggered_at: new Date().toISOString() })
-        .eq('id', webhook.id);
     }
 
-    console.log(`Sent ${sentCount} webhooks`);
+    console.log(`[Webhook] Completed: ${sentCount} sent, ${failedCount} failed`);
 
-    return new Response(JSON.stringify({ success: true, sent: sentCount }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    });
-  } catch (error: any) {
-    console.error('Error sending webhooks:', error);
     return new Response(
-      JSON.stringify({ success: false, error: error?.message || 'Unknown error' }),
+      JSON.stringify({ 
+        success: true, 
+        sent: sentCount,
+        failed: failedCount,
+        total: sentCount + failedCount
+      }), 
+      {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      }
+    );
+  } catch (error: any) {
+    console.error('[Webhook] Critical error:', error);
+    console.error('[Webhook] Stack trace:', error.stack);
+    
+    return new Response(
+      JSON.stringify({ 
+        success: false, 
+        error: error?.message || 'Unknown error',
+        type: error?.name || 'Error'
+      }),
       {
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
