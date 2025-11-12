@@ -209,6 +209,7 @@ function getEventTitle(eventType: string): string {
   const titles: Record<string, string> = {
     'batch.completed': '✅ Batch Processing Complete',
     'batch.failed': '❌ Batch Processing Failed',
+    'document.validated': '✅ Document Validated',
     'document.validation_failed': '⚠️ Document Validation Failed',
     'document.low_confidence': '📊 Low Confidence Detection',
     'document.duplicate_detected': '🔍 Duplicate Document Detected',
@@ -246,6 +247,16 @@ function formatEventFacts(eventType: string, data: any): any[] {
   }
   if (data.error_message) {
     facts.push({ title: 'Error', value: data.error_message });
+  }
+  
+  // For document.validated events, show key metadata fields
+  if (eventType === 'document.validated' && data.metadata) {
+    const importantFields = ['Invoice Number', 'Invoice Date', 'Invoice Total', 'PO Number', 'Vendor Name'];
+    importantFields.forEach(field => {
+      if (data.metadata[field]) {
+        facts.push({ title: field, value: String(data.metadata[field]) });
+      }
+    });
   }
   
   facts.push({ title: 'Time', value: new Date().toLocaleString() });
