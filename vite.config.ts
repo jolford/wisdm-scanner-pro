@@ -54,7 +54,10 @@ export default defineConfig(({ mode }) => ({
               'image/webp': ['.webp']
             }
           }
-        ]
+        ],
+        launch_handler: {
+          client_mode: 'navigate-new'
+        }
       },
       workbox: {
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024, // 5 MB

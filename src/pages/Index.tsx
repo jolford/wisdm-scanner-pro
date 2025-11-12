@@ -69,7 +69,29 @@ const Index = () => {
     }
   }, [authLoading, user, isProcessing]);
 
+  // Preselect previously used project on load (for seamless PWA imports)
+  useEffect(() => {
+    if (selectedProjectId) return;
+    const stored = sessionStorage.getItem('selectedProjectId') || localStorage.getItem('lastSelectedProjectId');
+    if (stored) {
+      setSelectedProjectId(stored);
+      (async () => {
+        try {
+          const { data } = await supabase
+            .from('projects')
+            .select('*')
+            .eq('id', stored)
+            .single();
+          if (data) setSelectedProject(data);
+        } catch (e) {
+          console.warn('Failed to load stored project details', e);
+        }
+      })();
+    }
+  }, []);
+
   useFileLaunch(async (files) => {
+    console.log('LaunchQueue: received files via PWA launch', { count: files?.length, names: files?.map(f => f.name) });
     try {
       // Ensure a project is selected: try current state, sessionStorage, then localStorage
       let projectId =
