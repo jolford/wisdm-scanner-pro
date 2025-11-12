@@ -105,7 +105,7 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
   };
 
   const handleDownload = () => {
-    window.open('/downloads/scanner-app/WISDM-Scanner-Setup.exe', '_blank');
+    window.location.href = '/downloads';
   };
 
   return (
