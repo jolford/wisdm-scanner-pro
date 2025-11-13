@@ -390,25 +390,16 @@ RESPONSE REQUIREMENTS:
           },
           {
             role: 'user',
-            content: textData
-              ? [
-                  {
-                    type: 'text',
-                    text: `${userPrompt}\n\nDocument text:\n${textData}`
-                  }
-                ]
-              : [
-                  {
-                    type: 'text',
-                    text: userPrompt
-                  },
-                  {
-                    type: 'image_url',
-                    image_url: {
-                      url: imageData
-                    }
-                  }
-                ]
+            content: [
+              {
+                type: 'text',
+                text: textData ? `${userPrompt}\n\nDocument text:\n${textData}` : userPrompt
+              },
+              ...(imageData ? [{
+                type: 'image_url',
+                image_url: { url: imageData }
+              }] : [])
+            ]
           }
         ]
       };
@@ -441,25 +432,16 @@ RESPONSE REQUIREMENTS:
             },
             {
               role: 'user',
-              content: textData
-                ? [
-                    {
-                      type: 'text',
-                      text: `${userPrompt}\n\nDocument text:\n${textData}`
-                    }
-                  ]
-                : [
-                    {
-                      type: 'text',
-                      text: userPrompt
-                    },
-                    {
-                      type: 'image_url',
-                      image_url: {
-                        url: imageData
-                      }
-                    }
-                  ]
+              content: [
+                {
+                  type: 'text',
+                  text: textData ? `${userPrompt}\n\nDocument text:\n${textData}` : userPrompt
+                },
+                ...(imageData ? [{
+                  type: 'image_url',
+                  image_url: { url: imageData }
+                }] : [])
+              ]
             }
           ]
         };
