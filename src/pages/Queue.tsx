@@ -1887,6 +1887,7 @@ const [isExporting, setIsExporting] = useState(false);
                   batchName={selectedBatch?.batch_name}
                   onSwitchToExport={() => handleTabChange('export')}
                   enableSignatureVerification={selectedProject?.enable_signature_verification || false}
+                  detectPii={selectedProject?.detect_pii || false}
                 />
               )}
             </TabsContent>
