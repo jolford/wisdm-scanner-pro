@@ -157,6 +157,82 @@ export default function WhiteLabel() {
               </div>
             </div>
           </CardHeader>
+          {previewMode && (
+            <CardContent>
+              <div className="space-y-4 p-6 border-2 border-dashed rounded-lg bg-background">
+                {/* Preview Header */}
+                <div 
+                  className="flex items-center justify-between p-4 rounded-lg"
+                  style={{ 
+                    backgroundColor: config.primaryColor + '15',
+                    borderBottom: `3px solid ${config.primaryColor}`
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    {config.companyLogo && (
+                      <img src={config.companyLogo} alt="Logo Preview" className="h-10 w-auto" />
+                    )}
+                    <span className="text-xl font-bold" style={{ color: config.primaryColor }}>
+                      {config.companyName}
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <div 
+                      className="px-4 py-2 rounded-md text-white text-sm font-medium"
+                      style={{ backgroundColor: config.primaryColor }}
+                    >
+                      Primary
+                    </div>
+                    <div 
+                      className="px-4 py-2 rounded-md text-white text-sm font-medium"
+                      style={{ backgroundColor: config.secondaryColor }}
+                    >
+                      Secondary
+                    </div>
+                    <div 
+                      className="px-4 py-2 rounded-md text-white text-sm font-medium"
+                      style={{ backgroundColor: config.accentColor }}
+                    >
+                      Accent
+                    </div>
+                  </div>
+                </div>
+
+                {/* Preview Content */}
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span>Support:</span>
+                    <span className="font-medium">{config.supportEmail}</span>
+                    <span>•</span>
+                    <span className="font-medium">{config.supportPhone}</span>
+                  </div>
+                  
+                  {config.customDomain && (
+                    <div className="text-sm text-muted-foreground">
+                      <span>Domain: </span>
+                      <span className="font-medium">{config.customDomain}</span>
+                    </div>
+                  )}
+
+                  {/* Preview Footer */}
+                  {config.customFooterText && (
+                    <div 
+                      className="mt-4 pt-4 border-t text-sm text-center"
+                      style={{ color: config.secondaryColor }}
+                    >
+                      {config.customFooterText}
+                    </div>
+                  )}
+                  
+                  {config.hideWisdmBranding && (
+                    <div className="text-xs text-muted-foreground text-center mt-2">
+                      (WISDM branding hidden)
+                    </div>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          )}
         </Card>
 
         <div className="grid gap-6 md:grid-cols-2">
