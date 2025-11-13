@@ -362,115 +362,131 @@ export const InteractiveDocumentViewer = ({
 
   return (
     <TooltipProvider>
-      <Card ref={cardRef} className="p-6 flex flex-col h-full">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold flex items-center gap-2">
-            <Highlighter className="h-4 w-4" />
-            Document Viewer
-          </h3>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="text-xs font-mono">
-              {Math.round(imageZoom * 100)}%
-            </Badge>
-            <Badge variant="outline">{fileName}</Badge>
+      <Card ref={cardRef} className="p-0 flex flex-col h-full overflow-hidden border-2 shadow-lg hover:shadow-xl transition-all duration-300">
+        {/* Header with gradient */}
+        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-6 py-4 border-b">
+          <div className="flex items-center justify-between">
+            <h3 className="font-semibold flex items-center gap-2 text-foreground">
+              <Highlighter className="h-5 w-5 text-primary" />
+              Document Viewer
+            </h3>
+            <div className="flex items-center gap-3">
+              <Badge variant="secondary" className="text-sm font-mono px-3 py-1 bg-gradient-to-r from-primary/20 to-primary/10 border-primary/20">
+                {Math.round(imageZoom * 100)}%
+              </Badge>
+              <Badge variant="outline" className="max-w-[200px] truncate">{fileName}</Badge>
+            </div>
           </div>
         </div>
         
-        {/* Controls */}
-        <div className="flex gap-2 mb-4 flex-wrap">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleZoom(0.25)}
-              >
-                <ZoomIn className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Zoom In (+)</TooltipContent>
-          </Tooltip>
+        {/* Controls with glass morphism */}
+        <div className="px-6 py-3 bg-muted/30 backdrop-blur-sm border-b flex items-center gap-2 flex-wrap">
+          {/* Zoom controls group */}
+          <div className="flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-lg border p-1 shadow-sm">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleZoom(0.25)}
+                  className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-all"
+                >
+                  <ZoomIn className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Zoom In (+)</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleZoom(-0.25)}
+                  className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-all"
+                >
+                  <ZoomOut className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Zoom Out (-)</TooltipContent>
+            </Tooltip>
+          </div>
+
+          {/* Fit controls group */}
+          <div className="flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-lg border p-1 shadow-sm">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleFitToWidth}
+                  className="h-8 px-2 text-xs hover:bg-primary/10 hover:text-primary transition-all"
+                >
+                  Fit Width
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Fit to container width</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleFitToHeight}
+                  className="h-8 px-2 text-xs hover:bg-primary/10 hover:text-primary transition-all"
+                >
+                  Fit Height
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Fit to container height</TooltipContent>
+            </Tooltip>
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleActualSize}
+                  className="h-8 px-2 text-xs hover:bg-primary/10 hover:text-primary transition-all"
+                >
+                  100%
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Actual size</TooltipContent>
+            </Tooltip>
+          </div>
           
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => handleZoom(-0.25)}
-              >
-                <ZoomOut className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Zoom Out (-)</TooltipContent>
-          </Tooltip>
+          {/* Transform controls group */}
+          <div className="flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-lg border p-1 shadow-sm">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setImageRotation(prev => (prev + 90) % 360)}
+                  className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-all"
+                >
+                  <RotateCw className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Rotate (Shift + Arrow)</TooltipContent>
+            </Tooltip>
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleFitToWidth}
-                className="text-xs"
-              >
-                Fit Width
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Fit to container width</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleFitToHeight}
-                className="text-xs"
-              >
-                Fit Height
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Fit to container height</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleActualSize}
-                className="text-xs"
-              >
-                100%
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Actual size</TooltipContent>
-          </Tooltip>
-          
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setImageRotation(prev => (prev + 90) % 360)}
-              >
-                <RotateCw className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Rotate (Shift + Arrow)</TooltipContent>
-          </Tooltip>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={toggleFullscreen}
-              >
-                {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Fullscreen (F)</TooltipContent>
-          </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={toggleFullscreen}
+                  className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-all"
+                >
+                  {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Fullscreen (F)</TooltipContent>
+            </Tooltip>
+          </div>
 
           {/* View Original Button for PII documents */}
           {documentId && piiRegions && piiRegions.length > 0 && onToggleOriginal && (
@@ -481,13 +497,15 @@ export const InteractiveDocumentViewer = ({
             />
           )}
 
-          <div className="ml-auto flex gap-2">
+          {/* Mode selector group */}
+          <div className="ml-auto flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-lg border p-1 shadow-sm">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   size="sm"
-                  variant={clickMode === 'highlight' ? 'default' : 'outline'}
+                  variant={clickMode === 'highlight' ? 'default' : 'ghost'}
                   onClick={() => setClickMode('highlight')}
+                  className="h-8 w-8 p-0 transition-all"
                 >
                   <Highlighter className="h-4 w-4" />
                 </Button>
@@ -499,8 +517,9 @@ export const InteractiveDocumentViewer = ({
               <TooltipTrigger asChild>
                 <Button
                   size="sm"
-                  variant={clickMode === 'extract' ? 'default' : 'outline'}
+                  variant={clickMode === 'extract' ? 'default' : 'ghost'}
                   onClick={() => setClickMode('extract')}
+                  className="h-8 w-8 p-0 transition-all"
                 >
                   <MousePointer className="h-4 w-4" />
                 </Button>
@@ -508,21 +527,12 @@ export const InteractiveDocumentViewer = ({
               <TooltipContent>Click to extract text at position</TooltipContent>
             </Tooltip>
           </div>
-          
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={handleReset}
-            className="text-xs"
-          >
-            Reset (R)
-          </Button>
         </div>
 
         {/* Document with overlay */}
         <div 
           ref={containerRef}
-          className="flex-1 overflow-hidden bg-muted/30 rounded-lg p-4 relative"
+          className="flex-1 overflow-hidden bg-gradient-to-br from-muted/20 via-muted/10 to-background p-6 relative group"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -530,7 +540,7 @@ export const InteractiveDocumentViewer = ({
           style={{ cursor: isPanning ? 'grabbing' : (imageZoom > 1 ? 'grab' : 'default') }}
         >
           <div 
-            className="relative inline-block transition-transform"
+            className="relative inline-block transition-transform duration-200 ease-out"
             style={{
               transform: `translate(${panOffset.x}px, ${panOffset.y}px)`
             }}
@@ -539,7 +549,7 @@ export const InteractiveDocumentViewer = ({
               ref={imageRef}
               src={imageUrl}
               alt="Document"
-              className="w-full h-auto object-contain transition-transform select-none"
+              className="w-full h-auto object-contain transition-all duration-300 ease-out select-none shadow-2xl rounded-lg border border-border/50"
               style={{
                 transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
                 transformOrigin: 'center center'
@@ -560,7 +570,7 @@ export const InteractiveDocumentViewer = ({
             <canvas
               ref={canvasRef}
               onClick={handleCanvasClick}
-              className="absolute top-0 left-0 pointer-events-auto select-none"
+              className="absolute top-0 left-0 pointer-events-auto select-none rounded-lg"
               style={{
                 transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
                 transformOrigin: 'center center',
@@ -568,17 +578,19 @@ export const InteractiveDocumentViewer = ({
               }}
             />
           </div>
-        </div>
 
-        <div className="mt-3 text-xs text-muted-foreground space-y-1">
-          {clickMode === 'highlight' ? (
-            <p>💡 Click on highlighted regions to focus on that field</p>
-          ) : (
-            <p>💡 Click anywhere on the document to extract text at that position</p>
-          )}
-          <p className="text-muted-foreground/70">
-            ⌨️ Shortcuts: +/- zoom | Shift+drag pan | R reset | F fullscreen | Shift+arrows rotate
-          </p>
+          {/* Info section - appears on hover */}
+          <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-1 text-xs bg-background/95 backdrop-blur-sm border rounded-lg px-4 py-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+            {clickMode === 'extract' && (
+              <p className="text-primary font-medium flex items-center gap-2">
+                <MousePointer className="h-3 w-3" />
+                Click anywhere on the document to extract text at that position
+              </p>
+            )}
+            <p className="text-muted-foreground font-mono text-[10px]">
+              ⌨️ +/- zoom · Shift+drag pan · R reset · F fullscreen · Shift+arrows rotate
+            </p>
+          </div>
         </div>
       </Card>
     </TooltipProvider>
