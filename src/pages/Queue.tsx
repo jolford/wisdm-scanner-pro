@@ -1674,11 +1674,11 @@ const [isExporting, setIsExporting] = useState(false);
                 </h1>
                 <p className="text-xs text-muted-foreground hidden sm:block">{t('nav.subtitle')}</p>
               </div>
-              <div className="hidden sm:flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
-                <span className="text-xs font-semibold text-primary">⚡ AI</span>
-              </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              <div className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-primary/10 rounded-full border border-primary/20">
+                <span className="text-xs font-semibold text-primary">⚡ AI</span>
+              </div>
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -1686,7 +1686,7 @@ const [isExporting, setIsExporting] = useState(false);
                   console.log('Help button clicked - navigating to /help');
                   navigate('/help');
                 }} 
-                className="h-8 w-8 p-0 sm:h-9 sm:w-auto sm:px-3"
+                className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3"
               >
                 <HelpCircle className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">{t('common.help')}</span>
@@ -1695,6 +1695,7 @@ const [isExporting, setIsExporting] = useState(false);
                 <Download className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">{t('common.install')}</span>
               </Button>
+              <div className="h-6 w-px bg-border hidden sm:block" />
               {isAdmin && (
                 <Button variant="outline" size="sm" onClick={() => navigate('/admin')} className="h-9 w-9 p-0 sm:h-9 sm:w-auto sm:px-3">
                   <Settings className="h-4 w-4 sm:mr-2" />
