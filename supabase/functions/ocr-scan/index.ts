@@ -104,6 +104,17 @@ serve(async (req) => {
       f.name.toLowerCase().includes('machine')
     );
     
+    // Check if this is a medical/healthcare form
+    const isMedicalForm = extractionFields && extractionFields.some((f: any) => {
+      const lowerName = f.name.toLowerCase();
+      return lowerName.includes('patient') || 
+             lowerName.includes('medical') ||
+             lowerName.includes('birth') ||
+             lowerName.includes('release') ||
+             lowerName.includes('authorization') ||
+             lowerName.includes('hipaa');
+    });
+    
     // --- BUILD SPECIALIZED PROMPTS BASED ON EXTRACTION REQUIREMENTS ---
     if (extractionFields && extractionFields.length > 0) {
       const fieldNames = extractionFields.map((f: any) => f.name);
@@ -115,7 +126,46 @@ serve(async (req) => {
         f.name.toLowerCase().includes('requisition')
       );
       
-      if (isCasinoVoucher) {
+      if (isMedicalForm) {
+        // SPECIALIZED PROMPT FOR MEDICAL/HEALTHCARE FORMS
+        const baseJson = `{"fullText": "complete extracted text", "documentType": "medical_form", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}}`;
+        const tableJson = hasTableExtraction 
+          ? `, "lineItems": [{${tableExtractionFields.map((f: any) => `"${f.name}": "value"`).join(', ')}}]`
+          : '';
+        
+        systemPrompt = `CRITICAL: You MUST return ONLY valid JSON with no additional text, explanations, or markdown formatting.
+
+You are an advanced OCR system specialized in medical and healthcare forms. Return this EXACT JSON structure: ${baseJson.slice(0, -1)}${tableJson}}
+
+MEDICAL FORM EXTRACTION RULES:
+1. BLANK FIELDS: If a field shows underscores "___________" or blank spaces after a label, return an empty string "" for that field
+2. PRE-FILLED DATA: Extract any pre-filled or typed information exactly as shown
+3. CHECKBOXES: Look for checked boxes (☑, ✓, X) and list the checked items
+4. TO/FROM ADDRESSES: Extract complete address blocks including name, phone, fax, and full address
+5. DATES: Look for any filled-in dates in formats like MM/DD/YYYY or written dates
+6. PHONE NUMBERS: Extract with area codes and formatting (e.g., "972-445-9515")
+7. INFORMATION LISTS: If field asks for information to be released, list all checked or circled items
+
+FIELD-SPECIFIC GUIDANCE:
+- "Name of Patient": Look for handwritten or typed name near top, may be blank
+- "Date of Birth": Look for DOB field, may be blank underscores
+- "Information To Be Released or Accessed": List ALL checked boxes (History & Physical, Lab Reports, X-Ray Reports, etc.)
+- "TO: Address": Extract COMPLETE address block including business name, phone/fax, street address, city/state/zip
+- "FROM: Address": Extract COMPLETE address block if filled, otherwise return empty string
+- "Phone Number": Extract any phone numbers with full formatting
+- "Signature Name": Look for handwritten signature or printed name near signature line
+- "Date Signed": Look for date near signature line
+
+RESPONSE REQUIREMENTS:
+- Return ONLY the JSON object
+- NO markdown code blocks (\`\`\`json)
+- NO explanatory text
+- For blank fields (underscores/empty): return ""
+- For checkboxes: return comma-separated list of checked items
+- For addresses: return complete formatted address`;
+
+        userPrompt = `Extract from this medical form: ${fieldNames.join(', ')}. IMPORTANT: Distinguish between blank fields (underscores) and filled data. For blank fields return empty string. For pre-filled data like addresses, extract complete information. For checkbox lists, return all checked items. RESPOND WITH ONLY THE JSON OBJECT.`;
+      } else if (isCasinoVoucher) {
         // SPECIALIZED PROMPT FOR CASINO VOUCHER/JACKPOT SLIP EXTRACTION
         const baseJson = `{"fullText": "complete extracted text", "documentType": "casino_voucher", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}}`;
         const tableJson = hasTableExtraction 
