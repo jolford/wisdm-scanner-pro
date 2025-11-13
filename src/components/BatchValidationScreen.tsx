@@ -97,6 +97,7 @@ interface BatchValidationScreenProps {
   batchName?: string;
   onSwitchToExport?: () => void;
   enableSignatureVerification?: boolean;
+  detectPii?: boolean; // Whether PII detection is enabled for this project
 }
 
 /**
@@ -113,6 +114,7 @@ export const BatchValidationScreen = ({
   batchName,
   onSwitchToExport,
   enableSignatureVerification = false,
+  detectPii = false,
 }: BatchValidationScreenProps) => {
   // Check if this is an AB1466 batch
   const isAB1466Batch = batchName?.includes('AB1466');
@@ -149,6 +151,12 @@ export const BatchValidationScreen = ({
   // Track which documents are showing unredacted originals (default redacted for PII docs)
   const [showingOriginal, setShowingOriginal] = useState<Set<string>>(new Set());
   useEffect(() => {
+    // Only run client-side PII detection if project has PII detection enabled
+    if (!detectPii) {
+      setComputedPiiCounts({});
+      return;
+    }
+    
     const counts: Record<string, number> = {};
     for (const doc of documents) {
       const hasDbFlag = (doc as any).pii_detected;
@@ -167,7 +175,7 @@ export const BatchValidationScreen = ({
       }
     }
     setComputedPiiCounts(counts);
-  }, [documents]);
+  }, [documents, detectPii]);
   
   // Track calculation variance for each document
   const [calculationVariance, setCalculationVariance] = useState<Record<string, {
