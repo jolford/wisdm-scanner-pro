@@ -173,7 +173,7 @@ export const InteractiveDocumentViewer = ({
         const bbox = region.bbox;
         // Convert to pixels (bbox may be percentage or absolute)
         const x = bbox.x > 100 ? bbox.x : (bbox.x / 100) * canvas.width;
-        const y = bbox.y > 100 ? bbox.y : (bbox.y / 100) * canvas.width;
+        const y = bbox.y > 100 ? bbox.y : (bbox.y / 100) * canvas.height;
         const width = bbox.width > 100 ? bbox.width : (bbox.width / 100) * canvas.width;
         const height = bbox.height > 100 ? bbox.height : (bbox.height / 100) * canvas.height;
 

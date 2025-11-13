@@ -1463,7 +1463,7 @@ const { toast } = useToast();
                                     true
                                   ) as any[];
                                   boxes = detected
-                                    .map((d: any) => (d.matches?.[0]?.bbox || (d as any).bbox))
+                                    .flatMap((d: any) => (d.matches?.map((m: any) => m.boundingBox).filter(Boolean)) || [])
                                     .filter(Boolean);
                                 } catch {
                                   // ignore client detection errors
