@@ -795,8 +795,28 @@ const [isExporting, setIsExporting] = useState(false);
                 ? selectedProject?.metadata?.table_extraction_config?.fields || []
                 : [];
               
+              // Also render first page image so OCR can read handwritten/typed values
+              let payloadImageData: string | undefined;
+              try {
+                const page = await pdfDoc.getPage(boundary.startPage);
+                let viewport = page.getViewport({ scale: 1.5 });
+                const maxDim = 2000;
+                const scale = Math.min(1.5, maxDim / Math.max(viewport.width, viewport.height));
+                viewport = page.getViewport({ scale });
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                canvas.width = Math.ceil(viewport.width);
+                canvas.height = Math.ceil(viewport.height);
+                if (ctx) {
+                  await page.render({ canvasContext: ctx as any, viewport }).promise;
+                  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                  payloadImageData = await downscaleDataUrl(dataUrl, 1600, 0.85);
+                }
+              } catch {}
+              
               const data = await invokeOcr({ 
                 textData: extractedPdfText,
+                imageData: payloadImageData,
                 isPdf: true,
                 extractionFields,
                 tableExtractionFields: tableFields,
