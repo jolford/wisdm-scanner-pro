@@ -186,31 +186,34 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
     if (!fabricCanvas) return;
     setIsDrawing(true);
     
+    // Disable selection mode to allow drawing
+    fabricCanvas.selection = false;
+    fabricCanvas.defaultCursor = 'crosshair';
+    
     let isDown = false;
     let rect: Rect | null = null;
     let startX = 0;
     let startY = 0;
 
     const mouseDown = (o: any) => {
-      if (!isDown) {
-        isDown = true;
-        const pointer = fabricCanvas.getPointer(o.e);
-        startX = pointer.x;
-        startY = pointer.y;
-        
-        rect = new Rect({
-          left: startX,
-          top: startY,
-          width: 0,
-          height: 0,
-          fill: 'rgba(59, 130, 246, 0.2)',
-          stroke: 'rgb(59, 130, 246)',
-          strokeWidth: 2,
-          selectable: false,
-        });
-        
-        fabricCanvas.add(rect);
-      }
+      isDown = true;
+      const pointer = fabricCanvas.getPointer(o.e);
+      startX = pointer.x;
+      startY = pointer.y;
+      
+      rect = new Rect({
+        left: startX,
+        top: startY,
+        width: 0,
+        height: 0,
+        fill: 'rgba(59, 130, 246, 0.2)',
+        stroke: 'rgb(59, 130, 246)',
+        strokeWidth: 2,
+        selectable: false,
+        evented: false,
+      });
+      
+      fabricCanvas.add(rect);
     };
 
     const mouseMove = (o: any) => {
@@ -239,12 +242,15 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
       if (rect.width! < 20 || rect.height! < 20) {
         fabricCanvas.remove(rect);
         toast.error('Zone too small. Draw a larger area.');
+        // Reset cursor and allow drawing again
+        fabricCanvas.defaultCursor = 'crosshair';
         return;
       }
       
       setPendingZone(rect);
       setShowNameDialog(true);
       setIsDrawing(false);
+      fabricCanvas.defaultCursor = 'default';
       
       fabricCanvas.off('mouse:down', mouseDown);
       fabricCanvas.off('mouse:move', mouseMove);
