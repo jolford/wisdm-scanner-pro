@@ -1809,6 +1809,44 @@ export type Database = {
           },
         ]
       }
+      redaction_audit_log: {
+        Row: {
+          document_id: string
+          id: string
+          ip_address: string | null
+          reason: string | null
+          user_agent: string | null
+          user_id: string
+          viewed_at: string
+        }
+        Insert: {
+          document_id: string
+          id?: string
+          ip_address?: string | null
+          reason?: string | null
+          user_agent?: string | null
+          user_id: string
+          viewed_at?: string
+        }
+        Update: {
+          document_id?: string
+          id?: string
+          ip_address?: string | null
+          reason?: string | null
+          user_agent?: string | null
+          user_id?: string
+          viewed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "redaction_audit_log_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       release_notes: {
         Row: {
           created_at: string

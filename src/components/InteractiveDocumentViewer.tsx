@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { ZoomIn, ZoomOut, RotateCw, MousePointer, Highlighter, Maximize2, Minimize2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
+import { ViewOriginalButton } from './ViewOriginalButton';
 
 interface BoundingBox {
   x: number;
@@ -16,6 +17,7 @@ interface BoundingBox {
 interface InteractiveDocumentViewerProps {
   imageUrl: string;
   fileName: string;
+  documentId?: string;
   boundingBoxes?: Record<string, BoundingBox>;
   onFieldClick?: (fieldName: string) => void;
   onRegionClick?: (x: number, y: number) => void;
@@ -27,16 +29,23 @@ interface InteractiveDocumentViewerProps {
     reason: string;
     boundingBox: { x: number; y: number; width: number; height: number } | null;
   }>;
+  piiRegions?: Array<{ type: string; category: string; text: string; bbox?: any }>;
+  showingOriginal?: boolean;
+  onToggleOriginal?: () => void;
 }
 
 export const InteractiveDocumentViewer = ({
   imageUrl,
   fileName,
+  documentId,
   boundingBoxes = {},
   onFieldClick,
   onRegionClick,
   highlightedField,
-  offensiveHighlights = []
+  offensiveHighlights = [],
+  piiRegions = [],
+  showingOriginal = false,
+  onToggleOriginal
 }: InteractiveDocumentViewerProps) => {
   const { toast } = useToast();
   const [imageZoom, setImageZoom] = useState(1);
@@ -155,7 +164,28 @@ export const InteractiveDocumentViewer = ({
       ctx.font = 'bold 11px sans-serif';
       ctx.fillText('⚠️ ' + highlight.category, x, y - 5);
     });
-  }, [boundingBoxes, highlightedField, imageZoom, offensiveHighlights, canvasSize]);
+
+    // Draw PII redaction boxes (only if not showing original)
+    if (!showingOriginal && piiRegions && piiRegions.length > 0) {
+      piiRegions.forEach((region) => {
+        if (!region.bbox) return;
+        
+        const bbox = region.bbox;
+        // Convert to pixels (bbox may be percentage or absolute)
+        const x = bbox.x > 100 ? bbox.x : (bbox.x / 100) * canvas.width;
+        const y = bbox.y > 100 ? bbox.y : (bbox.y / 100) * canvas.width;
+        const width = bbox.width > 100 ? bbox.width : (bbox.width / 100) * canvas.width;
+        const height = bbox.height > 100 ? bbox.height : (bbox.height / 100) * canvas.height;
+
+        // Draw black redaction box
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.90)';
+        ctx.fillRect(x, y, width, height);
+        ctx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, width, height);
+      });
+    }
+  }, [boundingBoxes, highlightedField, imageZoom, offensiveHighlights, canvasSize, piiRegions, showingOriginal]);
 
   // Pan handling
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -427,6 +457,15 @@ export const InteractiveDocumentViewer = ({
             </TooltipTrigger>
             <TooltipContent>Fullscreen (F)</TooltipContent>
           </Tooltip>
+
+          {/* View Original Button for PII documents */}
+          {documentId && piiRegions && piiRegions.length > 0 && onToggleOriginal && (
+            <ViewOriginalButton
+              documentId={documentId}
+              showingOriginal={showingOriginal}
+              onToggle={onToggleOriginal}
+            />
+          )}
 
           <div className="ml-auto flex gap-2">
             <Tooltip>

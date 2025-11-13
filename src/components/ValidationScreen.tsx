@@ -19,6 +19,8 @@ import { LineItemValidation } from './LineItemValidation';
 import { PetitionValidationWarnings } from './PetitionValidationWarnings';
 import { useAuth } from '@/hooks/use-auth';
 import { useSignedUrl } from '@/hooks/use-signed-url';
+import { ViewOriginalButton } from './ViewOriginalButton';
+import { detectKeywords } from '@/lib/keyword-redaction';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
 
@@ -108,6 +110,9 @@ export const ValidationScreen = ({
   const { signedUrl: displayUrl } = useSignedUrl(currentImageUrl);
   const isPdf = fileName?.toLowerCase().endsWith('.pdf');
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showingOriginal, setShowingOriginal] = useState(false);
+  const [piiDetected, setPiiDetected] = useState(false);
+  const [detectedPiiRegions, setDetectedPiiRegions] = useState<any[]>([]);
 
   // Resolve signature verification from prop or backend (project settings)
   const [sigEnabled, setSigEnabled] = useState<boolean>(enableSignatureVerification);
@@ -175,6 +180,27 @@ export const ValidationScreen = ({
   // Resolved OCR geometry for redaction (props or lazy-fetched)
   const [resolvedBoundingBoxes, setResolvedBoundingBoxes] = useState(boundingBoxes);
   const [resolvedWordBoxes, setResolvedWordBoxes] = useState<Array<{ text: string; bbox: any }>>(wordBoundingBoxes || []);
+
+  // Load PII detection data from database on mount
+  useEffect(() => {
+    if (!documentId) return;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from('documents')
+          .select('pii_detected, detected_pii_regions')
+          .eq('id', documentId)
+          .single();
+        if (data) {
+          setPiiDetected(data.pii_detected || false);
+          const regions = data.detected_pii_regions;
+          setDetectedPiiRegions(Array.isArray(regions) ? regions : []);
+        }
+      } catch (error) {
+        console.error('Failed to load PII data:', error);
+      }
+    })();
+  }, [documentId]);
 
   // Helper to normalize any metadata value to a displayable string
   const toFieldString = (v: any): string => {
@@ -909,11 +935,15 @@ useEffect(() => {
           <InteractiveDocumentViewer
             imageUrl={previewUrl || displayUrl || currentImageUrl}
             fileName={fileName}
+            documentId={documentId}
             boundingBoxes={boundingBoxes}
             onFieldClick={handleFieldFocus}
             onRegionClick={handleRegionClick}
             highlightedField={focusedField}
             offensiveHighlights={offensiveHighlights}
+            piiRegions={detectedPiiRegions}
+            showingOriginal={showingOriginal}
+            onToggleOriginal={() => setShowingOriginal(!showingOriginal)}
           />
         ) : (
           <Card className="p-6 flex flex-col" key="traditional-viewer">
@@ -994,6 +1024,15 @@ useEffect(() => {
               </Tooltip>
             )}
             
+            {/* View Original Button (for PII documents) */}
+            {documentId && piiDetected && (
+              <ViewOriginalButton
+                documentId={documentId}
+                showingOriginal={showingOriginal}
+                onToggle={() => setShowingOriginal(!showingOriginal)}
+              />
+            )}
+            
             <Button
               size="sm"
               variant="ghost"
@@ -1012,15 +1051,70 @@ useEffect(() => {
             className="flex-1 overflow-auto bg-muted/30 rounded-lg p-4"
           >
             {currentImageUrl ? (
-              <img
-                src={previewUrl || displayUrl || currentImageUrl}
-                alt="Scanned document"
-                className="w-full h-auto object-contain transition-transform cursor-move"
-                style={{
-                  transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
-                  transformOrigin: 'center center'
-                }}
-              />
+              <div className="relative inline-block w-full">
+                <img
+                  src={previewUrl || displayUrl || currentImageUrl}
+                  alt="Scanned document"
+                  className="w-full h-auto object-contain transition-transform cursor-move"
+                  style={{
+                    transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
+                    transformOrigin: 'center center'
+                  }}
+                />
+                {/* Auto PII redaction overlay - only show if NOT viewing original */}
+                {!showingOriginal && piiDetected && (() => {
+                  let boxes = (Array.isArray(detectedPiiRegions) ? detectedPiiRegions.map((r: any) => r?.bbox).filter(Boolean) : []) as Array<{ x: number; y: number; width: number; height: number }>;
+
+                  // Fallback to client-side detection if no boxes
+                  if (boxes.length === 0 && extractedText) {
+                    try {
+                      const detected = detectKeywords(
+                        extractedText,
+                        { wordBoundingBoxes: resolvedWordBoxes },
+                        [],
+                        true
+                      ) as any[];
+                      boxes = detected
+                        .map((d: any) => (d.matches?.[0]?.bbox || (d as any).bbox))
+                        .filter(Boolean);
+                    } catch {
+                      // ignore
+                    }
+                  }
+
+                  if (boxes.length > 0) {
+                    const viewW = Math.max(1000, ...boxes.map((b: any) => (b.x + b.width)));
+                    const viewH = Math.max(1000, ...boxes.map((b: any) => (b.y + b.height)));
+                    return (
+                      <svg
+                        className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                        preserveAspectRatio="none"
+                        viewBox={`0 0 ${viewW} ${viewH}`}
+                      >
+                        {boxes.map((b: any, idx: number) => (
+                          <rect
+                            key={idx}
+                            x={b.x}
+                            y={b.y}
+                            width={b.width}
+                            height={b.height}
+                            fill="rgba(0,0,0,0.85)"
+                            stroke="rgba(0,0,0,0.9)"
+                            strokeWidth="2"
+                          />
+                        ))}
+                      </svg>
+                    );
+                  }
+
+                  // Fallback: if PII detected but no boxes, show generic overlay
+                  return (
+                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
+                      <span className="text-xs text-white/90 bg-black/60 px-3 py-1.5 rounded">PII auto‑redacted</span>
+                    </div>
+                  );
+                })()}
+              </div>
             ) : (
               <div className="h-full flex items-center justify-center text-muted-foreground">
                 <FileText className="h-12 w-12" />

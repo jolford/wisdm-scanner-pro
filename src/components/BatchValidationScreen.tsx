@@ -23,6 +23,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ImageRegionSelector } from './ImageRegionSelector';
 import { useSignedUrl, getSignedUrl } from '@/hooks/use-signed-url';
 import { detectKeywords } from '@/lib/keyword-redaction';
+import { ViewOriginalButton } from './ViewOriginalButton';
 // Enhanced feature components
 import { BulkActionsToolbar } from './BulkActionsToolbar';
 import { SearchFilterBar, DocumentFilters } from './SearchFilterBar';
@@ -144,6 +145,9 @@ export const BatchValidationScreen = ({
   
   // Fallback PII detection counts computed client-side when DB flag not present
   const [computedPiiCounts, setComputedPiiCounts] = useState<Record<string, number>>({});
+  
+  // Track which documents are showing unredacted originals (default redacted for PII docs)
+  const [showingOriginal, setShowingOriginal] = useState<Set<string>>(new Set());
   useEffect(() => {
     const counts: Record<string, number> = {};
     for (const doc of documents) {
@@ -1444,8 +1448,8 @@ const { toast } = useToast();
                               zoom={documentZoom[doc.id] || 1}
                               rotation={documentRotation[doc.id] || 0}
                             />
-                            {/* Auto PII redaction overlay */}
-                            {(() => {
+                            {/* Auto PII redaction overlay - only show if NOT viewing original */}
+                            {!showingOriginal.has(doc.id) && (() => {
                               // Prefer server-detected regions; fallback to client detection if available
                               const pii = (doc as any).detected_pii_regions || [];
                               let boxes = (Array.isArray(pii) ? pii.map((r: any) => r?.bbox).filter(Boolean) : []) as Array<{ x: number; y: number; width: number; height: number }>;
@@ -1503,6 +1507,25 @@ const { toast } = useToast();
                             })()}
                           </div>
                         </div>
+
+                        {/* View Original Toggle (for PII documents) */}
+                        {((doc as any).pii_detected || computedPiiCounts[doc.id] > 0) && (
+                          <ViewOriginalButton
+                            documentId={doc.id}
+                            showingOriginal={showingOriginal.has(doc.id)}
+                            onToggle={() => {
+                              setShowingOriginal(prev => {
+                                const newSet = new Set(prev);
+                                if (newSet.has(doc.id)) {
+                                  newSet.delete(doc.id);
+                                } else {
+                                  newSet.add(doc.id);
+                                }
+                                return newSet;
+                              });
+                            }}
+                          />
+                        )}
 
                         {/* Toggle Region Selector Button */}
                         <Button
