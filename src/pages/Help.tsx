@@ -368,6 +368,39 @@ const Help = () => {
         'Check that you have appropriate role-based permissions',
       ]
     },
+    {
+      issue: 'Admin pages not loading or 404 errors',
+      icon: AlertCircle,
+      solutions: [
+        'System Viability page is now at /admin/system-viability (route updated in v2.4.1)',
+        'Clear browser cache if old routes are still cached',
+        'Check sidebar navigation for correct links to admin pages',
+        'Ensure you have admin permissions to access these pages',
+        'Refresh the page if navigation appears broken',
+      ]
+    },
+    {
+      issue: 'Labels displaying incorrectly or showing translation keys',
+      icon: FileText,
+      solutions: [
+        'Translation files were repaired in v2.4.1 - refresh your browser',
+        'Clear browser cache to load updated translation files',
+        'Hard refresh (Ctrl+Shift+R or Cmd+Shift+R) if labels still show incorrectly',
+        'Check language selector is set to your preferred language',
+        'Report persistent label issues to support',
+      ]
+    },
+    {
+      issue: 'White-label preview not showing changes',
+      icon: Eye,
+      solutions: [
+        'Preview functionality enhanced in v2.4.1 - enable preview mode first',
+        'White-label changes now show in real-time within the configuration page',
+        'Preview displays: logo, colors, support contacts, custom domain, footer text',
+        'Save configuration after making changes to persist them',
+        'Refresh page if preview doesn\'t update after enabling preview mode',
+      ]
+    },
   ];
 
   // Filter content based on search
