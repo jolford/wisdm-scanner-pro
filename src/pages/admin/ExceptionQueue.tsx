@@ -331,10 +331,9 @@ const ExceptionQueue = () => {
             <DialogDescription>
               {t('exceptions.dialog.description')}
             </DialogDescription>
-            </DialogDescription>
           </DialogHeader>
           <Textarea
-            placeholder="Describe the resolution..."
+            placeholder={t('exceptions.dialog.placeholder')}
             value={resolutionNotes}
             onChange={(e) => setResolutionNotes(e.target.value)}
             rows={4}
