@@ -1280,21 +1280,22 @@ Review the image and provide corrected text with any OCR errors fixed.`;
     // --- PII DETECTION ---
     // Scan for personally identifiable information in the extracted text
     const piiPatterns = [
-      { pattern: /\b\d{3}-\d{2}-\d{4}\b/g, type: 'ssn', category: 'Social Security Number' },
-      { pattern: /\b\d{9}\b/g, type: 'ssn', category: 'Social Security Number (9 digits)' },
+      { pattern: /\b\d{3}[\s-]?\d{2}[\s-]?\d{4}\b/g, type: 'ssn', category: 'Social Security Number' },
+      { pattern: /\b\d{9}\b/g, type: 'ssn_no_format', category: 'Social Security Number (9 digits)' },
       { pattern: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g, type: 'credit_card', category: 'Credit Card' },
       { pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, type: 'email', category: 'Email Address' },
       { pattern: /\b\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/g, type: 'phone', category: 'Phone Number' },
-      { pattern: /\b[A-Z]{1,2}\d{6,8}\b/g, type: 'drivers_license', category: "Driver's License" },
-      { pattern: /\b[A-Z]{1,2}\d{6,9}\b/g, type: 'passport', category: 'Passport Number' },
-      { pattern: /\b(0?[1-9]|1[0-2])\/(0?[1-9]|[12][0-9]|3[01])\/(19|20)\d{2}\b/g, type: 'dob', category: 'Date of Birth' },
+      { pattern: /\b[A-Z]{1,2}[\s-]?\d{6,8}\b/g, type: 'drivers_license', category: "Driver's License" },
+      { pattern: /\b[A-Z]{1,2}[\s-]?\d{6,9}\b/g, type: 'passport', category: 'Passport Number' },
+      { pattern: /\b(0?[1-9]|1[0-2])[\s/.-](0?[1-9]|[12][0-9]|3[01])[\s/.-](19|20)?\d{2}\b/g, type: 'dob', category: 'Date of Birth' },
+      { pattern: /\bpassport no\.?[\s:]*[A-Z0-9\s-]{6,}/gi, type: 'passport_label', category: 'Passport Number (labeled)' },
     ];
     
     const detectedPiiRegions: Array<{ type: string; category: string; text: string; bbox?: any }> = [];
     let piiDetected = false;
     
     for (const piiPattern of piiPatterns) {
-      let match;
+      let match: RegExpExecArray | null;
       piiPattern.pattern.lastIndex = 0; // Reset regex
       
       while ((match = piiPattern.pattern.exec(extractedText)) !== null) {
@@ -1304,7 +1305,7 @@ Review the image and provide corrected text with any OCR errors fixed.`;
           category: piiPattern.category,
           text: match[0],
           // Try to find bbox from word bounding boxes if available
-          bbox: wordBoundingBoxes.find((w: any) => w.text?.includes(match[0]))?.bbox || null
+          bbox: match ? wordBoundingBoxes.find((w: any) => w.text?.includes(match![0]))?.bbox || null : null
         });
       }
     }

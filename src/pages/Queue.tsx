@@ -770,7 +770,16 @@ const [isExporting, setIsExporting] = useState(false);
                     throw new Error('OCR service returned no data');
                   }
 
-                  await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || [], data.confidence || 0);
+                  await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || [], data.confidence || 0, data.piiDetected || false, data.detectedPiiRegions || []);
+                  
+                  // Show PII warning if detected
+                  if (data.piiDetected) {
+                    toast({
+                      title: 'PII Detected',
+                      description: `Found ${data.detectedPiiRegions?.length || 0} potentially sensitive items in ${docName}. Use redaction tool to protect sensitive data.`,
+                      variant: 'default',
+                    });
+                  }
                   return;
                 } catch (fallbackErr: any) {
                   console.error('PDF OCR fallback failed:', fallbackErr);
@@ -795,7 +804,16 @@ const [isExporting, setIsExporting] = useState(false);
                 throw new Error('OCR service returned no data');
               }
               
-              await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || [], data.confidence || 0);
+              await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || [], data.confidence || 0, data.piiDetected || false, data.detectedPiiRegions || []);
+              
+              // Show PII warning if detected
+              if (data.piiDetected) {
+                toast({
+                  title: 'PII Detected',
+                  description: `Found ${data.detectedPiiRegions?.length || 0} potentially sensitive items in ${docName}. Use redaction tool to protect sensitive data.`,
+                  variant: 'default',
+                });
+              }
             } catch (err: any) {
               console.error(`Failed to process document ${docName}:`, err);
               processingErrors.push(`${docName}: ${err.message}`);
