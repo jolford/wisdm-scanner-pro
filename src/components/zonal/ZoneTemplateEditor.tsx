@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import { Trash2, Edit2, Save, X } from 'lucide-react';
 import { REGEX_PATTERNS, type PatternName } from '@/lib/regex-patterns';
+import * as pdfjsLib from 'pdfjs-dist';
 
 interface Zone {
   id: string;
@@ -47,6 +48,51 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
   const [tempAnchorText, setTempAnchorText] = useState('');
   const [pendingZone, setPendingZone] = useState<Rect | null>(null);
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
+  const [isLoadingImage, setIsLoadingImage] = useState(true);
+
+  // Convert PDF to image if needed
+  const loadImageFromUrl = async (url: string): Promise<string> => {
+    // Check if it's a PDF
+    if (url.toLowerCase().includes('.pdf')) {
+      try {
+        // Configure PDF.js worker
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+
+        // Load the PDF
+        const loadingTask = pdfjsLib.getDocument(url);
+        const pdf = await loadingTask.promise;
+        
+        // Get first page
+        const page = await pdf.getPage(1);
+        
+        // Set scale for good quality
+        const scale = 2.0;
+        const viewport = page.getViewport({ scale });
+        
+        // Create canvas to render PDF
+        const pdfCanvas = document.createElement('canvas');
+        const context = pdfCanvas.getContext('2d')!;
+        pdfCanvas.width = viewport.width;
+        pdfCanvas.height = viewport.height;
+        
+        // Render PDF page to canvas
+        await page.render({
+          canvasContext: context,
+          viewport: viewport
+        } as any).promise;
+        
+        // Convert canvas to data URL
+        return pdfCanvas.toDataURL('image/png');
+      } catch (error) {
+        console.error('Error converting PDF to image:', error);
+        toast.error('Failed to load PDF. Please try uploading an image instead.');
+        throw error;
+      }
+    }
+    
+    // Return URL as-is if it's already an image
+    return url;
+  };
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -60,28 +106,40 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
 
     setFabricCanvas(canvas);
 
-    // Load background image
-    FabricImage.fromURL(imageUrl).then((img) => {
-      const canvasWidth = 1000;
-      const canvasHeight = 700;
-      
-      const scale = Math.min(
-        canvasWidth / img.width!,
-        canvasHeight / img.height!
-      );
-      
-      img.scale(scale);
-      img.set({
-        selectable: false,
-        evented: false,
-        left: (canvasWidth - img.width! * scale) / 2,
-        top: (canvasHeight - img.height! * scale) / 2,
-      });
-      
-      canvas.backgroundImage = img;
-      setImageSize({ width: img.width! * scale, height: img.height! * scale });
-      canvas.renderAll();
-    });
+    // Load background image (convert PDF if needed)
+    const loadImage = async () => {
+      try {
+        setIsLoadingImage(true);
+        const processedImageUrl = await loadImageFromUrl(imageUrl);
+        
+        const img = await FabricImage.fromURL(processedImageUrl);
+        const canvasWidth = 1000;
+        const canvasHeight = 700;
+        
+        const scale = Math.min(
+          canvasWidth / img.width!,
+          canvasHeight / img.height!
+        );
+        
+        img.scale(scale);
+        img.set({
+          selectable: false,
+          evented: false,
+          left: (canvasWidth - img.width! * scale) / 2,
+          top: (canvasHeight - img.height! * scale) / 2,
+        });
+        
+        canvas.backgroundImage = img;
+        setImageSize({ width: img.width! * scale, height: img.height! * scale });
+        canvas.renderAll();
+      } catch (error) {
+        console.error('Error loading image:', error);
+      } finally {
+        setIsLoadingImage(false);
+      }
+    };
+
+    loadImage();
 
     return () => {
       canvas.dispose();
@@ -267,8 +325,16 @@ export function ZoneTemplateEditor({ imageUrl, onSave, onCancel, initialZones = 
 
   return (
     <div className="space-y-4">
+      {isLoadingImage && (
+        <div className="absolute inset-0 bg-background/80 flex items-center justify-center z-50 rounded-lg">
+          <div className="text-center space-y-2">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
+            <p className="text-sm text-muted-foreground">Loading document...</p>
+          </div>
+        </div>
+      )}
       <div className="flex gap-2">
-        <Button onClick={startDrawing} disabled={isDrawing}>
+        <Button onClick={startDrawing} disabled={isDrawing || isLoadingImage}>
           {isDrawing ? 'Drawing...' : 'Draw New Zone'}
         </Button>
         <Button onClick={handleSave} variant="default" disabled={zones.length === 0}>
