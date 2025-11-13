@@ -1083,8 +1083,9 @@ useEffect(() => {
                   }
 
                   if (boxes.length > 0) {
-                    const viewW = Math.max(1000, ...boxes.map((b: any) => (b.x + b.width)));
-                    const viewH = Math.max(1000, ...boxes.map((b: any) => (b.y + b.height)));
+                    const isPercent = boxes.every((b: any) => b.x <= 100 && b.y <= 100 && b.width <= 100 && b.height <= 100);
+                    const viewW = isPercent ? 100 : Math.max(1000, ...boxes.map((b: any) => (b.x + b.width)));
+                    const viewH = isPercent ? 100 : Math.max(1000, ...boxes.map((b: any) => (b.y + b.height)));
                     return (
                       <svg
                         className="absolute top-0 left-0 w-full h-full pointer-events-none"

@@ -155,10 +155,41 @@ export const detectKeywords = (
       if (wordTokens.length > 0) {
         try {
           const tokenRegex = new RegExp(searchTerm, keyword.caseSensitive ? 'g' : 'gi');
+
+          // 1) Single-token matches
           for (const wt of wordTokens) {
             if (!wt?.raw) continue;
             if (tokenRegex.test(String(wt.raw)) && wt.bbox) {
               matches.push({ text: String(wt.raw), boundingBox: wt.bbox });
+            }
+          }
+
+          // 2) Multi-token sliding window (covers patterns split across tokens e.g. SSN "123-45-6789")
+          const maxWindow = 6; // reasonable cap for performance
+          for (let i = 0; i < wordTokens.length; i++) {
+            let concatText = '';
+            const rects: Array<{ x: number; y: number; width: number; height: number } | null> = [];
+
+            for (let w = 0; w < maxWindow && i + w < wordTokens.length; w++) {
+              const t = wordTokens[i + w];
+              if (!t) break;
+              // Preserve spacing to allow regex with optional whitespace separators
+              concatText = concatText ? concatText + ' ' + (t.raw ?? '') : String(t.raw ?? '');
+              rects.push(t.bbox ?? null);
+
+              if (tokenRegex.test(concatText)) {
+                const valid = rects.filter(Boolean) as Array<{ x: number; y: number; width: number; height: number }>;
+                if (valid.length) {
+                  const x1 = Math.min(...valid.map(r => r.x));
+                  const y1 = Math.min(...valid.map(r => r.y));
+                  const x2 = Math.max(...valid.map(r => r.x + r.width));
+                  const y2 = Math.max(...valid.map(r => r.y + r.height));
+                  matches.push({
+                    text: concatText,
+                    boundingBox: { x: x1, y: y1, width: x2 - x1, height: y2 - y1 }
+                  });
+                }
+              }
             }
           }
         } catch (e) {
