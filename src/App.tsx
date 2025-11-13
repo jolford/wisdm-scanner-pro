@@ -207,7 +207,7 @@ const App = () => {
             <Route path="/admin/cost-tracking" element={<CostTracking />} />
             <Route path="/admin/analytics" element={<Analytics />} />
             <Route path="/admin/barcode-test" element={<BarcodeTest />} />
-            <Route path="/admin/viability" element={<SystemViability />} />
+            <Route path="/admin/system-viability" element={<SystemViability />} />
             <Route path="/admin/advanced-reports" element={<AdvancedReports />} />
             <Route path="/admin/error-logs" element={<ErrorLogs />} />
             <Route path="/admin/reprocess" element={<DocumentReprocessing />} />
