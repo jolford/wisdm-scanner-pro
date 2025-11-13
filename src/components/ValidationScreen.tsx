@@ -385,7 +385,7 @@ export const ValidationScreen = ({
 
 // Lazy-fetch word-level boxes when opening Redaction Tool (for previously saved docs)
 useEffect(() => {
-  const shouldFetch = showRedactionTool && (!resolvedWordBoxes || resolvedWordBoxes.length === 0);
+  const shouldFetch = (showRedactionTool || piiDetected) && (!resolvedWordBoxes || resolvedWordBoxes.length === 0);
   if (!shouldFetch) return;
   const imgSrc = previewUrl || displayUrl || currentImageUrl;
   if (!imgSrc) return;
@@ -412,7 +412,7 @@ useEffect(() => {
     }
   })();
 // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [showRedactionTool, previewUrl, displayUrl, currentImageUrl]);
+}, [showRedactionTool, piiDetected, previewUrl, displayUrl, currentImageUrl]);
 
 // Auto-detect offensive language for AB 1466 projects
 useEffect(() => {
