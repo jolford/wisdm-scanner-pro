@@ -140,5 +140,57 @@
     "french": "French",
     "german": "German",
     "selectLanguage": "Select Language"
+  },
+  "exceptions": {
+    "title": "Exception Queue",
+    "description": "Review and resolve documents that failed validation or require attention",
+    "stats": {
+      "pending": "Pending",
+      "pendingCaption": "Awaiting review",
+      "inReview": "In Review",
+      "inReviewCaption": "Being processed",
+      "resolved": "Resolved",
+      "resolvedCaption": "Successfully handled",
+      "critical": "Critical",
+      "criticalCaption": "Requires immediate action"
+    },
+    "listTitle": "Exceptions",
+    "listDescription": "Filter and manage document exceptions",
+    "filterByStatus": "Filter by status",
+    "status": {
+      "all": "All Statuses",
+      "pending": "Pending",
+      "in_review": "In Review",
+      "resolved": "Resolved",
+      "ignored": "Ignored"
+    },
+    "severity": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "type": "Type",
+    "resolutionNotes": "Resolution Notes",
+    "actions": {
+      "viewDocument": "View Document",
+      "startReview": "Start Review",
+      "resolve": "Resolve",
+      "ignore": "Ignore"
+    },
+    "empty": "No exceptions found",
+    "dialog": {
+      "title": "Resolve Exception",
+      "description": "Add notes about how this exception was resolved",
+      "placeholder": "Describe the resolution...",
+      "resolving": "Resolving...",
+      "submit": "Resolve Exception"
+    },
+    "toast": {
+      "resolveSuccess": "Exception resolved successfully",
+      "resolveError": "Failed to resolve exception",
+      "statusSuccess": "Status updated successfully",
+      "statusError": "Failed to update status"
+    }
   }
 }

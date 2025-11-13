@@ -28,17 +28,18 @@ interface LanguageSelectorProps {
 
 export function LanguageSelector({ variant = 'dropdown' }: LanguageSelectorProps) {
   const { i18n, t } = useTranslation();
+  const normalizedLang = i18n.language?.split('-')[0] || i18n.language;
 
   const handleLanguageChange = (languageCode: string) => {
     i18n.changeLanguage(languageCode);
     // i18next automatically persists to localStorage with key 'i18nextLng'
   };
 
-  const currentLanguage = languages.find((lang) => lang.code === i18n.language) || languages[0];
+  const currentLanguage = languages.find((lang) => lang.code === normalizedLang) || languages[0];
 
   if (variant === 'select') {
     return (
-      <Select value={i18n.language} onValueChange={handleLanguageChange}>
+      <Select value={normalizedLang} onValueChange={handleLanguageChange}>
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder={t('language.selectLanguage')} />
         </SelectTrigger>
@@ -65,7 +66,7 @@ export function LanguageSelector({ variant = 'dropdown' }: LanguageSelectorProps
           <DropdownMenuItem
             key={lang.code}
             onClick={() => handleLanguageChange(lang.code)}
-            className={i18n.language === lang.code ? 'bg-accent' : ''}
+            className={normalizedLang === lang.code ? 'bg-accent' : ''}
           >
             {lang.nativeName}
           </DropdownMenuItem>

@@ -25,9 +25,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { useTranslation } from 'react-i18next';
 
 const ExceptionQueue = () => {
   const { loading } = useRequireAuth(true);
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedStatus, setSelectedStatus] = useState<string>('pending');
   const [resolveDialog, setResolveDialog] = useState<{ open: boolean; exceptionId?: string }>({ open: false });
@@ -77,15 +79,15 @@ const ExceptionQueue = () => {
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['document-exceptions'] });
-      toast.success('Exception resolved successfully');
-      setResolveDialog({ open: false });
-      setResolutionNotes('');
-    },
-    onError: (error) => {
-      toast.error('Failed to resolve exception: ' + error.message);
-    },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['document-exceptions'] });
+    toast.success(t('exceptions.toast.resolveSuccess'));
+    setResolveDialog({ open: false });
+    setResolutionNotes('');
+  },
+  onError: (error) => {
+    toast.error(t('exceptions.toast.resolveError') + ': ' + (error as any).message);
+  },
   });
 
   const updateStatusMutation = useMutation({
@@ -97,13 +99,13 @@ const ExceptionQueue = () => {
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['document-exceptions'] });
-      toast.success('Status updated successfully');
-    },
-    onError: (error) => {
-      toast.error('Failed to update status: ' + error.message);
-    },
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ['document-exceptions'] });
+    toast.success(t('exceptions.toast.statusSuccess'));
+  },
+  onError: (error) => {
+    toast.error(t('exceptions.toast.statusError') + ': ' + (error as any).message);
+  },
   });
 
   if (loading) {
@@ -124,19 +126,19 @@ const ExceptionQueue = () => {
 
   const getSeverityBadge = (severity: string) => {
     switch (severity) {
-      case 'critical': return <Badge variant="destructive">Critical</Badge>;
-      case 'high': return <Badge variant="destructive" className="bg-warning">High</Badge>;
-      case 'medium': return <Badge variant="secondary">Medium</Badge>;
-      default: return <Badge variant="outline">Low</Badge>;
+      case 'critical': return <Badge variant="destructive">{t('exceptions.severity.critical')}</Badge>;
+      case 'high': return <Badge variant="destructive" className="bg-warning">{t('exceptions.severity.high')}</Badge>;
+      case 'medium': return <Badge variant="secondary">{t('exceptions.severity.medium')}</Badge>;
+      default: return <Badge variant="outline">{t('exceptions.severity.low')}</Badge>;
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending': return <Badge variant="secondary">Pending</Badge>;
-      case 'in_review': return <Badge variant="default">In Review</Badge>;
-      case 'resolved': return <Badge variant="default" className="bg-success">Resolved</Badge>;
-      case 'ignored': return <Badge variant="outline">Ignored</Badge>;
+      case 'pending': return <Badge variant="secondary">{t('exceptions.status.pending')}</Badge>;
+      case 'in_review': return <Badge variant="default">{t('exceptions.status.in_review')}</Badge>;
+      case 'resolved': return <Badge variant="default" className="bg-success">{t('exceptions.status.resolved')}</Badge>;
+      case 'ignored': return <Badge variant="outline">{t('exceptions.status.ignored')}</Badge>;
       default: return <Badge>{status}</Badge>;
     }
   };
@@ -150,39 +152,39 @@ const ExceptionQueue = () => {
 
   return (
     <AdminLayout 
-      title="Exception Queue" 
-      description="Review and resolve documents that failed validation or require attention"
+      title={t('exceptions.title')} 
+      description={t('exceptions.description')}
     >
       <div className="space-y-6">
         {/* Summary Stats */}
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Pending</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('exceptions.stats.pending')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.pending}</div>
-              <p className="text-xs text-muted-foreground">Awaiting review</p>
+              <p className="text-xs text-muted-foreground">{t('exceptions.stats.pendingCaption')}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">In Review</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('exceptions.stats.inReview')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.in_review}</div>
-              <p className="text-xs text-muted-foreground">Being processed</p>
+              <p className="text-xs text-muted-foreground">{t('exceptions.stats.inReviewCaption')}</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Resolved</CardTitle>
+              <CardTitle className="text-sm font-medium">{t('exceptions.stats.resolved')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-success">{stats.resolved}</div>
-              <p className="text-xs text-muted-foreground">Successfully handled</p>
+              <p className="text-xs text-muted-foreground">{t('exceptions.stats.resolvedCaption')}</p>
             </CardContent>
           </Card>
 
@@ -190,12 +192,12 @@ const ExceptionQueue = () => {
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" />
-                Critical
+                {t('exceptions.stats.critical')}
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-destructive">{stats.critical}</div>
-              <p className="text-xs text-muted-foreground">Requires immediate action</p>
+              <p className="text-xs text-muted-foreground">{t('exceptions.stats.criticalCaption')}</p>
             </CardContent>
           </Card>
         </div>
@@ -205,19 +207,19 @@ const ExceptionQueue = () => {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Exceptions</CardTitle>
-                <CardDescription>Filter and manage document exceptions</CardDescription>
+                <CardTitle>{t('exceptions.listTitle')}</CardTitle>
+                <CardDescription>{t('exceptions.listDescription')}</CardDescription>
               </div>
               <Select value={selectedStatus} onValueChange={setSelectedStatus}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Filter by status" />
+                  <SelectValue placeholder={t('exceptions.filterByStatus')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in_review">In Review</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                  <SelectItem value="ignored">Ignored</SelectItem>
+                  <SelectItem value="all">{t('exceptions.status.all')}</SelectItem>
+                  <SelectItem value="pending">{t('exceptions.status.pending')}</SelectItem>
+                  <SelectItem value="in_review">{t('exceptions.status.in_review')}</SelectItem>
+                  <SelectItem value="resolved">{t('exceptions.status.resolved')}</SelectItem>
+                  <SelectItem value="ignored">{t('exceptions.status.ignored')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -249,20 +251,20 @@ const ExceptionQueue = () => {
                     <div className="bg-muted/50 p-3 rounded">
                       <p className="text-sm font-medium mb-1">{exception.description}</p>
                       <p className="text-xs text-muted-foreground">
-                        Type: {exception.exception_type.replace(/_/g, ' ')}
+                        {t('exceptions.type')}: {exception.exception_type.replace(/_/g, ' ')}
                       </p>
                     </div>
 
                     {exception.resolution_notes && (
                       <div className="bg-success/10 p-3 rounded border border-success/20">
-                        <p className="text-xs text-success font-medium mb-1">Resolution Notes:</p>
+                        <p className="text-xs text-success font-medium mb-1">{t('exceptions.resolutionNotes')}:</p>
                         <p className="text-sm">{exception.resolution_notes}</p>
                       </div>
                     )}
 
                     <div className="flex items-center gap-2">
                       <Link to={`/batches/${exception.batch_id}`}>
-                        <Button size="sm" variant="outline">View Document</Button>
+                        <Button size="sm" variant="outline">{t('exceptions.actions.viewDocument')}</Button>
                       </Link>
                       
                       {exception.status === 'pending' && (
@@ -272,7 +274,7 @@ const ExceptionQueue = () => {
                             variant="outline"
                             onClick={() => updateStatusMutation.mutate({ id: exception.id, status: 'in_review' })}
                           >
-                            Start Review
+                            {t('exceptions.actions.startReview')}
                           </Button>
                           <Button
                             size="sm"
@@ -280,7 +282,7 @@ const ExceptionQueue = () => {
                             onClick={() => setResolveDialog({ open: true, exceptionId: exception.id })}
                           >
                             <CheckCircle2 className="h-4 w-4 mr-1" />
-                            Resolve
+                            {t('exceptions.actions.resolve')}
                           </Button>
                         </>
                       )}
@@ -293,7 +295,7 @@ const ExceptionQueue = () => {
                             onClick={() => setResolveDialog({ open: true, exceptionId: exception.id })}
                           >
                             <CheckCircle2 className="h-4 w-4 mr-1" />
-                            Resolve
+                            {t('exceptions.actions.resolve')}
                           </Button>
                           <Button
                             size="sm"
@@ -301,7 +303,7 @@ const ExceptionQueue = () => {
                             onClick={() => updateStatusMutation.mutate({ id: exception.id, status: 'ignored' })}
                           >
                             <XCircle className="h-4 w-4 mr-1" />
-                            Ignore
+                            {t('exceptions.actions.ignore')}
                           </Button>
                         </>
                       )}
@@ -313,7 +315,7 @@ const ExceptionQueue = () => {
               {exceptions?.length === 0 && (
                 <div className="text-center py-12 text-muted-foreground">
                   <CheckCircle2 className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No exceptions found</p>
+                  <p>{t('exceptions.empty')}</p>
                 </div>
               )}
             </div>
@@ -325,9 +327,10 @@ const ExceptionQueue = () => {
       <Dialog open={resolveDialog.open} onOpenChange={(open) => setResolveDialog({ open })}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Resolve Exception</DialogTitle>
+            <DialogTitle>{t('exceptions.dialog.title')}</DialogTitle>
             <DialogDescription>
-              Add notes about how this exception was resolved
+              {t('exceptions.dialog.description')}
+            </DialogDescription>
             </DialogDescription>
           </DialogHeader>
           <Textarea
@@ -338,7 +341,7 @@ const ExceptionQueue = () => {
           />
           <DialogFooter>
             <Button variant="outline" onClick={() => setResolveDialog({ open: false })}>
-              Cancel
+              {t('common.cancel')}
             </Button>
             <Button
               onClick={() => {
@@ -351,7 +354,7 @@ const ExceptionQueue = () => {
               }}
               disabled={!resolutionNotes.trim() || resolveMutation.isPending}
             >
-              {resolveMutation.isPending ? 'Resolving...' : 'Resolve Exception'}
+              {resolveMutation.isPending ? t('exceptions.dialog.resolving') : t('exceptions.dialog.submit')}
             </Button>
           </DialogFooter>
         </DialogContent>

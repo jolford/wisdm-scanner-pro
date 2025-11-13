@@ -140,5 +140,57 @@
     "french": "Französisch",
     "german": "Deutsch",
     "selectLanguage": "Sprache Auswählen"
+  },
+  "exceptions": {
+    "title": "Ausnahme-Warteschlange",
+    "description": "Überprüfen und beheben Sie Dokumente, die die Validierung nicht bestanden haben oder Aufmerksamkeit erfordern",
+    "stats": {
+      "pending": "Ausstehend",
+      "pendingCaption": "Wartet auf Prüfung",
+      "inReview": "In Prüfung",
+      "inReviewCaption": "Wird bearbeitet",
+      "resolved": "Gelöst",
+      "resolvedCaption": "Erfolgreich bearbeitet",
+      "critical": "Kritisch",
+      "criticalCaption": "Erfordert sofortige Maßnahmen"
+    },
+    "listTitle": "Ausnahmen",
+    "listDescription": "Dokumentausnahmen filtern und verwalten",
+    "filterByStatus": "Nach Status filtern",
+    "status": {
+      "all": "Alle Status",
+      "pending": "Ausstehend",
+      "in_review": "In Prüfung",
+      "resolved": "Gelöst",
+      "ignored": "Ignoriert"
+    },
+    "severity": {
+      "critical": "Kritisch",
+      "high": "Hoch",
+      "medium": "Mittel",
+      "low": "Niedrig"
+    },
+    "type": "Typ",
+    "resolutionNotes": "Lösungsnotizen",
+    "actions": {
+      "viewDocument": "Dokument anzeigen",
+      "startReview": "Prüfung starten",
+      "resolve": "Beheben",
+      "ignore": "Ignorieren"
+    },
+    "empty": "Keine Ausnahmen gefunden",
+    "dialog": {
+      "title": "Ausnahme beheben",
+      "description": "Fügen Sie Notizen hinzu, wie diese Ausnahme behoben wurde",
+      "placeholder": "Beschreiben Sie die Lösung...",
+      "resolving": "Wird behoben...",
+      "submit": "Ausnahme beheben"
+    },
+    "toast": {
+      "resolveSuccess": "Ausnahme erfolgreich behoben",
+      "resolveError": "Ausnahme konnte nicht behoben werden",
+      "statusSuccess": "Status erfolgreich aktualisiert",
+      "statusError": "Status konnte nicht aktualisiert werden"
+    }
   }
 }

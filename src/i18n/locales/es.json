@@ -140,5 +140,57 @@
     "french": "Francés",
     "german": "Alemán",
     "selectLanguage": "Seleccionar Idioma"
+  },
+  "exceptions": {
+    "title": "Cola de Excepciones",
+    "description": "Revise y resuelva documentos que fallaron la validación o requieren atención",
+    "stats": {
+      "pending": "Pendiente",
+      "pendingCaption": "En espera de revisión",
+      "inReview": "En Revisión",
+      "inReviewCaption": "En proceso",
+      "resolved": "Resuelto",
+      "resolvedCaption": "Gestionado con éxito",
+      "critical": "Crítico",
+      "criticalCaption": "Requiere acción inmediata"
+    },
+    "listTitle": "Excepciones",
+    "listDescription": "Filtre y gestione excepciones de documentos",
+    "filterByStatus": "Filtrar por estado",
+    "status": {
+      "all": "Todos los estados",
+      "pending": "Pendiente",
+      "in_review": "En Revisión",
+      "resolved": "Resuelto",
+      "ignored": "Ignorado"
+    },
+    "severity": {
+      "critical": "Crítico",
+      "high": "Alto",
+      "medium": "Medio",
+      "low": "Bajo"
+    },
+    "type": "Tipo",
+    "resolutionNotes": "Notas de Resolución",
+    "actions": {
+      "viewDocument": "Ver Documento",
+      "startReview": "Iniciar Revisión",
+      "resolve": "Resolver",
+      "ignore": "Ignorar"
+    },
+    "empty": "No se encontraron excepciones",
+    "dialog": {
+      "title": "Resolver Excepción",
+      "description": "Agregue notas sobre cómo se resolvió esta excepción",
+      "placeholder": "Describa la resolución...",
+      "resolving": "Resolviendo...",
+      "submit": "Resolver Excepción"
+    },
+    "toast": {
+      "resolveSuccess": "Excepción resuelta con éxito",
+      "resolveError": "No se pudo resolver la excepción",
+      "statusSuccess": "Estado actualizado con éxito",
+      "statusError": "No se pudo actualizar el estado"
+    }
   }
 }

@@ -140,5 +140,57 @@
     "french": "Français",
     "german": "Allemand",
     "selectLanguage": "Sélectionner la Langue"
+  },
+  "exceptions": {
+    "title": "File des Exceptions",
+    "description": "Examiner et résoudre les documents ayant échoué à la validation ou nécessitant une attention",
+    "stats": {
+      "pending": "En Attente",
+      "pendingCaption": "En attente d'examen",
+      "inReview": "En Cours d'Examen",
+      "inReviewCaption": "En traitement",
+      "resolved": "Résolu",
+      "resolvedCaption": "Traité avec succès",
+      "critical": "Critique",
+      "criticalCaption": "Nécessite une action immédiate"
+    },
+    "listTitle": "Exceptions",
+    "listDescription": "Filtrer et gérer les exceptions de documents",
+    "filterByStatus": "Filtrer par statut",
+    "status": {
+      "all": "Tous les statuts",
+      "pending": "En Attente",
+      "in_review": "En Cours d'Examen",
+      "resolved": "Résolu",
+      "ignored": "Ignoré"
+    },
+    "severity": {
+      "critical": "Critique",
+      "high": "Élevé",
+      "medium": "Moyen",
+      "low": "Faible"
+    },
+    "type": "Type",
+    "resolutionNotes": "Notes de Résolution",
+    "actions": {
+      "viewDocument": "Voir le Document",
+      "startReview": "Commencer l'Examen",
+      "resolve": "Résoudre",
+      "ignore": "Ignorer"
+    },
+    "empty": "Aucune exception trouvée",
+    "dialog": {
+      "title": "Résoudre l'Exception",
+      "description": "Ajoutez des notes sur la façon dont cette exception a été résolue",
+      "placeholder": "Décrivez la résolution...",
+      "resolving": "Résolution...",
+      "submit": "Résoudre l'Exception"
+    },
+    "toast": {
+      "resolveSuccess": "Exception résolue avec succès",
+      "resolveError": "Échec de la résolution de l'exception",
+      "statusSuccess": "Statut mis à jour avec succès",
+      "statusError": "Échec de la mise à jour du statut"
+    }
   }
 }
