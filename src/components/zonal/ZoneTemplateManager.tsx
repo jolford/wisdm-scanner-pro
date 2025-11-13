@@ -40,6 +40,7 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
   const [templateDescription, setTemplateDescription] = useState('');
   const [editingTemplateId, setEditingTemplateId] = useState<string | null>(null);
   const [initialZones, setInitialZones] = useState<any[]>([]);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -84,6 +85,7 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
     }
 
     setSelectedFile(file);
+    setUploading(true);
     
     // Upload to storage
     try {
@@ -104,9 +106,15 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
 
       setUploadedImageUrl(signed.signedUrl);
       setSampleImagePath(data!.path);
-      toast.success('Sample document uploaded');
+      toast.success('Sample document uploaded successfully');
     } catch (error: any) {
+      console.error('Upload error:', error);
       toast.error('Upload failed: ' + error.message);
+      setSelectedFile(null);
+      setUploadedImageUrl('');
+      setSampleImagePath('');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -391,16 +399,43 @@ export function ZoneTemplateManager({ projectId, open, onClose }: ZoneTemplateMa
                 type="file"
                 accept="image/*,application/pdf"
                 onChange={handleFileSelect}
+                disabled={uploading}
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Upload a sample document to define extraction zones
+                {uploading ? (
+                  <span className="text-primary">Uploading document...</span>
+                ) : selectedFile ? (
+                  <span className="text-green-600">✓ {selectedFile.name} uploaded successfully</span>
+                ) : (
+                  'Upload a sample document to define extraction zones'
+                )}
               </p>
             </div>
+            {!templateName && (
+              <p className="text-sm text-amber-600">
+                ⚠ Please enter a template name to continue
+              </p>
+            )}
+            {!uploadedImageUrl && !uploading && selectedFile && (
+              <p className="text-sm text-red-600">
+                ⚠ Upload failed. Please try selecting the file again.
+              </p>
+            )}
             <div className="flex gap-2">
-              <Button onClick={proceedToEditor} disabled={!uploadedImageUrl || !templateName}>
-                Next: Define Zones
+              <Button 
+                onClick={proceedToEditor} 
+                disabled={!uploadedImageUrl || !templateName || uploading}
+              >
+                {uploading ? 'Uploading...' : 'Next: Define Zones'}
               </Button>
-              <Button variant="outline" onClick={() => setShowUpload(false)}>
+              <Button variant="outline" onClick={() => {
+                setShowUpload(false);
+                setSelectedFile(null);
+                setUploadedImageUrl('');
+                setSampleImagePath('');
+                setTemplateName('');
+                setTemplateDescription('');
+              }}>
                 Cancel
               </Button>
             </div>
