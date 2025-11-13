@@ -137,34 +137,46 @@ serve(async (req) => {
 
 You are an advanced OCR system specialized in medical and healthcare forms. Return this EXACT JSON structure: ${baseJson.slice(0, -1)}${tableJson}}
 
-MEDICAL FORM EXTRACTION RULES:
-1. BLANK FIELDS: If a field shows underscores "___________" or blank spaces after a label, return an empty string "" for that field
-2. PRE-FILLED DATA: Extract any pre-filled or typed information exactly as shown
-3. CHECKBOXES: Look for checked boxes (☑, ✓, X) and list the checked items
-4. TO/FROM ADDRESSES: Extract complete address blocks including name, phone, fax, and full address
-5. DATES: Look for any filled-in dates in formats like MM/DD/YYYY or written dates
-6. PHONE NUMBERS: Extract with area codes and formatting (e.g., "972-445-9515")
-7. INFORMATION LISTS: If field asks for information to be released, list all checked or circled items
+CRITICAL EXTRACTION INSTRUCTIONS:
+This is a FORM with field labels AND potentially filled-in values. You must carefully examine each field area to find ANY handwritten or typed text.
+
+FORM FIELD EXTRACTION RULES:
+1. LOOK CAREFULLY: Field labels like "Name of Patient _______" may have handwritten or typed text WRITTEN ON OR NEAR the underscores. This text IS the field value.
+2. EXAMINE THOROUGHLY: Check the area immediately after each field label - if there's ANY text (handwritten, typed, printed), that's the value.
+3. BLANK vs FILLED: Only return "" if the field truly has NO text written in it. If you see ANY text near the field label, extract it.
+4. HANDWRITING: Pay special attention to handwritten text which may be cursive or print. Examples: "Jim Hughes", "John Doe", dates like "10/02/1940"
+5. CHECKBOXES: Look for ☑, ✓, X, or filled boxes next to items. List ALL checked items separated by commas.
+6. TYPED DATA: Some fields may have typed/printed pre-filled data. Extract this exactly as shown.
+
+FIELD EXTRACTION EXAMPLES:
+- If you see "Name of Patient Jim Hughes" → value is "Jim Hughes"
+- If you see "Date of Birth 10/02/1940" → value is "10/02/1940"  
+- If you see "Name of Patient _______" with no text → value is ""
+- If you see checked boxes: ☑ History & Physical ☑ Lab Reports → value is "History & Physical, Lab Reports"
 
 FIELD-SPECIFIC GUIDANCE:
-- "Name of Patient": Look for handwritten or typed name near top, may be blank
-- "Date of Birth": Look for DOB field, may be blank underscores
-- "Information To Be Released or Accessed": List ALL checked boxes (History & Physical, Lab Reports, X-Ray Reports, etc.)
-- "TO: Address": Extract COMPLETE address block including business name, phone/fax, street address, city/state/zip
-- "FROM: Address": Extract COMPLETE address block if filled, otherwise return empty string
-- "Phone Number": Extract any phone numbers with full formatting
+- "Name of Patient": Look RIGHT AFTER this label for handwritten/typed name (may be on underscores)
+- "Date of Birth": Look for date in MM/DD/YYYY format near this label
+- "Information To Be Released or Accessed": List ALL items with checked boxes (☑, ✓, X)
+- "TO: Address": Extract the COMPLETE address block including business name, phone/fax numbers, street, city, state, zip
+- "FROM: Address": Extract COMPLETE address if filled, otherwise ""
+- "Phone Number": Extract with full formatting including area code
 - "Signature Name": Look for handwritten signature or printed name near signature line
-- "Date Signed": Look for date near signature line
+- "Date Signed": Look for date near signature area
 
 RESPONSE REQUIREMENTS:
 - Return ONLY the JSON object
 - NO markdown code blocks (\`\`\`json)
 - NO explanatory text
-- For blank fields (underscores/empty): return ""
-- For checkboxes: return comma-separated list of checked items
-- For addresses: return complete formatted address`;
+- Extract ACTUAL VALUES from form fields, not just labels
+- For truly blank fields: return ""
+- For checkboxes: return comma-separated list of ALL checked items`;
 
-        userPrompt = `Extract from this medical form: ${fieldNames.join(', ')}. IMPORTANT: Distinguish between blank fields (underscores) and filled data. For blank fields return empty string. For pre-filled data like addresses, extract complete information. For checkbox lists, return all checked items. RESPOND WITH ONLY THE JSON OBJECT.`;
+        userPrompt = `This is a medical form with FILLED-IN DATA. Extract these fields: ${fieldNames.join(', ')}. 
+
+CRITICAL: Look carefully at each field label and extract ANY handwritten or typed text you see in or near that field. If "Name of Patient" has "Jim Hughes" written on it, extract "Jim Hughes". If checkboxes are marked, list all checked items. DO NOT just return the field labels - extract the ACTUAL VALUES written in the form.
+
+RESPOND WITH ONLY THE JSON OBJECT containing the extracted values.`;
       } else if (isCasinoVoucher) {
         // SPECIALIZED PROMPT FOR CASINO VOUCHER/JACKPOT SLIP EXTRACTION
         const baseJson = `{"fullText": "complete extracted text", "documentType": "casino_voucher", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}}`;
