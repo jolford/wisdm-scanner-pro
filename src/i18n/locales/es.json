@@ -191,6 +191,7 @@
       "resolveError": "No se pudo resolver la excepción",
       "statusSuccess": "Estado actualizado con éxito",
       "statusError": "No se pudo actualizar el estado"
+  }
   },
   "batchesAdmin": {
     "back": "Atrás",
@@ -208,6 +209,5 @@
     "errors": "Errores",
     "emptyTitle": "No hay lotes aún",
     "emptyDescription": "Cree su primer lote para comenzar a procesar documentos"
-  }
 }
 }

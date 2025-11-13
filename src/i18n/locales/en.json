@@ -191,6 +191,7 @@
       "resolveError": "Failed to resolve exception",
       "statusSuccess": "Status updated successfully",
       "statusError": "Failed to update status"
+  }
   },
   "batchesAdmin": {
     "back": "Back",
@@ -209,5 +210,4 @@
     "emptyTitle": "No Batches Yet",
     "emptyDescription": "Create your first batch to start processing documents"
   }
-}
 }

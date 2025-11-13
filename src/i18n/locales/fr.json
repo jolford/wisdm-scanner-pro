@@ -191,6 +191,7 @@
       "resolveError": "Échec de la résolution de l'exception",
       "statusSuccess": "Statut mis à jour avec succès",
       "statusError": "Échec de la mise à jour du statut"
+  }
   },
   "batchesAdmin": {
     "back": "Retour",
@@ -208,6 +209,5 @@
     "errors": "Erreurs",
     "emptyTitle": "Aucun Lot",
     "emptyDescription": "Créez votre premier lot pour commencer le traitement des documents"
-  }
 }
 }
