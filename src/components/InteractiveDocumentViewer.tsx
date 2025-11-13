@@ -29,9 +29,10 @@ interface InteractiveDocumentViewerProps {
     reason: string;
     boundingBox: { x: number; y: number; width: number; height: number } | null;
   }>;
-  piiRegions?: Array<{ type: string; category: string; text: string; bbox?: any }>;
+  piiRegions?: Array<{ type: string; category: string; text: string; bbox?: any }>; 
   showingOriginal?: boolean;
   onToggleOriginal?: () => void;
+  piiDebug?: boolean;
 }
 
 export const InteractiveDocumentViewer = ({
@@ -45,7 +46,8 @@ export const InteractiveDocumentViewer = ({
   offensiveHighlights = [],
   piiRegions = [],
   showingOriginal = false,
-  onToggleOriginal
+  onToggleOriginal,
+  piiDebug = false
 }: InteractiveDocumentViewerProps) => {
   const { toast } = useToast();
   const [imageZoom, setImageZoom] = useState(1);
@@ -169,13 +171,13 @@ export const InteractiveDocumentViewer = ({
     if (!showingOriginal && piiRegions && piiRegions.length > 0) {
       piiRegions.forEach((region) => {
         if (!region.bbox) return;
-        
         const bbox = region.bbox;
         // Convert to pixels (bbox may be percentage or absolute)
-        const x = bbox.x > 100 ? bbox.x : (bbox.x / 100) * canvas.width;
-        const y = bbox.y > 100 ? bbox.y : (bbox.y / 100) * canvas.height;
-        const width = bbox.width > 100 ? bbox.width : (bbox.width / 100) * canvas.width;
-        const height = bbox.height > 100 ? bbox.height : (bbox.height / 100) * canvas.height;
+        const isPercent = bbox.x <= 100 && bbox.y <= 100 && bbox.width <= 100 && bbox.height <= 100;
+        const x = isPercent ? (bbox.x / 100) * canvas.width : bbox.x;
+        const y = isPercent ? (bbox.y / 100) * canvas.height : bbox.y;
+        const width = isPercent ? (bbox.width / 100) * canvas.width : bbox.width;
+        const height = isPercent ? (bbox.height / 100) * canvas.height : bbox.height;
 
         // Draw black redaction box
         ctx.fillStyle = 'rgba(0, 0, 0, 0.90)';
@@ -183,9 +185,20 @@ export const InteractiveDocumentViewer = ({
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.95)';
         ctx.lineWidth = 2;
         ctx.strokeRect(x, y, width, height);
+
+        if (piiDebug) {
+          // Debug outline and label
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(x, y, width, height);
+          ctx.fillStyle = 'rgba(250, 204, 21, 0.85)';
+          ctx.font = 'bold 11px sans-serif';
+          const label = `${region.category || 'PII'} (${Math.round(isPercent ? bbox.x : (x / canvas.width) * 100)}%,${Math.round(isPercent ? bbox.y : (y / canvas.height) * 100)}%)`;
+          ctx.fillText(label, x, Math.max(10, y - 6));
+        }
       });
     }
-  }, [boundingBoxes, highlightedField, imageZoom, offensiveHighlights, canvasSize, piiRegions, showingOriginal]);
+  }, [boundingBoxes, highlightedField, imageZoom, offensiveHighlights, canvasSize, piiRegions, showingOriginal, piiDebug]);
 
   // Pan handling
   const handleMouseDown = (e: React.MouseEvent) => {

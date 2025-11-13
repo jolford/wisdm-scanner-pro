@@ -113,6 +113,7 @@ export const ValidationScreen = ({
   const [showingOriginal, setShowingOriginal] = useState(false);
   const [piiDetected, setPiiDetected] = useState(false);
   const [detectedPiiRegions, setDetectedPiiRegions] = useState<any[]>([]);
+  const [piiDebug, setPiiDebug] = useState(false);
 
   // Resolve signature verification from prop or backend (project settings)
   const [sigEnabled, setSigEnabled] = useState<boolean>(enableSignatureVerification);
@@ -334,6 +335,11 @@ export const ValidationScreen = ({
     if (projectId) {
       fetchReferenceSignatures();
     }
+    // Read debug flag from URL
+    try {
+      const params = new URLSearchParams(window.location.search);
+      setPiiDebug(params.has('piidebug'));
+    } catch {}
   }, [projectId]);
 
   const fetchReferenceSignatures = async () => {
@@ -413,6 +419,30 @@ useEffect(() => {
   })();
 // eslint-disable-next-line react-hooks/exhaustive-deps
 }, [showRedactionTool, piiDetected, previewUrl, displayUrl, currentImageUrl]);
+
+// Fallback: if PII detected but regions missing, derive from client-side regex + word boxes
+useEffect(() => {
+  if (!piiDetected) return;
+  if ((detectedPiiRegions || []).length > 0) return;
+  if (!extractedText) return;
+  const wb = resolvedWordBoxes || [];
+  if (wb.length === 0) return;
+  try {
+    const detected = detectKeywords(
+      extractedText,
+      { wordBoundingBoxes: wb },
+      [],
+      true
+    ) as any[];
+    const boxes = detected
+      .flatMap((d: any) => (d.matches?.map((m: any) => ({ type: 'pii', category: d.category, text: m.text, bbox: m.boundingBox })).filter((x: any) => x?.bbox)) || [])
+      .filter(Boolean);
+    console.debug('PII fallback boxes', { wordBoxes: wb.length, boxes: boxes.length });
+    if (boxes.length > 0) setDetectedPiiRegions(boxes);
+  } catch (e) {
+    console.error('PII fallback detection failed', e);
+  }
+}, [piiDetected, detectedPiiRegions, extractedText, resolvedWordBoxes]);
 
 // Auto-detect offensive language for AB 1466 projects
 useEffect(() => {
@@ -931,7 +961,7 @@ useEffect(() => {
     <TooltipProvider>
       <div className="grid grid-cols-[2fr_1fr_2fr] gap-6 min-h-[calc(100vh-12rem)] pb-40">
         {/* Left: Document Viewer */}
-        {useInteractiveViewer && Object.keys(boundingBoxes).length > 0 ? (
+        {useInteractiveViewer ? (
           <InteractiveDocumentViewer
             imageUrl={previewUrl || displayUrl || currentImageUrl}
             fileName={fileName}
@@ -944,6 +974,7 @@ useEffect(() => {
             piiRegions={detectedPiiRegions}
             showingOriginal={showingOriginal}
             onToggleOriginal={() => setShowingOriginal(!showingOriginal)}
+            piiDebug={piiDebug}
           />
         ) : (
           <Card className="p-6 flex flex-col" key="traditional-viewer">
