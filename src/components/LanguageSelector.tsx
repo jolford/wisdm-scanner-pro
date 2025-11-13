@@ -31,8 +31,7 @@ export function LanguageSelector({ variant = 'dropdown' }: LanguageSelectorProps
 
   const handleLanguageChange = (languageCode: string) => {
     i18n.changeLanguage(languageCode);
-    // Persist to user preferences if authenticated
-    localStorage.setItem('language', languageCode);
+    // i18next automatically persists to localStorage with key 'i18nextLng'
   };
 
   const currentLanguage = languages.find((lang) => lang.code === i18n.language) || languages[0];
