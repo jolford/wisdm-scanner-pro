@@ -150,6 +150,21 @@ export const detectKeywords = (
       } catch (e) {
         console.warn(`Invalid regex pattern: ${searchTerm}`, e);
       }
+
+      // Also try to locate geometry at token level for regex patterns
+      if (wordTokens.length > 0) {
+        try {
+          const tokenRegex = new RegExp(searchTerm, keyword.caseSensitive ? 'g' : 'gi');
+          for (const wt of wordTokens) {
+            if (!wt?.raw) continue;
+            if (tokenRegex.test(String(wt.raw)) && wt.bbox) {
+              matches.push({ text: String(wt.raw), boundingBox: wt.bbox });
+            }
+          }
+        } catch (e) {
+          // ignore token regex issues
+        }
+      }
     } else {
       // 1) Fast textual scan to count occurrences (for UX info)
       const regex = new RegExp(`\\b${escapeRegex(searchTerm)}\\b`, 'gi');
