@@ -22,7 +22,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { ImageRegionSelector } from './ImageRegionSelector';
 import { useSignedUrl, getSignedUrl } from '@/hooks/use-signed-url';
-
+import { detectKeywords } from '@/lib/keyword-redaction';
 // Enhanced feature components
 import { BulkActionsToolbar } from './BulkActionsToolbar';
 import { SearchFilterBar, DocumentFilters } from './SearchFilterBar';
@@ -141,6 +141,29 @@ export const BatchValidationScreen = ({
   // Track offensive language detection results for each document
   const [offensiveLanguageResults, setOffensiveLanguageResults] = useState<Record<string, { highlights: any[] }>>({});
   const [isScanning, setIsScanning] = useState(false);
+  
+  // Fallback PII detection counts computed client-side when DB flag not present
+  const [computedPiiCounts, setComputedPiiCounts] = useState<Record<string, number>>({});
+  useEffect(() => {
+    const counts: Record<string, number> = {};
+    for (const doc of documents) {
+      const hasDbFlag = (doc as any).pii_detected;
+      if (!hasDbFlag && doc.extracted_text) {
+        try {
+          const detected = detectKeywords(
+            doc.extracted_text,
+            { wordBoundingBoxes: (doc as any).word_bounding_boxes },
+            [],
+            true // include PII patterns
+          );
+          counts[doc.id] = detected.length;
+        } catch (_) {
+          // ignore
+        }
+      }
+    }
+    setComputedPiiCounts(counts);
+  }, [documents]);
   
   // Track calculation variance for each document
   const [calculationVariance, setCalculationVariance] = useState<Record<string, {
@@ -1233,11 +1256,11 @@ const { toast } = useToast();
                       )}
                       
                       {/* PII Detection Warning Badge */}
-                      {(doc as any).pii_detected && (
+                      {(((doc as any).pii_detected) || ((computedPiiCounts[doc.id] || 0) > 0)) && (
                         <div className="flex flex-wrap gap-2 mt-1 mb-1">
                           <Badge variant="destructive" className="text-xs">
                             <ShieldAlert className="h-3 w-3 mr-1" />
-                            PII Detected ({(doc as any).detected_pii_regions?.length || 0} items)
+                            PII Detected ({(doc as any).detected_pii_regions?.length || computedPiiCounts[doc.id] || 0} items)
                           </Badge>
                         </div>
                       )}
