@@ -171,13 +171,14 @@ export const InteractiveDocumentViewer = ({
     if (!showingOriginal && piiRegions && piiRegions.length > 0) {
       piiRegions.forEach((region) => {
         if (!region.bbox) return;
-        const bbox = region.bbox;
-        // Convert to pixels (bbox may be percentage or absolute)
-        const isPercent = bbox.x <= 100 && bbox.y <= 100 && bbox.width <= 100 && bbox.height <= 100;
-        const x = isPercent ? (bbox.x / 100) * canvas.width : bbox.x;
-        const y = isPercent ? (bbox.y / 100) * canvas.height : bbox.y;
-        const width = isPercent ? (bbox.width / 100) * canvas.width : bbox.width;
-        const height = isPercent ? (bbox.height / 100) * canvas.height : bbox.height;
+        const raw = region.bbox;
+        const bx = Number(raw.x); const by = Number(raw.y); const bw = Number(raw.width); const bh = Number(raw.height);
+        if (![bx,by,bw,bh].every((n) => isFinite(n))) return;
+        const isPercent = bx <= 100 && by <= 100 && bw <= 100 && bh <= 100;
+        const x = isPercent ? (bx / 100) * canvas.width : bx;
+        const y = isPercent ? (by / 100) * canvas.height : by;
+        const width = isPercent ? (bw / 100) * canvas.width : bw;
+        const height = isPercent ? (bh / 100) * canvas.height : bh;
 
         // Draw black redaction box
         ctx.fillStyle = 'rgba(0, 0, 0, 0.90)';
@@ -193,7 +194,7 @@ export const InteractiveDocumentViewer = ({
           ctx.strokeRect(x, y, width, height);
           ctx.fillStyle = 'rgba(250, 204, 21, 0.85)';
           ctx.font = 'bold 11px sans-serif';
-          const label = `${region.category || 'PII'} (${Math.round(isPercent ? bbox.x : (x / canvas.width) * 100)}%,${Math.round(isPercent ? bbox.y : (y / canvas.height) * 100)}%)`;
+          const label = `${region.category || 'PII'} (${Math.round((x / canvas.width) * 100)}%,${Math.round((y / canvas.height) * 100)}%)`;
           ctx.fillText(label, x, Math.max(10, y - 6));
         }
       });

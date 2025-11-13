@@ -423,7 +423,9 @@ useEffect(() => {
 // Fallback: if PII detected but regions missing, derive from client-side regex + word boxes
 useEffect(() => {
   if (!piiDetected) return;
-  if ((detectedPiiRegions || []).length > 0) return;
+  const existing = detectedPiiRegions || [];
+  const hasValid = existing.some((r: any) => r && r.bbox && isFinite(Number(r.bbox.x)) && isFinite(Number(r.bbox.y)) && isFinite(Number(r.bbox.width)) && isFinite(Number(r.bbox.height)));
+  if (hasValid) return;
   if (!extractedText) return;
   const wb = resolvedWordBoxes || [];
   if (wb.length === 0) return;
