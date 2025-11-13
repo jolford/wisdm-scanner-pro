@@ -191,6 +191,23 @@
       "resolveError": "Ausnahme konnte nicht behoben werden",
       "statusSuccess": "Status erfolgreich aktualisiert",
       "statusError": "Status konnte nicht aktualisiert werden"
-    }
+  },
+  "batchesAdmin": {
+    "back": "Zurück",
+    "title": "Stapelverwaltung",
+    "subtitle": "Verwalten Sie Dokumentenverarbeitungsstapel",
+    "create": "Stapel Erstellen",
+    "compact": "Kompaktansicht",
+    "expand": "Details Erweitern",
+    "openInQueue": "In Warteschlange öffnen",
+    "tabs": { "scan": "Scannen", "validation": "Validierung", "export": "Export" },
+    "delete": "Stapel löschen",
+    "totalDocs": "Gesamtdokumente",
+    "processed": "Verarbeitet",
+    "validated": "Validiert",
+    "errors": "Fehler",
+    "emptyTitle": "Keine Stapel",
+    "emptyDescription": "Erstellen Sie Ihren ersten Stapel, um mit der Dokumentenverarbeitung zu beginnen"
   }
+}
 }

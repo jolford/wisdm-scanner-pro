@@ -918,6 +918,7 @@ useEffect(() => {
                 payload: {
                   document_id: documentId,
                   document_name: fileName,
+                  batch_id: (updatedDoc as any).batch_id,
                   batch_name: updatedDoc.batch?.batch_name,
                   project_name: updatedDoc.project?.name,
                   validated_by: user?.id,

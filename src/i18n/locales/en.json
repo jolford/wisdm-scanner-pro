@@ -191,6 +191,23 @@
       "resolveError": "Failed to resolve exception",
       "statusSuccess": "Status updated successfully",
       "statusError": "Failed to update status"
-    }
+  },
+  "batchesAdmin": {
+    "back": "Back",
+    "title": "Batch Management",
+    "subtitle": "Manage document processing batches",
+    "create": "Create Batch",
+    "compact": "Compact View",
+    "expand": "Expand Details",
+    "openInQueue": "Open in Queue",
+    "tabs": { "scan": "Scan", "validation": "Validation", "export": "Export" },
+    "delete": "Delete batch",
+    "totalDocs": "Total Docs",
+    "processed": "Processed",
+    "validated": "Validated",
+    "errors": "Errors",
+    "emptyTitle": "No Batches Yet",
+    "emptyDescription": "Create your first batch to start processing documents"
   }
+}
 }

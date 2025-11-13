@@ -1075,6 +1075,7 @@ const { toast } = useToast();
               payload: {
                 document_id: doc.id,
                 document_name: doc.file_name,
+                batch_id: (updatedDoc as any).batch_id ?? batchId,
                 batch_name: (updatedDoc as any).batch?.batch_name,
                 project_name: (updatedDoc as any).project?.name,
                 validated_by: user?.id,

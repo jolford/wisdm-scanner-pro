@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
 import { safeInvokeEdgeFunction } from '@/lib/edge-function-helper';
+import { useTranslation } from 'react-i18next';
 
 const BatchesIndex = () => {
   const navigate = useNavigate();
@@ -17,6 +18,7 @@ const BatchesIndex = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [compact, setCompact] = useState(false);
+  const { t } = useTranslation();
 
   const { data: batches, isLoading } = useQuery({
     queryKey: ['batches'],
@@ -101,20 +103,20 @@ const BatchesIndex = () => {
           <div className="flex items-center gap-4">
             <Button variant="ghost" onClick={() => navigate('/admin')}>
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back
+              {t('batchesAdmin.back')}
             </Button>
             <div>
-              <h1 className="text-3xl font-bold">Batch Management</h1>
-              <p className="text-muted-foreground">Manage document processing batches</p>
+              <h1 className="text-3xl font-bold">{t('batchesAdmin.title')}</h1>
+              <p className="text-muted-foreground">{t('batchesAdmin.subtitle')}</p>
             </div>
           </div>
           <div className="flex gap-2">
             <Button onClick={() => navigate('/admin/batches/new')}>
               <Plus className="h-4 w-4 mr-2" />
-              Create Batch
+              {t('batchesAdmin.create')}
             </Button>
             <Button variant="outline" onClick={() => setCompact((v) => !v)} aria-pressed={compact}>
-              {compact ? 'Expand Details' : 'Compact View'}
+              {compact ? t('batchesAdmin.expand') : t('batchesAdmin.compact')}
             </Button>
           </div>
         </div>
@@ -140,39 +142,39 @@ const BatchesIndex = () => {
                 <p className="text-sm text-muted-foreground mb-4">
                   Project: {batch.projects?.name}
                 </p>
-                {!compact && (
-                  <div className="grid grid-cols-4 gap-4">
-                    <div className="bg-muted/50 rounded-lg p-3">
-                      <p className="text-xs text-muted-foreground mb-1">Total Docs</p>
-                      <p className="text-2xl font-bold">{batch.total_documents}</p>
+                  {!compact && (
+                    <div className="grid grid-cols-4 gap-4">
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">{t('batchesAdmin.totalDocs')}</p>
+                        <p className="text-2xl font-bold">{batch.total_documents}</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">{t('batchesAdmin.processed')}</p>
+                        <p className="text-2xl font-bold">{batch.processed_documents}</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">{t('batchesAdmin.validated')}</p>
+                        <p className="text-2xl font-bold">{batch.validated_documents}</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3">
+                        <p className="text-xs text-muted-foreground mb-1">{t('batchesAdmin.errors')}</p>
+                        <p className="text-2xl font-bold text-destructive">{batch.error_count}</p>
+                      </div>
                     </div>
-                    <div className="bg-muted/50 rounded-lg p-3">
-                      <p className="text-xs text-muted-foreground mb-1">Processed</p>
-                      <p className="text-2xl font-bold">{batch.processed_documents}</p>
-                    </div>
-                    <div className="bg-muted/50 rounded-lg p-3">
-                      <p className="text-xs text-muted-foreground mb-1">Validated</p>
-                      <p className="text-2xl font-bold">{batch.validated_documents}</p>
-                    </div>
-                    <div className="bg-muted/50 rounded-lg p-3">
-                      <p className="text-xs text-muted-foreground mb-1">Errors</p>
-                      <p className="text-2xl font-bold text-destructive">{batch.error_count}</p>
-                    </div>
-                  </div>
-                )}
+                  )}
               </div>
               <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button size="sm" variant="outline">Open in Queue</Button>
+                    <Button size="sm" variant="outline">{t('batchesAdmin.openInQueue')}</Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => openBatchInQueue(batch, 'scan')}>Scan</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => openBatchInQueue(batch, 'validation')}>Validation</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => openBatchInQueue(batch, 'export')}>Export</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => openBatchInQueue(batch, 'scan')}>{t('batchesAdmin.tabs.scan')}</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => openBatchInQueue(batch, 'validation')}>{t('batchesAdmin.tabs.validation')}</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => openBatchInQueue(batch, 'export')}>{t('batchesAdmin.tabs.export')}</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
-                <Button size="icon" variant="outline" onClick={(e) => handleDelete(e, batch.id)} title="Delete batch">
+                <Button size="icon" variant="outline" onClick={(e) => handleDelete(e, batch.id)} title={t('batchesAdmin.delete')!}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
@@ -181,16 +183,16 @@ const BatchesIndex = () => {
           ))}
         </div>
 
-        {!batches || batches.length === 0 && (
+        {(!batches || batches.length === 0) && (
           <Card className="p-12 text-center">
             <FolderOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-xl font-semibold mb-2">No Batches Yet</h3>
+            <h3 className="text-xl font-semibold mb-2">{t('batchesAdmin.emptyTitle')}</h3>
             <p className="text-muted-foreground mb-4">
-              Create your first batch to start processing documents
+              {t('batchesAdmin.emptyDescription')}
             </p>
             <Button onClick={() => navigate('/admin/batches/new')}>
               <Plus className="h-4 w-4 mr-2" />
-              Create Batch
+              {t('batchesAdmin.create')}
             </Button>
           </Card>
         )}

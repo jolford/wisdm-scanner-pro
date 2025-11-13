@@ -191,6 +191,23 @@
       "resolveError": "No se pudo resolver la excepción",
       "statusSuccess": "Estado actualizado con éxito",
       "statusError": "No se pudo actualizar el estado"
-    }
+  },
+  "batchesAdmin": {
+    "back": "Atrás",
+    "title": "Gestión de Lotes",
+    "subtitle": "Administre lotes de procesamiento de documentos",
+    "create": "Crear Lote",
+    "compact": "Vista Compacta",
+    "expand": "Expandir Detalles",
+    "openInQueue": "Abrir en Cola",
+    "tabs": { "scan": "Escanear", "validation": "Validación", "export": "Exportar" },
+    "delete": "Eliminar lote",
+    "totalDocs": "Documentos Totales",
+    "processed": "Procesados",
+    "validated": "Validados",
+    "errors": "Errores",
+    "emptyTitle": "No hay lotes aún",
+    "emptyDescription": "Cree su primer lote para comenzar a procesar documentos"
   }
+}
 }

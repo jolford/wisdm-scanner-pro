@@ -191,6 +191,23 @@
       "resolveError": "Échec de la résolution de l'exception",
       "statusSuccess": "Statut mis à jour avec succès",
       "statusError": "Échec de la mise à jour du statut"
-    }
+  },
+  "batchesAdmin": {
+    "back": "Retour",
+    "title": "Gestion des Lots",
+    "subtitle": "Gérer les lots de traitement des documents",
+    "create": "Créer un Lot",
+    "compact": "Vue Compacte",
+    "expand": "Développer les Détails",
+    "openInQueue": "Ouvrir dans la File",
+    "tabs": { "scan": "Scanner", "validation": "Validation", "export": "Exporter" },
+    "delete": "Supprimer le lot",
+    "totalDocs": "Documents Totaux",
+    "processed": "Traités",
+    "validated": "Validés",
+    "errors": "Erreurs",
+    "emptyTitle": "Aucun Lot",
+    "emptyDescription": "Créez votre premier lot pour commencer le traitement des documents"
   }
+}
 }
