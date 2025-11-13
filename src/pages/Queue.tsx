@@ -672,10 +672,13 @@ const [isExporting, setIsExporting] = useState(false);
     
     try {
       // First, upload the original PDF file to storage
-      const fileName = `${selectedBatchId}/${Date.now()}_${file.name}`;
+      // Sanitize filename to avoid invalid storage keys (spaces, brackets, special chars)
+      const rawName = file.name || 'document.pdf';
+      const safeName = rawName.replace(/[^\w.\-]+/g, '_');
+      const objectPath = `${selectedBatchId}/${Date.now()}_${safeName}`;
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from('documents')
-        .upload(fileName, file, {
+        .upload(objectPath, file, {
           contentType: 'application/pdf',
           upsert: false,
         });
@@ -687,7 +690,7 @@ const [isExporting, setIsExporting] = useState(false);
       // Get public URL for the uploaded PDF
       const { data: { publicUrl } } = supabase.storage
         .from('documents')
-        .getPublicUrl(fileName);
+        .getPublicUrl(objectPath);
 
       // Get separation config from project
       const separationConfig: SeparationConfig = (selectedProject as any)?.metadata?.separation_config || { method: 'page_count', pagesPerDocument: 1 } as SeparationConfig;
