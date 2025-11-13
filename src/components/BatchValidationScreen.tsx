@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { SignatureValidator } from './SignatureValidator';
 
 // Icon imports from lucide-react
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles, FileText } from 'lucide-react';
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles, FileText, ShieldAlert } from 'lucide-react';
 
 // Backend and utility imports
 import { supabase } from '@/integrations/supabase/client';
@@ -1229,6 +1229,16 @@ const { toast } = useToast();
                               {Math.round(doc.classification_confidence * 100)}% confident
                             </Badge>
                           )}
+                        </div>
+                      )}
+                      
+                      {/* PII Detection Warning Badge */}
+                      {(doc as any).pii_detected && (
+                        <div className="flex flex-wrap gap-2 mt-1 mb-1">
+                          <Badge variant="destructive" className="text-xs">
+                            <ShieldAlert className="h-3 w-3 mr-1" />
+                            PII Detected ({(doc as any).detected_pii_regions?.length || 0} items)
+                          </Badge>
                         </div>
                       )}
                       

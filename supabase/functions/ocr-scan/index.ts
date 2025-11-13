@@ -1277,8 +1277,42 @@ Review the image and provide corrected text with any OCR errors fixed.`;
       console.log('Word bounding box extraction failed (non-critical):', e);
     }
 
+    // --- PII DETECTION ---
+    // Scan for personally identifiable information in the extracted text
+    const piiPatterns = [
+      { pattern: /\b\d{3}-\d{2}-\d{4}\b/g, type: 'ssn', category: 'Social Security Number' },
+      { pattern: /\b\d{9}\b/g, type: 'ssn', category: 'Social Security Number (9 digits)' },
+      { pattern: /\b\d{4}[\s-]?\d{4}[\s-]?\d{4}[\s-]?\d{4}\b/g, type: 'credit_card', category: 'Credit Card' },
+      { pattern: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, type: 'email', category: 'Email Address' },
+      { pattern: /\b\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b/g, type: 'phone', category: 'Phone Number' },
+      { pattern: /\b[A-Z]{1,2}\d{6,8}\b/g, type: 'drivers_license', category: "Driver's License" },
+      { pattern: /\b[A-Z]{1,2}\d{6,9}\b/g, type: 'passport', category: 'Passport Number' },
+      { pattern: /\b(0?[1-9]|1[0-2])\/(0?[1-9]|[12][0-9]|3[01])\/(19|20)\d{2}\b/g, type: 'dob', category: 'Date of Birth' },
+    ];
+    
+    const detectedPiiRegions: Array<{ type: string; category: string; text: string; bbox?: any }> = [];
+    let piiDetected = false;
+    
+    for (const piiPattern of piiPatterns) {
+      let match;
+      piiPattern.pattern.lastIndex = 0; // Reset regex
+      
+      while ((match = piiPattern.pattern.exec(extractedText)) !== null) {
+        piiDetected = true;
+        detectedPiiRegions.push({
+          type: piiPattern.type,
+          category: piiPattern.category,
+          text: match[0],
+          // Try to find bbox from word bounding boxes if available
+          bbox: wordBoundingBoxes.find((w: any) => w.text?.includes(match[0]))?.bbox || null
+        });
+      }
+    }
+    
+    console.log(`PII Detection: ${piiDetected ? `Found ${detectedPiiRegions.length} PII items` : 'No PII detected'}`);
+
     // --- RETURN SUCCESS RESPONSE ---
-    // Return all extracted data to the client including field-level confidence
+    // Return all extracted data to the client including field-level confidence and PII detection
     return new Response(
       JSON.stringify({ 
         text: extractedText,              // Full document text
@@ -1289,7 +1323,9 @@ Review the image and provide corrected text with any OCR errors fixed.`;
         fieldConfidence: fieldConfidence || {}, // Per-field confidence scores
         validationApplied: validationApplied, // Whether two-pass validation was used
         boundingBoxes: fieldBoundingBoxes, // Field locations on document
-        wordBoundingBoxes: wordBoundingBoxes // Word-level coordinates for highlighting
+        wordBoundingBoxes: wordBoundingBoxes, // Word-level coordinates for highlighting
+        piiDetected: piiDetected,         // Whether PII was detected in the document
+        detectedPiiRegions: detectedPiiRegions // Array of detected PII with locations
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

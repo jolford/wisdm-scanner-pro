@@ -782,6 +782,7 @@ export type Database = {
           classification_metadata: Json | null
           confidence_score: number | null
           created_at: string | null
+          detected_pii_regions: Json | null
           document_class_id: string | null
           document_type: Database["public"]["Enums"]["document_type"] | null
           extracted_metadata: Json | null
@@ -794,6 +795,7 @@ export type Database = {
           line_items: Json | null
           needs_review: boolean | null
           page_number: number | null
+          pii_detected: boolean | null
           processing_priority: number | null
           project_id: string
           redacted_file_url: string | null
@@ -814,6 +816,7 @@ export type Database = {
           classification_metadata?: Json | null
           confidence_score?: number | null
           created_at?: string | null
+          detected_pii_regions?: Json | null
           document_class_id?: string | null
           document_type?: Database["public"]["Enums"]["document_type"] | null
           extracted_metadata?: Json | null
@@ -826,6 +829,7 @@ export type Database = {
           line_items?: Json | null
           needs_review?: boolean | null
           page_number?: number | null
+          pii_detected?: boolean | null
           processing_priority?: number | null
           project_id: string
           redacted_file_url?: string | null
@@ -846,6 +850,7 @@ export type Database = {
           classification_metadata?: Json | null
           confidence_score?: number | null
           created_at?: string | null
+          detected_pii_regions?: Json | null
           document_class_id?: string | null
           document_type?: Database["public"]["Enums"]["document_type"] | null
           extracted_metadata?: Json | null
@@ -858,6 +863,7 @@ export type Database = {
           line_items?: Json | null
           needs_review?: boolean | null
           page_number?: number | null
+          pii_detected?: boolean | null
           processing_priority?: number | null
           project_id?: string
           redacted_file_url?: string | null

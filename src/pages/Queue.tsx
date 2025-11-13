@@ -556,7 +556,9 @@ const [isExporting, setIsExporting] = useState(false);
     text: string,
     metadata: any,
     lineItems: any[] = [],
-    confidence: number = 0
+    confidence: number = 0,
+    piiDetected: boolean = false,
+    detectedPiiRegions: any[] = []
   ) => {
     // Check license capacity before saving
     if (!hasCapacity(1)) {
@@ -612,6 +614,8 @@ const [isExporting, setIsExporting] = useState(false);
             line_items: lineItems,
             confidence_score: confidence || 0,
             uploaded_by: user?.id,
+            pii_detected: piiDetected,
+            detected_pii_regions: detectedPiiRegions,
           },
         ])
         .select()
@@ -981,7 +985,16 @@ const [isExporting, setIsExporting] = useState(false);
         throw new Error('OCR service returned no data');
       }
 
-      await saveDocument(fileName, 'image', imageUrl, data.text, data.metadata || {}, data.lineItems || [], data.confidence || 0);
+      await saveDocument(fileName, 'image', imageUrl, data.text, data.metadata || {}, data.lineItems || [], data.confidence || 0, data.piiDetected || false, data.detectedPiiRegions || []);
+
+      // Show PII warning if detected
+      if (data.piiDetected) {
+        toast({
+          title: 'PII Detected',
+          description: `Found ${data.detectedPiiRegions?.length || 0} potentially sensitive items. Use redaction tool to protect sensitive data.`,
+          variant: 'default',
+        });
+      }
 
       toast({
         title: 'Scan Complete',
