@@ -73,6 +73,7 @@ const EditProject = () => {
   const [projectDescription, setProjectDescription] = useState('');
   const [enableCheckScanning, setEnableCheckScanning] = useState(false);
   const [enableSignatureVerification, setEnableSignatureVerification] = useState(false);
+  const [detectPii, setDetectPii] = useState(false);
   const [ocrModel, setOcrModel] = useState('google/gemini-2.5-flash');
   const [documentNamingPattern, setDocumentNamingPattern] = useState('');
   const [customerId, setCustomerId] = useState<string | undefined>();
@@ -184,6 +185,7 @@ const EditProject = () => {
           metadata: any;
           enable_check_scanning: boolean;
           enable_signature_verification: boolean;
+          detect_pii: boolean;
           ocr_model: string;
           export_types: string[];
           created_at: string;
@@ -197,6 +199,7 @@ const EditProject = () => {
         setIconPreview(projectData.icon_url || '');
         setEnableCheckScanning(projectData.enable_check_scanning || false);
         setEnableSignatureVerification(projectData.enable_signature_verification || false);
+        setDetectPii(projectData.detect_pii || false);
         setOcrModel(projectData.ocr_model || 'google/gemini-2.5-flash');
         setCustomerId(projectData.customer_id || undefined);
         
@@ -419,6 +422,7 @@ const EditProject = () => {
           icon_url: iconUrl || null,
           enable_check_scanning: enableCheckScanning,
           enable_signature_verification: enableSignatureVerification,
+          detect_pii: detectPii,
           ocr_model: ocrModel,
           extraction_fields: validFields as any,
           export_types: selectedExportTypes,
@@ -659,6 +663,22 @@ const EditProject = () => {
                 </Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Allows users to upload and validate signatures on documents during the validation process
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 p-4 border border-border rounded-lg bg-muted/30 mb-6">
+              <Checkbox
+                id="detect-pii"
+                checked={detectPii}
+                onCheckedChange={(checked) => setDetectPii(checked as boolean)}
+              />
+              <div className="flex-1">
+                <Label htmlFor="detect-pii" className="cursor-pointer font-medium">
+                  Enable PII Detection & Auto-Redaction
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Automatically detect and redact PII (SSN, credit cards, phone numbers, etc.) for privacy compliance
                 </p>
               </div>
             </div>

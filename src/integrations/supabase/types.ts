@@ -1750,6 +1750,7 @@ export type Database = {
           created_by: string
           customer_id: string | null
           description: string | null
+          detect_pii: boolean | null
           enable_check_scanning: boolean | null
           enable_signature_verification: boolean | null
           export_types: string[] | null
@@ -1768,6 +1769,7 @@ export type Database = {
           created_by: string
           customer_id?: string | null
           description?: string | null
+          detect_pii?: boolean | null
           enable_check_scanning?: boolean | null
           enable_signature_verification?: boolean | null
           export_types?: string[] | null
@@ -1786,6 +1788,7 @@ export type Database = {
           created_by?: string
           customer_id?: string | null
           description?: string | null
+          detect_pii?: boolean | null
           enable_check_scanning?: boolean | null
           enable_signature_verification?: boolean | null
           export_types?: string[] | null
