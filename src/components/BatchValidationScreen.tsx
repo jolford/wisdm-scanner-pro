@@ -1436,13 +1436,72 @@ const { toast } = useToast();
                         
                         {/* Image Preview with Zoom and Rotation */}
                         <div className="overflow-auto max-h-[300px] sm:max-h-[400px] bg-muted/30 rounded-lg p-2 sm:p-4">
-                          <FullImageWithSignedUrl
-                            url={doc.file_url}
-                            alt={doc.file_name}
-                            fileType={(doc as any).file_type}
-                            zoom={documentZoom[doc.id] || 1}
-                            rotation={documentRotation[doc.id] || 0}
-                          />
+                          <div className="relative">
+                            <FullImageWithSignedUrl
+                              url={doc.file_url}
+                              alt={doc.file_name}
+                              fileType={(doc as any).file_type}
+                              zoom={documentZoom[doc.id] || 1}
+                              rotation={documentRotation[doc.id] || 0}
+                            />
+                            {/* Auto PII redaction overlay */}
+                            {(() => {
+                              // Prefer server-detected regions; fallback to client detection if available
+                              const pii = (doc as any).detected_pii_regions || [];
+                              let boxes = (Array.isArray(pii) ? pii.map((r: any) => r?.bbox).filter(Boolean) : []) as Array<{ x: number; y: number; width: number; height: number }>;
+
+                              if (boxes.length === 0 && ((computedPiiCounts[doc.id] || 0) > 0)) {
+                                try {
+                                  const detected = detectKeywords(
+                                    doc.extracted_text || '',
+                                    { wordBoundingBoxes: (doc as any).word_bounding_boxes },
+                                    [],
+                                    true
+                                  ) as any[];
+                                  boxes = detected
+                                    .map((d: any) => (d.matches?.[0]?.bbox || (d as any).bbox))
+                                    .filter(Boolean);
+                                } catch {
+                                  // ignore client detection errors
+                                }
+                              }
+
+                              if (boxes.length > 0) {
+                                const viewW = Math.max(1000, ...boxes.map((b: any) => (b.x + b.width)));
+                                const viewH = Math.max(1000, ...boxes.map((b: any) => (b.y + b.height)));
+                                return (
+                                  <svg
+                                    className="absolute top-0 left-0 w-full h-full pointer-events-none"
+                                    preserveAspectRatio="none"
+                                    viewBox={`0 0 ${viewW} ${viewH}`}
+                                  >
+                                    {boxes.map((b: any, idx: number) => (
+                                      <rect
+                                        key={idx}
+                                        x={b.x}
+                                        y={b.y}
+                                        width={b.width}
+                                        height={b.height}
+                                        fill="rgba(0,0,0,0.85)"
+                                        stroke="rgba(0,0,0,0.9)"
+                                        strokeWidth="2"
+                                      />
+                                    ))}
+                                  </svg>
+                                );
+                              }
+
+                              if ((doc as any).pii_detected) {
+                                return (
+                                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
+                                    <span className="text-[10px] sm:text-xs text-white/90 bg-black/60 px-2 py-1 rounded">PII auto‑redacted</span>
+                                  </div>
+                                );
+                              }
+
+                              return null;
+                            })()}
+                          </div>
                         </div>
 
                         {/* Toggle Region Selector Button */}
