@@ -32,7 +32,7 @@ export function LanguageSelector({ variant = 'dropdown' }: LanguageSelectorProps
 
   const handleLanguageChange = (languageCode: string) => {
     i18n.changeLanguage(languageCode);
-    // i18next automatically persists to localStorage with key 'i18nextLng'
+    try { localStorage.setItem('i18nextLng', languageCode); } catch {}
   };
 
   const currentLanguage = languages.find((lang) => lang.code === normalizedLang) || languages[0];

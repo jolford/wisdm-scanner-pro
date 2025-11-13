@@ -1,18 +1,22 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ArrowLeft, FolderOpen, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Plus, ArrowLeft, FolderOpen, Clock, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
+import { safeInvokeEdgeFunction } from '@/lib/edge-function-helper';
 
 const BatchesIndex = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [compact, setCompact] = useState(false);
 
   const { data: batches, isLoading } = useQuery({
     queryKey: ['batches'],
@@ -59,6 +63,29 @@ const BatchesIndex = () => {
     return <Icon className="h-4 w-4" />;
   };
 
+  const statusToTab: Record<string, string> = {
+    new: 'scan', scanning: 'scan', indexing: 'validation', validation: 'validation', validated: 'export', complete: 'export', exported: 'export'
+  };
+
+  const openBatchInQueue = (batch: any, tab?: string) => {
+    const targetTab = tab || statusToTab[batch.status] || 'scan';
+    sessionStorage.setItem('selectedBatchId', batch.id);
+    sessionStorage.setItem('selectedProjectId', batch.project_id);
+    navigate(`/?tab=${targetTab}`);
+  };
+
+  const handleDelete = async (e: React.MouseEvent, batchId: string) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this batch? This action cannot be undone.')) return;
+    const { data, error } = await safeInvokeEdgeFunction('delete-batch-safe', { body: { batchId } });
+    if (error || (data as any)?.error) {
+      toast({ title: 'Error', description: 'Failed to delete batch', variant: 'destructive' });
+      return;
+    }
+    toast({ title: 'Batch Deleted', description: 'The batch was deleted.' });
+    queryClient.invalidateQueries({ queryKey: ['batches'] });
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -81,10 +108,15 @@ const BatchesIndex = () => {
               <p className="text-muted-foreground">Manage document processing batches</p>
             </div>
           </div>
-          <Button onClick={() => navigate('/admin/batches/new')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Batch
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => navigate('/admin/batches/new')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Batch
+            </Button>
+            <Button variant="outline" onClick={() => setCompact((v) => !v)} aria-pressed={compact}>
+              {compact ? 'Expand Details' : 'Compact View'}
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-4">
@@ -105,9 +137,10 @@ const BatchesIndex = () => {
                       </span>
                     </Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Project: {batch.projects?.name}
-                  </p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Project: {batch.projects?.name}
+                </p>
+                {!compact && (
                   <div className="grid grid-cols-4 gap-4">
                     <div className="bg-muted/50 rounded-lg p-3">
                       <p className="text-xs text-muted-foreground mb-1">Total Docs</p>
@@ -126,8 +159,24 @@ const BatchesIndex = () => {
                       <p className="text-2xl font-bold text-destructive">{batch.error_count}</p>
                     </div>
                   </div>
-                </div>
+                )}
               </div>
+              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="outline">Open in Queue</Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => openBatchInQueue(batch, 'scan')}>Scan</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => openBatchInQueue(batch, 'validation')}>Validation</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => openBatchInQueue(batch, 'export')}>Export</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button size="icon" variant="outline" onClick={(e) => handleDelete(e, batch.id)} title="Delete batch">
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
             </Card>
           ))}
         </div>
