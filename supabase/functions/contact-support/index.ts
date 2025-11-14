@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { Resend } from "https://esm.sh/resend@2.0.0";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
 
@@ -8,13 +9,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface ContactSupportRequest {
-  name: string;
-  email: string;
-  subject: string;
-  message: string;
-  userAgent?: string;
-}
+const ContactSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+  email: z.string().email().max(255),
+  subject: z.string().trim().min(1).max(200),
+  message: z.string().trim().min(1).max(2000),
+  userAgent: z.string().max(500).optional(),
+});
 
 const handler = async (req: Request): Promise<Response> => {
   // Handle CORS preflight requests
@@ -23,19 +24,9 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    console.log("Contact support request received");
-
-    const { name, email, subject, message, userAgent }: ContactSupportRequest = await req.json();
-
-    if (!name || !email || !subject || !message) {
-      return new Response(
-        JSON.stringify({ error: "Missing required fields" }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
-      );
-    }
+    const body = await req.json();
+    const validated = ContactSchema.parse(body);
+    const { name, email, subject, message, userAgent } = validated;
 
     // Send email to support team
     const supportEmailResponse = await resend.emails.send({
@@ -88,6 +79,17 @@ const handler = async (req: Request): Promise<Response> => {
     );
   } catch (error: any) {
     console.error("Error in contact-support function:", error);
+    
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ error: "Invalid input", details: error.errors }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+    
     return new Response(
       JSON.stringify({ error: "Failed to send support request. Please try again later." }),
       {
