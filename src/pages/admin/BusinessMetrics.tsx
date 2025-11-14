@@ -115,6 +115,50 @@ export default function BusinessMetrics() {
   return (
     <AdminLayout title="Business Metrics" description="Key performance indicators and revenue analytics">
       <div className="space-y-6">
+        {/* Info Card */}
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Target className="h-5 w-5" />
+              How Business Metrics Work
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <p className="text-muted-foreground">
+              This dashboard tracks key performance indicators (KPIs) calculated from your actual system data:
+            </p>
+            <div className="grid gap-3 md:grid-cols-2">
+              <div>
+                <strong className="text-foreground">MRR (Monthly Recurring Revenue):</strong>
+                <p className="text-muted-foreground">Estimated revenue per month based on active licenses × avg document processing cost</p>
+              </div>
+              <div>
+                <strong className="text-foreground">ARR (Annual Recurring Revenue):</strong>
+                <p className="text-muted-foreground">MRR × 12 - projects your yearly revenue</p>
+              </div>
+              <div>
+                <strong className="text-foreground">Active Customers:</strong>
+                <p className="text-muted-foreground">Customers with at least one active license</p>
+              </div>
+              <div>
+                <strong className="text-foreground">Growth Rate:</strong>
+                <p className="text-muted-foreground">Customer growth % over the selected time period</p>
+              </div>
+              <div>
+                <strong className="text-foreground">ARPC (Avg Revenue Per Customer):</strong>
+                <p className="text-muted-foreground">MRR divided by total customers</p>
+              </div>
+              <div>
+                <strong className="text-foreground">Documents Processed:</strong>
+                <p className="text-muted-foreground">Total documents processed in the selected period</p>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground pt-2">
+              💡 <strong>Note:</strong> Revenue calculations use estimated document processing costs. Update the avgRevenuePerDoc constant in the code to match your actual pricing.
+            </p>
+          </CardContent>
+        </Card>
+        
         {/* Period Selector */}
         <div className="flex justify-end">
           <Select value={period} onValueChange={setPeriod}>
