@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Lightbulb, Crop, Eraser, Sparkles, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Lightbulb, Crop, Pencil, Sparkles, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { documentMetadataSchema } from '@/lib/validation-schemas';
@@ -1052,7 +1052,7 @@ useEffect(() => {
                   onClick={() => setShowRedactionTool(!showRedactionTool)}
                   className={piiDetected && !showRedactionTool ? "animate-pulse" : ""}
                 >
-                  <Eraser className="h-4 w-4" />
+                  <Pencil className="h-4 w-4" />
                   {piiDetected && !showRedactionTool && (
                     <Badge variant="destructive" className="ml-1 h-4 px-1 text-[10px]">
                       {detectedPiiRegions?.length || 0}
@@ -1189,7 +1189,7 @@ useEffect(() => {
                   onClick={() => setShowRedactionTool(true)}
                   className="ml-4"
                 >
-                  <Eraser className="h-4 w-4 mr-2" />
+                  <Pencil className="h-4 w-4 mr-2" />
                   Draw Redaction Zones
                 </Button>
               </AlertDescription>
