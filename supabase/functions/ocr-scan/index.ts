@@ -1238,22 +1238,33 @@ Review the image and provide corrected text with any OCR errors fixed.`;
       console.log(`Applying zone-based extraction with template: ${zoneTemplate.name}`);
       
       try {
+        // Convert pixel-based zones (from 1000x700 editor) to percentage if needed
+        const normalize = (val: number, axis: 'x' | 'y' | 'w' | 'h') => {
+          const base = axis === 'x' || axis === 'w' ? 1000 : 700;
+          return val > 100 ? (val / base) * 100 : val;
+        };
+        
         for (const zone of zoneTemplate.zone_definitions) {
+          const zx = normalize(zone.x, 'x');
+          const zy = normalize(zone.y, 'y');
+          const zw = normalize(zone.width, 'w');
+          const zh = normalize(zone.height, 'h');
+          
           const wordsInZone = wordBoundingBoxes.filter((word: any) => {
             const wb = word.bbox;
             const wordCenterX = wb.x + wb.width / 2;
             const wordCenterY = wb.y + wb.height / 2;
-            return wordCenterX >= zone.x && wordCenterX <= (zone.x + zone.width) &&
-                   wordCenterY >= zone.y && wordCenterY <= (zone.y + zone.height);
+            return wordCenterX >= zx && wordCenterX <= (zx + zw) &&
+                   wordCenterY >= zy && wordCenterY <= (zy + zh);
           });
           
           if (wordsInZone.length > 0) {
             const sortedWords = wordsInZone.sort((a: any, b: any) => {
               const yDiff = a.bbox.y - b.bbox.y;
-              return Math.abs(yDiff) < 5 ? a.bbox.x - b.bbox.x : yDiff;
+              return Math.abs(yDiff) < 2 ? a.bbox.x - b.bbox.x : yDiff;
             });
             
-            let extractedValue = sortedWords.map((w: any) => w.text).join(' ');
+            let extractedValue = sortedWords.map((w: any) => w.text).join(' ').replace(/\s{2,}/g, ' ').trim();
             
             if (zone.field_type === 'currency') {
               const match = extractedValue.match(/\$?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
@@ -1277,8 +1288,10 @@ Review the image and provide corrected text with any OCR errors fixed.`;
             }
             
             metadata[zone.field_name] = extractedValue;
-            if (fieldConfidence) fieldConfidence[zone.field_name] = 0.95;
+            if (fieldConfidence) fieldConfidence[zone.field_name] = 0.97;
             console.log(`Zone extracted ${zone.field_name}: ${extractedValue}`);
+          } else {
+            console.log(`Zone ${zone.field_name}: no words found in zone (${zx.toFixed(1)}%, ${zy.toFixed(1)}%, ${zw.toFixed(1)}%x${zh.toFixed(1)}%)`);
           }
         }
         console.log('Zone-based extraction completed');
