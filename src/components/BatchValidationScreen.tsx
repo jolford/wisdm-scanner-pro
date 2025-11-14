@@ -15,7 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { SignatureValidator } from './SignatureValidator';
 
 // Icon imports from lucide-react
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles, FileText, ShieldAlert } from 'lucide-react';
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles, FileText, ShieldAlert, Pencil } from 'lucide-react';
 
 // Backend and utility imports
 import { supabase } from '@/integrations/supabase/client';
@@ -24,6 +24,7 @@ import { ImageRegionSelector } from './ImageRegionSelector';
 import { useSignedUrl, getSignedUrl } from '@/hooks/use-signed-url';
 import { detectKeywords } from '@/lib/keyword-redaction';
 import { ViewOriginalButton } from './ViewOriginalButton';
+import { RedactionTool } from './RedactionTool';
 // Enhanced feature components
 import { BulkActionsToolbar } from './BulkActionsToolbar';
 import { SearchFilterBar, DocumentFilters } from './SearchFilterBar';
@@ -202,6 +203,7 @@ export const BatchValidationScreen = ({
   // Toast notifications for user feedback
 const { toast } = useToast();
   const [signatureDialogDocId, setSignatureDialogDocId] = useState<string | null>(null);
+  const [redactionDialogDocId, setRedactionDialogDocId] = useState<string | null>(null);
   
   // Filter documents based on search and filters
   const filteredDocuments = documents.filter(doc => {
@@ -1425,6 +1427,16 @@ const { toast } = useToast();
                               >
                                 <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4" />
                               </Button>
+                              {/* Redaction (Draw Zones) */}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setRedactionDialogDocId(doc.id)}
+                                className="h-7 sm:h-8 px-1 sm:px-2"
+                                title="Redact (Draw Zones)"
+                              >
+                                <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </Button>
                               <Button
                                 variant="ghost"
                                 size="sm"
@@ -1638,6 +1650,26 @@ const { toast } = useToast();
                                   documentImageUrl={doc.file_url}
                                   projectId={doc.project_id}
                                   currentMetadata={getMetadataForDoc(doc)}
+                                />
+                              </DialogContent>
+                            </Dialog>
+
+                            {/* Redaction Tool Dialog */}
+                            <Dialog open={redactionDialogDocId === doc.id} onOpenChange={(o) => setRedactionDialogDocId(o ? doc.id : null)}>
+                              <DialogContent className="sm:max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+                                <DialogHeader>
+                                  <DialogTitle>Redact PII</DialogTitle>
+                                </DialogHeader>
+                                <RedactionTool
+                                  imageUrl={doc.file_url}
+                                  documentId={doc.id}
+                                  ocrText={doc.extracted_text}
+                                  ocrMetadata={{ wordBoundingBoxes: (doc as any).word_bounding_boxes, boundingBoxes: (doc as any).bounding_boxes }}
+                                  onRedactionSaved={() => {
+                                    setRedactionDialogDocId(null);
+                                    toast({ title: 'Redaction saved', description: 'Your redacted image has been saved.' });
+                                  }}
+                                  onCancel={() => setRedactionDialogDocId(null)}
                                 />
                               </DialogContent>
                             </Dialog>
