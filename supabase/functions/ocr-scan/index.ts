@@ -1300,6 +1300,97 @@ Review the image and provide corrected text with any OCR errors fixed.`;
       }
     }
 
+    // ROI-based zone extraction when word boxes are unavailable
+    if (zoneTemplate && zoneTemplate.zone_definitions && zoneTemplate.zone_definitions.length > 0 && wordBoundingBoxes.length === 0 && imageData) {
+      try {
+        const normalize = (val: number, axis: 'x' | 'y' | 'w' | 'h') => {
+          const base = axis === 'x' || axis === 'w' ? 1000 : 700;
+          return val > 100 ? (val / base) * 100 : val;
+        };
+
+        const zones = zoneTemplate.zone_definitions.map((z: any) => ({
+          name: z.field_name,
+          type: z.field_type || 'text',
+          x: normalize(z.x, 'x'),
+          y: normalize(z.y, 'y'),
+          width: normalize(z.width, 'w'),
+          height: normalize(z.height, 'h'),
+          validation_pattern: z.validation_pattern || null,
+          validation_flags: z.validation_flags || 'i',
+        }));
+
+        const systemPromptRoi = 'You are an OCR system. Read ONLY the specified rectangular regions (percent coordinates 0-100 relative to page). Return STRICT JSON: {"fields": {"Field Name": "value"}}. Do not include any extra text.';
+        const userPromptRoi = `Extract each field ONLY from its region (percent of page):\n${zones.map((z: any) => `- ${z.name} (${z.type}) at x:${z.x.toFixed(1)} y:${z.y.toFixed(1)} w:${z.width.toFixed(1)} h:${z.height.toFixed(1)}`).join('\n')}\nRespond with JSON as specified.`;
+
+        const roiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'google/gemini-2.5-flash',
+            messages: [
+              { role: 'system', content: systemPromptRoi },
+              { role: 'user', content: [ { type: 'text', text: userPromptRoi }, { type: 'image_url', image_url: { url: imageData } } ] }
+            ],
+            temperature: 0.1
+          })
+        });
+
+        if (roiResp.ok) {
+          const roiData = await roiResp.json();
+          const raw = roiData.choices?.[0]?.message?.content || '';
+          let jsonStr = raw;
+          const cb = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+          if (cb) jsonStr = cb[1].trim();
+          const objMatch = jsonStr.match(/\{[\s\S]*\}/);
+          if (objMatch) {
+            try {
+              const parsed = JSON.parse(objMatch[0]);
+              const fields: Record<string, any> = parsed.fields || parsed;
+
+              for (const z of zones) {
+                let val: any = fields[z.name];
+                if (val && typeof val === 'object' && 'value' in val) val = val.value;
+                if (typeof val === 'string') {
+                  let s = val.replace(/\s{2,}/g, ' ').trim();
+
+                  if (z.type === 'currency') {
+                    const m = s.match(/\$?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
+                    if (m) {
+                      s = m[0].replace(/\s/g, '');
+                      if (!s.startsWith('$')) s = '$' + s;
+                    }
+                  } else if (z.type === 'date') {
+                    const m = s.match(/\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/);
+                    if (m) s = m[0];
+                  } else if (z.type === 'number') {
+                    s = s.replace(/[^0-9\-]/g, '');
+                  }
+
+                  if (z.validation_pattern) {
+                    const re = new RegExp(z.validation_pattern, z.validation_flags || 'i');
+                    if (!re.test(s)) {
+                      console.log(`ROI ${z.name}: validation failed for "${s}"`);
+                      continue;
+                    }
+                  }
+
+                  metadata[z.name] = s;
+                  if (fieldConfidence) fieldConfidence[z.name] = 0.97;
+                  console.log(`ROI extracted ${z.name}: ${s}`);
+                }
+              }
+            } catch (e) {
+              console.log('Failed to parse ROI JSON:', e);
+            }
+          }
+        } else {
+          console.log('ROI model call failed:', await roiResp.text());
+        }
+      } catch (e) {
+        console.log('ROI extraction error:', e);
+      }
+    }
+
     // --- PII DETECTION ---
     // Scan for personally identifiable information in the extracted text (only if project has PII detection enabled)
     const detectedPiiRegions: Array<{ type: string; category: string; text: string; bbox?: any }> = [];
