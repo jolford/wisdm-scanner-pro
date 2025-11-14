@@ -1790,7 +1790,8 @@ const { toast } = useToast();
                                 <CollapsibleContent className="animate-accordion-down">
                                   <div className="border rounded-lg overflow-hidden shadow-sm">
                                     <div className="overflow-x-auto">
-                                      <Table>
+                                      <TooltipProvider>
+                                        <Table>
                                         <TableHeader>
                                           <TableRow className="bg-muted/50">
                                             {getLineItemsForDoc(doc).length > 0 && Object.keys(getLineItemsForDoc(doc)[0]).map((key) => (
@@ -1804,16 +1805,28 @@ const { toast } = useToast();
                                         <TableBody>
                                           {getLineItemsForDoc(doc).map((item, idx) => (
                                             <TableRow key={idx} className="hover:bg-muted/30 transition-colors">
-                                              {Object.entries(item).map(([key, value], vIdx) => (
-                                                <TableCell key={vIdx} className="py-3 align-top">
-                                                  <Textarea
-                                                    value={value !== null && value !== undefined ? String(value) : ''}
-                                                    onChange={(e) => handleLineItemChange(doc.id, idx, key, e.target.value)}
-                                                    className="min-h-[80px] resize-y border-muted-foreground/20 focus:border-primary transition-colors"
-                                                    rows={3}
-                                                  />
-                                                </TableCell>
-                                              ))}
+                                              {Object.entries(item).map(([key, value], vIdx) => {
+                                                const displayValue = value !== null && value !== undefined ? String(value) : '';
+                                                return (
+                                                  <TableCell key={vIdx} className="py-3 align-top">
+                                                    <Tooltip>
+                                                      <TooltipTrigger asChild>
+                                                        <Textarea
+                                                          value={displayValue}
+                                                          onChange={(e) => handleLineItemChange(doc.id, idx, key, e.target.value)}
+                                                          className="min-h-[80px] resize-y border-muted-foreground/20 focus:border-primary transition-colors"
+                                                          rows={3}
+                                                        />
+                                                      </TooltipTrigger>
+                                                      <TooltipContent side="top" className="max-w-md p-3 text-sm">
+                                                        <div className="max-h-48 overflow-y-auto whitespace-pre-wrap break-words">
+                                                          {displayValue || '(empty)'}
+                                                        </div>
+                                                      </TooltipContent>
+                                                    </Tooltip>
+                                                  </TableCell>
+                                                );
+                                              })}
                                               <TableCell className="text-center align-top pt-5">
                                                 <Button
                                                   size="sm"
@@ -1828,6 +1841,7 @@ const { toast } = useToast();
                                           ))}
                                         </TableBody>
                                       </Table>
+                                      </TooltipProvider>
                                     </div>
                                   </div>
                                 </CollapsibleContent>
