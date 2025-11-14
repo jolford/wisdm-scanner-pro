@@ -678,120 +678,7 @@ RESPONSE REQUIREMENTS:
             }
           }
           
-          // Placeholder for zone extraction (moved after word bounding boxes are populated)
-          try {
-                  const wb = word.bbox;
-                  // Check if word center is within zone
-                  const wordCenterX = wb.x + wb.width / 2;
-                  const wordCenterY = wb.y + wb.height / 2;
-                  return wordCenterX >= zoneBbox.x && 
-                         wordCenterX <= (zoneBbox.x + zoneBbox.width) &&
-                         wordCenterY >= zoneBbox.y && 
-                         wordCenterY <= (zoneBbox.y + zoneBbox.height);
-                });
-                
-                if (wordsInZone.length > 0) {
-                  // Combine words in reading order (left to right, top to bottom)
-                  const sortedWords = wordsInZone.sort((a: any, b: any) => {
-                    const yDiff = a.bbox.y - b.bbox.y;
-                    if (Math.abs(yDiff) < 5) return a.bbox.x - b.bbox.x;
-                    return yDiff;
-                  });
-                  
-                  let extractedValue = sortedWords.map((w: any) => w.text).join(' ');
-                  
-                  // Clean up based on field type
-                  if (zone.field_type === 'currency') {
-                    // Extract first valid currency amount
-                    const match = extractedValue.match(/\$?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
-                    if (match) extractedValue = match[0].replace(/\s/g, '');
-                    if (!extractedValue.startsWith('$')) extractedValue = '$' + extractedValue;
-                  } else if (zone.field_type === 'date') {
-                    // Extract date pattern
-                    const match = extractedValue.match(/\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/);
-                    if (match) extractedValue = match[0];
-                  } else if (zone.field_type === 'number') {
-                    // Clean to just numbers and common separators
-                    extractedValue = extractedValue.replace(/[^0-9\-]/g, '');
-                  }
-                  
-                  // Apply validation pattern if specified
-                  if (zone.validation_pattern && extractedValue) {
-                    const pattern = new RegExp(zone.validation_pattern, zone.validation_flags || 'i');
-                    if (!pattern.test(extractedValue)) {
-                      console.log(`Zone ${zone.field_name}: value "${extractedValue}" failed validation pattern`);
-                      continue;
-                    }
-                  }
-                  
-                  metadata[zone.field_name] = extractedValue;
-                  if (fieldConfidence) fieldConfidence[zone.field_name] = 0.95;
-                  console.log(`Zone extracted ${zone.field_name}: ${extractedValue} (confidence: 95%)`);
-                } else {
-                  console.log(`Zone ${zone.field_name}: no words found in zone (${zoneBbox.x}, ${zoneBbox.y}, ${zoneBbox.width}x${zoneBbox.height})`);
-                }
-              }
-              
-              console.log('Zone-based extraction completed');
-            } else {
-              // FALLBACK: Context-based extraction (only if no zones)
-              const text = (extractedText || '').toString();
-              const lower = text.toLowerCase();
-              const isVoucherDoc = documentType === 'casino_voucher' ||
-                lower.includes('cashout ticket') || lower.includes('cashout voucher') || lower.includes('voucher #');
-              
-              if (isVoucherDoc && isCasinoVoucher) {
-                console.log('Applying context-based extraction for casino voucher (no zone template)...');
-                
-                // Extract using context keywords instead of just grabbing largest amount
-                const lines = text.split('\n').map((l: string) => l.trim()).filter(Boolean);
-                
-                // Amount: Look for dollar amounts near "AMOUNT", "TOTAL", "VALUE" keywords
-                if (!metadata['Amount'] || metadata['Amount'] === '') {
-                  for (const line of lines) {
-                    if (/amount|total|value|cash|voucher/i.test(line)) {
-                      const match = line.match(/\$[\d,]+\.\d{2}/);
-                      if (match) {
-                        metadata['Amount'] = match[0];
-                        if (fieldConfidence) fieldConfidence['Amount'] = 0.85;
-                        console.log(`Context-based Amount: ${match[0]} from line: ${line}`);
-                        break;
-                      }
-                    }
-                  }
-                }
-                
-                // Validation Date
-                if (!metadata['Validation Date'] || metadata['Validation Date'] === '') {
-                  const dateMatch = text.match(/\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/);
-                  if (dateMatch) {
-                    metadata['Validation Date'] = dateMatch[0];
-                    if (fieldConfidence) fieldConfidence['Validation Date'] = 0.85;
-                  }
-                }
-                
-                // Ticket Number
-                if (!metadata['Ticket Number'] || metadata['Ticket Number'] === '') {
-                  const ticketMatch = text.match(/\d{2}-\d{4}-\d{4}-\d{4}-\d{4}/);
-                  if (ticketMatch) {
-                    metadata['Ticket Number'] = ticketMatch[0];
-                    if (fieldConfidence) fieldConfidence['Ticket Number'] = 0.85;
-                  }
-                }
-                
-                // Machine Number
-                if (!metadata['Machine Number'] || metadata['Machine Number'] === '') {
-                  const machineMatch = text.match(/(?:MACHINE|ASSET)\s*#?\s*(\d{3,6})/i);
-                  if (machineMatch) {
-                    metadata['Machine Number'] = machineMatch[1];
-                    if (fieldConfidence) fieldConfidence['Machine Number'] = 0.85;
-                  }
-                }
-              }
-            }
-          } catch (postErr) {
-            console.warn('Zone/template extraction failed, using AI results:', postErr);
-          }
+          // Skip template/zone extraction here - will be done after word bounding boxes are populated
 
           // Invoice-specific label-based corrections (avoid mistaking CUSTOMER NO)
           try {
@@ -1344,6 +1231,60 @@ Review the image and provide corrected text with any OCR errors fixed.`;
       }
     } catch (e) {
       console.log('Word bounding box extraction failed (non-critical):', e);
+    }
+
+    // --- ZONE-BASED EXTRACTION (use zone templates when available) ---
+    if (zoneTemplate && zoneTemplate.zone_definitions && zoneTemplate.zone_definitions.length > 0 && wordBoundingBoxes.length > 0) {
+      console.log(`Applying zone-based extraction with template: ${zoneTemplate.name}`);
+      
+      try {
+        for (const zone of zoneTemplate.zone_definitions) {
+          const wordsInZone = wordBoundingBoxes.filter((word: any) => {
+            const wb = word.bbox;
+            const wordCenterX = wb.x + wb.width / 2;
+            const wordCenterY = wb.y + wb.height / 2;
+            return wordCenterX >= zone.x && wordCenterX <= (zone.x + zone.width) &&
+                   wordCenterY >= zone.y && wordCenterY <= (zone.y + zone.height);
+          });
+          
+          if (wordsInZone.length > 0) {
+            const sortedWords = wordsInZone.sort((a: any, b: any) => {
+              const yDiff = a.bbox.y - b.bbox.y;
+              return Math.abs(yDiff) < 5 ? a.bbox.x - b.bbox.x : yDiff;
+            });
+            
+            let extractedValue = sortedWords.map((w: any) => w.text).join(' ');
+            
+            if (zone.field_type === 'currency') {
+              const match = extractedValue.match(/\$?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
+              if (match) {
+                extractedValue = match[0].replace(/\s/g, '');
+                if (!extractedValue.startsWith('$')) extractedValue = '$' + extractedValue;
+              }
+            } else if (zone.field_type === 'date') {
+              const match = extractedValue.match(/\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/);
+              if (match) extractedValue = match[0];
+            } else if (zone.field_type === 'number') {
+              extractedValue = extractedValue.replace(/[^0-9\-]/g, '');
+            }
+            
+            if (zone.validation_pattern && extractedValue) {
+              const pattern = new RegExp(zone.validation_pattern, zone.validation_flags || 'i');
+              if (!pattern.test(extractedValue)) {
+                console.log(`Zone ${zone.field_name}: validation failed for "${extractedValue}"`);
+                continue;
+              }
+            }
+            
+            metadata[zone.field_name] = extractedValue;
+            if (fieldConfidence) fieldConfidence[zone.field_name] = 0.95;
+            console.log(`Zone extracted ${zone.field_name}: ${extractedValue}`);
+          }
+        }
+        console.log('Zone-based extraction completed');
+      } catch (zoneErr) {
+        console.error('Zone extraction error:', zoneErr);
+      }
     }
 
     // --- PII DETECTION ---
