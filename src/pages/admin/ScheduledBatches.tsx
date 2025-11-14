@@ -150,7 +150,7 @@ export default function ScheduledBatches() {
           <div>
             <h1 className="text-3xl font-bold">Scheduled Batch Processing</h1>
             <p className="text-muted-foreground">
-              Automate batch processing at specific times
+              Automate your workflow by scheduling when validated batches are automatically exported. Set up recurring schedules (daily, weekly, or monthly) to export completed batches to your integrated systems at specific times. This ensures timely data delivery without manual intervention.
             </p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>

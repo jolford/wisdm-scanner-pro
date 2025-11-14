@@ -77,12 +77,12 @@ export default function DuplicateDetections() {
   return (
     <AdminLayout title="Duplicate Detections">
       <div className="space-y-6">
-        <div>
-          <h1 className="text-3xl font-bold">Duplicate Detections</h1>
-          <p className="text-muted-foreground">
-            Review and manage potential duplicate documents
-          </p>
-        </div>
+      <div>
+        <h1 className="text-3xl font-bold">Duplicate Detections</h1>
+        <p className="text-muted-foreground">
+          AI-powered duplicate detection analyzes documents for potential duplicates using advanced similarity algorithms on names, addresses, and signatures. Review flagged duplicates with similarity scores, compare matching fields, and confirm or dismiss detections to maintain data integrity and prevent duplicate entries.
+        </p>
+      </div>
 
         <Card>
           <CardHeader>

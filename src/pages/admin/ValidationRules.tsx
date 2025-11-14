@@ -153,7 +153,7 @@ export default function ValidationRules() {
           <div>
             <h1 className="text-3xl font-bold">Validation Rules</h1>
             <p className="text-muted-foreground">
-              Configure field-level validation rules for your projects
+              Define custom validation rules to ensure data quality and consistency across your documents. Create regex patterns, required field checks, format validations, and cross-field rules that automatically flag documents that don't meet your business requirements. Rules can be set to error (blocking) or warning (advisory) levels.
             </p>
           </div>
           <Dialog open={open} onOpenChange={setOpen}>
