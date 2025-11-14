@@ -1228,9 +1228,10 @@ Review the image and provide corrected text with any OCR errors fixed.`;
             console.log('Failed to parse word bounding boxes:', e);
           }
         }
-      } catch (e) {
-        console.log('Word bounding box extraction failed (non-critical):', e);
       }
+    } catch (e) {
+      console.log('Word bounding box extraction failed (non-critical):', e);
+    }
  
     let zoneExtractedCount = 0;
 
