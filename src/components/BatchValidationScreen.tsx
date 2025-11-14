@@ -1463,7 +1463,7 @@ const { toast } = useToast();
                         <div className="overflow-auto max-h-[300px] sm:max-h-[400px] bg-muted/30 rounded-lg p-2 sm:p-4">
                           <div className="relative">
                             <FullImageWithSignedUrl
-                              url={doc.file_url}
+                              url={(doc as any).redacted_file_url || doc.file_url}
                               alt={doc.file_name}
                               fileType={(doc as any).file_type}
                               zoom={documentZoom[doc.id] || 1}
@@ -1665,9 +1665,10 @@ const { toast } = useToast();
                                   documentId={doc.id}
                                   ocrText={doc.extracted_text}
                                   ocrMetadata={{ wordBoundingBoxes: (doc as any).word_bounding_boxes, boundingBoxes: (doc as any).bounding_boxes }}
-                                  onRedactionSaved={() => {
+                                  onRedactionSaved={async () => {
                                     setRedactionDialogDocId(null);
-                                    toast({ title: 'Redaction saved', description: 'Your redacted image has been saved.' });
+                                    onValidationComplete();
+                                    toast({ title: 'Redaction saved', description: 'The redacted version is now displayed in the preview.' });
                                   }}
                                   onCancel={() => setRedactionDialogDocId(null)}
                                 />
