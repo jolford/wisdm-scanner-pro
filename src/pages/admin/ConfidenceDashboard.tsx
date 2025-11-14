@@ -15,7 +15,8 @@ const ConfidenceDashboard = () => {
   const { data: confidenceStats } = useQuery({
     queryKey: ['confidence-stats'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Try per-field confidence records first
+      const { data: confidenceData, error: confidenceError } = await supabase
         .from('extraction_confidence')
         .select(`
           *,
@@ -33,36 +34,79 @@ const ConfidenceDashboard = () => {
         .order('created_at', { ascending: false })
         .limit(100);
 
-      if (error) throw error;
+      if (confidenceError) throw confidenceError;
+
+      let data = confidenceData || [];
+
+      // Fallback: if no field-level records exist, derive from documents' overall confidence
+      if (!data || data.length === 0) {
+        const { data: docs, error: docsError } = await supabase
+          .from('documents')
+          .select(`
+            id,
+            file_name,
+            batch_id,
+            validation_status,
+            confidence_score,
+            batch:batches(
+              batch_name,
+              project:projects(name)
+            )
+          `)
+          .order('created_at', { ascending: false })
+          .limit(100);
+
+        if (docsError) throw docsError;
+
+        data = (docs || [])
+          .filter((d: any) => typeof d.confidence_score === 'number')
+          .map((d: any) => ({
+            id: d.id,
+            document_id: d.id,
+            field_name: 'Document Overall',
+            extracted_value: null,
+            confidence_score: d.confidence_score,
+            needs_review: d.validation_status === 'needs_review' || (d.confidence_score ?? 0) < 0.7,
+            created_at: null,
+            document: {
+              id: d.id,
+              file_name: d.file_name,
+              batch_id: d.batch_id,
+              validation_status: d.validation_status,
+              batch: d.batch,
+            },
+          }));
+      }
 
       // Calculate statistics
       const total = data?.length || 0;
       const avgConfidence = total > 0
-        ? data!.reduce((sum, item) => sum + Number(item.confidence_score), 0) / total
+        ? data.reduce((sum: number, item: any) => sum + Number(item.confidence_score), 0) / total
         : 0;
-      
-      const lowConfidence = data?.filter(item => Number(item.confidence_score) < 0.7) || [];
-      const mediumConfidence = data?.filter(item => 
+
+      const lowConfidence = data.filter((item: any) => Number(item.confidence_score) < 0.7);
+      const mediumConfidence = data.filter((item: any) =>
         Number(item.confidence_score) >= 0.7 && Number(item.confidence_score) < 0.9
-      ) || [];
-      const highConfidence = data?.filter(item => Number(item.confidence_score) >= 0.9) || [];
+      );
+      const highConfidence = data.filter((item: any) => Number(item.confidence_score) >= 0.9);
 
       // Group by field name
-      const byField = data?.reduce((acc: any, item) => {
-        if (!acc[item.field_name]) {
-          acc[item.field_name] = [];
+      const byField = data.reduce((acc: any, item: any) => {
+        const key = item.field_name || 'Document Overall';
+        if (!acc[key]) {
+          acc[key] = [];
         }
-        acc[item.field_name].push(item);
+        acc[key].push(item);
         return acc;
-      }, {}) || {};
+      }, {} as Record<string, any[]>);
 
       const fieldStats = Object.entries(byField).map(([fieldName, items]: [string, any]) => ({
         fieldName,
-        avgConfidence: items.reduce((sum: number, item: any) => 
+        avgConfidence: items.reduce((sum: number, item: any) =>
           sum + Number(item.confidence_score), 0) / items.length,
         count: items.length,
         lowConfidenceCount: items.filter((item: any) => Number(item.confidence_score) < 0.7).length,
-      })).sort((a, b) => a.avgConfidence - b.avgConfidence);
+      })).sort((a: any, b: any) => a.avgConfidence - b.avgConfidence);
 
       return {
         total,
