@@ -96,6 +96,23 @@ const ConfidenceDashboard = () => {
       description="Monitor OCR confidence levels and identify documents needing review"
     >
       <div className="space-y-6">
+        {/* Empty State */}
+        {!confidenceStats || confidenceStats.total === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-12">
+              <FileText className="h-16 w-16 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No Confidence Data Yet</h3>
+              <p className="text-sm text-muted-foreground text-center max-w-md mb-4">
+                Confidence scores are tracked when documents are processed with OCR. 
+                Process some documents to see confidence metrics here.
+              </p>
+              <Link to="/admin/batches">
+                <Button>View Batches</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ) : (
+          <>
         {/* Summary Stats */}
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
@@ -227,6 +244,8 @@ const ConfidenceDashboard = () => {
             </div>
           </CardContent>
         </Card>
+          </>
+        )}
       </div>
     </AdminLayout>
   );
