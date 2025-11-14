@@ -118,39 +118,18 @@ export default function ReleaseNotes() {
               </CardHeader>
               <CardContent>
                 <Accordion type="single" collapsible className="w-full">
-                  {/* Latest Release Details */}
-                  <AccordionItem value={latestRelease.id}>
-                    <AccordionTrigger className="text-lg font-semibold">
-                      <div className="flex items-center gap-3">
-                        <Badge>{latestRelease.version}</Badge>
-                        <span>{latestRelease.version_name}</span>
-                      </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="space-y-6 pt-4">
-                      {(latestRelease.features as any[])?.map((feature: any, idx: number) => (
-                        <div key={idx}>
-                          <h4 className="font-semibold mb-3 flex items-center gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-primary" />
-                            {feature.section}
-                          </h4>
-                          <ul className="space-y-2 ml-6 text-sm text-muted-foreground">
-                            {feature.items?.map((item: string, itemIdx: number) => (
-                              <li key={itemIdx}>• {item}</li>
-                            ))}
-                          </ul>
-                          {idx < ((latestRelease.features as any[])?.length - 1) && <Separator className="mt-6" />}
-                        </div>
-                      ))}
-                    </AccordionContent>
-                  </AccordionItem>
-
-                  {/* Older Releases */}
-                  {olderReleases.map((release: any) => (
+                  {/* Sorted Releases */}
+                  {releases?.map((release: any) => (
                     <AccordionItem key={release.id} value={release.id}>
                       <AccordionTrigger className="text-lg font-semibold">
                         <div className="flex items-center gap-3">
                           <Badge>{release.version}</Badge>
-                          <span>{release.version_name}</span>
+                          <span className="flex items-center gap-2">
+                            {release.version_name}
+                            {release.id === latestRelease?.id && (
+                              <Badge variant="default">Latest</Badge>
+                            )}
+                          </span>
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="space-y-6 pt-4">
