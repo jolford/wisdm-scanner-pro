@@ -284,6 +284,90 @@ const WebhookConfig = () => {
       description="Configure webhooks for real-time notifications"
     >
       <div className="space-y-6">
+        {/* Examples Card */}
+        <Card className="border-primary/20 bg-primary/5">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Webhook className="h-5 w-5" />
+              Webhook Integration Examples
+            </CardTitle>
+            <CardDescription>
+              Connect your document processing events to external services in real-time
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <strong className="text-sm flex items-center gap-2">
+                  💬 Slack / Microsoft Teams
+                </strong>
+                <p className="text-xs text-muted-foreground">
+                  Send notifications to team channels when batches complete, documents need review, or exceptions occur.
+                  <br /><strong>Example:</strong> "Batch 'Q4-Invoices' completed with 45 documents validated"
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <strong className="text-sm flex items-center gap-2">
+                  📧 Email Services (SendGrid, Mailgun)
+                </strong>
+                <p className="text-xs text-muted-foreground">
+                  Trigger email notifications to specific users when documents require attention or fraud is detected.
+                  <br /><strong>Example:</strong> Alert finance team when low-confidence invoices need review
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <strong className="text-sm flex items-center gap-2">
+                  📱 SMS/Text (Twilio, AWS SNS)
+                </strong>
+                <p className="text-xs text-muted-foreground">
+                  Send urgent text alerts for high-priority events like fraud detection or critical exceptions.
+                  <br /><strong>Example:</strong> Text alert when duplicate invoices detected
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <strong className="text-sm flex items-center gap-2">
+                  🔄 Custom Workflows (Zapier, Make, n8n)
+                </strong>
+                <p className="text-xs text-muted-foreground">
+                  Trigger complex automation workflows connecting multiple systems and business processes.
+                  <br /><strong>Example:</strong> Auto-create tickets in Jira for documents with exceptions
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <strong className="text-sm flex items-center gap-2">
+                  📊 Analytics & Monitoring (Datadog, New Relic)
+                </strong>
+                <p className="text-xs text-muted-foreground">
+                  Track processing metrics, performance data, and error rates in your monitoring dashboards.
+                  <br /><strong>Example:</strong> Monitor validation completion rates and processing times
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <strong className="text-sm flex items-center gap-2">
+                  💼 Business Systems (ERP, CRM, Accounting)
+                </strong>
+                <p className="text-xs text-muted-foreground">
+                  Sync validated document data to SAP, Salesforce, QuickBooks, or other enterprise systems.
+                  <br /><strong>Example:</strong> Auto-post validated invoices to accounting software
+                </p>
+              </div>
+            </div>
+            
+            <div className="pt-3 border-t">
+              <p className="text-xs text-muted-foreground">
+                💡 <strong>Getting Started:</strong> Create a webhook pointing to your service's incoming webhook URL. 
+                Select which events to monitor (e.g., "Document Validated", "Fraud Detected"). 
+                Your service will receive real-time JSON payloads with document data, batch info, and processing results.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+        
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
