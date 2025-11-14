@@ -2953,6 +2953,7 @@ export type Database = {
           created_by: string
           customer_id: string
           description: string
+          detect_pii: boolean
           enable_check_scanning: boolean
           enable_signature_verification: boolean
           export_types: string[]
@@ -2962,6 +2963,7 @@ export type Database = {
           is_active: boolean
           metadata: Json
           name: string
+          ocr_model: string
           queues: Json
           updated_at: string
         }[]
