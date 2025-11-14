@@ -1421,6 +1421,69 @@ Review the image and provide corrected text with any OCR errors fixed.`;
       }
     }
 
+    // Casino voucher deterministic text fallback
+    try {
+      if (isCasinoVoucher && extractedText) {
+        const text = String(extractedText);
+        // Amount: choose the largest dollar amount on the page
+        const amounts = text.match(/\$\s?\d{1,3}(,\d{3})*(\.\d{2})?/g) || [];
+        if (amounts.length) {
+          let max = '';
+          let maxv = 0;
+          for (const a of amounts) {
+            const v = parseFloat(a.replace(/[$,\s]/g, ''));
+            if (!isNaN(v) && v > maxv) {
+              maxv = v;
+              max = a.replace(/\s/g, '');
+            }
+          }
+          if (max) {
+            const val = max.startsWith('$') ? max : `$${max}`;
+            metadata['Amount'] = val;
+            if (fieldConfidence) fieldConfidence['Amount'] = 0.98;
+            console.log(`Text fallback Amount: ${val}`);
+          }
+        }
+
+        // Validation Date: support MM/DD/YYYY or MM-DD-YYYY
+        const dateMatch = text.match(/\b\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}\b/);
+        if (dateMatch) {
+          const val = dateMatch[0].replace(/-/g, '/');
+          metadata['Validation Date'] = val;
+          if (fieldConfidence) fieldConfidence['Validation Date'] = 0.97;
+          console.log(`Text fallback Validation Date: ${val}`);
+        }
+
+        // Ticket Number: prefer pattern near the word VALIDATION
+        let ticket = '';
+        const upper = text.toUpperCase();
+        const valIdx = upper.indexOf('VALIDATION');
+        const slice = valIdx >= 0 ? text.slice(valIdx, valIdx + 200) : text;
+        const t1 = slice.match(/\b\d{2}-\d{4}-\d{4}-\d{4}-\d{4}\b/);
+        if (t1) ticket = t1[0];
+        if (!ticket) {
+          const any = text.match(/\b\d{2}-\d{4}-\d{4}-\d{4}-\d{4}\b/);
+          if (any) ticket = any[0];
+        }
+        if (ticket) {
+          metadata['Ticket Number'] = ticket;
+          if (fieldConfidence) fieldConfidence['Ticket Number'] = 0.97;
+          console.log(`Text fallback Ticket Number: ${ticket}`);
+        }
+
+        // Machine Number: "MACHINE #12345" or "ASSET# 12345"
+        const m = text.match(/(?:MACHINE|ASSET)\s*#?\s*(\d{4,5})/i);
+        if (m) {
+          const val = m[1];
+          metadata['Machine Number'] = val;
+          if (fieldConfidence) fieldConfidence['Machine Number'] = 0.96;
+          console.log(`Text fallback Machine Number: ${val}`);
+        }
+      }
+    } catch (e) {
+      console.log('Casino voucher text fallback failed:', e);
+    }
+
     // --- PII DETECTION ---
     // Scan for personally identifiable information in the extracted text (only if project has PII detection enabled)
     const detectedPiiRegions: Array<{ type: string; category: string; text: string; bbox?: any }> = [];
