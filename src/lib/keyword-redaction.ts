@@ -148,7 +148,8 @@ export const detectKeywords = (
       // Try to locate geometry at token level for regex patterns
       if (wordTokens.length > 0) {
         try {
-          const tokenRegex = new RegExp(searchTerm, keyword.caseSensitive ? 'g' : 'gi');
+          // Build a non-global regex to avoid lastIndex state between tests
+          const tokenRegex = new RegExp(searchTerm, keyword.caseSensitive ? '' : 'i');
 
           // 1) Single-token matches
           for (const wt of wordTokens) {
