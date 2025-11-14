@@ -1789,43 +1789,46 @@ const { toast } = useToast();
                                 
                                 <CollapsibleContent className="animate-accordion-down">
                                   <div className="border rounded-lg overflow-hidden shadow-sm">
-                                    <Table>
-                                      <TableHeader>
-                                        <TableRow className="bg-muted/50">
-                                          {getLineItemsForDoc(doc).length > 0 && Object.keys(getLineItemsForDoc(doc)[0]).map((key) => (
-                                            <TableHead key={key} className="font-semibold">
-                                              {key}
-                                            </TableHead>
-                                          ))}
-                                          <TableHead className="w-20 text-center">Actions</TableHead>
-                                        </TableRow>
-                                      </TableHeader>
-                                      <TableBody>
-                                        {getLineItemsForDoc(doc).map((item, idx) => (
-                                          <TableRow key={idx} className="hover:bg-muted/30 transition-colors">
-                                            {Object.entries(item).map(([key, value], vIdx) => (
-                                              <TableCell key={vIdx} className="py-2">
-                                                <Input
-                                                  value={value !== null && value !== undefined ? String(value) : ''}
-                                                  onChange={(e) => handleLineItemChange(doc.id, idx, key, e.target.value)}
-                                                  className="h-9 border-muted-foreground/20 focus:border-primary transition-colors"
-                                                />
-                                              </TableCell>
+                                    <div className="overflow-x-auto">
+                                      <Table>
+                                        <TableHeader>
+                                          <TableRow className="bg-muted/50">
+                                            {getLineItemsForDoc(doc).length > 0 && Object.keys(getLineItemsForDoc(doc)[0]).map((key) => (
+                                              <TableHead key={key} className="font-semibold min-w-[200px]">
+                                                {key}
+                                              </TableHead>
                                             ))}
-                                            <TableCell className="text-center">
-                                              <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => handleDeleteLineItem(doc.id, idx)}
-                                                className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive transition-colors"
-                                              >
-                                                <XCircle className="h-4 w-4" />
-                                              </Button>
-                                            </TableCell>
+                                            <TableHead className="w-20 text-center">Actions</TableHead>
                                           </TableRow>
-                                        ))}
-                                      </TableBody>
-                                    </Table>
+                                        </TableHeader>
+                                        <TableBody>
+                                          {getLineItemsForDoc(doc).map((item, idx) => (
+                                            <TableRow key={idx} className="hover:bg-muted/30 transition-colors">
+                                              {Object.entries(item).map(([key, value], vIdx) => (
+                                                <TableCell key={vIdx} className="py-3 align-top">
+                                                  <Textarea
+                                                    value={value !== null && value !== undefined ? String(value) : ''}
+                                                    onChange={(e) => handleLineItemChange(doc.id, idx, key, e.target.value)}
+                                                    className="min-h-[80px] resize-y border-muted-foreground/20 focus:border-primary transition-colors"
+                                                    rows={3}
+                                                  />
+                                                </TableCell>
+                                              ))}
+                                              <TableCell className="text-center align-top pt-5">
+                                                <Button
+                                                  size="sm"
+                                                  variant="ghost"
+                                                  onClick={() => handleDeleteLineItem(doc.id, idx)}
+                                                  className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive transition-colors"
+                                                >
+                                                  <XCircle className="h-4 w-4" />
+                                                </Button>
+                                              </TableCell>
+                                            </TableRow>
+                                          ))}
+                                        </TableBody>
+                                      </Table>
+                                    </div>
                                   </div>
                                 </CollapsibleContent>
                               </Collapsible>
