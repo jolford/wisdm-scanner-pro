@@ -142,10 +142,18 @@ export const detectKeywords = (
     const isRegexPattern = searchTerm.includes('\\b') || searchTerm.includes('\\d') || searchTerm.includes('[');
     
     if (isRegexPattern) {
-      // For regex patterns, ONLY use word token matching to ensure we have bounding boxes
-      // Don't add matches without bounding boxes from full text matching
-      
-      // Try to locate geometry at token level for regex patterns
+      // 1) Fast textual scan to count occurrences (text-only matches for UX even if geometry missing)
+      try {
+        const regex = new RegExp(searchTerm, keyword.caseSensitive ? 'g' : 'gi');
+        let textMatch;
+        while ((textMatch = regex.exec(ocrText)) !== null) {
+          matches.push({ text: textMatch[0] });
+        }
+      } catch (e) {
+        console.warn(`Invalid regex pattern: ${searchTerm}`, e);
+      }
+
+      // 2) Try to locate geometry at token level for regex patterns
       if (wordTokens.length > 0) {
         try {
           // Build a non-global regex to avoid lastIndex state between tests
