@@ -1044,28 +1044,26 @@ useEffect(() => {
               <TooltipContent>{showRegionSelector ? 'Cancel Selection' : 'Select Region to Re-OCR'}</TooltipContent>
             </Tooltip>
 
-            {isAdmin && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant={showRedactionTool ? "default" : piiDetected ? "destructive" : "outline"}
-                    onClick={() => setShowRedactionTool(!showRedactionTool)}
-                    className={piiDetected && !showRedactionTool ? "animate-pulse" : ""}
-                  >
-                    <Eraser className="h-4 w-4" />
-                    {piiDetected && !showRedactionTool && (
-                      <Badge variant="destructive" className="ml-1 h-4 px-1 text-[10px]">
-                        {detectedPiiRegions?.length || 0}
-                      </Badge>
-                    )}
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {showRedactionTool ? 'Cancel Redaction' : piiDetected ? `Draw Redaction Zones (${detectedPiiRegions?.length || 0} PII items detected)` : 'Redact Document'}
-                </TooltipContent>
-              </Tooltip>
-            )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant={showRedactionTool ? "default" : piiDetected ? "destructive" : "outline"}
+                  onClick={() => setShowRedactionTool(!showRedactionTool)}
+                  className={piiDetected && !showRedactionTool ? "animate-pulse" : ""}
+                >
+                  <Eraser className="h-4 w-4" />
+                  {piiDetected && !showRedactionTool && (
+                    <Badge variant="destructive" className="ml-1 h-4 px-1 text-[10px]">
+                      {detectedPiiRegions?.length || 0}
+                    </Badge>
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                {showRedactionTool ? 'Cancel Redaction' : piiDetected ? `Draw Redaction Zones (${detectedPiiRegions?.length || 0} PII items detected)` : 'Redact Document'}
+              </TooltipContent>
+            </Tooltip>
             
             {/* View Original Button (for PII documents) */}
             {documentId && piiDetected && (
