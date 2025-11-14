@@ -1795,7 +1795,7 @@ const { toast } = useToast();
                                         <TableHeader>
                                           <TableRow className="bg-muted/50">
                                             {getLineItemsForDoc(doc).length > 0 && Object.keys(getLineItemsForDoc(doc)[0]).map((key) => (
-                                              <TableHead key={key} className="font-semibold min-w-[200px]">
+                                              <TableHead key={key} className="font-semibold min-w-[150px]">
                                                 {key}
                                               </TableHead>
                                             ))}
@@ -1808,14 +1808,13 @@ const { toast } = useToast();
                                               {Object.entries(item).map(([key, value], vIdx) => {
                                                 const displayValue = value !== null && value !== undefined ? String(value) : '';
                                                 return (
-                                                  <TableCell key={vIdx} className="py-3 align-top">
+                                                  <TableCell key={vIdx} className="py-2 align-middle">
                                                     <Tooltip>
                                                       <TooltipTrigger asChild>
-                                                        <Textarea
+                                                        <Input
                                                           value={displayValue}
                                                           onChange={(e) => handleLineItemChange(doc.id, idx, key, e.target.value)}
-                                                          className="min-h-[80px] resize-y border-muted-foreground/20 focus:border-primary transition-colors"
-                                                          rows={3}
+                                                          className="border-muted-foreground/20 focus:border-primary transition-colors"
                                                         />
                                                       </TooltipTrigger>
                                                       <TooltipContent side="top" className="max-w-md p-3 text-sm">
@@ -1827,7 +1826,7 @@ const { toast } = useToast();
                                                   </TableCell>
                                                 );
                                               })}
-                                              <TableCell className="text-center align-top pt-5">
+                                              <TableCell className="text-center align-middle">
                                                 <Button
                                                   size="sm"
                                                   variant="ghost"
