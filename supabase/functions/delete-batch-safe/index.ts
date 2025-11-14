@@ -29,17 +29,27 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
     // Authenticated client with end-user JWT to verify access
+    const authHeader = req.headers.get('Authorization');
     const supabase = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: req.headers.get('Authorization') || '' } },
+      global: { headers: { Authorization: authHeader || '' } },
     });
 
     // Service role client for privileged deletes (bypasses RLS)
     const admin = createClient(supabaseUrl, serviceKey);
 
-    // Ensure the requester can access the batch
-    const { data: batch, error: fetchErr } = await supabase
+    // Get the current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: 'Not authenticated' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    // Use service role to fetch batch and verify user access
+    const { data: batch, error: fetchErr } = await admin
       .from('batches')
-      .select('id, created_by, project_id')
+      .select('id, created_by, project_id, customer_id')
       .eq('id', batchId)
       .maybeSingle();
 
@@ -51,8 +61,26 @@ Deno.serve(async (req) => {
     }
 
     if (!batch) {
-      return new Response(JSON.stringify({ error: 'Batch not found or access denied' }), {
+      return new Response(JSON.stringify({ error: 'Batch not found' }), {
         status: 404,
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    // Check if user has permission (is creator or admin)
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('role, customer_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+    const isOwner = batch.created_by === user.id;
+    const sameCustomer = profile?.customer_id === batch.customer_id;
+
+    if (!isAdmin && !isOwner && !sameCustomer) {
+      return new Response(JSON.stringify({ error: 'Access denied' }), {
+        status: 403,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
