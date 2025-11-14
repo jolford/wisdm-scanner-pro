@@ -72,6 +72,7 @@ export const RedactionTool = ({
   const [detectedKeywords, setDetectedKeywords] = useState<DetectedKeyword[]>([]);
   const [showKeywordAlert, setShowKeywordAlert] = useState(false);
   const [enablePIIDetection, setEnablePIIDetection] = useState(true); // PII detection enabled by default
+  const [showPIIZones, setShowPIIZones] = useState(true); // Show detected PII zones by default
   
   // Redaction settings
   const [redactionMode, setRedactionMode] = useState<'permanent' | 'version'>('version'); // Permanent or create version
@@ -122,6 +123,30 @@ export const RedactionTool = ({
     // Clear canvas and draw the original image
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(imageRef.current, 0, 0);
+
+    // Draw detected PII zones as semi-transparent red boxes (if enabled)
+    if (showPIIZones && detectedKeywords.length > 0) {
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';  // Red border
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.15)';    // Light red fill
+      ctx.lineWidth = 2;
+      
+      detectedKeywords.forEach(keyword => {
+        keyword.matches?.forEach(match => {
+          if (match.boundingBox) {
+            const box = match.boundingBox;
+            // Add 2% padding to the boxes
+            const padding = canvas.width * 0.02;
+            const x = Math.max(0, box.x - padding);
+            const y = Math.max(0, box.y - padding);
+            const width = Math.min(canvas.width - x, box.width + padding * 2);
+            const height = Math.min(canvas.height - y, box.height + padding * 2);
+            
+            ctx.fillRect(x, y, width, height);
+            ctx.strokeRect(x, y, width, height);
+          }
+        });
+      });
+    }
 
     // Draw all completed redaction boxes as solid black rectangles
     ctx.fillStyle = 'rgba(0, 0, 0, 1)';  // Solid black (100% opacity)
@@ -275,6 +300,7 @@ export const RedactionTool = ({
     
     // Add to existing boxes
     setRedactionBoxes(prev => [...prev, ...mergedBoxes]);
+    setShowPIIZones(false); // Hide PII zones after auto-redaction
     
     toast({
       title: 'Auto-Redaction Applied',
@@ -462,6 +488,23 @@ export const RedactionTool = ({
             Enable PII Detection (SSN, Credit Cards, Email, Phone, DOB)
           </Label>
         </div>
+
+        {/* Show PII Zones Toggle */}
+        {detectedKeywords.length > 0 && (
+          <div className="flex items-center space-x-2 p-3 border border-border rounded-lg bg-muted/30">
+            <Checkbox
+              id="show-pii-zones"
+              checked={showPIIZones}
+              onCheckedChange={(checked) => {
+                setShowPIIZones(checked as boolean);
+                redrawCanvas();
+              }}
+            />
+            <Label htmlFor="show-pii-zones" className="cursor-pointer text-sm">
+              Highlight Detected PII Zones (red overlay on canvas)
+            </Label>
+          </div>
+        )}
         
         <div>
           <Label className="text-sm font-medium mb-2 block">Redaction Mode</Label>
@@ -498,9 +541,14 @@ export const RedactionTool = ({
 
         <div className="flex items-start gap-2 text-xs text-muted-foreground bg-muted/30 p-3 rounded-lg">
           <div className="flex-1">
-            <p className="mb-1">💡 <strong>Manual:</strong> Click and drag to draw redaction boxes</p>
+            <p className="mb-1">💡 <strong>Manual:</strong> Click and drag to draw redaction boxes (black boxes)</p>
             {detectedKeywords.length > 0 && (
-              <p>🤖 <strong>Auto:</strong> Click "Auto-Redact" to automatically redact detected sensitive keywords</p>
+              <>
+                <p className="mb-1">🤖 <strong>Auto:</strong> Click "Auto-Redact" to automatically redact detected sensitive keywords</p>
+                {showPIIZones && (
+                  <p className="text-red-500">🔴 <strong>Red overlays:</strong> Detected PII zones (not yet redacted)</p>
+                )}
+              </>
             )}
           </div>
         </div>

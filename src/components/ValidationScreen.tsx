@@ -5,8 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Lightbulb, Crop, Eraser, Sparkles } from 'lucide-react';
+import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Lightbulb, Crop, Eraser, Sparkles, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { documentMetadataSchema } from '@/lib/validation-schemas';
@@ -1048,13 +1049,21 @@ useEffect(() => {
                 <TooltipTrigger asChild>
                   <Button
                     size="sm"
-                    variant={showRedactionTool ? "default" : "outline"}
+                    variant={showRedactionTool ? "default" : piiDetected ? "destructive" : "outline"}
                     onClick={() => setShowRedactionTool(!showRedactionTool)}
+                    className={piiDetected && !showRedactionTool ? "animate-pulse" : ""}
                   >
                     <Eraser className="h-4 w-4" />
+                    {piiDetected && !showRedactionTool && (
+                      <Badge variant="destructive" className="ml-1 h-4 px-1 text-[10px]">
+                        {detectedPiiRegions?.length || 0}
+                      </Badge>
+                    )}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>{showRedactionTool ? 'Cancel Redaction' : 'Redact Document'}</TooltipContent>
+                <TooltipContent>
+                  {showRedactionTool ? 'Cancel Redaction' : piiDetected ? `Draw Redaction Zones (${detectedPiiRegions?.length || 0} PII items detected)` : 'Redact Document'}
+                </TooltipContent>
               </Tooltip>
             )}
             
@@ -1166,6 +1175,27 @@ useEffect(() => {
                 extractionFields={projectFields}
               />
             </div>
+          )}
+
+          {/* PII Detection Alert */}
+          {piiDetected && !showRedactionTool && (
+            <Alert variant="destructive" className="mt-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription className="flex items-center justify-between">
+                <span>
+                  <strong>PII Detected:</strong> {detectedPiiRegions?.length || 0} potentially sensitive items found in this document.
+                </span>
+                <Button 
+                  size="sm" 
+                  variant="destructive"
+                  onClick={() => setShowRedactionTool(true)}
+                  className="ml-4"
+                >
+                  <Eraser className="h-4 w-4 mr-2" />
+                  Draw Redaction Zones
+                </Button>
+              </AlertDescription>
+            </Alert>
           )}
 
           {/* Redaction Tool */}
