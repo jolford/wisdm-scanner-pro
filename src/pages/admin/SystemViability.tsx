@@ -28,6 +28,14 @@ interface ViabilityMetrics {
   manualLaborCostPerDoc: number;
   costSavingsPerDoc: number;
   totalCostSavings: number;
+  annualSubscriptionCost: number;
+  monthlyCostPerDoc: number;
+
+  // FTE Impact
+  currentFTEs: number;
+  projectedFTEs: number;
+  fteReduction: number;
+  hoursReallocated: number;
 
   // Accuracy Metrics
   totalDocuments: number;
@@ -42,7 +50,9 @@ interface ViabilityMetrics {
   // ROI Metrics
   totalInvestment: number;
   totalSavings: number;
+  netSavings: number;
   roi: number;
+  savingsPerDollarSpent: number;
   breakEvenDocuments: number;
   paybackPeriodMonths: number;
 }
@@ -56,7 +66,8 @@ const SystemViability = () => {
   const MANUAL_TIME_PER_DOC = 300; // 5 minutes in seconds
   const MANUAL_LABOR_RATE = 25; // $25/hour (realistic data entry rate)
   const SYSTEM_SETUP_COST = 2500; // One-time setup cost (training, implementation, configuration)
-  const MONTHLY_SUBSCRIPTION = 0; // Monthly platform cost (if applicable)
+  const MONTHLY_SUBSCRIPTION = 499; // Monthly platform cost
+  const HOURS_PER_FTE = 2080; // Standard annual work hours (260 days × 8 hours)
 
   useEffect(() => {
     if (!loading && isAdmin) {
@@ -149,16 +160,29 @@ const SystemViability = () => {
         ? (scores.reduce((sum, s) => sum + Number(s.confidence_score || 0), 0) / scores.length) * 100
         : 0;
 
+      // Calculate subscription and per-doc costs
+      const annualSubscriptionCost = MONTHLY_SUBSCRIPTION * 12;
+      const monthlyCostPerDoc = docs.length > 0 ? (MONTHLY_SUBSCRIPTION / docs.length) * 12 : 0;
+
+      // Calculate FTE impact
+      const totalManualHours = (MANUAL_TIME_PER_DOC * docs.length) / 3600;
+      const currentFTEs = totalManualHours / HOURS_PER_FTE;
+      const totalAutomatedHours = (avgProcessingTimeSeconds * docs.length) / 3600;
+      const projectedFTEs = totalAutomatedHours / HOURS_PER_FTE;
+      const fteReduction = currentFTEs - projectedFTEs;
+      const hoursReallocated = totalTimeSavedHours;
+
       // Calculate ROI
       const totalSavings = totalCostSavings;
-      const totalInvestment = SYSTEM_SETUP_COST + totalCost;
+      const totalInvestment = SYSTEM_SETUP_COST + totalCost + annualSubscriptionCost;
       const netSavings = totalSavings - totalInvestment;
       const roi = totalInvestment > 0 ? (netSavings / totalInvestment) * 100 : 0;
+      const savingsPerDollarSpent = totalInvestment > 0 ? totalSavings / totalInvestment : 0;
       const breakEvenDocuments = costSavingsPerDoc > 0 ? Math.ceil(SYSTEM_SETUP_COST / costSavingsPerDoc) : 0;
       
       // Calculate payback period in months
-      const docsPerMonth = docs.length > 0 ? docs.length / 12 : 100; // Assume 12 months of data or default
-      const monthlyNetSavings = costSavingsPerDoc * docsPerMonth;
+      const docsPerMonth = docs.length > 0 ? docs.length / 12 : 100;
+      const monthlyNetSavings = costSavingsPerDoc * docsPerMonth - MONTHLY_SUBSCRIPTION;
       const paybackPeriodMonths = monthlyNetSavings > 0 ? Math.ceil(SYSTEM_SETUP_COST / monthlyNetSavings) : 0;
 
       setMetrics({
@@ -170,6 +194,12 @@ const SystemViability = () => {
         manualLaborCostPerDoc,
         costSavingsPerDoc,
         totalCostSavings,
+        annualSubscriptionCost,
+        monthlyCostPerDoc,
+        currentFTEs,
+        projectedFTEs,
+        fteReduction,
+        hoursReallocated,
         totalDocuments: docs.length,
         successfulExtractions,
         validationCatchRate,
@@ -180,7 +210,9 @@ const SystemViability = () => {
         pendingDocs,
         totalInvestment,
         totalSavings,
+        netSavings,
         roi,
+        savingsPerDollarSpent,
         breakEvenDocuments,
         paybackPeriodMonths,
       });
@@ -218,15 +250,20 @@ const SystemViability = () => {
               <Target className="h-8 w-8 text-green-600" />
               <h2 className="text-3xl font-bold">System ROI</h2>
             </div>
-            <div className="flex items-center justify-center gap-8">
+            <div className="flex items-center justify-center gap-6">
               <div>
-                <p className="text-5xl font-bold text-green-600">{metrics.roi.toFixed(0)}%</p>
-                <p className="text-sm text-muted-foreground mt-2">Return on Investment</p>
+                <p className="text-5xl font-bold text-green-600">${metrics.savingsPerDollarSpent.toFixed(2)}</p>
+                <p className="text-sm text-muted-foreground mt-2">Saved per $1 Spent</p>
               </div>
               <div className="h-16 w-px bg-border" />
               <div>
-                <p className="text-3xl font-bold">${metrics.totalSavings.toFixed(2)}</p>
-                <p className="text-sm text-muted-foreground mt-2">Total Savings</p>
+                <p className="text-4xl font-bold text-green-600">{metrics.roi.toFixed(0)}%</p>
+                <p className="text-sm text-muted-foreground mt-2">ROI</p>
+              </div>
+              <div className="h-16 w-px bg-border" />
+              <div>
+                <p className="text-3xl font-bold">${metrics.netSavings.toFixed(2)}</p>
+                <p className="text-sm text-muted-foreground mt-2">Net Savings</p>
               </div>
               <div className="h-16 w-px bg-border" />
               <div>
@@ -250,6 +287,46 @@ const SystemViability = () => {
               </Badge>
             )}
           </div>
+        </Card>
+
+        {/* FTE Impact Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Staffing Impact
+            </CardTitle>
+            <CardDescription>Full-time equivalent (FTE) analysis</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-6">
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-2">Current FTEs</p>
+                <p className="text-4xl font-bold">{metrics.currentFTEs.toFixed(1)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Manual processing</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-2">Projected FTEs</p>
+                <p className="text-4xl font-bold text-green-600">{metrics.projectedFTEs.toFixed(1)}</p>
+                <p className="text-xs text-muted-foreground mt-1">With automation</p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-muted-foreground mb-2">FTE Reduction</p>
+                <p className="text-4xl font-bold text-green-600">{metrics.fteReduction.toFixed(1)}</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {metrics.hoursReallocated.toFixed(0)} hours reallocated
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 p-4 bg-muted/50 rounded-lg">
+              <p className="text-sm text-center text-muted-foreground">
+                <span className="font-semibold text-foreground">
+                  {((metrics.fteReduction / metrics.currentFTEs) * 100).toFixed(0)}% reduction
+                </span>
+                {' '}in staff required for document processing, freeing resources for higher-value work
+              </p>
+            </div>
+          </CardContent>
         </Card>
 
         {/* Time Savings Comparison */}
@@ -398,6 +475,88 @@ const SystemViability = () => {
           </CardContent>
         </Card>
 
+        {/* Cost Comparison Table - Upland Style */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <DollarSign className="h-5 w-5" />
+              Cost Comparison
+            </CardTitle>
+            <CardDescription>Side-by-side analysis of manual vs automated processing</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-3 px-4 font-semibold">Metric</th>
+                    <th className="text-center py-3 px-4 font-semibold bg-muted/30">Without System</th>
+                    <th className="text-center py-3 px-4 font-semibold bg-green-500/10">With System</th>
+                    <th className="text-center py-3 px-4 font-semibold text-green-600">Savings</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b">
+                    <td className="py-3 px-4">Processing Time per Document</td>
+                    <td className="text-center py-3 px-4 bg-muted/10">{formatTime(metrics.manualProcessingTimeSeconds)}</td>
+                    <td className="text-center py-3 px-4 bg-green-500/5">{formatTime(metrics.avgProcessingTimeSeconds)}</td>
+                    <td className="text-center py-3 px-4 font-semibold text-green-600">
+                      {formatTime(metrics.timeSavedPerDocument)}
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-3 px-4">Cost per Document</td>
+                    <td className="text-center py-3 px-4 bg-muted/10">${metrics.manualLaborCostPerDoc.toFixed(2)}</td>
+                    <td className="text-center py-3 px-4 bg-green-500/5">
+                      ${(metrics.avgAICostPerDoc + metrics.monthlyCostPerDoc).toFixed(3)}
+                    </td>
+                    <td className="text-center py-3 px-4 font-semibold text-green-600">
+                      ${metrics.costSavingsPerDoc.toFixed(2)}
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-3 px-4">FTEs Required</td>
+                    <td className="text-center py-3 px-4 bg-muted/10">{metrics.currentFTEs.toFixed(1)}</td>
+                    <td className="text-center py-3 px-4 bg-green-500/5">{metrics.projectedFTEs.toFixed(1)}</td>
+                    <td className="text-center py-3 px-4 font-semibold text-green-600">
+                      -{metrics.fteReduction.toFixed(1)}
+                    </td>
+                  </tr>
+                  <tr className="border-b">
+                    <td className="py-3 px-4">Annual Processing Cost</td>
+                    <td className="text-center py-3 px-4 bg-muted/10">
+                      ${(metrics.manualLaborCostPerDoc * metrics.totalDocuments).toFixed(2)}
+                    </td>
+                    <td className="text-center py-3 px-4 bg-green-500/5">
+                      ${((metrics.avgAICostPerDoc + metrics.monthlyCostPerDoc) * metrics.totalDocuments).toFixed(2)}
+                    </td>
+                    <td className="text-center py-3 px-4 font-semibold text-green-600">
+                      ${metrics.totalCostSavings.toFixed(2)}
+                    </td>
+                  </tr>
+                  <tr className="bg-green-500/10 font-semibold">
+                    <td className="py-4 px-4">Total Annual Cost</td>
+                    <td className="text-center py-4 px-4">
+                      ${(metrics.manualLaborCostPerDoc * metrics.totalDocuments).toFixed(2)}
+                    </td>
+                    <td className="text-center py-4 px-4">
+                      ${metrics.totalInvestment.toFixed(2)}
+                    </td>
+                    <td className="text-center py-4 px-4 text-green-600 text-lg">
+                      ${metrics.netSavings.toFixed(2)}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-4 p-4 bg-green-500/10 rounded-lg text-center">
+              <p className="text-lg font-semibold text-green-600">
+                For every $1 spent on the system, you save ${metrics.savingsPerDollarSpent.toFixed(2)}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Key Proof Points */}
         <Card className="p-6">
           <CardHeader className="p-0 mb-6">
@@ -453,10 +612,11 @@ const SystemViability = () => {
                     <CheckCircle className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
-                    <h4 className="font-bold mb-1">Positive ROI</h4>
+                    <h4 className="font-bold mb-1">Exceptional ROI</h4>
                     <p className="text-sm text-muted-foreground">
-                      Net savings of ${(metrics.totalSavings - metrics.totalInvestment).toFixed(2)} with {metrics.roi.toFixed(0)}% ROI 
-                      after {metrics.totalDocuments.toLocaleString()} documents processed (Break-even: {metrics.breakEvenDocuments.toLocaleString()} docs).
+                      Saving ${metrics.savingsPerDollarSpent.toFixed(2)} for every $1 spent with {metrics.roi.toFixed(0)}% return. 
+                      Net profit of ${metrics.netSavings.toFixed(2)} after processing {metrics.totalDocuments.toLocaleString()} documents 
+                      (Break-even: {metrics.breakEvenDocuments.toLocaleString()} docs).
                     </p>
                   </div>
                 </div>
@@ -466,10 +626,11 @@ const SystemViability = () => {
                     <CheckCircle className="h-5 w-5 text-green-600" />
                   </div>
                   <div>
-                    <h4 className="font-bold mb-1">Proven Reliability</h4>
+                    <h4 className="font-bold mb-1">Staffing Efficiency</h4>
                     <p className="text-sm text-muted-foreground">
-                      {((metrics.successfulExtractions / metrics.totalDocuments) * 100).toFixed(1)}% success rate processing real documents.
-                      System has handled {metrics.totalDocuments.toLocaleString()} documents with validation workflow catching errors.
+                      Reduced from {metrics.currentFTEs.toFixed(1)} to {metrics.projectedFTEs.toFixed(1)} FTEs needed 
+                      ({((metrics.fteReduction / metrics.currentFTEs) * 100).toFixed(0)}% reduction), 
+                      reallocating {metrics.hoursReallocated.toFixed(0)} hours annually to higher-value activities.
                     </p>
                   </div>
                 </div>
@@ -482,7 +643,7 @@ const SystemViability = () => {
                     <h4 className="font-bold mb-1">Scalable Performance</h4>
                     <p className="text-sm text-muted-foreground">
                       Consistent {formatTime(metrics.avgProcessingTimeSeconds)} average processing time regardless of volume.
-                      Saved {metrics.totalTimeSavedHours.toFixed(1)} hours of manual work total.
+                      System reliability proven across {metrics.totalDocuments.toLocaleString()} documents.
                     </p>
                   </div>
                 </div>
@@ -498,22 +659,44 @@ const SystemViability = () => {
             <CardDescription>Baseline values used for ROI calculations</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
               <div>
-                <p className="text-muted-foreground">Manual Processing Time</p>
-                <p className="font-semibold">{formatTime(MANUAL_TIME_PER_DOC)} per document</p>
+                <p className="text-muted-foreground">Manual Time/Doc</p>
+                <p className="font-semibold">{formatTime(MANUAL_TIME_PER_DOC)}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Manual Labor Rate</p>
-                <p className="font-semibold">${MANUAL_LABOR_RATE}/hour</p>
+                <p className="text-muted-foreground">Labor Rate</p>
+                <p className="font-semibold">${MANUAL_LABOR_RATE}/hr</p>
               </div>
               <div>
-                <p className="text-muted-foreground">System Setup Cost</p>
+                <p className="text-muted-foreground">Setup Cost</p>
                 <p className="font-semibold">${SYSTEM_SETUP_COST.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-muted-foreground">Avg AI Cost/Doc</p>
-                <p className="font-semibold">${metrics.avgAICostPerDoc.toFixed(3)}</p>
+                <p className="text-muted-foreground">Monthly Subscription</p>
+                <p className="font-semibold">${MONTHLY_SUBSCRIPTION}/mo</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Avg AI Cost</p>
+                <p className="font-semibold">${metrics.avgAICostPerDoc.toFixed(3)}/doc</p>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t">
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Total Investment</p>
+                  <p className="font-semibold text-lg">${metrics.totalInvestment.toFixed(2)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Setup + AI costs + subscription (${metrics.annualSubscriptionCost}/yr)
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Cost per Document</p>
+                  <p className="font-semibold text-lg">${(metrics.avgAICostPerDoc + metrics.monthlyCostPerDoc).toFixed(3)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    AI + amortized subscription vs ${metrics.manualLaborCostPerDoc.toFixed(2)} manual
+                  </p>
+                </div>
               </div>
             </div>
           </CardContent>
