@@ -7,6 +7,22 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { CheckCircle2, Rocket, Zap, Shield, TrendingUp, Calendar, Package } from "lucide-react";
 import { format } from "date-fns";
 
+// Helper function to compare semantic versions
+const compareVersions = (a: string, b: string): number => {
+  const aParts = a.split('.').map(Number);
+  const bParts = b.split('.').map(Number);
+  
+  for (let i = 0; i < Math.max(aParts.length, bParts.length); i++) {
+    const aPart = aParts[i] || 0;
+    const bPart = bParts[i] || 0;
+    
+    if (aPart > bPart) return -1; // Descending order (newer first)
+    if (aPart < bPart) return 1;
+  }
+  
+  return 0;
+};
+
 export default function ReleaseNotes() {
   const { data: releases, isLoading } = useQuery({
     queryKey: ["release-notes"],
@@ -17,7 +33,9 @@ export default function ReleaseNotes() {
         .eq("status", "published")
         .order("release_date", { ascending: false });
       if (error) throw error;
-      return data;
+      
+      // Sort by semantic version (descending)
+      return data?.sort((a, b) => compareVersions(a.version, b.version)) || [];
     },
   });
 
