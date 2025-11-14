@@ -1228,10 +1228,11 @@ Review the image and provide corrected text with any OCR errors fixed.`;
             console.log('Failed to parse word bounding boxes:', e);
           }
         }
+      } catch (e) {
+        console.log('Word bounding box extraction failed (non-critical):', e);
       }
-    } catch (e) {
-      console.log('Word bounding box extraction failed (non-critical):', e);
-    }
+ 
+    let zoneExtractedCount = 0;
 
     // --- ZONE-BASED EXTRACTION (use zone templates when available) ---
     if (zoneTemplate && zoneTemplate.zone_definitions && zoneTemplate.zone_definitions.length > 0 && wordBoundingBoxes.length > 0) {
@@ -1243,29 +1244,56 @@ Review the image and provide corrected text with any OCR errors fixed.`;
           const base = axis === 'x' || axis === 'w' ? 1000 : 700;
           return val > 100 ? (val / base) * 100 : val;
         };
-        
+
+        // Normalize word box scale: some models return 0..1 instead of 0..100
+        if (wordBoundingBoxes.length > 0) {
+          const maxX = Math.max(...wordBoundingBoxes.map((w: any) => (w.bbox.x + w.bbox.width)));
+          const maxY = Math.max(...wordBoundingBoxes.map((w: any) => (w.bbox.y + w.bbox.height)));
+          if (maxX <= 1.5 && maxY <= 1.5) {
+            console.log('Scaling wordBoundingBoxes from 0..1 to 0..100');
+            wordBoundingBoxes = wordBoundingBoxes.map((w: any) => ({
+              text: w.text,
+              bbox: {
+                x: Math.max(0, Math.min(100, w.bbox.x * 100)),
+                y: Math.max(0, Math.min(100, w.bbox.y * 100)),
+                width: Math.max(0, Math.min(100, w.bbox.width * 100)),
+                height: Math.max(0, Math.min(100, w.bbox.height * 100)),
+              }
+            }));
+          }
+        }
+
+        const intersects = (wb: any, zx: number, zy: number, zw: number, zh: number) => {
+          const ax1 = wb.x, ay1 = wb.y, ax2 = wb.x + wb.width, ay2 = wb.y + wb.height;
+          const bx1 = zx, by1 = zy, bx2 = zx + zw, by2 = zy + zh;
+          const ix1 = Math.max(ax1, bx1);
+          const iy1 = Math.max(ay1, by1);
+          const ix2 = Math.min(ax2, bx2);
+          const iy2 = Math.min(ay2, by2);
+          const iw = Math.max(0, ix2 - ix1);
+          const ih = Math.max(0, iy2 - iy1);
+          const interArea = iw * ih;
+          const wordArea = Math.max(1e-6, wb.width * wb.height);
+          const centerInside = (wb.x + wb.width / 2) >= zx && (wb.x + wb.width / 2) <= (zx + zw) && (wb.y + wb.height / 2) >= zy && (wb.y + wb.height / 2) <= (zy + zh);
+          return centerInside || (interArea / wordArea) >= 0.3;
+        };
+
         for (const zone of zoneTemplate.zone_definitions) {
           const zx = normalize(zone.x, 'x');
           const zy = normalize(zone.y, 'y');
           const zw = normalize(zone.width, 'w');
           const zh = normalize(zone.height, 'h');
-          
-          const wordsInZone = wordBoundingBoxes.filter((word: any) => {
-            const wb = word.bbox;
-            const wordCenterX = wb.x + wb.width / 2;
-            const wordCenterY = wb.y + wb.height / 2;
-            return wordCenterX >= zx && wordCenterX <= (zx + zw) &&
-                   wordCenterY >= zy && wordCenterY <= (zy + zh);
-          });
-          
+
+          const wordsInZone = wordBoundingBoxes.filter((word: any) => intersects(word.bbox, zx, zy, zw, zh));
+
           if (wordsInZone.length > 0) {
             const sortedWords = wordsInZone.sort((a: any, b: any) => {
               const yDiff = a.bbox.y - b.bbox.y;
               return Math.abs(yDiff) < 2 ? a.bbox.x - b.bbox.x : yDiff;
             });
-            
+
             let extractedValue = sortedWords.map((w: any) => w.text).join(' ').replace(/\s{2,}/g, ' ').trim();
-            
+
             if (zone.field_type === 'currency') {
               const match = extractedValue.match(/\$?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
               if (match) {
@@ -1278,7 +1306,7 @@ Review the image and provide corrected text with any OCR errors fixed.`;
             } else if (zone.field_type === 'number') {
               extractedValue = extractedValue.replace(/[^0-9\-]/g, '');
             }
-            
+
             if (zone.validation_pattern && extractedValue) {
               const pattern = new RegExp(zone.validation_pattern, zone.validation_flags || 'i');
               if (!pattern.test(extractedValue)) {
@@ -1286,9 +1314,10 @@ Review the image and provide corrected text with any OCR errors fixed.`;
                 continue;
               }
             }
-            
+
             metadata[zone.field_name] = extractedValue;
             if (fieldConfidence) fieldConfidence[zone.field_name] = 0.97;
+            zoneExtractedCount += 1;
             console.log(`Zone extracted ${zone.field_name}: ${extractedValue}`);
           } else {
             console.log(`Zone ${zone.field_name}: no words found in zone (${zx.toFixed(1)}%, ${zy.toFixed(1)}%, ${zw.toFixed(1)}%x${zh.toFixed(1)}%)`);
@@ -1300,8 +1329,8 @@ Review the image and provide corrected text with any OCR errors fixed.`;
       }
     }
 
-    // ROI-based zone extraction when word boxes are unavailable
-    if (zoneTemplate && zoneTemplate.zone_definitions && zoneTemplate.zone_definitions.length > 0 && wordBoundingBoxes.length === 0 && imageData) {
+    // ROI-based zone extraction when word boxes are unavailable or zones yielded no values
+    if (zoneTemplate && zoneTemplate.zone_definitions && zoneTemplate.zone_definitions.length > 0 && (wordBoundingBoxes.length === 0 || zoneExtractedCount === 0) && imageData) {
       try {
         const normalize = (val: number, axis: 'x' | 'y' | 'w' | 'h') => {
           const base = axis === 'x' || axis === 'w' ? 1000 : 700;
