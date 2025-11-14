@@ -67,6 +67,37 @@ serve(async (req) => {
     console.log('MICR Mode:', enableCheckScanning);
     console.log('Extraction fields:', extractionFields);
     console.log('Table extraction fields:', tableExtractionFields);
+    console.log('Project ID:', projectId);
+
+    // --- CHECK FOR ZONE TEMPLATES ---
+    let zoneTemplate: any = null;
+    if (projectId) {
+      try {
+        const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+        const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+        const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.39.3');
+        const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
+        
+        const { data: templates } = await supabaseAdmin
+          .from('zone_templates')
+          .select(`
+            *,
+            zone_definitions(*)
+          `)
+          .eq('project_id', projectId)
+          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single();
+        
+        if (templates) {
+          zoneTemplate = templates;
+          console.log('Found zone template:', templates.name, 'with', templates.zone_definitions?.length || 0, 'zones');
+        }
+      } catch (e) {
+        console.log('No zone template found or error loading:', e);
+      }
+    }
 
     // --- API KEY VALIDATION ---
     // Get Lovable AI API key from environment (auto-configured)
@@ -647,125 +678,119 @@ RESPONSE REQUIREMENTS:
             }
           }
           
-          // Template-based extraction for Casino Vouchers
+          // Placeholder for zone extraction (moved after word bounding boxes are populated)
           try {
-            const text = (extractedText || '').toString();
-            const lower = text.toLowerCase();
-            const isVoucherDoc = documentType === 'casino_voucher' ||
-              lower.includes('cashout ticket') || lower.includes('cashout voucher') || lower.includes('voucher #');
-            
-            if (isVoucherDoc && isCasinoVoucher) {
-              console.log('Applying template-based extraction for casino voucher...');
+                  const wb = word.bbox;
+                  // Check if word center is within zone
+                  const wordCenterX = wb.x + wb.width / 2;
+                  const wordCenterY = wb.y + wb.height / 2;
+                  return wordCenterX >= zoneBbox.x && 
+                         wordCenterX <= (zoneBbox.x + zoneBbox.width) &&
+                         wordCenterY >= zoneBbox.y && 
+                         wordCenterY <= (zoneBbox.y + zoneBbox.height);
+                });
+                
+                if (wordsInZone.length > 0) {
+                  // Combine words in reading order (left to right, top to bottom)
+                  const sortedWords = wordsInZone.sort((a: any, b: any) => {
+                    const yDiff = a.bbox.y - b.bbox.y;
+                    if (Math.abs(yDiff) < 5) return a.bbox.x - b.bbox.x;
+                    return yDiff;
+                  });
+                  
+                  let extractedValue = sortedWords.map((w: any) => w.text).join(' ');
+                  
+                  // Clean up based on field type
+                  if (zone.field_type === 'currency') {
+                    // Extract first valid currency amount
+                    const match = extractedValue.match(/\$?\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
+                    if (match) extractedValue = match[0].replace(/\s/g, '');
+                    if (!extractedValue.startsWith('$')) extractedValue = '$' + extractedValue;
+                  } else if (zone.field_type === 'date') {
+                    // Extract date pattern
+                    const match = extractedValue.match(/\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4}/);
+                    if (match) extractedValue = match[0];
+                  } else if (zone.field_type === 'number') {
+                    // Clean to just numbers and common separators
+                    extractedValue = extractedValue.replace(/[^0-9\-]/g, '');
+                  }
+                  
+                  // Apply validation pattern if specified
+                  if (zone.validation_pattern && extractedValue) {
+                    const pattern = new RegExp(zone.validation_pattern, zone.validation_flags || 'i');
+                    if (!pattern.test(extractedValue)) {
+                      console.log(`Zone ${zone.field_name}: value "${extractedValue}" failed validation pattern`);
+                      continue;
+                    }
+                  }
+                  
+                  metadata[zone.field_name] = extractedValue;
+                  if (fieldConfidence) fieldConfidence[zone.field_name] = 0.95;
+                  console.log(`Zone extracted ${zone.field_name}: ${extractedValue} (confidence: 95%)`);
+                } else {
+                  console.log(`Zone ${zone.field_name}: no words found in zone (${zoneBbox.x}, ${zoneBbox.y}, ${zoneBbox.width}x${zoneBbox.height})`);
+                }
+              }
               
-              // Inline template extractor (edge functions cannot import local files)
-              interface LocalExtractionZone {
-                fieldName: string;
-                searchPatterns: RegExp[];
-                contextKeywords?: string[];
-                cleanupRules?: ((text: string) => string)[];
-                validationPattern?: RegExp;
-              }
-              interface LocalTemplate {
-                name: string;
-                documentType: string;
-                zones: LocalExtractionZone[];
-                overallHints?: string[];
-              }
-              async function localExtractWithTemplate(fullText: string, template: LocalTemplate) {
-                const fields: Record<string, { value: string; confidence: number }> = {};
-                const lines = fullText.split('\n').map(l => l.trim()).filter(Boolean);
-                let total = 0, count = 0;
-                for (const zone of template.zones) {
-                  let best = '', conf = 0;
-                  for (const pattern of zone.searchPatterns) {
-                    const m = fullText.match(pattern);
-                    if (m && m[0]) {
-                      let c = m[0];
-                      if (zone.cleanupRules) for (const r of zone.cleanupRules) c = r(c);
-                      if (!zone.validationPattern || zone.validationPattern.test(c)) {
-                        best = c; conf = zone.validationPattern ? 0.95 : 0.8; break;
+              console.log('Zone-based extraction completed');
+            } else {
+              // FALLBACK: Context-based extraction (only if no zones)
+              const text = (extractedText || '').toString();
+              const lower = text.toLowerCase();
+              const isVoucherDoc = documentType === 'casino_voucher' ||
+                lower.includes('cashout ticket') || lower.includes('cashout voucher') || lower.includes('voucher #');
+              
+              if (isVoucherDoc && isCasinoVoucher) {
+                console.log('Applying context-based extraction for casino voucher (no zone template)...');
+                
+                // Extract using context keywords instead of just grabbing largest amount
+                const lines = text.split('\n').map((l: string) => l.trim()).filter(Boolean);
+                
+                // Amount: Look for dollar amounts near "AMOUNT", "TOTAL", "VALUE" keywords
+                if (!metadata['Amount'] || metadata['Amount'] === '') {
+                  for (const line of lines) {
+                    if (/amount|total|value|cash|voucher/i.test(line)) {
+                      const match = line.match(/\$[\d,]+\.\d{2}/);
+                      if (match) {
+                        metadata['Amount'] = match[0];
+                        if (fieldConfidence) fieldConfidence['Amount'] = 0.85;
+                        console.log(`Context-based Amount: ${match[0]} from line: ${line}`);
+                        break;
                       }
                     }
-                    if (!best && zone.contextKeywords) {
-                      for (const line of lines) {
-                        const hasCtx = zone.contextKeywords.some(kw => line.toLowerCase().includes(kw.toLowerCase()));
-                        if (!hasCtx) continue;
-                        const mm = line.match(pattern);
-                        if (mm && mm[0]) {
-                          let c = mm[0];
-                          if (zone.cleanupRules) for (const r of zone.cleanupRules) c = r(c);
-                          if (!zone.validationPattern || zone.validationPattern.test(c)) { best = c; conf = 0.9; break; }
-                        }
-                      }
-                    }
-                    if (best) break;
-                  }
-                  fields[zone.fieldName] = { value: best, confidence: conf };
-                  if (best) { total += conf; count++; }
-                }
-                const overall = count ? total / count : 0;
-                return { success: count >= Math.ceil(template.zones.length * 0.75), fields, overallConfidence: overall };
-              }
-              const LOCAL_FORT_HALL_CASINO_TEMPLATE: LocalTemplate = {
-                name: 'Fort Hall Casino Cashout Ticket',
-                documentType: 'casino_voucher',
-                zones: [
-                  {
-                    fieldName: 'Validation Date',
-                    searchPatterns: [ /\d{1,2}[\/-]\d{1,2}[\/-]\d{4}\s+\d{1,2}:\d{2}:\d{2}/, /\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/ ],
-                    contextKeywords: ['VALIDATION', 'TICKET'],
-                    validationPattern: /\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/,
-                    cleanupRules: [ (t) => { const m = t.match(/\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/); return m ? m[0] : t; } ]
-                  },
-                  {
-                    fieldName: 'Amount',
-                    searchPatterns: [ /\$[\d,]+\.\d{2}/g ],
-                    validationPattern: /^\$[\d,]+\.\d{2}$/,
-                    cleanupRules: [ (t) => {
-                      const amts = t.match(/\$[\d,]+\.\d{2}/g) || [];
-                      let max = 0, out = '';
-                      for (const a of amts) { const n = parseFloat(a.replace(/[\$,]/g, '')); if (n > max) { max = n; out = a; } }
-                      return out || t;
-                    }]
-                  },
-                  {
-                    fieldName: 'Ticket Number',
-                    searchPatterns: [ /\d{2}-\d{4}-\d{4}-\d{4}-\d{4}/, /VALIDATION\s+([\d-]+)/i ],
-                    contextKeywords: ['VALIDATION'],
-                    validationPattern: /^\d{2}-\d{4}-\d{4}-\d{4}-\d{4}$/,
-                    cleanupRules: [ (t) => { const m = t.match(/\d{2}-\d{4}-\d{4}-\d{4}-\d{4}/); return m ? m[0] : t; } ]
-                  },
-                  {
-                    fieldName: 'Machine Number',
-                    searchPatterns: [ /MACHINE\s+#?(\d{3,6})/i, /ASSET\s*#?(\d{3,6})/i, /\b\d{3,6}-\d{2,3}\b/ ],
-                    contextKeywords: ['MACHINE', 'ASSET'],
-                    validationPattern: /^\d{3,6}(-\d{2,3})?$/,
-                    cleanupRules: [ (t) => {
-                      const dash = t.match(/\b\d{3,6}-\d{2,3}\b/);
-                      if (dash) return dash[0];
-                      const m = t.match(/\d{3,6}/); return m ? m[0] : t;
-                    } ]
-                  }
-                ]
-              };
-              const templateResult = await localExtractWithTemplate(text, LOCAL_FORT_HALL_CASINO_TEMPLATE);
-              if (templateResult.success && templateResult.overallConfidence > 0.7) {
-                console.log(`Template extraction successful with ${(templateResult.overallConfidence * 100).toFixed(1)}% confidence`);
-                for (const [fieldName, data] of Object.entries(templateResult.fields)) {
-                  const fieldData = data as { value: string; confidence: number };
-                  if (fieldData.value) {
-                    metadata[fieldName] = fieldData.value;
-                    if (fieldConfidence) fieldConfidence[fieldName] = fieldData.confidence;
-                    console.log(`Template extracted ${fieldName}: ${fieldData.value} (confidence: ${(fieldData.confidence * 100).toFixed(1)}%)`);
                   }
                 }
-                confidence = templateResult.overallConfidence;
-              } else {
-            console.log(`Template extraction failed or low confidence (${(templateResult.overallConfidence * 100).toFixed(1)}%)`);
+                
+                // Validation Date
+                if (!metadata['Validation Date'] || metadata['Validation Date'] === '') {
+                  const dateMatch = text.match(/\d{1,2}[\/-]\d{1,2}[\/-]\d{4}/);
+                  if (dateMatch) {
+                    metadata['Validation Date'] = dateMatch[0];
+                    if (fieldConfidence) fieldConfidence['Validation Date'] = 0.85;
+                  }
+                }
+                
+                // Ticket Number
+                if (!metadata['Ticket Number'] || metadata['Ticket Number'] === '') {
+                  const ticketMatch = text.match(/\d{2}-\d{4}-\d{4}-\d{4}-\d{4}/);
+                  if (ticketMatch) {
+                    metadata['Ticket Number'] = ticketMatch[0];
+                    if (fieldConfidence) fieldConfidence['Ticket Number'] = 0.85;
+                  }
+                }
+                
+                // Machine Number
+                if (!metadata['Machine Number'] || metadata['Machine Number'] === '') {
+                  const machineMatch = text.match(/(?:MACHINE|ASSET)\s*#?\s*(\d{3,6})/i);
+                  if (machineMatch) {
+                    metadata['Machine Number'] = machineMatch[1];
+                    if (fieldConfidence) fieldConfidence['Machine Number'] = 0.85;
+                  }
+                }
               }
             }
           } catch (postErr) {
-            console.warn('Template extraction failed, using AI results:', postErr);
+            console.warn('Zone/template extraction failed, using AI results:', postErr);
           }
 
           // Invoice-specific label-based corrections (avoid mistaking CUSTOMER NO)
