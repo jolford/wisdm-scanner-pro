@@ -1,8 +1,50 @@
-# Release Notes - Last 2 Weeks
+# Release Notes - Version 2.2.1
 
-## 🎯 Major Features
+## 🎯 Latest Updates (v2.2.1)
 
-### Phase 2: Automation & Advanced Validation (Latest)
+### Enhanced Medical Form OCR Processing
+Significantly improved OCR accuracy for medical forms, healthcare documents, and patient release forms.
+
+**Medical Form Detection:**
+- **Intelligent Form Recognition**
+  - Automatic detection of medical/healthcare forms based on field names
+  - Specialized processing for medical terminology and structures
+  - Enhanced handling of patient information fields
+  - Optimized for common medical form layouts
+
+**Dual-Mode Extraction:**
+- **Text + Image Processing**
+  - Processes both PDF text extraction and page images simultaneously
+  - Captures handwritten values missed by text-only extraction
+  - Handles typed information in form fields
+  - Extracts check boxes and hand-marked selections
+  
+- **Smart Blank Field Detection**
+  - Distinguishes between blank fields (underscores/lines) and actual data
+  - Returns empty strings for unfilled fields instead of placeholder text
+  - Accurately identifies pre-printed form content vs. filled information
+  
+**Medical-Specific Extraction:**
+- **Field-Aware Processing**
+  - Patient name extraction with proper formatting
+  - Date parsing for birth dates, service dates, authorization dates
+  - Address extraction with proper structure
+  - Phone number formatting and validation
+  - Medical record number detection
+  - Insurance information capture
+  - Checkbox list handling (e.g., "Information To Be Released")
+
+**Technical Improvements:**
+- First page image rendering at optimal resolution (1600px max)
+- Image downscaling for efficient processing
+- Combined text + visual data sent to AI for comprehensive analysis
+- Medical form-specific prompts and extraction rules
+
+---
+
+## 🎯 Major Features (v2.2.0)
+
+### Phase 2: Automation & Advanced Validation
 Enhanced automation capabilities with intelligent duplicate detection, customizable validation rules, and scheduled batch processing.
 
 **Duplicate Detection System:**

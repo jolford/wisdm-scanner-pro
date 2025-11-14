@@ -113,6 +113,7 @@ const Help = () => {
         { title: 'Physical Scanner', description: 'Use TWAIN-compatible scanners for direct document capture', icon: ScanLine },
         { title: 'Batch Processing', description: 'Multiple documents can be added to the same batch for bulk processing', icon: FileText },
         { title: 'OCR Extraction', description: 'Text and metadata are automatically extracted using AI-powered OCR', icon: Database },
+        { title: 'Medical Form Processing', description: 'Enhanced extraction for medical forms, patient releases, and healthcare documents with handwriting recognition', icon: Bot },
       ]
     },
     {
@@ -177,6 +178,10 @@ const Help = () => {
         {
           q: 'Why is OCR accuracy low for some documents?',
           a: 'OCR quality depends on image clarity, resolution, and text formatting. For best results: use high-resolution scans (300 DPI+), ensure good lighting, avoid skewed images, and use clear fonts.'
+        },
+        {
+          q: 'How does medical form extraction work?',
+          a: 'Medical forms receive enhanced processing that combines text extraction with image analysis. The system automatically detects healthcare forms and uses specialized extraction for patient names, dates, addresses, phone numbers, and checkboxes. It distinguishes between blank form fields and filled information, including handwritten values.'
         },
         {
           q: 'Can I scan multiple pages at once?',
