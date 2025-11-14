@@ -33,13 +33,18 @@ interface ViabilityMetrics {
   totalDocuments: number;
   successfulExtractions: number;
   validationCatchRate: number;
+  errorDetectionRate: number;
   extractionAccuracy: number;
+  validatedDocs: number;
+  rejectedDocs: number;
+  pendingDocs: number;
 
   // ROI Metrics
   totalInvestment: number;
   totalSavings: number;
   roi: number;
   breakEvenDocuments: number;
+  paybackPeriodMonths: number;
 }
 
 const SystemViability = () => {
@@ -47,10 +52,11 @@ const SystemViability = () => {
   const [metrics, setMetrics] = useState<ViabilityMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Constants for calculations
+  // Constants for calculations (now visible to users)
   const MANUAL_TIME_PER_DOC = 300; // 5 minutes in seconds
-  const MANUAL_LABOR_RATE = 15; // $15/hour
-  const SYSTEM_SETUP_COST = 0; // One-time setup cost
+  const MANUAL_LABOR_RATE = 25; // $25/hour (realistic data entry rate)
+  const SYSTEM_SETUP_COST = 2500; // One-time setup cost (training, implementation, configuration)
+  const MONTHLY_SUBSCRIPTION = 0; // Monthly platform cost (if applicable)
 
   useEffect(() => {
     if (!loading && isAdmin) {
@@ -125,8 +131,18 @@ const SystemViability = () => {
 
       // Calculate accuracy metrics
       const successfulExtractions = validations.length;
+      const validatedDocs = docs.filter(d => d.validation_status === 'validated').length;
+      const rejectedDocs = docs.filter(d => d.validation_status === 'rejected').length;
+      const pendingDocs = docs.filter(d => d.validation_status === 'pending').length;
+      
+      // Validation catch rate: % of docs that passed validation (quality metric)
       const validationCatchRate = docs.length > 0
-        ? (validations.filter(d => d.validation_status === 'validated').length / docs.length) * 100
+        ? (validatedDocs / docs.length) * 100
+        : 0;
+
+      // Error detection rate: % of docs flagged for review
+      const errorDetectionRate = docs.length > 0
+        ? (rejectedDocs / docs.length) * 100
         : 0;
 
       const extractionAccuracy = scores.length > 0
@@ -136,8 +152,14 @@ const SystemViability = () => {
       // Calculate ROI
       const totalSavings = totalCostSavings;
       const totalInvestment = SYSTEM_SETUP_COST + totalCost;
-      const roi = totalInvestment > 0 ? ((totalSavings - totalInvestment) / totalInvestment) * 100 : 0;
+      const netSavings = totalSavings - totalInvestment;
+      const roi = totalInvestment > 0 ? (netSavings / totalInvestment) * 100 : 0;
       const breakEvenDocuments = costSavingsPerDoc > 0 ? Math.ceil(SYSTEM_SETUP_COST / costSavingsPerDoc) : 0;
+      
+      // Calculate payback period in months
+      const docsPerMonth = docs.length > 0 ? docs.length / 12 : 100; // Assume 12 months of data or default
+      const monthlyNetSavings = costSavingsPerDoc * docsPerMonth;
+      const paybackPeriodMonths = monthlyNetSavings > 0 ? Math.ceil(SYSTEM_SETUP_COST / monthlyNetSavings) : 0;
 
       setMetrics({
         avgProcessingTimeSeconds,
@@ -151,11 +173,16 @@ const SystemViability = () => {
         totalDocuments: docs.length,
         successfulExtractions,
         validationCatchRate,
+        errorDetectionRate,
         extractionAccuracy,
+        validatedDocs,
+        rejectedDocs,
+        pendingDocs,
         totalInvestment,
         totalSavings,
         roi,
         breakEvenDocuments,
+        paybackPeriodMonths,
       });
     } catch (error) {
       console.error('Error loading viability metrics:', error);
@@ -208,11 +235,16 @@ const SystemViability = () => {
               </div>
             </div>
             {metrics.breakEvenDocuments > 0 && metrics.totalDocuments < metrics.breakEvenDocuments && (
-              <Badge variant="outline" className="text-lg py-2 px-4">
-                Break-even at {metrics.breakEvenDocuments} documents
-              </Badge>
+              <div className="flex gap-2">
+                <Badge variant="outline" className="text-lg py-2 px-4">
+                  Break-even at {metrics.breakEvenDocuments.toLocaleString()} documents
+                </Badge>
+                <Badge variant="secondary" className="text-lg py-2 px-4">
+                  Payback in {metrics.paybackPeriodMonths} months
+                </Badge>
+              </div>
             )}
-            {metrics.totalDocuments >= metrics.breakEvenDocuments && (
+            {metrics.totalDocuments >= metrics.breakEvenDocuments && metrics.breakEvenDocuments > 0 && (
               <Badge className="text-lg py-2 px-4 bg-green-600">
                 ✓ System has reached break-even!
               </Badge>
@@ -316,68 +348,55 @@ const SystemViability = () => {
           </Card>
         </div>
 
-        {/* Performance & Reliability Metrics */}
-        <div className="grid md:grid-cols-4 gap-6">
-          <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <Zap className="h-6 w-6 text-primary" />
+        {/* Performance Metrics */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              Performance Metrics
+            </CardTitle>
+            <CardDescription>Document processing accuracy and quality indicators</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              <div>
+                <p className="text-sm text-muted-foreground mb-2">Validated</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-bold text-green-600">{metrics.validatedDocs}</span>
+                </div>
+                <Progress 
+                  value={metrics.validationCatchRate} 
+                  className="mt-2" 
+                />
+                <p className="text-xs text-muted-foreground mt-1">{metrics.validationCatchRate.toFixed(1)}% pass rate</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Processing Speed</p>
-                <p className="text-2xl font-bold">{metrics.avgProcessingTimeSeconds.toFixed(1)}s</p>
-                <p className="text-xs text-green-600 font-medium mt-1">
-                  {((1 - metrics.avgProcessingTimeSeconds / metrics.manualProcessingTimeSeconds) * 100).toFixed(0)}x faster
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6 bg-gradient-to-br from-green-500/5 to-green-500/10 border-green-500/20">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-green-500/10 rounded-lg">
-                <CheckCircle className="h-6 w-6 text-green-600" />
+                <p className="text-sm text-muted-foreground mb-2">Rejected</p>
+                <div className="text-3xl font-bold text-red-600">{metrics.rejectedDocs}</div>
+                <Progress 
+                  value={metrics.errorDetectionRate} 
+                  className="mt-2"
+                />
+                <p className="text-xs text-muted-foreground mt-1">{metrics.errorDetectionRate.toFixed(1)}% flagged</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Success Rate</p>
-                <p className="text-2xl font-bold">{((metrics.successfulExtractions / metrics.totalDocuments) * 100).toFixed(1)}%</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {metrics.successfulExtractions} successful
-                </p>
-              </div>
-            </div>
-          </Card>
-
-          <Card className="p-6 bg-gradient-to-br from-blue-500/5 to-blue-500/10 border-blue-500/20">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-500/10 rounded-lg">
-                <ShieldCheck className="h-6 w-6 text-blue-600" />
+                <p className="text-sm text-muted-foreground mb-2">Pending</p>
+                <div className="text-3xl font-bold text-amber-600">{metrics.pendingDocs}</div>
+                <Progress 
+                  value={(metrics.pendingDocs / metrics.totalDocuments) * 100} 
+                  className="mt-2"
+                />
+                <p className="text-xs text-muted-foreground mt-1">In queue</p>
               </div>
               <div>
-                <p className="text-sm text-muted-foreground">Validation Rate</p>
-                <p className="text-2xl font-bold">{metrics.validationCatchRate.toFixed(1)}%</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Quality assurance
-                </p>
+                <p className="text-sm text-muted-foreground mb-2">Avg Confidence</p>
+                <div className="text-3xl font-bold">{metrics.extractionAccuracy.toFixed(1)}%</div>
+                <Progress value={metrics.extractionAccuracy} className="mt-2" />
+                <p className="text-xs text-muted-foreground mt-1">AI certainty</p>
               </div>
             </div>
-          </Card>
-
-          <Card className="p-6 bg-gradient-to-br from-purple-500/5 to-purple-500/10 border-purple-500/20">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-purple-500/10 rounded-lg">
-                <Activity className="h-6 w-6 text-purple-600" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Extraction Accuracy</p>
-                <p className="text-2xl font-bold">{metrics.extractionAccuracy.toFixed(1)}%</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  OCR confidence
-                </p>
-              </div>
-            </div>
-          </Card>
-        </div>
+          </CardContent>
+        </Card>
 
         {/* Key Proof Points */}
         <Card className="p-6">
@@ -395,8 +414,8 @@ const SystemViability = () => {
                   <div>
                     <h4 className="font-bold mb-1">Time Efficiency</h4>
                     <p className="text-sm text-muted-foreground">
-                      Processing documents {((1 - metrics.avgProcessingTimeSeconds / metrics.manualProcessingTimeSeconds) * 100).toFixed(0)}x faster than manual entry.
-                      Average: {formatTime(metrics.avgProcessingTimeSeconds)} vs {formatTime(metrics.manualProcessingTimeSeconds)}.
+                      System processes documents in {formatTime(metrics.avgProcessingTimeSeconds)} vs {formatTime(metrics.manualProcessingTimeSeconds)} manually, 
+                      saving {((metrics.timeSavedPerDocument / metrics.manualProcessingTimeSeconds) * 100).toFixed(0)}% of processing time per document.
                     </p>
                   </div>
                 </div>
@@ -408,8 +427,8 @@ const SystemViability = () => {
                   <div>
                     <h4 className="font-bold mb-1">Cost Reduction</h4>
                     <p className="text-sm text-muted-foreground">
-                      Saving ${metrics.costSavingsPerDoc.toFixed(2)} per document ({(100 - (metrics.avgAICostPerDoc / metrics.manualLaborCostPerDoc) * 100).toFixed(0)}% reduction).
-                      Total savings: ${metrics.totalCostSavings.toFixed(2)} across {metrics.totalDocuments} documents.
+                      AI processing costs ${metrics.avgAICostPerDoc.toFixed(3)} per document vs ${metrics.manualLaborCostPerDoc.toFixed(2)} for manual entry, 
+                      reducing costs by {((metrics.costSavingsPerDoc / metrics.manualLaborCostPerDoc) * 100).toFixed(0)}% per document.
                     </p>
                   </div>
                 </div>
@@ -421,8 +440,8 @@ const SystemViability = () => {
                   <div>
                     <h4 className="font-bold mb-1">High Accuracy</h4>
                     <p className="text-sm text-muted-foreground">
-                      {metrics.extractionAccuracy.toFixed(1)}% OCR confidence score with {metrics.validationCatchRate.toFixed(1)}% validation rate.
-                      Successfully extracted data from {metrics.successfulExtractions} documents.
+                      {metrics.validationCatchRate.toFixed(1)}% validation pass rate with {metrics.extractionAccuracy.toFixed(1)}% average AI confidence, 
+                      catching {metrics.errorDetectionRate.toFixed(1)}% of documents for review before processing.
                     </p>
                   </div>
                 </div>
@@ -436,11 +455,8 @@ const SystemViability = () => {
                   <div>
                     <h4 className="font-bold mb-1">Positive ROI</h4>
                     <p className="text-sm text-muted-foreground">
-                      {metrics.roi > 0 ? `${metrics.roi.toFixed(0)}% return on investment` : 'Approaching break-even'}
-                      {metrics.totalDocuments >= metrics.breakEvenDocuments 
-                        ? `. System has paid for itself and is generating profit.`
-                        : ` after ${metrics.totalDocuments} documents. Break-even at ${metrics.breakEvenDocuments} documents.`
-                      }
+                      Net savings of ${(metrics.totalSavings - metrics.totalInvestment).toFixed(2)} with {metrics.roi.toFixed(0)}% ROI 
+                      after {metrics.totalDocuments.toLocaleString()} documents processed (Break-even: {metrics.breakEvenDocuments.toLocaleString()} docs).
                     </p>
                   </div>
                 </div>
@@ -470,6 +486,34 @@ const SystemViability = () => {
                     </p>
                   </div>
                 </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Calculation Assumptions */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-sm">Calculation Assumptions</CardTitle>
+            <CardDescription>Baseline values used for ROI calculations</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <p className="text-muted-foreground">Manual Processing Time</p>
+                <p className="font-semibold">{formatTime(MANUAL_TIME_PER_DOC)} per document</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Manual Labor Rate</p>
+                <p className="font-semibold">${MANUAL_LABOR_RATE}/hour</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">System Setup Cost</p>
+                <p className="font-semibold">${SYSTEM_SETUP_COST.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">Avg AI Cost/Doc</p>
+                <p className="font-semibold">${metrics.avgAICostPerDoc.toFixed(3)}</p>
               </div>
             </div>
           </CardContent>
