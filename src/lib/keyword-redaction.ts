@@ -28,18 +28,20 @@ export interface DetectedKeyword {
  * Detects personally identifiable information that should be redacted
  */
 export const PII_KEYWORDS: RedactionKeyword[] = [
-  // Social Security Numbers (SSN)
-  { term: '\\b\\d{3}-\\d{2}-\\d{4}\\b', category: 'ssn', caseSensitive: false },
+  // Social Security Numbers (SSN) - flexible pattern for various formats
+  { term: '\\b\\d{3}[\\s.-]?\\d{2}[\\s.-]?\\d{4}\\b', category: 'ssn', caseSensitive: false },
   { term: '\\b\\d{9}\\b', category: 'ssn', caseSensitive: false },
   
-  // Credit Card Numbers (basic pattern)
-  { term: '\\b\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}[\\s-]?\\d{4}\\b', category: 'credit_card', caseSensitive: false },
+  // Credit Card Numbers (basic pattern) - flexible separators
+  { term: '\\b\\d{4}[\\s.-]?\\d{4}[\\s.-]?\\d{4}[\\s.-]?\\d{4}\\b', category: 'credit_card', caseSensitive: false },
   
   // Email addresses
   { term: '\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b', category: 'email', caseSensitive: false },
   
-  // Phone numbers (various formats)
+  // Phone numbers (various formats) - more flexible pattern
   { term: '\\b\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4}\\b', category: 'phone', caseSensitive: false },
+  { term: '\\b\\d{3}[\\s.-]\\d{3}[\\s.-]\\d{4}\\b', category: 'phone', caseSensitive: false },
+  { term: '\\b\\d{10}\\b', category: 'phone', caseSensitive: false }, // 10 digits no separator
   
   // Driver's License patterns (state-specific can be added)
   { term: '\\b[A-Z]{1,2}\\d{6,8}\\b', category: 'drivers_license', caseSensitive: false },
@@ -140,18 +142,10 @@ export const detectKeywords = (
     const isRegexPattern = searchTerm.includes('\\b') || searchTerm.includes('\\d') || searchTerm.includes('[');
     
     if (isRegexPattern) {
-      // Use regex directly for PII patterns
-      try {
-        const regex = new RegExp(searchTerm, keyword.caseSensitive ? 'g' : 'gi');
-        let textMatch;
-        while ((textMatch = regex.exec(ocrText)) !== null) {
-          matches.push({ text: textMatch[0] });
-        }
-      } catch (e) {
-        console.warn(`Invalid regex pattern: ${searchTerm}`, e);
-      }
-
-      // Also try to locate geometry at token level for regex patterns
+      // For regex patterns, ONLY use word token matching to ensure we have bounding boxes
+      // Don't add matches without bounding boxes from full text matching
+      
+      // Try to locate geometry at token level for regex patterns
       if (wordTokens.length > 0) {
         try {
           const tokenRegex = new RegExp(searchTerm, keyword.caseSensitive ? 'g' : 'gi');
@@ -168,26 +162,46 @@ export const detectKeywords = (
           const maxWindow = 6; // reasonable cap for performance
           for (let i = 0; i < wordTokens.length; i++) {
             let concatText = '';
+            let concatTextNormalized = ''; // Remove all non-alphanumeric except spaces
             const rects: Array<{ x: number; y: number; width: number; height: number } | null> = [];
 
             for (let w = 0; w < maxWindow && i + w < wordTokens.length; w++) {
               const t = wordTokens[i + w];
               if (!t) break;
-              // Preserve spacing to allow regex with optional whitespace separators
+              // Preserve original text
               concatText = concatText ? concatText + ' ' + (t.raw ?? '') : String(t.raw ?? '');
+              // Create normalized version for matching (remove special chars except digits/letters)
+              const normalized = String(t.raw ?? '').replace(/[^\d\w]/g, '');
+              concatTextNormalized = concatTextNormalized ? concatTextNormalized + normalized : normalized;
               rects.push(t.bbox ?? null);
 
-              if (tokenRegex.test(concatText)) {
-                const valid = rects.filter(Boolean) as Array<{ x: number; y: number; width: number; height: number }>;
-                if (valid.length) {
-                  const x1 = Math.min(...valid.map(r => r.x));
-                  const y1 = Math.min(...valid.map(r => r.y));
-                  const x2 = Math.max(...valid.map(r => r.x + r.width));
-                  const y2 = Math.max(...valid.map(r => r.y + r.height));
-                  matches.push({
-                    text: concatText,
-                    boundingBox: { x: x1, y: y1, width: x2 - x1, height: y2 - y1 }
-                  });
+              // Test both original and normalized versions
+              const testStrings = [concatText, concatTextNormalized, concatText.replace(/\s+/g, '')];
+              
+              for (const testStr of testStrings) {
+                if (tokenRegex.test(testStr)) {
+                  const valid = rects.filter(Boolean) as Array<{ x: number; y: number; width: number; height: number }>;
+                  if (valid.length) {
+                    const x1 = Math.min(...valid.map(r => r.x));
+                    const y1 = Math.min(...valid.map(r => r.y));
+                    const x2 = Math.max(...valid.map(r => r.x + r.width));
+                    const y2 = Math.max(...valid.map(r => r.y + r.height));
+                    
+                    // Check if we already have this match (avoid duplicates)
+                    const isDuplicate = matches.some(m => 
+                      m.boundingBox && 
+                      Math.abs(m.boundingBox.x - x1) < 1 && 
+                      Math.abs(m.boundingBox.y - y1) < 1
+                    );
+                    
+                    if (!isDuplicate) {
+                      matches.push({
+                        text: concatText,
+                        boundingBox: { x: x1, y: y1, width: x2 - x1, height: y2 - y1 }
+                      });
+                    }
+                    break; // Stop testing other formats once we found a match
+                  }
                 }
               }
             }
