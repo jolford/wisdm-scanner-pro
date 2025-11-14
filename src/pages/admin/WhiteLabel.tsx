@@ -101,13 +101,13 @@ export default function WhiteLabel() {
       const filePath = `white-label/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('documents')
+        .from('white-label')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('documents')
+        .from('white-label')
         .getPublicUrl(filePath);
 
       setConfig(prev => ({
