@@ -178,49 +178,49 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField }: LineIt
       </div>
 
       {validationResults.length > 0 && (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {validationResults.map((result, idx) => (
-            <Card key={idx} className="p-3 bg-muted/30">
-              <div className="flex items-start gap-3">
-                <div className="mt-0.5">{getStatusIcon(result)}</div>
+            <Card key={idx} className="p-4 bg-muted/30">
+              <div className="flex items-start gap-4">
+                <div className="mt-1">{getStatusIcon(result)}</div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="font-medium">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="font-semibold text-base">
                       Row {result.index + 1}: {result.keyValue}
                     </span>
                     {getStatusBadge(result)}
                   </div>
 
                   {result.message && (
-                    <p className="text-sm text-muted-foreground mb-2">{result.message}</p>
+                    <p className="text-sm text-muted-foreground mb-3">{result.message}</p>
                   )}
 
                   {result.validationResults && result.validationResults.length > 0 && (
-                    <div className="space-y-1 mt-2">
+                    <div className="space-y-3 mt-3">
                       {result.validationResults.map((fieldResult, fieldIdx) => (
                         <div
                           key={fieldIdx}
-                          className={`text-xs p-2 rounded ${
+                          className={`text-sm p-4 rounded-md border ${
                             fieldResult.matches
-                              ? 'bg-success/10 text-success-foreground'
-                              : 'bg-warning/10 text-warning-foreground'
+                              ? 'bg-success/10 border-success/20'
+                              : 'bg-warning/10 border-warning/20'
                           }`}
                         >
-                          <div className="font-medium">{fieldResult.field}</div>
-                          <div className="grid grid-cols-2 gap-2 mt-1">
-                            <div>
-                              <span className="opacity-70">Document: </span>
-                              <span>{fieldResult.wisdmValue || '(empty)'}</span>
+                          <div className="font-semibold mb-3 text-foreground">{fieldResult.field}</div>
+                          <div className="space-y-2">
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs font-medium uppercase tracking-wide opacity-60">Document Value</span>
+                              <span className="font-medium">{fieldResult.wisdmValue || '(empty)'}</span>
                             </div>
-                            <div>
-                              <span className="opacity-70">Registry: </span>
-                              <span>{fieldResult.excelValue || '(empty)'}</span>
+                            <div className="flex flex-col gap-1">
+                              <span className="text-xs font-medium uppercase tracking-wide opacity-60">Registry Value</span>
+                              <span className="font-medium">{fieldResult.excelValue || '(empty)'}</span>
                             </div>
                           </div>
                           {!fieldResult.matches && fieldResult.suggestion && (
-                            <div className="mt-1 text-xs">
-                              <span className="opacity-70">Suggestion: </span>
-                              <span className="font-medium">{fieldResult.suggestion}</span>
+                            <div className="mt-3 pt-3 border-t border-border/30">
+                              <span className="text-xs font-medium uppercase tracking-wide opacity-60">Suggestion: </span>
+                              <span className="font-semibold text-foreground">{fieldResult.suggestion}</span>
                             </div>
                           )}
                         </div>
