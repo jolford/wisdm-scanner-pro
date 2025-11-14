@@ -17,6 +17,7 @@ import { Eraser, Save, Undo, X, Wand2, AlertTriangle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { detectKeywords, generateRedactionBoxes, mergeRedactionBoxes, type DetectedKeyword } from '@/lib/keyword-redaction';
+import { useSignedUrl } from '@/hooks/use-signed-url';
 
 /**
  * RedactionBox structure defining a rectangular area to redact on the image
@@ -63,10 +64,14 @@ export const RedactionTool = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement | null>(null);
   
+  // Get signed URL for the image
+  const { signedUrl: displayUrl, loading: urlLoading } = useSignedUrl(imageUrl);
+  
   // Drawing state
   const [isDrawing, setIsDrawing] = useState(false);                    // Is user currently drawing a box
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null); // Starting point of current box
   const [redactionBoxes, setRedactionBoxes] = useState<RedactionBox[]>([]); // All completed redaction boxes
+  const [imageLoaded, setImageLoaded] = useState(false); // Track if image has loaded
   
   // Keyword detection state
   const [detectedKeywords, setDetectedKeywords] = useState<DetectedKeyword[]>([]);
@@ -97,8 +102,9 @@ export const RedactionTool = ({
    */
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || !displayUrl) return;
 
+    setImageLoaded(false);
     const img = new Image();
     img.crossOrigin = 'anonymous';  // Required for canvas toBlob to work with external images
     img.onload = () => {
@@ -106,10 +112,18 @@ export const RedactionTool = ({
       // Set canvas size to match image dimensions
       canvas.width = img.width;
       canvas.height = img.height;
+      setImageLoaded(true);
       redrawCanvas();  // Draw the image
     };
-    img.src = imageUrl;
-  }, [imageUrl]);
+    img.onerror = () => {
+      toast({
+        title: 'Image Load Error',
+        description: 'Failed to load image for redaction',
+        variant: 'destructive'
+      });
+    };
+    img.src = displayUrl;
+  }, [displayUrl]);
 
   /**
    * Redraw the entire canvas including image and all redaction boxes
@@ -529,13 +543,23 @@ export const RedactionTool = ({
         </div>
 
         <div className="border rounded-lg p-2 bg-muted/30 overflow-auto max-h-[500px]">
+          {urlLoading && (
+            <div className="flex items-center justify-center h-64 text-muted-foreground">
+              Loading image...
+            </div>
+          )}
+          {!urlLoading && !imageLoaded && (
+            <div className="flex items-center justify-center h-64 text-muted-foreground">
+              Preparing canvas...
+            </div>
+          )}
           <canvas
             ref={canvasRef}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             className="cursor-crosshair max-w-full h-auto"
-            style={{ display: 'block' }}
+            style={{ display: imageLoaded ? 'block' : 'none' }}
           />
         </div>
 
