@@ -1,12 +1,14 @@
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface BarcodeDetectionRequest {
-  imageUrl: string;
-  fileName?: string;
-}
+const BarcodeDetectionSchema = z.object({
+  imageUrl: z.string().url().max(2000),
+  fileName: z.string().max(255).optional(),
+});
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -14,11 +16,9 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { imageUrl, fileName = "document" }: BarcodeDetectionRequest = await req.json();
-
-    if (!imageUrl) {
-      throw new Error("imageUrl is required");
-    }
+    const body = await req.json();
+    const validated = BarcodeDetectionSchema.parse(body);
+    const { imageUrl, fileName = "document" } = validated;
 
     console.log(`Detecting barcodes in: ${fileName}`);
 
@@ -129,6 +129,22 @@ If no barcodes are found, return an empty array: []`,
     );
   } catch (error) {
     console.error("Error detecting barcodes:", error);
+    
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Invalid input",
+          details: error.errors,
+          barcodes: [],
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        }
+      );
+    }
+    
     return new Response(
       JSON.stringify({
         success: false,

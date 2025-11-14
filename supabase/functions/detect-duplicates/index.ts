@@ -15,11 +15,23 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const DuplicateDetectionSchema = z.object({
+  documentId: z.string().uuid(),
+  batchId: z.string().uuid(),
+  checkCrossBatch: z.boolean().optional(),
+  thresholds: z.object({
+    name: z.number().min(0).max(1).optional(),
+    address: z.number().min(0).max(1).optional(),
+    signature: z.number().min(0).max(1).optional(),
+  }).optional(),
+});
 
 // Jaro-Winkler distance implementation
 function jaroWinkler(s1: string, s2: string): number {
@@ -140,19 +152,21 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
+    const body = await req.json();
+    const validated = DuplicateDetectionSchema.parse(body);
     const {
       documentId,
       batchId,
       checkCrossBatch = false,
       thresholds = { name: 0.85, address: 0.90, signature: 0.85 }
-    } = await req.json();
-
-    if (!documentId || !batchId) {
-      return new Response(
-        JSON.stringify({ error: 'documentId and batchId are required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    } = validated;
+    
+    // Ensure threshold values are defined
+    const finalThresholds = {
+      name: thresholds.name ?? 0.85,
+      address: thresholds.address ?? 0.90,
+      signature: thresholds.signature ?? 0.85,
+    };
 
     console.log('Checking for duplicates:', { documentId, batchId, checkCrossBatch });
 
@@ -258,13 +272,13 @@ serve(async (req) => {
       let duplicateType: string[] = [];
       const duplicateFields: Record<string, number> = {};
 
-      if (nameSimilarity >= thresholds.name) {
+      if (nameSimilarity >= finalThresholds.name) {
         isDuplicate = true;
         duplicateType.push('name');
         duplicateFields.name = nameSimilarity;
       }
 
-      if (addressSimilarity >= thresholds.address) {
+      if (addressSimilarity >= finalThresholds.address) {
         isDuplicate = true;
         duplicateType.push('address');
         duplicateFields.address = addressSimilarity;
@@ -319,6 +333,13 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error in duplicate detection:', error);
+    
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid input', details: error.errors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     return new Response(
       JSON.stringify({ error: 'Failed to detect duplicates. Please try again.' }),

@@ -1,10 +1,16 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.75.0';
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+const ClassifyDocumentSchema = z.object({
+  documentId: z.string().uuid(),
+  extractedText: z.string().max(50000).optional(),
+});
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -23,14 +29,9 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get document ID and optional text from request
-    const { documentId, extractedText } = await req.json();
-
-    if (!documentId) {
-      return new Response(
-        JSON.stringify({ error: 'documentId is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    const body = await req.json();
+    const validated = ClassifyDocumentSchema.parse(body);
+    const { documentId, extractedText } = validated;
 
     // Fetch document if text not provided
     let textToClassify = extractedText;
@@ -49,6 +50,13 @@ serve(async (req) => {
       }
 
       textToClassify = doc.extracted_text || '';
+    }
+    
+    if (!textToClassify) {
+      return new Response(
+        JSON.stringify({ error: 'No text content to classify' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Truncate text to first 2000 characters for classification
@@ -175,6 +183,14 @@ Return your classification.`
 
   } catch (error: any) {
     console.error('Classification error:', error);
+    
+    if (error instanceof z.ZodError) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid input', details: error.errors }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
     return new Response(
       JSON.stringify({ error: error.message || 'Classification failed' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
