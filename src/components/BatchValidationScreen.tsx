@@ -12,10 +12,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { SignatureValidator } from './SignatureValidator';
 
 // Icon imports from lucide-react
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles, FileText, ShieldAlert, Pencil } from 'lucide-react';
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles, FileText, ShieldAlert, Pencil, Plus } from 'lucide-react';
 
 // Backend and utility imports
 import { supabase } from '@/integrations/supabase/client';
@@ -129,6 +130,9 @@ export const BatchValidationScreen = ({
   
   // Store user edits to line items (keyed by document ID)
   const [editedLineItems, setEditedLineItems] = useState<Record<string, Array<Record<string, any>>>>({});
+  
+  // Track which document's line items are expanded
+  const [expandedLineItems, setExpandedLineItems] = useState<Record<string, boolean>>({});
   
   // Track which documents are currently being validated (for loading states)
   const [validatingDocs, setValidatingDocs] = useState<Set<string>>(new Set());
@@ -1757,59 +1761,74 @@ const { toast } = useToast();
                             return null;
                           }
                           
+                          const isExpanded = expandedLineItems[doc.id] ?? true;
+                          
                           if (hasLineItems) {
                             return (
-                              <div className="mt-6 border-t pt-4">
+                              <Collapsible
+                                open={isExpanded}
+                                onOpenChange={(open) => setExpandedLineItems(prev => ({ ...prev, [doc.id]: open }))}
+                                className="mt-6 border-t pt-4"
+                              >
                                 <div className="flex items-center justify-between mb-3">
-                                  <h4 className="font-semibold">Line Items ({getLineItemsForDoc(doc).length})</h4>
+                                  <CollapsibleTrigger asChild>
+                                    <Button variant="ghost" size="sm" className="gap-2 font-semibold text-base">
+                                      {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+                                      Line Items ({getLineItemsForDoc(doc).length})
+                                    </Button>
+                                  </CollapsibleTrigger>
                                   <Button
                                     size="sm"
                                     variant="outline"
                                     onClick={() => handleAddLineItem(doc.id)}
                                   >
+                                    <Plus className="h-4 w-4 mr-1" />
                                     Add Row
                                   </Button>
                                 </div>
-                                <div className="border rounded-md overflow-x-auto">
-                                  <table className="w-full text-sm">
-                                    <thead className="bg-muted">
-                                      <tr>
-                                        {getLineItemsForDoc(doc).length > 0 && Object.keys(getLineItemsForDoc(doc)[0]).map((key) => (
-                                          <th key={key} className="px-3 py-2 text-left font-medium">
-                                            {key}
-                                          </th>
-                                        ))}
-                                        <th className="px-3 py-2 w-20"></th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {getLineItemsForDoc(doc).map((item, idx) => (
-                                        <tr key={idx} className="border-t">
-                                          {Object.entries(item).map(([key, value], vIdx) => (
-                                            <td key={vIdx} className="px-2 py-1">
-                                              <Input
-                                                value={value !== null && value !== undefined ? String(value) : ''}
-                                                onChange={(e) => handleLineItemChange(doc.id, idx, key, e.target.value)}
-                                                className="h-8 text-sm"
-                                              />
-                                            </td>
+                                
+                                <CollapsibleContent className="animate-accordion-down">
+                                  <div className="border rounded-lg overflow-hidden shadow-sm">
+                                    <Table>
+                                      <TableHeader>
+                                        <TableRow className="bg-muted/50">
+                                          {getLineItemsForDoc(doc).length > 0 && Object.keys(getLineItemsForDoc(doc)[0]).map((key) => (
+                                            <TableHead key={key} className="font-semibold">
+                                              {key}
+                                            </TableHead>
                                           ))}
-                                          <td className="px-2 py-1">
-                                            <Button
-                                              size="sm"
-                                              variant="ghost"
-                                              onClick={() => handleDeleteLineItem(doc.id, idx)}
-                                              className="h-8 w-8 p-0"
-                                            >
-                                              <XCircle className="h-4 w-4" />
-                                            </Button>
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
+                                          <TableHead className="w-20 text-center">Actions</TableHead>
+                                        </TableRow>
+                                      </TableHeader>
+                                      <TableBody>
+                                        {getLineItemsForDoc(doc).map((item, idx) => (
+                                          <TableRow key={idx} className="hover:bg-muted/30 transition-colors">
+                                            {Object.entries(item).map(([key, value], vIdx) => (
+                                              <TableCell key={vIdx} className="py-2">
+                                                <Input
+                                                  value={value !== null && value !== undefined ? String(value) : ''}
+                                                  onChange={(e) => handleLineItemChange(doc.id, idx, key, e.target.value)}
+                                                  className="h-9 border-muted-foreground/20 focus:border-primary transition-colors"
+                                                />
+                                              </TableCell>
+                                            ))}
+                                            <TableCell className="text-center">
+                                              <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => handleDeleteLineItem(doc.id, idx)}
+                                                className="h-8 w-8 p-0 hover:bg-destructive/10 hover:text-destructive transition-colors"
+                                              >
+                                                <XCircle className="h-4 w-4" />
+                                              </Button>
+                                            </TableCell>
+                                          </TableRow>
+                                        ))}
+                                      </TableBody>
+                                    </Table>
+                                  </div>
+                                </CollapsibleContent>
+                              </Collapsible>
                             );
                           } else {
                             return (
