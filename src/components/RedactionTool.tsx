@@ -169,10 +169,10 @@ export const RedactionTool = ({
     });
   };
 
-  // Redraw canvas whenever redaction boxes change
+  // Redraw canvas whenever redaction boxes, PII zones, or detected keywords change
   useEffect(() => {
     redrawCanvas();
-  }, [redactionBoxes]);
+  }, [redactionBoxes, showPIIZones, detectedKeywords]);
 
   /**
    * Convert mouse event coordinates to canvas pixel coordinates
