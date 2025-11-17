@@ -41,6 +41,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 // PDF.js library for rendering PDF thumbnails and previews
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
@@ -2108,7 +2109,7 @@ const FullImageWithSignedUrl = ({
     return (
       <div className="w-full h-48 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto mb-2" />
+          <LoadingSpinner className="mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">Loading image...</p>
         </div>
       </div>
