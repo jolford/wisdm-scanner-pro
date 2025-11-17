@@ -1,6 +1,7 @@
 const { store } = require('./main');
 const scanner = require('../src/scanner');
-const { uploadToSupabase } = require('../src/uploader');
+const { uploadToSupabase, checkOnline } = require('../src/uploader');
+const queueManager = require('../src/queue-manager');
 
 /**
  * Handle wisdm-scan:// protocol URLs
@@ -59,9 +60,35 @@ async function handleProtocolUrl(url) {
       return;
     }
 
-    console.log('Scan successful. Uploading to Supabase...');
+    console.log('Scan successful. Checking connection...');
 
-    // Upload to Supabase
+    // Check if online
+    const isOnline = await checkOnline(supabaseUrl);
+
+    if (!isOnline) {
+      console.log('Offline mode: Adding to upload queue');
+      
+      // Add to queue for later upload
+      await queueManager.addToQueue({
+        filePath: scanResult.filePath,
+        fileName: scanResult.fileName,
+        projectId,
+        batchId,
+        customerId,
+        sessionToken,
+        supabaseUrl
+      });
+
+      const queueCount = queueManager.getQueueCount();
+      console.log(`Document queued. ${queueCount} items in queue.`);
+      // TODO: Show notification "Scan saved. Will upload when online."
+      
+      return;
+    }
+
+    // Online: Upload immediately
+    console.log('Online: Uploading to Supabase...');
+    
     const uploadResult = await uploadToSupabase({
       filePath: scanResult.filePath,
       fileName: scanResult.fileName,
@@ -76,8 +103,28 @@ async function handleProtocolUrl(url) {
       console.log('Upload successful:', uploadResult.documentId);
       // TODO: Show success notification
     } else {
-      console.error('Upload failed:', uploadResult.error);
-      // TODO: Show error notification
+      // Check if it's a network error
+      if (uploadResult.isNetworkError) {
+        console.log('Network error detected: Adding to upload queue');
+        
+        // Add to queue for retry
+        await queueManager.addToQueue({
+          filePath: scanResult.filePath,
+          fileName: scanResult.fileName,
+          projectId,
+          batchId,
+          customerId,
+          sessionToken,
+          supabaseUrl
+        });
+
+        const queueCount = queueManager.getQueueCount();
+        console.log(`Document queued. ${queueCount} items in queue.`);
+        // TODO: Show notification "Network error. Document queued for upload."
+      } else {
+        console.error('Upload failed:', uploadResult.error);
+        // TODO: Show error notification
+      }
     }
 
   } catch (error) {
