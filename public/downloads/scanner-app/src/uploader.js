@@ -103,11 +103,41 @@ async function uploadToSupabase(options) {
 
   } catch (error) {
     console.error('Upload error:', error);
+    
+    // Check if it's a network error
+    const isNetworkError = 
+      error.message?.includes('fetch') || 
+      error.message?.includes('network') ||
+      error.message?.includes('ECONNREFUSED') ||
+      error.message?.includes('ETIMEDOUT') ||
+      error.code === 'ENOTFOUND';
+    
     return {
       success: false,
-      error: error.message
+      error: error.message,
+      isNetworkError
     };
   }
 }
 
-module.exports = { uploadToSupabase };
+/**
+ * Check if online by attempting to reach Supabase
+ */
+async function checkOnline(supabaseUrl) {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+    
+    const response = await fetch(`${supabaseUrl}/rest/v1/`, {
+      method: 'HEAD',
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeout);
+    return response.ok || response.status === 401;
+  } catch (error) {
+    return false;
+  }
+}
+
+module.exports = { uploadToSupabase, checkOnline };

@@ -4,6 +4,7 @@ const Store = require('electron-store');
 const { initTray } = require('./tray');
 const { handleProtocolUrl } = require('./protocol');
 const scanner = require('../src/scanner');
+const queueManager = require('../src/queue-manager');
 
 const store = new Store();
 let tray = null;
@@ -48,6 +49,14 @@ if (!gotTheLock) {
 
     // Initialize scanner
     await scanner.initialize();
+
+    // Start automatic queue processing (retry every 2 minutes)
+    queueManager.startAutoProcessing(120000);
+    
+    const queueCount = queueManager.getQueueCount();
+    if (queueCount > 0) {
+      console.log(`${queueCount} documents waiting in upload queue`);
+    }
   });
 }
 
@@ -94,6 +103,26 @@ ipcMain.handle('save-config', (event, config) => {
   store.set('projectId', config.projectId);
   store.set('customerId', config.customerId);
   return { success: true };
+});
+
+// Queue management IPC handlers
+ipcMain.handle('get-queue', () => {
+  return queueManager.getQueue();
+});
+
+ipcMain.handle('process-queue', async () => {
+  await queueManager.processQueue();
+  return { success: true };
+});
+
+ipcMain.handle('clear-failed-queue', () => {
+  queueManager.clearFailedItems();
+  return { success: true };
+});
+
+// Clean up on app quit
+app.on('before-quit', () => {
+  queueManager.stopAutoProcessing();
 });
 
 // Export for use in other modules
