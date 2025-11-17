@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { isTiffFile, convertTiffToPngDataUrl } from '@/lib/image-utils';
 import { MobileCapture } from '@/components/MobileCapture';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 interface ScanUploaderProps {
   onScanComplete: (text: string, imageUrl: string, fileName: string) => void;
@@ -124,7 +125,7 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
           <div className="absolute inset-0 bg-gradient-to-br from-primary to-accent rounded-full blur-xl opacity-20 animate-pulse" />
           <div className="relative bg-gradient-to-br from-primary to-accent p-4 rounded-full">
             {isProcessing ? (
-              <Loader2 className="h-8 w-8 text-primary-foreground animate-spin" />
+              <LoadingSpinner className="[&>div]:border-primary-foreground/20 [&>div:nth-child(2)]:border-t-primary-foreground [&>div:nth-child(2)]:border-r-primary-foreground/60 [&>div:last-child>div]:bg-primary-foreground" />
             ) : (
               <div className="flex items-center justify-center">
                 <Upload className="h-6 w-6 text-primary-foreground mr-1" />
