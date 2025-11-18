@@ -980,8 +980,10 @@ export type Database = {
           email_folder: string
           email_host: string
           email_password: string
+          email_password_encrypted: string | null
           email_port: number
           email_username: string
+          encryption_version: number | null
           id: string
           is_active: boolean | null
           last_check_at: string | null
@@ -1001,8 +1003,10 @@ export type Database = {
           email_folder?: string
           email_host: string
           email_password: string
+          email_password_encrypted?: string | null
           email_port?: number
           email_username: string
+          encryption_version?: number | null
           id?: string
           is_active?: boolean | null
           last_check_at?: string | null
@@ -1022,8 +1026,10 @@ export type Database = {
           email_folder?: string
           email_host?: string
           email_password?: string
+          email_password_encrypted?: string | null
           email_port?: number
           email_username?: string
+          encryption_version?: number | null
           id?: string
           is_active?: boolean | null
           last_check_at?: string | null
@@ -2669,6 +2675,7 @@ export type Database = {
           created_at: string
           created_by: string
           customer_id: string
+          encryption_version: number | null
           events: Json
           headers: Json | null
           id: string
@@ -2677,6 +2684,7 @@ export type Database = {
           name: string
           retry_config: Json | null
           secret: string | null
+          secret_encrypted: string | null
           updated_at: string
           url: string
           webhook_type: string | null
@@ -2685,6 +2693,7 @@ export type Database = {
           created_at?: string
           created_by: string
           customer_id: string
+          encryption_version?: number | null
           events?: Json
           headers?: Json | null
           id?: string
@@ -2693,6 +2702,7 @@ export type Database = {
           name: string
           retry_config?: Json | null
           secret?: string | null
+          secret_encrypted?: string | null
           updated_at?: string
           url: string
           webhook_type?: string | null
@@ -2701,6 +2711,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           customer_id?: string
+          encryption_version?: number | null
           events?: Json
           headers?: Json | null
           id?: string
@@ -2709,6 +2720,7 @@ export type Database = {
           name?: string
           retry_config?: Json | null
           secret?: string | null
+          secret_encrypted?: string | null
           updated_at?: string
           url?: string
           webhook_type?: string | null
@@ -2991,6 +3003,7 @@ export type Database = {
         Returns: boolean
       }
       jwt_claim: { Args: { path: string }; Returns: string }
+      migrate_to_encrypted_credentials: { Args: never; Returns: undefined }
       track_field_change: {
         Args: {
           _change_type: string

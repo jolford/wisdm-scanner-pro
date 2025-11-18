@@ -73,6 +73,7 @@ import BulkEdit from "./pages/admin/BulkEdit";
 import DocumentComparison from "./pages/admin/DocumentComparison";
 import QAMetrics from "./pages/admin/QAMetrics";
 import Downloads from "./pages/Downloads";
+import CredentialMigration from "./pages/admin/CredentialMigration";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -225,6 +226,7 @@ const App = () => {
             <Route path="/admin/validation-rules" element={<ValidationRules />} />
           <Route path="/admin/scheduled-batches" element={<ScheduledBatches />} />
           <Route path="/admin/release-notes" element={<ReleaseNotesManager />} />
+          <Route path="/admin/credential-migration" element={<CredentialMigration />} />
           
           {/* Phase 3: Bulk Operations & QA */}
           <Route path="/admin/bulk-edit" element={<BulkEdit />} />

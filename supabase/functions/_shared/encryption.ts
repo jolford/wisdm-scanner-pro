@@ -36,7 +36,7 @@ async function getEncryptionKey(): Promise<CryptoKey> {
   
   // Hash the key to get consistent 256-bit key
   const keyData = stringToUint8Array(keyString);
-  const hash = await crypto.subtle.digest('SHA-256', keyData);
+  const hash = await crypto.subtle.digest('SHA-256', keyData.buffer as ArrayBuffer);
   
   return await crypto.subtle.importKey(
     'raw',
@@ -59,9 +59,9 @@ export async function encrypt(plaintext: string): Promise<string> {
   const data = stringToUint8Array(plaintext);
   
   const encrypted = await crypto.subtle.encrypt(
-    { name: 'AES-GCM', iv },
+    { name: 'AES-GCM', iv: iv.buffer as ArrayBuffer },
     key,
-    data
+    data.buffer as ArrayBuffer
   );
   
   // Combine IV + encrypted data
