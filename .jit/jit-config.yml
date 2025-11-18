@@ -1,0 +1,8 @@
+applications:
+- api_domain: wisdmcapture.com
+  application_name: wisdmcapture
+  authentication_mode: non-authenticated
+  exclude_paths:
+  - https://wisdmcapture.com/tes
+  target_url: https://wisdmcapture.com/
+  type: web
