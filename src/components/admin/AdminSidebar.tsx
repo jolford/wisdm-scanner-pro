@@ -87,6 +87,7 @@ const menuItems = [
     title: 'Configuration',
     items: [
       { title: 'White Label', url: '/admin/white-label', icon: Palette },
+      { title: 'Credential Migration', url: '/admin/credential-migration', icon: Shield },
       { title: 'System Viability', url: '/admin/system-viability', icon: Settings },
     ],
   },

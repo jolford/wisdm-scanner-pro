@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { safeDecrypt } from '../_shared/encryption.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,6 +16,7 @@ interface WebhookConfig {
   id: string;
   url: string;
   secret?: string;
+  secret_encrypted?: string;
   headers?: Record<string, string>;
   webhook_type?: string;
   retry_config?: {
@@ -183,8 +185,12 @@ async function sendWebhook(
       };
 
       // Add HMAC signature if secret is configured (not for Teams)
-      if (webhook.secret && webhook.webhook_type !== 'teams') {
-        const signature = await generateSignature(webhook.secret, payload);
+      const secretToUse = webhook.secret_encrypted 
+        ? await safeDecrypt(webhook.secret_encrypted)
+        : webhook.secret;
+        
+      if (secretToUse && webhook.webhook_type !== 'teams') {
+        const signature = await generateSignature(secretToUse, payload);
         headers['X-Webhook-Signature'] = signature;
       }
 

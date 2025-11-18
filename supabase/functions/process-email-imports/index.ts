@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { safeDecrypt } from '../_shared/encryption.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -14,6 +15,7 @@ interface EmailImportConfig {
   email_port: number;
   email_username: string;
   email_password: string;
+  email_password_encrypted?: string;
   email_folder: string;
   use_ssl: boolean;
   auto_create_batch: boolean;
@@ -138,11 +140,16 @@ Deno.serve(async (req) => {
 async function processEmailConfig(supabase: any, config: EmailImportConfig) {
   console.log(`Connecting to ${config.email_host}:${config.email_port}, folder: ${config.email_folder}`);
   
+  // Decrypt password if encrypted version exists
+  const emailPassword = config.email_password_encrypted
+    ? await safeDecrypt(config.email_password_encrypted)
+    : config.email_password;
+  
   // Note: This is a placeholder implementation
   // In production, you would use a proper IMAP client library
   // For now, we'll use a simulated approach that demonstrates the workflow
   
-  const emails = await fetchEmails(config);
+  const emails = await fetchEmails({ ...config, email_password: emailPassword });
   console.log(`Found ${emails.length} unread emails with attachments`);
 
   let imported = 0;
