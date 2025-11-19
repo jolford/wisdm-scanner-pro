@@ -37,6 +37,7 @@ interface ExtractionField {
   description: string;
   required?: boolean;
   type?: 'text' | 'date' | 'currency' | 'number' | 'email';
+  confidenceThreshold?: number;
 }
 
 interface Queue {
@@ -793,16 +794,35 @@ const EditProject = () => {
                                 </Select>
                               </div>
                             </div>
-                            <div>
-                              <Label htmlFor={`field-desc-${index}`} className="text-xs">
-                                Description
-                              </Label>
-                              <Input
-                                id={`field-desc-${index}`}
-                                value={field.description}
-                                onChange={(e) => updateField(index, 'description', e.target.value)}
-                                placeholder="e.g., The unique invoice identifier"
-                              />
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <Label htmlFor={`field-desc-${index}`} className="text-xs">
+                                  Description (AI Guidance)
+                                </Label>
+                                <Input
+                                  id={`field-desc-${index}`}
+                                  value={field.description}
+                                  onChange={(e) => updateField(index, 'description', e.target.value)}
+                                  placeholder="e.g., search for Terms of an invoice"
+                                />
+                              </div>
+                              <div>
+                                <Label htmlFor={`field-confidence-${index}`} className="text-xs">
+                                  Confidence Threshold (%)
+                                </Label>
+                                <Input
+                                  id={`field-confidence-${index}`}
+                                  type="number"
+                                  min="0"
+                                  max="100"
+                                  value={field.confidenceThreshold || ''}
+                                  onChange={(e) => updateField(index, 'confidenceThreshold', parseInt(e.target.value) || undefined)}
+                                  placeholder="e.g., 75"
+                                />
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  Require validation if below this %
+                                </p>
+                              </div>
                             </div>
                             <div className="flex items-center space-x-2">
                               <Checkbox
