@@ -302,7 +302,7 @@ const EditProject = () => {
     setFields(fields.filter((_, i) => i !== index));
   };
 
-  const updateField = (index: number, key: keyof ExtractionField, value: string | boolean) => {
+  const updateField = (index: number, key: keyof ExtractionField, value: string | boolean | number | undefined) => {
     const updated = [...fields];
     updated[index] = { ...updated[index], [key]: value };
     setFields(updated);
