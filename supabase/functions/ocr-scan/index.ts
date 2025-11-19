@@ -286,7 +286,7 @@ RESPONSE REQUIREMENTS:
         userPrompt = `Extract from this ${isPdf ? 'PDF' : 'image'}: ${fieldNames.join(', ')}.${tableInstructions} Classify document type. RESPOND WITH ONLY THE JSON OBJECT - NO OTHER TEXT.`;
       } else {
         // STANDARD PROMPT FOR GENERAL FIELD EXTRACTION
-        const baseJson = `{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}}`;
+        const baseJson = `{"fullText": "complete extracted text", "documentType": "invoice|receipt|purchase_order|check|form|letter|other", "confidence": 0.0-1.0, "logoDetected": {"present": false, "companyName": "", "confidence": 0.0}, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}}`;
         const tableJson = hasTableExtraction 
           ? `, "lineItems": [{${tableExtractionFields.map((f: any) => `"${f.name}": "value"`).join(', ')}}]`
           : '';
@@ -320,7 +320,15 @@ RESPONSE REQUIREMENTS:
         
         systemPrompt = `CRITICAL: You MUST return ONLY valid JSON with no additional text, explanations, or markdown formatting.
 
-You are an advanced OCR system. Return this EXACT JSON structure: ${baseJson.slice(0, -1)}${tableJson}}
+You are an advanced OCR system with logo recognition capabilities. Return this EXACT JSON structure: ${baseJson.slice(0, -1)}${tableJson}}
+
+LOGO DETECTION:
+- Scan the document for any company or brand logos (graphical symbols, icons, branded designs)
+- If a logo is present, identify the company/brand name
+- Set "logoDetected.present" to true if a logo is found, false otherwise
+- Set "logoDetected.companyName" to the identified company/brand name
+- Set "logoDetected.confidence" (0.0-1.0) based on logo clarity and recognition certainty
+- Common logo locations: top center, top left, header area, letterhead
 
 FIELD EXTRACTION GUIDANCE:${fieldGuidance}
 
@@ -343,7 +351,9 @@ RESPONSE REQUIREMENTS:
           tableInstructions = ` Extract ALL rows from line item tables into "lineItems" array with fields: ${tableExtractionFields.map((f: any) => f.name).join(', ')}.`;
         }
         
-        userPrompt = `Extract from this ${isPdf ? 'PDF' : 'image'}: ${fieldNames.join(', ')}.${tableInstructions} Pay special attention to invoice number accuracy. Classify document type. RESPOND WITH ONLY THE JSON OBJECT - NO OTHER TEXT.`;
+        userPrompt = `Extract from this ${isPdf ? 'PDF' : 'image'}: ${fieldNames.join(', ')}.${tableInstructions}
+
+IMPORTANT: Also identify any company or brand logos present in the document. Pay special attention to invoice number accuracy. Classify document type. RESPOND WITH ONLY THE JSON OBJECT - NO OTHER TEXT.`;
       }
     } else {
       // NO CUSTOM FIELDS - JUST OCR AND CLASSIFICATION
