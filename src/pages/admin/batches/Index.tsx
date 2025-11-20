@@ -138,10 +138,35 @@ const BatchesIndex = () => {
                         {batch.status}
                       </span>
                     </Badge>
+                    {batch.priority && (
+                      <Badge className={
+                        batch.priority === 3 ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' :
+                        batch.priority === 2 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' :
+                        'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300'
+                      }>
+                        {batch.priority === 3 ? 'High' : batch.priority === 2 ? 'Medium' : 'Low'} Priority
+                      </Badge>
+                    )}
                   </div>
-                <p className="text-sm text-muted-foreground mb-4">
+                <p className="text-sm text-muted-foreground mb-2">
                   Project: {batch.projects?.name}
                 </p>
+                  {!compact && (
+                    <div className="mb-4">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                        <span>Progress</span>
+                        <span className="font-semibold">
+                          {batch.total_documents > 0 ? Math.round((batch.validated_documents / batch.total_documents) * 100) : 0}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-secondary rounded-full h-2">
+                        <div 
+                          className="bg-primary h-2 rounded-full transition-all"
+                          style={{ width: `${batch.total_documents > 0 ? (batch.validated_documents / batch.total_documents) * 100 : 0}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                   {!compact && (
                     <div className="grid grid-cols-4 gap-4">
                       <div className="bg-muted/50 rounded-lg p-3">
