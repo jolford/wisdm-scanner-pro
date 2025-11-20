@@ -39,6 +39,7 @@ interface Batch {
   validated_documents: number;
   created_by: string;
   project_id: string;
+  priority?: number;
   projects: {
     name: string;
   };
@@ -311,6 +312,17 @@ const Batches = () => {
     return Math.round((batch.validated_documents / batch.total_documents) * 100);
   };
 
+  const getPriorityBadge = (priority?: number) => {
+    if (!priority) return null;
+    const config = {
+      1: { label: 'Low', variant: 'secondary' as const, className: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300' },
+      2: { label: 'Medium', variant: 'default' as const, className: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300' },
+      3: { label: 'High', variant: 'destructive' as const, className: 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300' },
+    };
+    const p = config[priority as keyof typeof config] || config[2];
+    return <Badge className={p.className}>{p.label}</Badge>;
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -465,10 +477,13 @@ const Batches = () => {
                           <FolderOpen className="h-5 w-5 text-primary" />
                           <span className="line-clamp-2">{batch.batch_name}</span>
                         </h3>
-                        <Badge className={`${getStatusColor(batch.status)} text-white`}>
-                          <StatusIcon className="h-3 w-3 mr-1" />
-                          {batch.status}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <Badge className={`${getStatusColor(batch.status)} text-white`}>
+                            <StatusIcon className="h-3 w-3 mr-1" />
+                            {batch.status}
+                          </Badge>
+                          {getPriorityBadge(batch.priority)}
+                        </div>
                       </div>
                       <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                         <Button
@@ -567,6 +582,7 @@ const Batches = () => {
                               <StatusIcon className="h-3 w-3 mr-1" />
                               {batch.status}
                             </Badge>
+                            {getPriorityBadge(batch.priority)}
                           </div>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <span className="flex items-center gap-1 truncate">
