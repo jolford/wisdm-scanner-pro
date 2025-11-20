@@ -30,8 +30,6 @@ serve(async (req) => {
     const validated = FraudDetectionSchema.parse(body);
     const { batchId, documentId, metadata, lineItems } = validated;
 
-    console.log('Detecting fraud patterns for batch:', batchId);
-
     const fraudAlerts: any[] = [];
 
     // Check 1: Identical handwriting patterns (using similarity of names/addresses)

@@ -50,7 +50,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[Webhook] Triggering for customer ${customer_id}, event: ${event_type}`);
+    console.log(`[Webhook] Processing event: ${event_type}`);
 
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
@@ -104,7 +104,7 @@ Deno.serve(async (req) => {
           continue;
         }
 
-        console.log(`[Webhook] Sending to ${webhook.url}...`);
+        console.log(`[Webhook] Sending webhook...`);
         await sendWebhook(supabase, webhook as WebhookConfig, event_type, payload);
         sentCount++;
 
@@ -215,7 +215,7 @@ async function sendWebhook(
       });
 
       if (response.ok) {
-        console.log(`Webhook delivered successfully to ${webhook.url}`);
+        console.log(`Webhook delivered successfully`);
         return; // Success, exit retry loop
       }
 
