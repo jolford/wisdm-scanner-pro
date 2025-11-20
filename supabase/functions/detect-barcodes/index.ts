@@ -96,8 +96,6 @@ If no barcodes are found, return an empty array: []`,
     const aiData = await aiResponse.json();
     const aiContent = aiData.choices[0].message.content;
 
-    console.log("AI Response:", aiContent);
-
     // Parse the AI response
     let barcodes = [];
     try {
@@ -107,15 +105,10 @@ If no barcodes are found, return an empty array: []`,
       
       if (jsonMatch) {
         barcodes = JSON.parse(jsonMatch[1]);
-      } else {
-        console.log("No JSON array found in response");
       }
     } catch (parseError) {
-      console.error("Failed to parse AI response:", parseError);
-      console.log("Raw content:", aiContent);
+      console.error("Failed to parse AI response");
     }
-
-    console.log(`Detected ${barcodes.length} barcode(s)`);
 
     return new Response(
       JSON.stringify({

@@ -141,7 +141,6 @@ Return your classification.`
     }
 
     const aiResult = await classificationResponse.json();
-    console.log('AI classification result:', JSON.stringify(aiResult));
 
     // Extract classification from tool call
     const toolCall = aiResult.choices?.[0]?.message?.tool_calls?.[0];

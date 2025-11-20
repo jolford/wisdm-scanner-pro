@@ -59,15 +59,52 @@ serve(async (req) => {
       );
     }
 
-    // --- PARSE REQUEST BODY ---
-    // Extract parameters from the request
-    const { imageData, isPdf, extractionFields, textData, tableExtractionFields, enableCheckScanning, documentId, customerId, projectId } = await req.json();
+    // --- INPUT VALIDATION ---
+    // Parse and validate request body
+    let body;
+    try {
+      body = await req.json();
+    } catch (parseError) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const { imageData, isPdf, extractionFields, textData, tableExtractionFields, enableCheckScanning, documentId, customerId, projectId } = body;
+    
+    // Validate required fields
+    if (!isPdf && !imageData) {
+      return new Response(
+        JSON.stringify({ error: 'imageData is required for non-PDF documents' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Validate field limits
+    if (extractionFields && (!Array.isArray(extractionFields) || extractionFields.length > 50)) {
+      return new Response(
+        JSON.stringify({ error: 'extractionFields must be an array with max 50 items' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // Validate IDs format
+    if (documentId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(documentId)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid documentId format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    if (projectId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid projectId format' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     console.log('Processing OCR request...', isPdf ? 'PDF' : 'Image');
-    console.log('MICR Mode:', enableCheckScanning);
-    console.log('Extraction fields:', extractionFields);
-    console.log('Table extraction fields:', tableExtractionFields);
-    console.log('Project ID:', projectId);
 
     // --- CHECK FOR ZONE TEMPLATES ---
     let zoneTemplate: any = null;
