@@ -122,7 +122,7 @@ const AdminDashboard = () => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate('/admin/security')}
+              onClick={() => navigate('/security-compliance')}
               className="border-green-300 dark:border-green-700 hover:bg-green-50 dark:hover:bg-green-950/30"
             >
               View Details
