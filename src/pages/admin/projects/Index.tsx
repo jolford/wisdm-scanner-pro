@@ -522,8 +522,8 @@ const Projects = () => {
         {!loadingProjects && projects.length === 0 && (
           <EmptyState
             icon={Package}
-            title="No projects yet"
-            description="Get started by creating your first project to begin processing documents."
+            title="No Projects Yet"
+            description="Create your first project to start processing documents. Projects help you organize different document types and workflows."
             action={{
               label: "Create First Project",
               onClick: () => navigate('/admin/projects/new'),
@@ -535,8 +535,8 @@ const Projects = () => {
         {!loadingProjects && projects.length > 0 && filteredProjects.length === 0 && (
           <EmptyState
             icon={Search}
-            title="No projects found"
-            description={`Try adjusting your search${searchQuery ? ` for "${searchQuery}"` : ' or filters'}.`}
+            title="No Matching Projects"
+            description={`Try adjusting your search${searchQuery ? ` for "${searchQuery}"` : ' or filters'} to find what you're looking for.`}
           />
         )}
 

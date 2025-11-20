@@ -12,8 +12,9 @@ import { ProjectSelector } from '@/components/ProjectSelector';
 import { BatchSelector } from '@/components/BatchSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useContextualToast } from '@/lib/toast-helper';
-import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText, FolderOpen, Cloud, Database, HelpCircle, User } from 'lucide-react';
+import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText, FolderOpen, Cloud, Database, HelpCircle, User, Package, AlertCircle } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
+import { EmptyState } from '@/components/ui/empty-state';
 import { LicenseWarning } from '@/components/LicenseWarning';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { LanguageSelector } from '@/components/LanguageSelector';
@@ -1778,6 +1779,28 @@ const [isExporting, setIsExporting] = useState(false);
         </div>
         
         {customerId && <RateLimitWarning customerId={customerId} />}
+
+        {!selectedProjectId && (
+          <EmptyState
+            icon={Package}
+            title="Select a Project to Get Started"
+            description="Choose a project from the selector above to begin uploading and processing documents."
+            className="my-12"
+          />
+        )}
+
+        {selectedProjectId && !selectedBatchId && (
+          <EmptyState
+            icon={FolderOpen}
+            title="Create or Select a Batch"
+            description="Create a new batch or select an existing one to start processing documents for this project."
+            action={{
+              label: "Create New Batch",
+              onClick: () => navigate('/admin/batches/new')
+            }}
+            className="my-12"
+          />
+        )}
 
         {selectedProjectId && selectedBatchId && (
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
