@@ -15,6 +15,8 @@ import { SkeletonCard } from '@/components/ui/skeleton-card';
 import { EmptyState } from '@/components/ui/empty-state';
 import { ZoneTemplateManager } from '@/components/zonal/ZoneTemplateManager';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import noProjectsImg from '@/assets/empty-states/no-projects.png';
+import noResultsImg from '@/assets/empty-states/no-results.png';
 
 const LUCIDE_ICON_MAP: Record<string, LucideIcon> = {
   folder: Folder,
@@ -521,7 +523,7 @@ const Projects = () => {
         {/* Empty State - No projects at all */}
         {!loadingProjects && projects.length === 0 && (
           <EmptyState
-            icon={Package}
+            image={noProjectsImg}
             title="No Projects Yet"
             description="Create your first project to start processing documents. Projects help you organize different document types and workflows."
             action={{
@@ -534,7 +536,7 @@ const Projects = () => {
         {/* No Results State - After filtering */}
         {!loadingProjects && projects.length > 0 && filteredProjects.length === 0 && (
           <EmptyState
-            icon={Search}
+            image={noResultsImg}
             title="No Matching Projects"
             description={`Try adjusting your search${searchQuery ? ` for "${searchQuery}"` : ' or filters'} to find what you're looking for.`}
           />
