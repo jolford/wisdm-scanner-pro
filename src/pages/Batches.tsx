@@ -15,6 +15,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserPreferences } from '@/hooks/use-user-preferences';
 import { BulkActionsToolbar } from '@/components/BulkActionsToolbar';
+import { BatchHoverPreview } from '@/components/BatchHoverPreview';
 import { safeInvokeEdgeFunction } from '@/lib/edge-function-helper';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -60,6 +61,7 @@ const Batches = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>(preferences?.default_batch_view || 'grid');
   const [showPauseDialog, setShowPauseDialog] = useState(false);
   const [pausing, setPausing] = useState(false);
+  const [hoveredBatchId, setHoveredBatchId] = useState<string | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const filteredBatches = batches.filter(batch =>
@@ -456,7 +458,10 @@ const Batches = () => {
                     isSelected(batch.id) ? 'ring-2 ring-primary' : ''
                   } bg-gradient-to-br from-card via-card to-card/80 shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-1`}
                   onClick={() => navigate(`/batches/${batch.id}`)}
+                  onMouseEnter={() => setHoveredBatchId(batch.id)}
+                  onMouseLeave={() => setHoveredBatchId(null)}
                 >
+                  <BatchHoverPreview batchId={batch.id} isVisible={hoveredBatchId === batch.id} />
                   <div className="p-6">
                     {/* Selection Checkbox */}
                     <div 
@@ -563,7 +568,10 @@ const Batches = () => {
                     isSelected(batch.id) ? 'ring-2 ring-primary' : ''
                   } bg-gradient-to-r from-card via-card to-card/80 shadow-sm hover:shadow-lg transition-all cursor-pointer`}
                   onClick={() => navigate(`/batches/${batch.id}`)}
+                  onMouseEnter={() => setHoveredBatchId(batch.id)}
+                  onMouseLeave={() => setHoveredBatchId(null)}
                 >
+                  <BatchHoverPreview batchId={batch.id} isVisible={hoveredBatchId === batch.id} />
                   <div className="p-4">
                     <div className="flex items-center justify-between gap-6">
                       <div className="flex items-center gap-4 flex-1 min-w-0">

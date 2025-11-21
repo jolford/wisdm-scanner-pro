@@ -16,6 +16,8 @@ import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye,
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LicenseWarning } from '@/components/LicenseWarning';
+import noProjectsImg from '@/assets/empty-states/no-projects.png';
+import noBatchesImg from '@/assets/empty-states/no-batches.png';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { RateLimitWarning } from '@/components/RateLimitWarning';
@@ -1782,7 +1784,7 @@ const [isExporting, setIsExporting] = useState(false);
 
         {!selectedProjectId && (
           <EmptyState
-            icon={Package}
+            image={noProjectsImg}
             title="Select a Project to Get Started"
             description="Choose a project from the selector above to begin uploading and processing documents."
             className="my-12"
@@ -1791,7 +1793,7 @@ const [isExporting, setIsExporting] = useState(false);
 
         {selectedProjectId && !selectedBatchId && (
           <EmptyState
-            icon={FolderOpen}
+            image={noBatchesImg}
             title="Create or Select a Batch"
             description="Create a new batch or select an existing one to start processing documents for this project."
             action={{
