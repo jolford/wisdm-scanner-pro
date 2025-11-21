@@ -28,6 +28,7 @@ export default function ValidationRules() {
     severity: "error",
     is_active: true,
   });
+  const [regexPattern, setRegexPattern] = useState("");
 
   const { data: projects } = useQuery({
     queryKey: ["projects-for-rules"],
@@ -79,6 +80,7 @@ export default function ValidationRules() {
         severity: "error",
         is_active: true,
       });
+      setRegexPattern("");
     },
     onError: () => {
       toast.error("Failed to create validation rule");
@@ -125,7 +127,16 @@ export default function ValidationRules() {
     
     let parsedConfig;
     try {
-      parsedConfig = JSON.parse(formData.rule_config);
+      // For regex type, auto-construct JSON from pattern field
+      if (formData.rule_type === "regex") {
+        if (!regexPattern) {
+          toast.error("Please enter a regex pattern");
+          return;
+        }
+        parsedConfig = { pattern: regexPattern };
+      } else {
+        parsedConfig = JSON.parse(formData.rule_config);
+      }
     } catch (error) {
       toast.error("Invalid JSON in rule configuration");
       return;
@@ -230,20 +241,36 @@ export default function ValidationRules() {
                     </div>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="rule_config">Rule Configuration (JSON) *</Label>
-                    <Textarea
-                      id="rule_config"
-                      value={formData.rule_config}
-                      onChange={(e) => setFormData({ ...formData, rule_config: e.target.value })}
-                      placeholder='{"pattern": "^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$"}'
-                      rows={3}
-                      required
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Example for regex: {`{"pattern": "^\\d{3}-\\d{2}-\\d{4}$"}`}
-                    </p>
-                  </div>
+                  {formData.rule_type === "regex" ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="regex_pattern">Regex Pattern *</Label>
+                      <Input
+                        id="regex_pattern"
+                        value={regexPattern}
+                        onChange={(e) => setRegexPattern(e.target.value)}
+                        placeholder="C\d{4}-\d+"
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Enter just the pattern (no JSON needed). Example: ^\d{`{3}`}-\d{`{2}`}-\d{`{4}`}$
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label htmlFor="rule_config">Rule Configuration (JSON) *</Label>
+                      <Textarea
+                        id="rule_config"
+                        value={formData.rule_config}
+                        onChange={(e) => setFormData({ ...formData, rule_config: e.target.value })}
+                        placeholder='{"min": 0, "max": 100}'
+                        rows={3}
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Enter configuration as JSON. Example for range: {`{"min": 0, "max": 100}`}
+                      </p>
+                    </div>
+                  )}
 
                   <div className="space-y-2">
                     <Label htmlFor="error_message">Error Message *</Label>
