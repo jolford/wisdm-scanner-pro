@@ -2,11 +2,12 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, FileText, CheckCircle2, XCircle, AlertCircle, Trash2, Download, FileSpreadsheet, FileJson, FileType, Cloud, Database } from 'lucide-react';
+import { ArrowLeft, FileText, CheckCircle2, XCircle, AlertCircle, Trash2, Download, FileSpreadsheet, FileJson, FileType, Cloud, Database, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
@@ -26,6 +27,7 @@ const BatchDetail = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { isAdmin, isSystemAdmin } = useAuth();
 
   const { data: batch, isLoading } = useQuery({
     queryKey: ['batch', id],
@@ -155,6 +157,33 @@ const BatchDetail = () => {
       default:
         return <AlertCircle className="h-4 w-4 text-gray-500" />;
     }
+  };
+
+  const formatDuration = (startDate: string, endDate: string | null) => {
+    if (!endDate) return null;
+    const start = new Date(startDate).getTime();
+    const end = new Date(endDate).getTime();
+    const diffMs = end - start;
+    
+    if (diffMs < 0) return 'N/A';
+    
+    const seconds = Math.floor(diffMs / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) {
+      const remainingHours = hours % 24;
+      return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+    }
+    if (hours > 0) {
+      const remainingMinutes = minutes % 60;
+      return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+    }
+    if (minutes > 0) {
+      return `${minutes}m`;
+    }
+    return `${seconds}s`;
   };
 
   // Export functions
@@ -643,7 +672,7 @@ ${xmlDocs}
         </div>
 
         {/* Statistics */}
-        <div className="grid grid-cols-4 gap-4 mb-8">
+        <div className={`grid ${(isAdmin || isSystemAdmin) && batch.completed_at ? 'grid-cols-6' : 'grid-cols-4'} gap-4 mb-8`}>
           <Card className="p-6">
             <p className="text-sm text-muted-foreground mb-2">Total Documents</p>
             <p className="text-3xl font-bold">{batch.total_documents}</p>
@@ -660,6 +689,28 @@ ${xmlDocs}
             <p className="text-sm text-muted-foreground mb-2">Errors</p>
             <p className="text-3xl font-bold text-destructive">{batch.error_count}</p>
           </Card>
+          {(isAdmin || isSystemAdmin) && batch.completed_at && (
+            <>
+              <Card className="p-6 bg-primary/5">
+                <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  Total Duration
+                </p>
+                <p className="text-3xl font-bold">{formatDuration(batch.created_at!, batch.completed_at)}</p>
+                <p className="text-xs text-muted-foreground mt-1">Creation to completion</p>
+              </Card>
+              {batch.started_at && (
+                <Card className="p-6 bg-primary/5">
+                  <p className="text-sm text-muted-foreground mb-2 flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Processing Time
+                  </p>
+                  <p className="text-3xl font-bold">{formatDuration(batch.started_at, batch.completed_at)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">Start to completion</p>
+                </Card>
+              )}
+            </>
+          )}
         </div>
 
         {/* Documents List */}

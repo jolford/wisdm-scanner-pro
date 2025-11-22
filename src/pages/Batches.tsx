@@ -51,7 +51,7 @@ interface Batch {
 }
 
 const Batches = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isAdmin, isSystemAdmin } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const { preferences } = useUserPreferences();
@@ -325,6 +325,33 @@ const Batches = () => {
     return <Badge className={p.className}>{p.label}</Badge>;
   };
 
+  const formatDuration = (startDate: string, endDate: string | null) => {
+    if (!endDate) return null;
+    const start = new Date(startDate).getTime();
+    const end = new Date(endDate).getTime();
+    const diffMs = end - start;
+    
+    if (diffMs < 0) return 'N/A';
+    
+    const seconds = Math.floor(diffMs / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) {
+      const remainingHours = hours % 24;
+      return remainingHours > 0 ? `${days}d ${remainingHours}h` : `${days}d`;
+    }
+    if (hours > 0) {
+      const remainingMinutes = minutes % 60;
+      return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+    }
+    if (minutes > 0) {
+      return `${minutes}m`;
+    }
+    return `${seconds}s`;
+  };
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -550,6 +577,21 @@ const Batches = () => {
                       </div>
                       <Progress value={progressPercent} className="h-2" />
                     </div>
+
+                    {/* Duration (Admin only) */}
+                    {(isAdmin || isSystemAdmin) && batch.completed_at && (
+                      <div className="mt-3 pt-3 border-t border-border/50">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            <span>Duration</span>
+                          </div>
+                          <span className="font-semibold text-primary">
+                            {formatDuration(batch.created_at, batch.completed_at)}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </Card>
               );
@@ -629,6 +671,15 @@ const Batches = () => {
                             <div className="font-bold text-primary">{batch.validated_documents}</div>
                             <div className="text-xs text-muted-foreground">Validated</div>
                           </div>
+                          {(isAdmin || isSystemAdmin) && batch.completed_at && (
+                            <div className="text-right border-l border-border/50 pl-4">
+                              <div className="font-bold text-primary flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {formatDuration(batch.created_at, batch.completed_at)}
+                              </div>
+                              <div className="text-xs text-muted-foreground">Duration</div>
+                            </div>
+                          )}
                         </div>
                         
                         {/* Actions */}
