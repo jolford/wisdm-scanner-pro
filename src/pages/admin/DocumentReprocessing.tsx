@@ -136,6 +136,8 @@ const DocumentReprocessing = () => {
         // Determine if this is a PDF or image
         const isPdf = doc.file_type === 'application/pdf';
         
+        console.log(`Reprocessing document: ${doc.file_name} (${doc.id})`);
+        
         let requestBody: any = {
           extractionFields,
           tableExtractionFields: tableFields,
@@ -150,11 +152,21 @@ const DocumentReprocessing = () => {
         } else {
           // For images or PDFs without text, we need the image data
           // Get a signed URL first
+          // Extract the file path from file_url (remove the bucket name if present)
+          let filePath = doc.file_url;
+          
+          // If file_url contains the full storage URL, extract just the path
+          if (filePath.includes('/storage/v1/object/')) {
+            const parts = filePath.split('/documents/');
+            filePath = parts.length > 1 ? parts[1] : filePath;
+          }
+          
           const { data: signedUrlData } = await supabase.storage
             .from('documents')
-            .createSignedUrl(doc.file_url.split('/documents/')[1], 60);
+            .createSignedUrl(filePath, 60);
 
           if (!signedUrlData?.signedUrl) {
+            console.error('Failed to get signed URL for:', filePath);
             throw new Error('Failed to get signed URL');
           }
 
@@ -172,28 +184,47 @@ const DocumentReprocessing = () => {
         }
 
         // Call OCR function
+        console.log(`Calling OCR scan for ${doc.file_name}...`);
         const { data: ocrData, error: ocrError } = await supabase.functions.invoke('ocr-scan', {
           body: requestBody,
         });
 
-        if (ocrError) throw ocrError;
+        if (ocrError) {
+          console.error(`OCR error for ${doc.file_name}:`, ocrError);
+          throw ocrError;
+        }
+        
+        if (!ocrData) {
+          throw new Error('No data returned from OCR');
+        }
+
+        console.log(`OCR completed for ${doc.file_name}, updating database...`);
 
         // Update document with new data
         const { error: updateError } = await supabase
           .from('documents')
           .update({
-            extracted_text: ocrData.text,
+            extracted_text: ocrData.text || '',
             extracted_metadata: ocrData.metadata || {},
             line_items: ocrData.lineItems || [],
             confidence_score: ocrData.confidence || 0,
           })
           .eq('id', doc.id);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error(`Update error for ${doc.file_name}:`, updateError);
+          throw updateError;
+        }
 
+        console.log(`Successfully reprocessed ${doc.file_name}`);
         successCount++;
       } catch (error: any) {
         console.error(`Failed to reprocess ${doc.file_name}:`, error);
+        toast({
+          title: 'Reprocessing Error',
+          description: `Failed to reprocess ${doc.file_name}: ${error.message}`,
+          variant: 'destructive',
+        });
         failCount++;
       }
     }
