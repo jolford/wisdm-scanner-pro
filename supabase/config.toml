@@ -97,6 +97,10 @@ verify_jwt = true
 [functions.detect-fraud-patterns]
 verify_jwt = true
 
+# Workflow Execution Engine
+[functions.execute-workflow]
+verify_jwt = true
+
 # Public REST API v1
 [functions.api-v1-submit]
 verify_jwt = false
