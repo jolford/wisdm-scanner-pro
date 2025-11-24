@@ -18,9 +18,7 @@ export const ImageRegionSelector = ({
 }: ImageRegionSelectorProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [isSelecting, setIsSelecting] = useState(false);
-  const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null);
-  const [endPoint, setEndPoint] = useState<{ x: number; y: number } | null>(null);
+  const [selectedPoint, setSelectedPoint] = useState<{ x: number; y: number } | null>(null);
   const [image, setImage] = useState<HTMLImageElement | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [zoom, setZoom] = useState(1);
@@ -112,20 +110,32 @@ export const ImageRegionSelector = ({
     // Draw image scaled to fit canvas
     ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-    // Draw selection rectangle if exists
-    if (startPoint && endPoint) {
+    // Draw click indicator if exists
+    if (selectedPoint) {
+      // Draw crosshair at click point
       ctx.strokeStyle = '#3b82f6';
       ctx.lineWidth = 2;
-      ctx.setLineDash([5, 5]);
-      const width = endPoint.x - startPoint.x;
-      const height = endPoint.y - startPoint.y;
-      ctx.strokeRect(startPoint.x, startPoint.y, width, height);
+      ctx.setLineDash([]);
       
-      // Fill with semi-transparent blue
-      ctx.fillStyle = 'rgba(59, 130, 246, 0.1)';
-      ctx.fillRect(startPoint.x, startPoint.y, width, height);
+      // Vertical line
+      ctx.beginPath();
+      ctx.moveTo(selectedPoint.x, selectedPoint.y - 20);
+      ctx.lineTo(selectedPoint.x, selectedPoint.y + 20);
+      ctx.stroke();
+      
+      // Horizontal line
+      ctx.beginPath();
+      ctx.moveTo(selectedPoint.x - 20, selectedPoint.y);
+      ctx.lineTo(selectedPoint.x + 20, selectedPoint.y);
+      ctx.stroke();
+      
+      // Circle at center
+      ctx.beginPath();
+      ctx.arc(selectedPoint.x, selectedPoint.y, 5, 0, 2 * Math.PI);
+      ctx.fillStyle = '#3b82f6';
+      ctx.fill();
     }
-  }, [image, canvasDimensions, startPoint, endPoint]);
+  }, [image, canvasDimensions, selectedPoint]);
 
   // Handle window resize to recalc canvas size
   useEffect(() => {
@@ -157,46 +167,20 @@ export const ImageRegionSelector = ({
     };
   };
 
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const handleClick = async (e: React.MouseEvent<HTMLCanvasElement>) => {
     const coords = getCanvasCoordinates(e);
-    setStartPoint(coords);
-    setEndPoint(coords);
-    setIsSelecting(true);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isSelecting) return;
-    const coords = getCanvasCoordinates(e);
-    if (moveRafRef.current) return;
-    moveRafRef.current = requestAnimationFrame(() => {
-      setEndPoint(coords);
-      moveRafRef.current = null;
-    });
-  };
-
-  const handleMouseUp = async () => {
-    if (!isSelecting || !startPoint || !endPoint) return;
-    setIsSelecting(false);
+    setSelectedPoint(coords);
 
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Calculate crop dimensions
-    const x = Math.round(Math.min(startPoint.x, endPoint.x));
-    const y = Math.round(Math.min(startPoint.y, endPoint.y));
-    const width = Math.round(Math.abs(endPoint.x - startPoint.x));
-    const height = Math.round(Math.abs(endPoint.y - startPoint.y));
-
-    if (width < 10 || height < 10) {
-      toast({
-        title: 'Selection too small',
-        description: 'Please select a larger area',
-        variant: 'destructive',
-      });
-      setStartPoint(null);
-      setEndPoint(null);
-      return;
-    }
+    // Create a region around the click point (80x40 pixels)
+    const regionWidth = 80;
+    const regionHeight = 40;
+    const x = Math.round(Math.max(0, coords.x - regionWidth / 2));
+    const y = Math.round(Math.max(0, coords.y - regionHeight / 2));
+    const width = Math.min(regionWidth, canvas.width - x);
+    const height = Math.min(regionHeight, canvas.height - y);
 
     setIsProcessing(true);
 
@@ -209,7 +193,7 @@ export const ImageRegionSelector = ({
       
       if (!cropCtx || !image) throw new Error('Canvas context not available');
 
-      // Draw the cropped region from the canvas (not the image element)
+      // Draw the cropped region from the canvas
       const sourceCanvas = canvas;
       const sourceCtx = sourceCanvas.getContext('2d');
       if (!sourceCtx) throw new Error('Source canvas context not available');
@@ -219,7 +203,7 @@ export const ImageRegionSelector = ({
 
       const croppedImageData = cropCanvas.toDataURL('image/png');
 
-      // Run OCR on the selected region (table extraction not applicable for region selection)
+      // Run OCR on the selected region
       const { data, error } = await supabase.functions.invoke('ocr-scan', {
         body: { 
           imageData: croppedImageData,
@@ -231,20 +215,19 @@ export const ImageRegionSelector = ({
       if (error) throw error;
 
       toast({
-        title: 'Region Processed',
-        description: 'OCR completed on selected region',
+        title: 'Text Extracted',
+        description: 'Successfully extracted text from clicked area',
       });
 
       onRegionSelected(data.metadata || {});
 
-      // Reset selection (canvas will redraw automatically)
-      setStartPoint(null);
-      setEndPoint(null);
+      // Reset selection after a short delay
+      setTimeout(() => setSelectedPoint(null), 1000);
     } catch (error: any) {
       console.error('Error processing region:', error);
       toast({
         title: 'Processing Failed',
-        description: error.message || 'Failed to process the selected region',
+        description: error.message || 'Failed to extract text from the clicked area',
         variant: 'destructive',
       });
     } finally {
@@ -253,8 +236,7 @@ export const ImageRegionSelector = ({
   };
 
   const handleReset = () => {
-    setStartPoint(null);
-    setEndPoint(null);
+    setSelectedPoint(null);
     setZoom(1);
   };
 
@@ -264,10 +246,10 @@ export const ImageRegionSelector = ({
         <div>
           <h4 className="font-semibold text-sm flex items-center gap-2">
             <Crop className="h-4 w-4" />
-            Select Region to Re-OCR
+            Point and Click to Extract Text
           </h4>
           <p className="text-xs text-muted-foreground mt-1">
-            Click and drag to select an area for OCR correction
+            Click on any text to extract it with OCR
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -300,7 +282,7 @@ export const ImageRegionSelector = ({
             variant="outline"
             size="sm"
             onClick={handleReset}
-            disabled={!startPoint && !endPoint && zoom === 1}
+            disabled={!selectedPoint && zoom === 1}
           >
             <RotateCcw className="h-3 w-3 mr-1" />
             Reset
@@ -321,11 +303,8 @@ export const ImageRegionSelector = ({
         }}>
           <canvas
             ref={canvasRef}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={() => setIsSelecting(false)}
-            className="cursor-crosshair"
+            onClick={handleClick}
+            className="cursor-pointer"
             style={{ display: 'block', width: '100%', height: '100%' }}
           />
         </div>
