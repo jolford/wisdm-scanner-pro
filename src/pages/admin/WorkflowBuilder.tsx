@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 interface WorkflowNode {
   id: string;
   type: 'trigger' | 'condition' | 'action';
+  value: string;
   label: string;
   config: Record<string, any>;
 }
@@ -50,16 +51,19 @@ export default function WorkflowBuilder() {
     {
       id: '1',
       type: 'trigger',
+      value: 'document_uploaded',
       label: 'Document Uploaded',
       config: {},
     },
   ]);
 
   const addNode = (type: 'condition' | 'action') => {
+    const defaultOption = nodeTypes[type][0];
     const newNode: WorkflowNode = {
       id: Date.now().toString(),
       type,
-      label: type === 'condition' ? 'New Condition' : 'New Action',
+      value: defaultOption.value,
+      label: defaultOption.label,
       config: {},
     };
     setNodes([...nodes, newNode]);
@@ -97,9 +101,9 @@ export default function WorkflowBuilder() {
       description: 'Automatically validate documents with >90% confidence',
       steps: 3,
       nodes: [
-        { id: '1', type: 'trigger', label: 'Document Uploaded', config: {} },
-        { id: '2', type: 'condition', label: 'Confidence Threshold', config: { threshold: '90' } },
-        { id: '3', type: 'action', label: 'Auto-Validate', config: {} },
+        { id: '1', type: 'trigger', value: 'document_uploaded', label: 'Document Uploaded', config: {} },
+        { id: '2', type: 'condition', value: 'confidence_threshold', label: 'Confidence Threshold', config: { threshold: '90' } },
+        { id: '3', type: 'action', value: 'auto_validate', label: 'Auto-Validate', config: {} },
       ],
     },
     {
@@ -107,20 +111,20 @@ export default function WorkflowBuilder() {
       description: 'Route invoices from known vendors directly to export',
       steps: 4,
       nodes: [
-        { id: '1', type: 'trigger', label: 'Document Uploaded', config: {} },
-        { id: '2', type: 'condition', label: 'Document Type', config: { docType: 'invoice' } },
-        { id: '3', type: 'condition', label: 'Field Value Match', config: { field: 'Vendor Name' } },
-        { id: '4', type: 'action', label: 'Route to Queue', config: { queue: 'export' } },
+        { id: '1', type: 'trigger', value: 'document_uploaded', label: 'Document Uploaded', config: {} },
+        { id: '2', type: 'condition', value: 'document_type', label: 'Document Type', config: { docType: 'invoice' } },
+        { id: '3', type: 'condition', value: 'field_value', label: 'Field Value Match', config: { field: 'Vendor Name' } },
+        { id: '4', type: 'action', value: 'route_to_queue', label: 'Route to Queue', config: { queue: 'export' } },
       ],
     },
     {
       name: 'Low Confidence Alert',
       description: 'Send webhook when documents have <70% confidence',
-      steps: 2,
+      steps: 3,
       nodes: [
-        { id: '1', type: 'trigger', label: 'Validation Completed', config: {} },
-        { id: '2', type: 'condition', label: 'Confidence Threshold', config: { threshold: '70', below: true } },
-        { id: '3', type: 'action', label: 'Send Webhook', config: {} },
+        { id: '1', type: 'trigger', value: 'validation_completed', label: 'Validation Completed', config: {} },
+        { id: '2', type: 'condition', value: 'confidence_threshold', label: 'Confidence Threshold', config: { threshold: '70', below: true } },
+        { id: '3', type: 'action', value: 'send_webhook', label: 'Send Webhook', config: {} },
       ],
     },
   ];
@@ -211,10 +215,10 @@ export default function WorkflowBuilder() {
                             <div className="space-y-2">
                               <Label>Type</Label>
                               <Select
-                                value={node.label}
+                                value={node.value}
                                 onValueChange={(value) => {
                                   const option = nodeTypes[node.type].find(o => o.value === value);
-                                  updateNode(node.id, { label: option?.label || value });
+                                  updateNode(node.id, { value, label: option?.label || value });
                                 }}
                               >
                                 <SelectTrigger>
