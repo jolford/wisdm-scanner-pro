@@ -54,6 +54,7 @@ const menuItems = [
       { title: 'Smart Routing', url: '/admin/smart-routing', icon: GitBranch },
       { title: 'ML Templates', url: '/admin/ml-templates', icon: FileType },
       { title: 'Mobile Validation', url: '/admin/mobile-validation', icon: Smartphone },
+      { title: 'Workflow Management', url: '/admin/workflows', icon: GitBranch },
       { title: 'Workflow Builder', url: '/admin/workflow-builder', icon: GitBranch },
       { title: 'Integrations', url: '/admin/integrations', icon: Package },
       { title: 'Barcode Test', url: '/admin/barcode-test', icon: TestTube2 },
