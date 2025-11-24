@@ -3067,6 +3067,10 @@ export type Database = {
         }
         Returns: number
       }
+      can_access_integration_customer: {
+        Args: { _customer_id: string }
+        Returns: boolean
+      }
       check_license_capacity: {
         Args: { _documents_needed?: number; _license_id: string }
         Returns: boolean
