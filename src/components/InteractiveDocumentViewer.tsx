@@ -362,34 +362,34 @@ export const InteractiveDocumentViewer = ({
 
   return (
     <TooltipProvider>
-      <Card ref={cardRef} className="p-0 flex flex-col h-full overflow-hidden border-2 shadow-lg hover:shadow-xl transition-all duration-300">
-        {/* Header with gradient */}
-        <div className="bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-6 py-4 border-b">
+      <Card ref={cardRef} className="p-0 flex flex-col h-full overflow-hidden border-2 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-background via-background to-primary/5">
+        {/* Header with enhanced gradient */}
+        <div className="bg-gradient-to-r from-primary/15 via-primary/8 to-primary/5 px-6 py-4 border-b backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <h3 className="font-semibold flex items-center gap-2 text-foreground">
-              <Highlighter className="h-5 w-5 text-primary" />
+              <Highlighter className="h-5 w-5 text-primary animate-pulse" />
               Document Viewer
             </h3>
             <div className="flex items-center gap-3">
-              <Badge variant="secondary" className="text-sm font-mono px-3 py-1 bg-gradient-to-r from-primary/20 to-primary/10 border-primary/20">
+              <Badge variant="secondary" className="text-sm font-mono px-3 py-1.5 bg-gradient-to-r from-primary/30 to-primary/15 border-primary/30 shadow-md">
                 {Math.round(imageZoom * 100)}%
               </Badge>
-              <Badge variant="outline" className="max-w-[200px] truncate">{fileName}</Badge>
+              <Badge variant="outline" className="max-w-[200px] truncate bg-background/50 backdrop-blur-sm">{fileName}</Badge>
             </div>
           </div>
         </div>
         
-        {/* Controls with glass morphism */}
-        <div className="px-6 py-3 bg-muted/30 backdrop-blur-sm border-b flex items-center gap-2 flex-wrap">
+        {/* Controls with enhanced glass morphism */}
+        <div className="px-6 py-3 bg-gradient-to-r from-muted/40 via-muted/30 to-muted/20 backdrop-blur-md border-b flex items-center gap-2 flex-wrap shadow-inner">
           {/* Zoom controls group */}
-          <div className="flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-lg border p-1 shadow-sm">
+          <div className="flex items-center gap-1 bg-background/90 backdrop-blur-md rounded-lg border border-primary/20 p-1 shadow-lg hover:shadow-xl hover:border-primary/40 transition-all duration-200">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => handleZoom(0.25)}
-                  className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-all"
+                  className="h-8 w-8 p-0 hover:bg-primary/20 hover:text-primary hover:scale-110 transition-all duration-200"
                 >
                   <ZoomIn className="h-4 w-4" />
                 </Button>
@@ -403,7 +403,7 @@ export const InteractiveDocumentViewer = ({
                   size="sm"
                   variant="ghost"
                   onClick={() => handleZoom(-0.25)}
-                  className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-all"
+                  className="h-8 w-8 p-0 hover:bg-primary/20 hover:text-primary hover:scale-110 transition-all duration-200"
                 >
                   <ZoomOut className="h-4 w-4" />
                 </Button>
@@ -413,14 +413,14 @@ export const InteractiveDocumentViewer = ({
           </div>
 
           {/* Fit controls group */}
-          <div className="flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-lg border p-1 shadow-sm">
+          <div className="flex items-center gap-1 bg-background/90 backdrop-blur-md rounded-lg border border-primary/20 p-1 shadow-lg hover:shadow-xl hover:border-primary/40 transition-all duration-200">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={handleFitToWidth}
-                  className="h-8 px-2 text-xs hover:bg-primary/10 hover:text-primary transition-all"
+                  className="h-8 px-2 text-xs hover:bg-primary/20 hover:text-primary hover:scale-105 transition-all duration-200 font-medium"
                 >
                   Fit Width
                 </Button>
@@ -434,7 +434,7 @@ export const InteractiveDocumentViewer = ({
                   size="sm"
                   variant="ghost"
                   onClick={handleFitToHeight}
-                  className="h-8 px-2 text-xs hover:bg-primary/10 hover:text-primary transition-all"
+                  className="h-8 px-2 text-xs hover:bg-primary/20 hover:text-primary hover:scale-105 transition-all duration-200 font-medium"
                 >
                   Fit Height
                 </Button>
@@ -448,7 +448,7 @@ export const InteractiveDocumentViewer = ({
                   size="sm"
                   variant="ghost"
                   onClick={handleActualSize}
-                  className="h-8 px-2 text-xs hover:bg-primary/10 hover:text-primary transition-all"
+                  className="h-8 px-2 text-xs hover:bg-primary/20 hover:text-primary hover:scale-105 transition-all duration-200 font-medium"
                 >
                   100%
                 </Button>
@@ -458,14 +458,14 @@ export const InteractiveDocumentViewer = ({
           </div>
           
           {/* Transform controls group */}
-          <div className="flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-lg border p-1 shadow-sm">
+          <div className="flex items-center gap-1 bg-background/90 backdrop-blur-md rounded-lg border border-primary/20 p-1 shadow-lg hover:shadow-xl hover:border-primary/40 transition-all duration-200">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => setImageRotation(prev => (prev + 90) % 360)}
-                  className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-all"
+                  className="h-8 w-8 p-0 hover:bg-primary/20 hover:text-primary hover:scale-110 hover:rotate-90 transition-all duration-300"
                 >
                   <RotateCw className="h-4 w-4" />
                 </Button>
@@ -479,7 +479,7 @@ export const InteractiveDocumentViewer = ({
                   size="sm"
                   variant="ghost"
                   onClick={toggleFullscreen}
-                  className="h-8 w-8 p-0 hover:bg-primary/10 hover:text-primary transition-all"
+                  className="h-8 w-8 p-0 hover:bg-primary/20 hover:text-primary hover:scale-110 transition-all duration-200"
                 >
                   {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
                 </Button>
@@ -497,15 +497,19 @@ export const InteractiveDocumentViewer = ({
             />
           )}
 
-          {/* Mode selector group */}
-          <div className="ml-auto flex items-center gap-1 bg-background/80 backdrop-blur-sm rounded-lg border p-1 shadow-sm">
+          {/* Enhanced mode selector group with animations */}
+          <div className="ml-auto flex items-center gap-1 bg-background/90 backdrop-blur-md rounded-lg border border-primary/20 p-1 shadow-lg hover:shadow-xl hover:border-primary/40 transition-all duration-200">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   size="sm"
                   variant={clickMode === 'highlight' ? 'default' : 'ghost'}
                   onClick={() => setClickMode('highlight')}
-                  className="h-8 w-8 p-0 transition-all"
+                  className={`h-8 w-8 p-0 transition-all duration-200 ${
+                    clickMode === 'highlight' 
+                      ? 'shadow-md scale-105' 
+                      : 'hover:bg-primary/20 hover:text-primary hover:scale-105'
+                  }`}
                 >
                   <Highlighter className="h-4 w-4" />
                 </Button>
@@ -519,7 +523,11 @@ export const InteractiveDocumentViewer = ({
                   size="sm"
                   variant={clickMode === 'extract' ? 'default' : 'ghost'}
                   onClick={() => setClickMode('extract')}
-                  className="h-8 w-8 p-0 transition-all"
+                  className={`h-8 w-8 p-0 transition-all duration-200 ${
+                    clickMode === 'extract' 
+                      ? 'shadow-md scale-105' 
+                      : 'hover:bg-primary/20 hover:text-primary hover:scale-105'
+                  }`}
                 >
                   <MousePointer className="h-4 w-4" />
                 </Button>
@@ -529,10 +537,10 @@ export const InteractiveDocumentViewer = ({
           </div>
         </div>
 
-        {/* Document with overlay */}
+        {/* Document with overlay - enhanced styling */}
         <div 
           ref={containerRef}
-          className="flex-1 overflow-hidden bg-gradient-to-br from-muted/20 via-muted/10 to-background p-6 relative group"
+          className="flex-1 overflow-hidden bg-gradient-to-br from-primary/5 via-background to-muted/10 p-6 relative group"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -549,10 +557,11 @@ export const InteractiveDocumentViewer = ({
               ref={imageRef}
               src={imageUrl}
               alt="Document"
-              className="w-full h-auto object-contain transition-all duration-300 ease-out select-none shadow-2xl rounded-lg border border-border/50"
+              className="w-full h-auto object-contain transition-all duration-300 ease-out select-none shadow-2xl rounded-lg border-2 border-primary/10 hover:border-primary/30 hover:shadow-primary/20"
               style={{
                 transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
-                transformOrigin: 'center center'
+                transformOrigin: 'center center',
+                filter: 'contrast(1.03) brightness(1.02) saturate(1.05)'
               }}
               onLoad={() => {
                 // Trigger canvas redraw when image loads
@@ -579,15 +588,16 @@ export const InteractiveDocumentViewer = ({
             />
           </div>
 
-          {/* Info section - appears on hover */}
-          <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-1 text-xs bg-background/95 backdrop-blur-sm border rounded-lg px-4 py-2 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          {/* Enhanced info section with gradient and animations */}
+          <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-1.5 text-xs bg-gradient-to-r from-background/98 via-primary/5 to-background/98 backdrop-blur-md border border-primary/30 rounded-lg px-4 py-3 shadow-2xl opacity-0 group-hover:opacity-100 transition-all duration-300 hover:shadow-primary/20">
             {clickMode === 'extract' && (
-              <p className="text-primary font-medium flex items-center gap-2">
-                <MousePointer className="h-3 w-3" />
+              <p className="text-primary font-medium flex items-center gap-2 animate-pulse">
+                <MousePointer className="h-3.5 w-3.5" />
                 Click anywhere on the document to extract text at that position
               </p>
             )}
-            <p className="text-muted-foreground font-mono text-[10px]">
+            <p className="text-muted-foreground font-mono text-[10px] flex items-center gap-1.5">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary/70 animate-pulse"></span>
               ⌨️ +/- zoom · Shift+drag pan · R reset · F fullscreen · Shift+arrows rotate
             </p>
           </div>
