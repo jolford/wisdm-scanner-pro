@@ -2864,6 +2864,63 @@ export type Database = {
           },
         ]
       }
+      workflows: {
+        Row: {
+          created_at: string
+          created_by: string
+          customer_id: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          project_id: string
+          trigger_events: string[]
+          updated_at: string
+          workflow_nodes: Json
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          customer_id: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          project_id: string
+          trigger_events?: string[]
+          updated_at?: string
+          workflow_nodes?: Json
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          project_id?: string
+          trigger_events?: string[]
+          updated_at?: string
+          workflow_nodes?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflows_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflows_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       zone_definitions: {
         Row: {
           anchor_offset_x: number | null
