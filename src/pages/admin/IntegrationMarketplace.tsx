@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,8 @@ import {
   DollarSign
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
 
 interface Integration {
   id: string;
@@ -171,20 +173,121 @@ const integrations: Integration[] = [
 ];
 
 export default function IntegrationMarketplace() {
+  const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [installedIntegrations, setInstalledIntegrations] = useState<Set<string>>(new Set());
+  const [loading, setLoading] = useState(true);
+  const [customerId, setCustomerId] = useState<string | null>(null);
 
-  const filteredIntegrations = integrations.filter(integration => {
+  useEffect(() => {
+    fetchCustomerAndInstalledIntegrations();
+  }, [user]);
+
+  const fetchCustomerAndInstalledIntegrations = async () => {
+    if (!user) return;
+    
+    try {
+      // Get customer_id from user's license
+      const { data: licenseUsage } = await supabase
+        .from('license_usage')
+        .select('license_id')
+        .eq('user_id', user.id)
+        .limit(1)
+        .single();
+
+      if (licenseUsage) {
+        const { data: license } = await supabase
+          .from('licenses')
+          .select('customer_id')
+          .eq('id', licenseUsage.license_id)
+          .single();
+
+        if (license?.customer_id) {
+          setCustomerId(license.customer_id);
+
+          // Fetch installed integrations for this customer
+          const { data: installed } = await supabase
+            .from('installed_integrations')
+            .select('integration_id')
+            .eq('customer_id', license.customer_id)
+            .eq('is_active', true);
+
+          if (installed) {
+            setInstalledIntegrations(new Set(installed.map(i => i.integration_id)));
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching installed integrations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredIntegrations = integrations.map(integration => ({
+    ...integration,
+    installed: installedIntegrations.has(integration.id)
+  })).filter(integration => {
     const matchesSearch = integration.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          integration.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || integration.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
-  const installIntegration = (id: string) => {
+  const installIntegration = async (id: string) => {
+    if (!user || !customerId) {
+      toast.error('Unable to install integration. Please try again.');
+      return;
+    }
+
     const integration = integrations.find(i => i.id === id);
-    if (integration) {
-      toast.success(`${integration.name} integration installed successfully!`);
+    if (!integration) return;
+
+    try {
+      const { error } = await supabase
+        .from('installed_integrations')
+        .insert({
+          customer_id: customerId,
+          integration_id: id,
+          integration_name: integration.name,
+          installed_by: user.id
+        });
+
+      if (error) throw error;
+
+      setInstalledIntegrations(prev => new Set(prev).add(id));
+      toast.success(`${integration.name} installed successfully!`);
+    } catch (error) {
+      console.error('Error installing integration:', error);
+      toast.error('Failed to install integration');
+    }
+  };
+
+  const uninstallIntegration = async (id: string) => {
+    if (!customerId) return;
+
+    const integration = integrations.find(i => i.id === id);
+    if (!integration) return;
+
+    try {
+      const { error } = await supabase
+        .from('installed_integrations')
+        .delete()
+        .eq('customer_id', customerId)
+        .eq('integration_id', id);
+
+      if (error) throw error;
+
+      setInstalledIntegrations(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(id);
+        return newSet;
+      });
+      toast.success(`${integration.name} uninstalled successfully`);
+    } catch (error) {
+      console.error('Error uninstalling integration:', error);
+      toast.error('Failed to uninstall integration');
     }
   };
 
@@ -259,15 +362,21 @@ export default function IntegrationMarketplace() {
                                   </div>
                                 </div>
                                 {integration.installed ? (
-                                  <Button size="sm" variant="outline" disabled className="w-full">
+                                  <Button 
+                                    size="sm" 
+                                    variant="outline" 
+                                    className="w-full"
+                                    onClick={() => uninstallIntegration(integration.id)}
+                                  >
                                     <CheckCircle2 className="h-4 w-4 mr-2" />
-                                    Installed
+                                    Uninstall
                                   </Button>
                                 ) : (
                                   <Button
                                     size="sm"
                                     className="w-full"
                                     onClick={() => installIntegration(integration.id)}
+                                    disabled={loading}
                                   >
                                     Install
                                   </Button>
@@ -309,15 +418,20 @@ export default function IntegrationMarketplace() {
                                 {integration.rating}
                               </div>
                               {integration.installed ? (
-                                <Badge variant="outline">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => uninstallIntegration(integration.id)}
+                                >
                                   <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  Installed
-                                </Badge>
+                                  Uninstall
+                                </Button>
                               ) : (
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   onClick={() => installIntegration(integration.id)}
+                                  disabled={loading}
                                 >
                                   Install
                                 </Button>
@@ -345,7 +459,7 @@ export default function IntegrationMarketplace() {
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold">
-                {integrations.filter(i => i.installed).length}
+                {installedIntegrations.size}
               </div>
               <div className="text-sm text-muted-foreground">Installed</div>
             </CardContent>
