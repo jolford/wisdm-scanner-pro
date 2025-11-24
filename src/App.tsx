@@ -202,6 +202,7 @@ const App = () => {
             <Route path="/admin/advanced-reports" element={<AdvancedReports />} />
             <Route path="/admin/error-logs" element={<ErrorLogs />} />
             <Route path="/admin/reprocess" element={<DocumentReprocessing />} />
+            <Route path="/admin/document-reprocessing" element={<DocumentReprocessing />} />
             <Route path="/admin/business-metrics" element={<BusinessMetrics />} />
             <Route path="/admin/white-label" element={<WhiteLabel />} />
             <Route path="/admin/customer-success" element={<CustomerSuccess />} />
