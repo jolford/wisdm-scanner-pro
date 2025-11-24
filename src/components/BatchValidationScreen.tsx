@@ -856,46 +856,54 @@ const { toast } = useToast();
   /**
    * Handle pop-out viewer for a document
    */
-  const handlePopout = (docId: string, fileUrl: string, fileName: string) => {
+  const handlePopout = async (docId: string, fileUrl: string, fileName: string) => {
     const existingPopout = viewerPopouts[docId];
     if (existingPopout && !existingPopout.closed) {
       existingPopout.focus();
       return;
     }
 
-    const popout = window.open('', `DocumentViewer_${docId}`, 'width=1200,height=900,menubar=no,toolbar=no,location=no,status=no');
-    if (!popout) {
-      toast({ title: 'Pop-up blocked', description: 'Please allow pop-ups for this site', variant: 'destructive' });
-      return;
+    try {
+      // Generate signed URL for private storage access
+      const signedUrl = await getSignedUrl(fileUrl);
+
+      const popout = window.open('', `DocumentViewer_${docId}`, 'width=1200,height=900,menubar=no,toolbar=no,location=no,status=no');
+      if (!popout) {
+        toast({ title: 'Pop-up blocked', description: 'Please allow pop-ups for this site', variant: 'destructive' });
+        return;
+      }
+
+      setViewerPopouts(prev => ({ ...prev, [docId]: popout }));
+
+      popout.document.write(`
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <title>Document Viewer - ${fileName}</title>
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { 
+                background: #0a0a0a; 
+                height: 100vh; 
+                overflow: hidden;
+              }
+              iframe { 
+                width: 100%; 
+                height: 100vh; 
+                border: none;
+              }
+            </style>
+          </head>
+          <body>
+            <iframe src="${signedUrl}" title="${fileName}"></iframe>
+          </body>
+        </html>
+      `);
+      popout.document.close();
+    } catch (error) {
+      console.error('Error generating signed URL:', error);
+      toast({ title: 'Error', description: 'Failed to open document viewer', variant: 'destructive' });
     }
-
-    setViewerPopouts(prev => ({ ...prev, [docId]: popout }));
-
-    popout.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Document Viewer - ${fileName}</title>
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { 
-              background: #0a0a0a; 
-              height: 100vh; 
-              overflow: hidden;
-            }
-            iframe { 
-              width: 100%; 
-              height: 100vh; 
-              border: none;
-            }
-          </style>
-        </head>
-        <body>
-          <iframe src="${fileUrl}" title="${fileName}"></iframe>
-        </body>
-      </html>
-    `);
-    popout.document.close();
   };
 
   /**
