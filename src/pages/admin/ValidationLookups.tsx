@@ -156,34 +156,20 @@ export default function ValidationLookups() {
           </div>
         )}
 
-        {projectsWithoutLookups.length > 0 && (
-          <div>
-            <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
-              <XCircle className="h-5 w-5 text-muted-foreground" />
-              Projects without Validation Lookups ({projectsWithoutLookups.length})
-            </h2>
-            <div className="grid gap-4">
-              {projectsWithoutLookups.map((project) => (
-                <Card key={project.id} className="p-4 opacity-60">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <Database className="h-5 w-5 text-muted-foreground" />
-                      <h3 className="font-semibold">{project.name}</h3>
-                      <Badge variant="outline">Not Configured</Badge>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/admin/projects/${project.id}/edit`)}
-                    >
-                      <Settings className="h-4 w-4 mr-2" />
-                      Set Up
-                    </Button>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
+        {projectsWithLookups.length === 0 && (
+          <Card className="p-8 text-center">
+            <Database className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-semibold mb-2">No Validation Lookups Configured</h3>
+            <p className="text-muted-foreground mb-4">
+              No projects have validation lookup configurations enabled. Configure lookup validation in project settings to get started.
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => navigate('/admin/projects')}
+            >
+              View Projects
+            </Button>
+          </Card>
         )}
 
         {filteredProjects.length === 0 && (
