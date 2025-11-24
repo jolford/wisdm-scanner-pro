@@ -4,12 +4,13 @@ import {
   BarChart2, DollarSign, TrendingUp, Edit3, GitCompare,
   Brain, TestTube2, RefreshCw, Database, Palette, Activity,
   BookOpen, Settings, LogOut, HelpCircle, GitBranch, FileType,
-  Smartphone, Package
+  Smartphone, Package, ChevronDown
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
 import {
   Sidebar,
   SidebarContent,
@@ -22,6 +23,7 @@ import {
   SidebarFooter,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 
@@ -31,6 +33,7 @@ const menuItems = [
     items: [
       { title: 'Dashboard', url: '/admin', icon: LayoutDashboard, end: true },
     ],
+    defaultOpen: true,
   },
   {
     title: 'Core Management',
@@ -42,6 +45,7 @@ const menuItems = [
       { title: 'Licenses', url: '/admin/licenses', icon: Key },
       { title: 'Customers', url: '/admin/customers', icon: Building2 },
     ],
+    defaultOpen: true,
   },
   {
     title: 'Intelligence & Tools',
@@ -55,6 +59,7 @@ const menuItems = [
       { title: 'Barcode Test', url: '/admin/barcode-test', icon: TestTube2 },
       { title: 'Document Reprocessing', url: '/admin/document-reprocessing', icon: RefreshCw },
     ],
+    defaultOpen: false,
   },
   {
     title: 'Quality & Automation',
@@ -67,6 +72,7 @@ const menuItems = [
       { title: 'Validation Rules', url: '/admin/validation-rules', icon: Shield },
       { title: 'Scheduled Batches', url: '/admin/scheduled-batches', icon: Clock },
     ],
+    defaultOpen: false,
   },
   {
     title: 'Analytics & Operations',
@@ -78,6 +84,7 @@ const menuItems = [
       { title: 'Bulk Edit', url: '/admin/bulk-edit', icon: Edit3 },
       { title: 'Document Comparison', url: '/admin/document-comparison', icon: GitCompare },
     ],
+    defaultOpen: false,
   },
   {
     title: 'Settings',
@@ -87,13 +94,51 @@ const menuItems = [
       { title: 'System Viability', url: '/admin/system-viability', icon: Settings },
       { title: 'Release Notes', url: '/admin/release-notes', icon: BookOpen },
     ],
+    defaultOpen: false,
   },
 ];
 
 export function AdminSidebar() {
   const { state } = useSidebar();
   const navigate = useNavigate();
+  const location = useLocation();
   const collapsed = state === 'collapsed';
+
+  // Initialize group states from localStorage or defaults
+  const [groupStates, setGroupStates] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem('admin-sidebar-groups');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    // Set defaults
+    const defaults: Record<string, boolean> = {};
+    menuItems.forEach(group => {
+      defaults[group.title] = group.defaultOpen ?? true;
+    });
+    return defaults;
+  });
+
+  // Check if current route is in a group to auto-expand it
+  useEffect(() => {
+    const currentGroup = menuItems.find(group =>
+      group.items.some(item => location.pathname === item.url)
+    );
+    if (currentGroup && !groupStates[currentGroup.title]) {
+      setGroupStates(prev => {
+        const updated = { ...prev, [currentGroup.title]: true };
+        localStorage.setItem('admin-sidebar-groups', JSON.stringify(updated));
+        return updated;
+      });
+    }
+  }, [location.pathname]);
+
+  const toggleGroup = (title: string) => {
+    setGroupStates(prev => {
+      const updated = { ...prev, [title]: !prev[title] };
+      localStorage.setItem('admin-sidebar-groups', JSON.stringify(updated));
+      return updated;
+    });
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -105,33 +150,52 @@ export function AdminSidebar() {
     <Sidebar className={collapsed ? 'w-16' : 'w-64'} collapsible="icon">
       <SidebarContent className="overflow-y-auto">
         {menuItems.map((group) => (
-          <SidebarGroup key={group.title}>
-            <SidebarGroupLabel className="text-xs uppercase tracking-wider">
-              {!collapsed && group.title}
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {group.items.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <SidebarMenuItem key={item.title}>
-                      <SidebarMenuButton asChild>
-                        <NavLink
-                          to={item.url}
-                          end={item.end}
-                          className="flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-accent"
-                          activeClassName="bg-primary/10 text-primary font-medium"
-                        >
-                          <Icon className="h-4 w-4 flex-shrink-0" />
-                          {!collapsed && <span>{item.title}</span>}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          <Collapsible
+            key={group.title}
+            open={groupStates[group.title]}
+            onOpenChange={() => toggleGroup(group.title)}
+          >
+            <SidebarGroup>
+              <CollapsibleTrigger asChild>
+                <SidebarGroupLabel className="text-xs uppercase tracking-wider cursor-pointer hover:bg-accent rounded-md flex items-center justify-between">
+                  {!collapsed && (
+                    <>
+                      <span>{group.title}</span>
+                      <ChevronDown 
+                        className={`h-4 w-4 transition-transform ${
+                          groupStates[group.title] ? '' : '-rotate-90'
+                        }`}
+                      />
+                    </>
+                  )}
+                </SidebarGroupLabel>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {group.items.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <SidebarMenuItem key={item.title}>
+                          <SidebarMenuButton asChild>
+                            <NavLink
+                              to={item.url}
+                              end={item.end}
+                              className="flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-accent"
+                              activeClassName="bg-primary/10 text-primary font-medium"
+                            >
+                              <Icon className="h-4 w-4 flex-shrink-0" />
+                              {!collapsed && <span>{item.title}</span>}
+                            </NavLink>
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </CollapsibleContent>
+            </SidebarGroup>
+          </Collapsible>
         ))}
       </SidebarContent>
 
