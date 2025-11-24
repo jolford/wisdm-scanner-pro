@@ -76,6 +76,9 @@ import Downloads from "./pages/Downloads";
 import CredentialMigration from "./pages/admin/CredentialMigration";
 import MLLearning from "./pages/admin/MLLearning";
 import SmartRouting from "./pages/admin/SmartRouting";
+import MobileValidation from "./pages/admin/MobileValidation";
+import WorkflowBuilder from "./pages/admin/WorkflowBuilder";
+import IntegrationMarketplace from "./pages/admin/IntegrationMarketplace";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -217,6 +220,9 @@ const App = () => {
           {/* Phase 1 Enhancements */}
           <Route path="/admin/ml-learning" element={<MLLearning />} />
           <Route path="/admin/smart-routing" element={<SmartRouting />} />
+          <Route path="/admin/mobile-validation" element={<MobileValidation />} />
+          <Route path="/admin/workflow-builder" element={<WorkflowBuilder />} />
+          <Route path="/admin/integrations" element={<IntegrationMarketplace />} />
           
           {/* Phase 3: Bulk Operations & QA */}
           <Route path="/admin/bulk-edit" element={<BulkEdit />} />
