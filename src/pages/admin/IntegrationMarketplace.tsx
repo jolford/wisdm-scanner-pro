@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Label } from '@/components/ui/label';
 import { 
   Store, 
   Search, 
@@ -19,7 +21,8 @@ import {
   Cloud,
   MessageSquare,
   Calendar,
-  DollarSign
+  DollarSign,
+  Settings
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -179,6 +182,8 @@ export default function IntegrationMarketplace() {
   const [installedIntegrations, setInstalledIntegrations] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [customerId, setCustomerId] = useState<string | null>(null);
+  const [configureIntegration, setConfigureIntegration] = useState<string | null>(null);
+  const [configData, setConfigData] = useState<Record<string, any>>({});
 
   useEffect(() => {
     fetchCustomerAndInstalledIntegrations();
@@ -293,6 +298,80 @@ export default function IntegrationMarketplace() {
     }
   };
 
+  const openConfiguration = async (id: string) => {
+    if (!customerId) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('installed_integrations')
+        .select('configuration')
+        .eq('customer_id', customerId)
+        .eq('integration_id', id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      
+      setConfigData((data?.configuration as Record<string, any>) || {});
+      setConfigureIntegration(id);
+    } catch (error) {
+      console.error('Error loading configuration:', error);
+      toast.error('Failed to load configuration');
+    }
+  };
+
+  const saveConfiguration = async () => {
+    if (!customerId || !configureIntegration) return;
+    
+    try {
+      const { error } = await supabase
+        .from('installed_integrations')
+        .update({ configuration: configData })
+        .eq('customer_id', customerId)
+        .eq('integration_id', configureIntegration);
+      
+      if (error) throw error;
+      
+      toast.success('Configuration saved successfully');
+      setConfigureIntegration(null);
+    } catch (error) {
+      console.error('Error saving configuration:', error);
+      toast.error('Failed to save configuration');
+    }
+  };
+
+  const getConfigFields = (integrationId: string) => {
+    switch (integrationId) {
+      case 'quickbooks':
+        return [
+          { key: 'company_id', label: 'Company ID', type: 'text', placeholder: 'Enter your QuickBooks Company ID' },
+          { key: 'client_id', label: 'Client ID', type: 'text', placeholder: 'OAuth Client ID' },
+          { key: 'client_secret', label: 'Client Secret', type: 'password', placeholder: 'OAuth Client Secret' },
+          { key: 'redirect_uri', label: 'Redirect URI', type: 'text', placeholder: 'OAuth Redirect URI' },
+          { key: 'sandbox', label: 'Use Sandbox', type: 'checkbox' }
+        ];
+      case 'salesforce':
+        return [
+          { key: 'instance_url', label: 'Instance URL', type: 'text', placeholder: 'https://yourinstance.salesforce.com' },
+          { key: 'client_id', label: 'Consumer Key', type: 'text' },
+          { key: 'client_secret', label: 'Consumer Secret', type: 'password' },
+          { key: 'username', label: 'Username', type: 'text' },
+          { key: 'security_token', label: 'Security Token', type: 'password' }
+        ];
+      case 'sharepoint':
+        return [
+          { key: 'site_url', label: 'SharePoint Site URL', type: 'text', placeholder: 'https://yourorg.sharepoint.com/sites/yoursite' },
+          { key: 'client_id', label: 'Client ID', type: 'text' },
+          { key: 'client_secret', label: 'Client Secret', type: 'password' },
+          { key: 'library_name', label: 'Document Library', type: 'text', placeholder: 'Documents' }
+        ];
+      default:
+        return [
+          { key: 'api_key', label: 'API Key', type: 'password', placeholder: 'Enter API key' },
+          { key: 'endpoint', label: 'Endpoint URL', type: 'text', placeholder: 'https://api.example.com' }
+        ];
+    }
+  };
+
   return (
     <AdminLayout title="Integration Marketplace">
       <div className="space-y-6">
@@ -363,16 +442,25 @@ export default function IntegrationMarketplace() {
                                     {integration.installs.toLocaleString()}
                                   </div>
                                 </div>
-                                {integration.installed ? (
-                                  <Button 
-                                    size="sm" 
-                                    variant="outline" 
-                                    className="w-full"
-                                    onClick={() => uninstallIntegration(integration.id)}
-                                  >
-                                    <CheckCircle2 className="h-4 w-4 mr-2" />
-                                    Uninstall
-                                  </Button>
+                                 {integration.installed ? (
+                                  <div className="flex gap-2 w-full">
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline" 
+                                      className="flex-1"
+                                      onClick={() => openConfiguration(integration.id)}
+                                    >
+                                      <Settings className="h-4 w-4 mr-2" />
+                                      Configure
+                                    </Button>
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline" 
+                                      onClick={() => uninstallIntegration(integration.id)}
+                                    >
+                                      Uninstall
+                                    </Button>
+                                  </div>
                                 ) : (
                                   <Button
                                     size="sm"
@@ -420,14 +508,23 @@ export default function IntegrationMarketplace() {
                                 {integration.rating}
                               </div>
                               {integration.installed ? (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => uninstallIntegration(integration.id)}
-                                >
-                                  <CheckCircle2 className="h-3 w-3 mr-1" />
-                                  Uninstall
-                                </Button>
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openConfiguration(integration.id)}
+                                  >
+                                    <Settings className="h-3 w-3 mr-1" />
+                                    Configure
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => uninstallIntegration(integration.id)}
+                                  >
+                                    Uninstall
+                                  </Button>
+                                </div>
                               ) : (
                                 <Button
                                   size="sm"
@@ -473,6 +570,55 @@ export default function IntegrationMarketplace() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Configuration Sheet */}
+        <Sheet open={!!configureIntegration} onOpenChange={() => setConfigureIntegration(null)}>
+          <SheetContent className="sm:max-w-md">
+            <SheetHeader>
+              <SheetTitle>
+                Configure {integrations.find(i => i.id === configureIntegration)?.name}
+              </SheetTitle>
+              <SheetDescription>
+                Enter your integration credentials and settings
+              </SheetDescription>
+            </SheetHeader>
+            <div className="space-y-4 mt-6">
+              {configureIntegration && getConfigFields(configureIntegration).map(field => (
+                <div key={field.key} className="space-y-2">
+                  <Label htmlFor={field.key}>{field.label}</Label>
+                  {field.type === 'checkbox' ? (
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={field.key}
+                        checked={configData[field.key] || false}
+                        onChange={(e) => setConfigData(prev => ({ ...prev, [field.key]: e.target.checked }))}
+                        className="h-4 w-4"
+                      />
+                      <Label htmlFor={field.key} className="font-normal">{field.label}</Label>
+                    </div>
+                  ) : (
+                    <Input
+                      id={field.key}
+                      type={field.type}
+                      placeholder={field.placeholder}
+                      value={configData[field.key] || ''}
+                      onChange={(e) => setConfigData(prev => ({ ...prev, [field.key]: e.target.value }))}
+                    />
+                  )}
+                </div>
+              ))}
+              <div className="flex gap-2 pt-4">
+                <Button onClick={saveConfiguration} className="flex-1">
+                  Save Configuration
+                </Button>
+                <Button variant="outline" onClick={() => setConfigureIntegration(null)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </AdminLayout>
   );
