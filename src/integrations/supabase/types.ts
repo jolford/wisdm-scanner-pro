@@ -1942,6 +1942,47 @@ export type Database = {
           },
         ]
       }
+      routing_config: {
+        Row: {
+          auto_validate_enabled: boolean | null
+          created_at: string | null
+          customer_id: string | null
+          enabled: boolean | null
+          high_confidence_threshold: number | null
+          id: string
+          medium_confidence_threshold: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          auto_validate_enabled?: boolean | null
+          created_at?: string | null
+          customer_id?: string | null
+          enabled?: boolean | null
+          high_confidence_threshold?: number | null
+          id?: string
+          medium_confidence_threshold?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          auto_validate_enabled?: boolean | null
+          created_at?: string | null
+          customer_id?: string | null
+          enabled?: boolean | null
+          high_confidence_threshold?: number | null
+          id?: string
+          medium_confidence_threshold?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routing_config_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scanner_import_configs: {
         Row: {
           auto_create_batch: boolean | null

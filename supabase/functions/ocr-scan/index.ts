@@ -1587,8 +1587,84 @@ Review the image and provide corrected text with any OCR errors fixed.`;
         }
       }
       
-      console.log(`PII Detection: ${piiDetected ? `Found ${detectedPiiRegions.length} PII items` : 'No PII detected'}`);
+    console.log(`PII Detection: ${piiDetected ? `Found ${detectedPiiRegions.length} PII items` : 'No PII detected'}`);
     }
+    
+    // --- SMART ROUTING LOGIC ---
+    // Check routing configuration and apply automatic routing/validation
+    let routingApplied = false;
+    let suggestedStatus = 'pending';
+    
+    if (customerId && documentId && confidence) {
+      try {
+        const supabaseAdmin = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        );
+        
+        // Load routing config for this customer
+        const { data: routingConfig } = await supabaseAdmin
+          .from('routing_config')
+          .select('*')
+          .eq('customer_id', customerId)
+          .maybeSingle();
+        
+        if (routingConfig && routingConfig.enabled) {
+          const confidencePercent = confidence * 100;
+          
+          // High confidence routing
+          if (confidencePercent >= routingConfig.high_confidence_threshold) {
+            if (routingConfig.auto_validate_enabled) {
+              // Auto-validate high confidence documents
+              suggestedStatus = 'validated';
+              console.log(`Smart Routing: Auto-validating document (${confidencePercent.toFixed(1)}% >= ${routingConfig.high_confidence_threshold}%)`);
+            } else {
+              // High priority validation queue
+              suggestedStatus = 'pending'; // Will be handled by validation priority
+              console.log(`Smart Routing: High-priority queue (${confidencePercent.toFixed(1)}% >= ${routingConfig.high_confidence_threshold}%)`);
+            }
+            routingApplied = true;
+          }
+          // Medium confidence routing
+          else if (confidencePercent >= routingConfig.medium_confidence_threshold) {
+            suggestedStatus = 'pending'; // Standard validation queue
+            console.log(`Smart Routing: Standard queue (${confidencePercent.toFixed(1)}% between ${routingConfig.medium_confidence_threshold}% and ${routingConfig.high_confidence_threshold}%)`);
+            routingApplied = true;
+          }
+          // Low confidence routing
+          else {
+            suggestedStatus = 'pending'; // Manual review queue (flagged)
+            console.log(`Smart Routing: Review queue (${confidencePercent.toFixed(1)}% < ${routingConfig.medium_confidence_threshold}%)`);
+            routingApplied = true;
+          }
+          
+          // Update document with routing decision
+          if (routingApplied && documentId) {
+            const updateData: any = {
+              validation_status: suggestedStatus,
+            };
+            
+            // Set priority based on confidence
+            if (confidencePercent >= routingConfig.high_confidence_threshold) {
+              updateData.processing_priority = 100; // High priority
+            } else if (confidencePercent < routingConfig.medium_confidence_threshold) {
+              updateData.processing_priority = -100; // Low priority (needs review)
+              updateData.needs_review = true;
+            } else {
+              updateData.processing_priority = 0; // Normal priority
+            }
+            
+            await supabaseAdmin
+              .from('documents')
+              .update(updateData)
+              .eq('id', documentId);
+          }
+        }
+      } catch (e) {
+        console.log('Smart routing check failed, continuing without routing:', e);
+      }
+    }
+    
     // --- RETURN SUCCESS RESPONSE ---
     // Return all extracted data to the client including field-level confidence and PII detection
     return new Response(
@@ -1603,7 +1679,9 @@ Review the image and provide corrected text with any OCR errors fixed.`;
         boundingBoxes: fieldBoundingBoxes, // Field locations on document
         wordBoundingBoxes: wordBoundingBoxes, // Word-level coordinates for highlighting
         piiDetected: piiDetected,         // Whether PII was detected in the document
-        detectedPiiRegions: detectedPiiRegions // Array of detected PII with locations
+        detectedPiiRegions: detectedPiiRegions, // Array of detected PII with locations
+        routingApplied: routingApplied,   // Whether smart routing was applied
+        suggestedStatus: suggestedStatus   // Suggested validation status based on routing rules
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
