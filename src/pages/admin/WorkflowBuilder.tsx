@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,8 +7,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { GitBranch, Plus, Trash2, Save, Play, Settings, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { GitBranch, Plus, Trash2, Save, Play, Settings, ArrowRight, CheckCircle2, FolderKanban } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/use-auth';
+import { ProjectSelector } from '@/components/ProjectSelector';
 
 interface WorkflowNode {
   id: string;
@@ -46,7 +49,13 @@ const nodeTypes = {
 };
 
 export default function WorkflowBuilder() {
+  const { user } = useAuth();
+  const [selectedProject, setSelectedProject] = useState<string>('');
+  const [customerId, setCustomerId] = useState<string>('');
   const [workflowName, setWorkflowName] = useState('');
+  const [workflowDescription, setWorkflowDescription] = useState('');
+  const [existingWorkflows, setExistingWorkflows] = useState<any[]>([]);
+  const [editingWorkflowId, setEditingWorkflowId] = useState<string | null>(null);
   const [nodes, setNodes] = useState<WorkflowNode[]>([
     {
       id: '1',
@@ -56,6 +65,47 @@ export default function WorkflowBuilder() {
       config: {},
     },
   ]);
+
+  // Fetch customer ID
+  useEffect(() => {
+    const fetchCustomerId = async () => {
+      if (!user?.id) return;
+      
+      const { data, error } = await supabase
+        .from('user_customers')
+        .select('customer_id')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (data && !error) {
+        setCustomerId(data.customer_id);
+      }
+    };
+    
+    fetchCustomerId();
+  }, [user]);
+
+  // Fetch existing workflows when project changes
+  useEffect(() => {
+    const fetchWorkflows = async () => {
+      if (!selectedProject) {
+        setExistingWorkflows([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('workflows')
+        .select('*')
+        .eq('project_id', selectedProject)
+        .order('created_at', { ascending: false });
+
+      if (data && !error) {
+        setExistingWorkflows(data);
+      }
+    };
+
+    fetchWorkflows();
+  }, [selectedProject]);
 
   const addNode = (type: 'condition' | 'action') => {
     const defaultOption = nodeTypes[type][0];
@@ -81,13 +131,124 @@ export default function WorkflowBuilder() {
     setNodes(nodes.map(n => n.id === id ? { ...n, ...updates } : n));
   };
 
-  const saveWorkflow = () => {
+  const saveWorkflow = async () => {
     if (!workflowName) {
       toast.error('Please enter a workflow name');
       return;
     }
-    // TODO: Save to database
-    toast.success('Workflow saved successfully');
+    if (!selectedProject) {
+      toast.error('Please select a project');
+      return;
+    }
+    if (!customerId) {
+      toast.error('Customer ID not found');
+      return;
+    }
+
+    const triggerEvents = nodes
+      .filter(n => n.type === 'trigger')
+      .map(n => n.value);
+
+    const workflowData = {
+      name: workflowName,
+      description: workflowDescription,
+      project_id: selectedProject,
+      customer_id: customerId,
+      created_by: user!.id,
+      workflow_nodes: nodes as any,
+      trigger_events: triggerEvents,
+      is_active: true,
+    };
+
+    if (editingWorkflowId) {
+      // Update existing workflow
+      const { error } = await supabase
+        .from('workflows')
+        .update(workflowData)
+        .eq('id', editingWorkflowId);
+
+      if (error) {
+        toast.error('Failed to update workflow');
+        console.error(error);
+        return;
+      }
+      toast.success('Workflow updated successfully');
+    } else {
+      // Create new workflow
+      const { error } = await supabase
+        .from('workflows')
+        .insert([workflowData]);
+
+      if (error) {
+        toast.error('Failed to save workflow');
+        console.error(error);
+        return;
+      }
+      toast.success('Workflow saved successfully');
+    }
+
+    // Refresh workflows list
+    const { data } = await supabase
+      .from('workflows')
+      .select('*')
+      .eq('project_id', selectedProject)
+      .order('created_at', { ascending: false });
+
+    if (data) {
+      setExistingWorkflows(data);
+    }
+
+    // Reset form
+    resetForm();
+  };
+
+  const resetForm = () => {
+    setWorkflowName('');
+    setWorkflowDescription('');
+    setEditingWorkflowId(null);
+    setNodes([
+      {
+        id: '1',
+        type: 'trigger',
+        value: 'document_uploaded',
+        label: 'Document Uploaded',
+        config: {},
+      },
+    ]);
+  };
+
+  const loadExistingWorkflow = (workflow: any) => {
+    setWorkflowName(workflow.name);
+    setWorkflowDescription(workflow.description || '');
+    setNodes(workflow.workflow_nodes);
+    setEditingWorkflowId(workflow.id);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    toast.success(`Loaded workflow: ${workflow.name}`);
+  };
+
+  const toggleWorkflowActive = async (workflowId: string, currentStatus: boolean) => {
+    const { error } = await supabase
+      .from('workflows')
+      .update({ is_active: !currentStatus })
+      .eq('id', workflowId);
+
+    if (error) {
+      toast.error('Failed to update workflow status');
+      return;
+    }
+
+    // Refresh workflows list
+    const { data } = await supabase
+      .from('workflows')
+      .select('*')
+      .eq('project_id', selectedProject)
+      .order('created_at', { ascending: false });
+
+    if (data) {
+      setExistingWorkflows(data);
+    }
+
+    toast.success(`Workflow ${!currentStatus ? 'activated' : 'deactivated'}`);
   };
 
   const testWorkflow = () => {
@@ -151,6 +312,25 @@ export default function WorkflowBuilder() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
+              {/* Project Selection */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <FolderKanban className="h-4 w-4" />
+                  Select Project
+                </Label>
+                <ProjectSelector
+                  selectedProjectId={selectedProject}
+                  onProjectSelect={(projectId) => setSelectedProject(projectId)}
+                />
+                {!selectedProject && (
+                  <p className="text-sm text-muted-foreground">
+                    Select a project to associate this workflow with
+                  </p>
+                )}
+              </div>
+
+              <Separator />
+
               {/* Workflow Name */}
               <div className="space-y-2">
                 <Label>Workflow Name</Label>
@@ -158,6 +338,16 @@ export default function WorkflowBuilder() {
                   value={workflowName}
                   onChange={(e) => setWorkflowName(e.target.value)}
                   placeholder="e.g., High Confidence Auto-Validation"
+                />
+              </div>
+
+              {/* Workflow Description */}
+              <div className="space-y-2">
+                <Label>Description (Optional)</Label>
+                <Input
+                  value={workflowDescription}
+                  onChange={(e) => setWorkflowDescription(e.target.value)}
+                  placeholder="Briefly describe what this workflow does"
                 />
               </div>
 
@@ -291,8 +481,13 @@ export default function WorkflowBuilder() {
               <div className="flex gap-3">
                 <Button onClick={saveWorkflow} className="flex-1">
                   <Save className="h-4 w-4 mr-2" />
-                  Save Workflow
+                  {editingWorkflowId ? 'Update Workflow' : 'Save Workflow'}
                 </Button>
+                {editingWorkflowId && (
+                  <Button onClick={resetForm} variant="outline">
+                    Cancel Edit
+                  </Button>
+                )}
                 <Button onClick={testWorkflow} variant="outline">
                   <Play className="h-4 w-4 mr-2" />
                   Test
@@ -301,6 +496,58 @@ export default function WorkflowBuilder() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Existing Workflows for Selected Project */}
+        {selectedProject && existingWorkflows.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Saved Workflows</CardTitle>
+              <CardDescription>Workflows for the selected project</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {existingWorkflows.map((workflow) => (
+                  <Card key={workflow.id} className="border-2">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <div className="font-medium">{workflow.name}</div>
+                            <Badge variant={workflow.is_active ? 'default' : 'secondary'}>
+                              {workflow.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </div>
+                          {workflow.description && (
+                            <div className="text-sm text-muted-foreground">{workflow.description}</div>
+                          )}
+                          <div className="text-xs text-muted-foreground">
+                            {workflow.workflow_nodes.length} steps
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => toggleWorkflowActive(workflow.id, workflow.is_active)}
+                          >
+                            {workflow.is_active ? 'Deactivate' : 'Activate'}
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="ghost"
+                            onClick={() => loadExistingWorkflow(workflow)}
+                          >
+                            Edit
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Example Workflows */}
         <Card>
