@@ -44,72 +44,47 @@ const menuItems = [
     ],
   },
   {
-    title: 'ML & Intelligence',
+    title: 'Intelligence & Tools',
     items: [
       { title: 'ML Learning', url: '/admin/ml-learning', icon: Brain },
       { title: 'Smart Routing', url: '/admin/smart-routing', icon: GitBranch },
       { title: 'ML Templates', url: '/admin/ml-templates', icon: FileType },
-    ],
-  },
-  {
-    title: 'Advanced Features',
-    items: [
       { title: 'Mobile Validation', url: '/admin/mobile-validation', icon: Smartphone },
       { title: 'Workflow Builder', url: '/admin/workflow-builder', icon: GitBranch },
       { title: 'Integrations', url: '/admin/integrations', icon: Package },
+      { title: 'Barcode Test', url: '/admin/barcode-test', icon: TestTube2 },
+      { title: 'Document Reprocessing', url: '/admin/document-reprocessing', icon: RefreshCw },
     ],
   },
   {
-    title: 'Quality & Monitoring',
+    title: 'Quality & Automation',
     items: [
       { title: 'Validation Lookups', url: '/admin/validation-lookups', icon: Database },
       { title: 'Confidence Scoring', url: '/admin/confidence', icon: Target },
       { title: 'Exception Queue', url: '/admin/exceptions', icon: AlertTriangle },
       { title: 'Webhooks', url: '/admin/webhooks', icon: Webhook },
-    ],
-  },
-  {
-    title: 'Automation & Rules',
-    items: [
       { title: 'Duplicate Detection', url: '/admin/duplicates', icon: Copy },
       { title: 'Validation Rules', url: '/admin/validation-rules', icon: Shield },
       { title: 'Scheduled Batches', url: '/admin/scheduled-batches', icon: Clock },
     ],
   },
   {
-    title: 'Analytics & Reports',
+    title: 'Analytics & Operations',
     items: [
       { title: 'Validation Analytics', url: '/admin/analytics', icon: BarChart2 },
       { title: 'Business Metrics', url: '/admin/business-metrics', icon: TrendingUp },
       { title: 'Cost Tracking', url: '/admin/cost-tracking', icon: DollarSign },
       { title: 'QA Metrics', url: '/admin/qa-metrics', icon: Activity },
-    ],
-  },
-  {
-    title: 'Bulk Operations',
-    items: [
       { title: 'Bulk Edit', url: '/admin/bulk-edit', icon: Edit3 },
       { title: 'Document Comparison', url: '/admin/document-comparison', icon: GitCompare },
     ],
   },
   {
-    title: 'Advanced Tools',
-    items: [
-      { title: 'Barcode Test', url: '/admin/barcode-test', icon: TestTube2 },
-      { title: 'Document Reprocessing', url: '/admin/document-reprocessing', icon: RefreshCw },
-    ],
-  },
-  {
-    title: 'Configuration',
+    title: 'Settings',
     items: [
       { title: 'White Label', url: '/admin/white-label', icon: Palette },
       { title: 'Credential Migration', url: '/admin/credential-migration', icon: Shield },
       { title: 'System Viability', url: '/admin/system-viability', icon: Settings },
-    ],
-  },
-  {
-    title: 'Documentation',
-    items: [
       { title: 'Release Notes', url: '/admin/release-notes', icon: BookOpen },
     ],
   },
