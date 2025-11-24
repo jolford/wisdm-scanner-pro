@@ -1472,6 +1472,47 @@ export type Database = {
           },
         ]
       }
+      installed_integrations: {
+        Row: {
+          configuration: Json | null
+          customer_id: string
+          id: string
+          installed_at: string | null
+          installed_by: string | null
+          integration_id: string
+          integration_name: string
+          is_active: boolean | null
+        }
+        Insert: {
+          configuration?: Json | null
+          customer_id: string
+          id?: string
+          installed_at?: string | null
+          installed_by?: string | null
+          integration_id: string
+          integration_name: string
+          is_active?: boolean | null
+        }
+        Update: {
+          configuration?: Json | null
+          customer_id?: string
+          id?: string
+          installed_at?: string | null
+          installed_by?: string | null
+          integration_id?: string
+          integration_name?: string
+          is_active?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "installed_integrations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       job_metrics: {
         Row: {
           avg_processing_time_ms: number | null
