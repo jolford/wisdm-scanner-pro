@@ -29,6 +29,7 @@
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { Card } from '@/components/ui/card';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { AdminLayout } from '@/components/admin/AdminLayout';
@@ -46,7 +47,9 @@ import {
   CheckCircle2,
   XCircle,
   Activity,
+  ArrowLeft,
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectContent,
@@ -95,6 +98,7 @@ interface Analytics {
 
 const Analytics = () => {
   const { loading, isAdmin } = useRequireAuth(true);
+  const navigate = useNavigate();
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
   const [timeRange, setTimeRange] = useState('30');
 
@@ -326,6 +330,12 @@ const Analytics = () => {
       title="Analytics & Reports"
       description="Comprehensive performance and usage metrics"
     >
+      <div className="mb-4">
+        <Button onClick={() => navigate(-1)} variant="ghost" size="sm">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+      </div>
       <div className="space-y-6">
         {/* Time Range Selector */}
         <div className="flex justify-end">

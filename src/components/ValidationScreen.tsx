@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Lightbulb, Crop, Pencil, Sparkles, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Lightbulb, Crop, Pencil, Sparkles, AlertTriangle, ExternalLink } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { documentMetadataSchema } from '@/lib/validation-schemas';
@@ -98,6 +98,7 @@ export const ValidationScreen = ({
   const [signatureImage, setSignatureImage] = useState<string>('');
   const [signatureValidationResult, setSignatureValidationResult] = useState<any>(null);
   const [isValidatingSignature, setIsValidatingSignature] = useState(false);
+  const [viewerPopout, setViewerPopout] = useState<Window | null>(null);
   const [referenceSignatures, setReferenceSignatures] = useState<any[]>([]);
   const [selectedReferenceId, setSelectedReferenceId] = useState<string | null>(null);
   const [entityIdField, setEntityIdField] = useState<string>('');
@@ -963,25 +964,80 @@ useEffect(() => {
     }
   };
 
+  const handlePopoutViewer = () => {
+    if (viewerPopout && !viewerPopout.closed) {
+      viewerPopout.focus();
+      return;
+    }
+
+    const popout = window.open('', 'DocumentViewer', 'width=1200,height=900,menubar=no,toolbar=no,location=no,status=no');
+    if (!popout) {
+      toast({ title: 'Pop-up blocked', description: 'Please allow pop-ups for this site', variant: 'destructive' });
+      return;
+    }
+
+    setViewerPopout(popout);
+
+    popout.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Document Viewer - ${fileName}</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+              background: #0a0a0a; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              height: 100vh; 
+              overflow: hidden;
+            }
+            img { 
+              max-width: 100%; 
+              max-height: 100vh; 
+              object-fit: contain; 
+            }
+          </style>
+        </head>
+        <body>
+          <img src="${previewUrl || displayUrl || currentImageUrl}" alt="${fileName}" />
+        </body>
+      </html>
+    `);
+    popout.document.close();
+  };
+
   return (
     <TooltipProvider>
       <div className="grid grid-cols-[2fr_1fr_2fr] gap-6 min-h-[calc(100vh-12rem)] pb-40">
         {/* Left: Document Viewer */}
         {useInteractiveViewer ? (
-          <InteractiveDocumentViewer
-            imageUrl={previewUrl || displayUrl || currentImageUrl}
-            fileName={fileName}
-            documentId={documentId}
-            boundingBoxes={boundingBoxes}
-            onFieldClick={handleFieldFocus}
-            onRegionClick={handleRegionClick}
-            highlightedField={focusedField}
-            offensiveHighlights={offensiveHighlights}
-            piiRegions={detectedPiiRegions}
+          <div className="relative">
+            <Button
+              onClick={handlePopoutViewer}
+              size="sm"
+              variant="outline"
+              className="absolute top-2 right-2 z-10 bg-background/80 backdrop-blur-sm"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Pop-out
+            </Button>
+            <InteractiveDocumentViewer
+              imageUrl={previewUrl || displayUrl || currentImageUrl}
+              fileName={fileName}
+              documentId={documentId}
+              boundingBoxes={boundingBoxes}
+              onFieldClick={handleFieldFocus}
+              onRegionClick={handleRegionClick}
+              highlightedField={focusedField}
+              offensiveHighlights={offensiveHighlights}
+              piiRegions={detectedPiiRegions}
             showingOriginal={showingOriginal}
             onToggleOriginal={() => setShowingOriginal(!showingOriginal)}
             piiDebug={piiDebug}
           />
+          </div>
         ) : (
           <Card className="p-6 flex flex-col" key="traditional-viewer">
             <div className="flex items-center justify-between mb-4">

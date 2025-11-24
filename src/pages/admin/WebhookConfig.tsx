@@ -8,8 +8,9 @@ import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Webhook, Plus, Trash2, CheckCircle2, XCircle, ExternalLink, Send } from 'lucide-react';
+import { Webhook, Plus, Trash2, CheckCircle2, XCircle, ExternalLink, Send, ArrowLeft } from 'lucide-react';
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -35,6 +36,7 @@ const EVENT_TYPES = [
 
 const WebhookConfig = () => {
   const { loading } = useRequireAuth(true);
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingWebhook, setEditingWebhook] = useState<any>(null);
@@ -283,6 +285,12 @@ const WebhookConfig = () => {
       title="Webhook Configuration" 
       description="Configure webhooks for real-time notifications"
     >
+      <div className="mb-4">
+        <Button onClick={() => navigate(-1)} variant="ghost" size="sm">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+      </div>
       <div className="space-y-6">
         {/* Examples Card */}
         <Card className="border-primary/20 bg-primary/5">
