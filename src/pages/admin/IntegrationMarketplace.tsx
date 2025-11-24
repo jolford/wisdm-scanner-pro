@@ -189,21 +189,31 @@ export default function IntegrationMarketplace() {
     
     try {
       // Get customer_id from user_customers table
-      const { data: userCustomer } = await supabase
+      const { data: userCustomer, error: customerError } = await supabase
         .from('user_customers')
         .select('customer_id')
         .eq('user_id', user.id)
         .maybeSingle();
 
+      if (customerError) {
+        console.error('Error fetching customer:', customerError);
+        throw customerError;
+      }
+
       if (userCustomer?.customer_id) {
         setCustomerId(userCustomer.customer_id);
 
         // Fetch installed integrations for this customer
-        const { data: installed } = await supabase
+        const { data: installed, error: installedError } = await supabase
           .from('installed_integrations')
           .select('integration_id')
           .eq('customer_id', userCustomer.customer_id)
           .eq('is_active', true);
+
+        if (installedError) {
+          console.error('Error fetching installed integrations:', installedError);
+          throw installedError;
+        }
 
         if (installed) {
           setInstalledIntegrations(new Set(installed.map(i => i.integration_id)));
