@@ -73,6 +73,7 @@ export const ValidationScreen = ({
   const [editedMetadata, setEditedMetadata] = useState(metadata);
   const [fieldConfidence, setFieldConfidence] = useState<Record<string, number>>({});
   const [validationSuggestions, setValidationSuggestions] = useState<Record<string, any>>({});
+  const [validationNotes, setValidationNotes] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [validationStatus, setValidationStatus] = useState<'pending' | 'validated' | 'rejected'>('pending');
   const [isSaving, setIsSaving] = useState(false);
@@ -886,6 +887,7 @@ useEffect(() => {
           .update({
             extracted_metadata: finalMetadata,
             validation_status: status,
+            validation_notes: validationNotes || null,
             validated_at: new Date().toISOString(),
             validated_by: user?.id,
           })
@@ -1502,7 +1504,24 @@ useEffect(() => {
           </div>
         )}
 
-        {/* Petition Validation Warnings */}
+          {/* Validation Notes Section */}
+          <div className="mb-4">
+            <Card className="p-4">
+              <Label htmlFor="validation-notes" className="text-sm font-medium mb-2 block">
+                Validation Notes
+                <span className="text-xs text-muted-foreground ml-2">(Optional - Add notes for suspension, rejection, or special handling)</span>
+              </Label>
+              <Textarea
+                id="validation-notes"
+                value={validationNotes}
+                onChange={(e) => setValidationNotes(e.target.value)}
+                placeholder="Enter notes about document status, reasons for rejection/suspension, or any special handling instructions..."
+                className="min-h-[80px] resize-y"
+              />
+            </Card>
+          </div>
+
+          {/* Petition Validation Warnings */}
         {documentId && (
           <div className="mb-4">
             <PetitionValidationWarnings

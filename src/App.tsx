@@ -169,7 +169,7 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Queue launchedFiles={launchedFiles} />} />
             <Route path="/old" element={<Index />} />
-            <Route path="/auth" element={<Auth />} className="border-2" />
+            <Route path="/auth" element={<Auth />} />
             <Route path="/install" element={<Install />} />
             <Route path="/batches" element={<Batches />} />
             <Route path="/batches/:id" element={<BatchDetail />} />
