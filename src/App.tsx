@@ -78,6 +78,7 @@ import MLLearning from "./pages/admin/MLLearning";
 import SmartRouting from "./pages/admin/SmartRouting";
 import MobileValidation from "./pages/admin/MobileValidation";
 import WorkflowBuilder from "./pages/admin/WorkflowBuilder";
+import Workflows from "./pages/admin/Workflows";
 import IntegrationMarketplace from "./pages/admin/IntegrationMarketplace";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
@@ -221,6 +222,7 @@ const App = () => {
           <Route path="/admin/ml-learning" element={<MLLearning />} />
           <Route path="/admin/smart-routing" element={<SmartRouting />} />
           <Route path="/admin/mobile-validation" element={<MobileValidation />} />
+          <Route path="/admin/workflows" element={<Workflows />} />
           <Route path="/admin/workflow-builder" element={<WorkflowBuilder />} />
           <Route path="/admin/integrations" element={<IntegrationMarketplace />} />
           
