@@ -78,7 +78,6 @@ import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SkipToContent } from "./components/SkipToContent";
-
 const queryClient = new QueryClient();
 
 // Redirect users to the Auth page when arriving via a password recovery link
@@ -98,57 +97,47 @@ const RecoveryRedirect: React.FC = () => {
 
   // Avoid redirect loop if already on /auth
   const isOnAuth = location.pathname === '/auth';
-
   if (!isOnAuth && (hasHashRecovery || hasAccessToken || hasAuthError || hasQueryRecovery || hasCode)) {
     // Preserve both search and hash so the Auth page can parse tokens or code
     return <Navigate to={`/auth${search}${hash}`} replace />;
   }
   return null;
 };
-
-function GlobalKeyboardShortcuts({ onShowShortcuts, onFilesLaunched }: { 
+function GlobalKeyboardShortcuts({
+  onShowShortcuts,
+  onFilesLaunched
+}: {
   onShowShortcuts: () => void;
   onFilesLaunched: (files: File[]) => void;
 }) {
   const navigate = useNavigate();
-  
-  useFileLaunch((files) => {
+  useFileLaunch(files => {
     navigate('/');
     onFilesLaunched(files);
   });
-  
   useKeyboardShortcuts({
-    shortcuts: [
-      {
-        ...GLOBAL_SHORTCUTS.HELP,
-        handler: onShowShortcuts,
-      },
-      {
-        ...GLOBAL_SHORTCUTS.GO_BATCHES,
-        handler: () => navigate('/batches'),
-      },
-      {
-        ...GLOBAL_SHORTCUTS.GO_QUEUE,
-        handler: () => navigate('/queue'),
-      },
-      {
-        ...GLOBAL_SHORTCUTS.GO_ADMIN,
-        handler: () => navigate('/admin/dashboard'),
-      },
-      {
-        ...GLOBAL_SHORTCUTS.GO_HOME,
-        handler: () => navigate('/'),
-      },
-    ],
+    shortcuts: [{
+      ...GLOBAL_SHORTCUTS.HELP,
+      handler: onShowShortcuts
+    }, {
+      ...GLOBAL_SHORTCUTS.GO_BATCHES,
+      handler: () => navigate('/batches')
+    }, {
+      ...GLOBAL_SHORTCUTS.GO_QUEUE,
+      handler: () => navigate('/queue')
+    }, {
+      ...GLOBAL_SHORTCUTS.GO_ADMIN,
+      handler: () => navigate('/admin/dashboard')
+    }, {
+      ...GLOBAL_SHORTCUTS.GO_HOME,
+      handler: () => navigate('/')
+    }]
   });
-
   return null;
 }
-
 const App = () => {
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [launchedFiles, setLaunchedFiles] = useState<File[]>([]);
-
   const handleFilesLaunched = useCallback((files: File[]) => {
     setLaunchedFiles(files);
     toast.success(`${files.length} file(s) ready to import`, {
@@ -163,9 +152,7 @@ const App = () => {
       return () => clearTimeout(timer);
     }
   }, [launchedFiles]);
-  
-  return (
-    <ErrorBoundary>
+  return <ErrorBoundary>
       <I18nextProvider i18n={i18n}>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light">{/* Force light mode only */}
@@ -176,16 +163,13 @@ const App = () => {
             <KeyboardShortcutsDialog open={showShortcuts} onOpenChange={setShowShortcuts} />
           <BrowserRouter>
             <CommandPalette />
-            <GlobalKeyboardShortcuts 
-              onShowShortcuts={() => setShowShortcuts(true)}
-              onFilesLaunched={handleFilesLaunched}
-            />
+            <GlobalKeyboardShortcuts onShowShortcuts={() => setShowShortcuts(true)} onFilesLaunched={handleFilesLaunched} />
           <RecoveryRedirect />
           <div id="main-content" className="flex-1" role="main">
           <Routes>
             <Route path="/" element={<Queue launchedFiles={launchedFiles} />} />
             <Route path="/old" element={<Index />} />
-            <Route path="/auth" element={<Auth />} />
+            <Route path="/auth" element={<Auth />} className="border-2" />
             <Route path="/install" element={<Install />} />
             <Route path="/batches" element={<Batches />} />
             <Route path="/batches/:id" element={<BatchDetail />} />
@@ -258,8 +242,6 @@ const App = () => {
         </ThemeProvider>
       </QueryClientProvider>
       </I18nextProvider>
-    </ErrorBoundary>
-  );
+    </ErrorBoundary>;
 };
-
 export default App;
