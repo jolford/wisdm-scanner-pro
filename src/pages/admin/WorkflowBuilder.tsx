@@ -128,6 +128,7 @@ export default function WorkflowBuilder() {
   const loadTemplate = (template: WorkflowTemplate) => {
     setWorkflowName(template.name);
     setNodes(template.nodes);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
     toast.success(`Loaded template: ${template.name}`);
   };
 
