@@ -364,6 +364,14 @@ export default function IntegrationMarketplace() {
           { key: 'client_secret', label: 'Client Secret', type: 'password' },
           { key: 'library_name', label: 'Document Library', type: 'text', placeholder: 'Documents' }
         ];
+      case 'teams':
+        return [
+          { key: 'webhook_url', label: 'Webhook URL', type: 'text', placeholder: 'https://outlook.office.com/webhook/...' }
+        ];
+      case 'slack':
+        return [
+          { key: 'webhook_url', label: 'Webhook URL', type: 'text', placeholder: 'https://hooks.slack.com/services/...' }
+        ];
       default:
         return [
           { key: 'api_key', label: 'API Key', type: 'password', placeholder: 'Enter API key' },
@@ -573,7 +581,7 @@ export default function IntegrationMarketplace() {
 
         {/* Configuration Sheet */}
         <Sheet open={!!configureIntegration} onOpenChange={() => setConfigureIntegration(null)}>
-          <SheetContent className="sm:max-w-md">
+          <SheetContent className="sm:max-w-md overflow-y-auto">
             <SheetHeader>
               <SheetTitle>
                 Configure {integrations.find(i => i.id === configureIntegration)?.name}
@@ -582,7 +590,73 @@ export default function IntegrationMarketplace() {
                 Enter your integration credentials and settings
               </SheetDescription>
             </SheetHeader>
-            <div className="space-y-4 mt-6">
+
+            {/* Setup Instructions */}
+            {configureIntegration && (
+              <Card className="mt-4 bg-muted">
+                <CardContent className="p-4 text-sm space-y-2">
+                  <div className="font-semibold">Setup Instructions:</div>
+                  {configureIntegration === 'quickbooks' && (
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                      <li>Log into QuickBooks Developer Portal</li>
+                      <li>Create a new app or select existing app</li>
+                      <li>Copy the Client ID and Client Secret from Keys & OAuth</li>
+                      <li>Find your Company ID in QuickBooks settings</li>
+                      <li>Set redirect URI to your application URL</li>
+                      <li>Enable sandbox mode for testing (optional)</li>
+                    </ol>
+                  )}
+                  {configureIntegration === 'salesforce' && (
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                      <li>Log into Salesforce Setup</li>
+                      <li>Navigate to Apps → App Manager → New Connected App</li>
+                      <li>Enable OAuth Settings and select scopes</li>
+                      <li>Copy Consumer Key (Client ID) and Consumer Secret</li>
+                      <li>Get Security Token from Settings → Reset Security Token</li>
+                      <li>Your Instance URL is typically https://[domain].salesforce.com</li>
+                    </ol>
+                  )}
+                  {configureIntegration === 'sharepoint' && (
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                      <li>Go to Azure Portal → App Registrations</li>
+                      <li>Create new registration or use existing</li>
+                      <li>Copy Application (client) ID</li>
+                      <li>Create client secret under Certificates & Secrets</li>
+                      <li>Grant SharePoint API permissions (Sites.ReadWrite.All)</li>
+                      <li>Enter your SharePoint site URL and library name</li>
+                    </ol>
+                  )}
+                  {configureIntegration === 'teams' && (
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                      <li>Open Microsoft Teams and go to your channel</li>
+                      <li>Click ⋯ (More options) → Connectors</li>
+                      <li>Search for "Incoming Webhook" and click Configure</li>
+                      <li>Give it a name (e.g., "WISDM Notifications")</li>
+                      <li>Copy the webhook URL provided</li>
+                      <li>Paste the URL in the Endpoint field below</li>
+                    </ol>
+                  )}
+                  {configureIntegration === 'slack' && (
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                      <li>Go to api.slack.com → Your Apps → Create New App</li>
+                      <li>Choose "From scratch" and select your workspace</li>
+                      <li>Navigate to Incoming Webhooks and activate</li>
+                      <li>Click "Add New Webhook to Workspace"</li>
+                      <li>Select the channel for notifications</li>
+                      <li>Copy the webhook URL and paste below</li>
+                    </ol>
+                  )}
+                  {!['quickbooks', 'salesforce', 'sharepoint', 'teams', 'slack'].includes(configureIntegration) && (
+                    <p className="text-muted-foreground">
+                      Please refer to the integration's documentation for setup instructions.
+                      Enter your API credentials below to connect.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="space-y-4 mt-4">
               {configureIntegration && getConfigFields(configureIntegration).map(field => (
                 <div key={field.key} className="space-y-2">
                   <Label htmlFor={field.key}>{field.label}</Label>
