@@ -1673,35 +1673,49 @@ Review the image and provide corrected text with any OCR errors fixed.`;
         Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
       );
       
-      // Get document's batch_id for workflow context
+      // Get document's batch_id and project_id for workflow context
       let workflowBatchId = null;
+      let workflowProjectId = projectId; // Use provided projectId if available
+      
       if (documentId) {
         const { data: doc } = await supabaseAdmin
           .from('documents')
-          .select('batch_id')
+          .select('batch_id, project_id')
           .eq('id', documentId)
           .maybeSingle();
-        workflowBatchId = doc?.batch_id;
-      }
-      
-      const workflowResult = await supabaseAdmin.functions.invoke('execute-workflow', {
-        body: {
-          eventType: 'Document Uploaded',
-          projectId: projectId,
-          documentId: documentId,
-          batchId: workflowBatchId,
-          metadata: {
-            documentType: documentType,
-            confidence: confidence,
-            ...metadata
+        
+        if (doc) {
+          workflowBatchId = doc.batch_id;
+          // Use document's project_id if projectId wasn't provided
+          if (!workflowProjectId) {
+            workflowProjectId = doc.project_id;
           }
         }
-      });
+      }
       
-      if (workflowResult.error) {
-        console.error('Workflow execution error:', workflowResult.error);
+      // Only trigger workflows if we have a valid project_id
+      if (workflowProjectId) {
+        const workflowResult = await supabaseAdmin.functions.invoke('execute-workflow', {
+          body: {
+            eventType: 'Document Uploaded',
+            projectId: workflowProjectId,
+            documentId: documentId,
+            batchId: workflowBatchId,
+            metadata: {
+              documentType: documentType,
+              confidence: confidence,
+              ...metadata
+            }
+          }
+        });
+        
+        if (workflowResult.error) {
+          console.error('Workflow execution error:', workflowResult.error);
+        } else {
+          console.log('Workflow execution result:', workflowResult.data);
+        }
       } else {
-        console.log('Workflow execution result:', workflowResult.data);
+        console.log('Skipped workflow execution - no project_id available');
       }
     } catch (workflowError) {
       console.error('Failed to trigger workflow execution:', workflowError);
