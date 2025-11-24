@@ -372,6 +372,50 @@ export default function IntegrationMarketplace() {
         return [
           { key: 'webhook_url', label: 'Webhook URL', type: 'text', placeholder: 'https://hooks.slack.com/services/...' }
         ];
+      case 'zapier':
+        return [
+          { key: 'webhook_url', label: 'Zapier Webhook URL', type: 'text', placeholder: 'https://hooks.zapier.com/hooks/catch/...' }
+        ];
+      case 'gmail':
+        return [
+          { key: 'client_id', label: 'Client ID', type: 'text', placeholder: 'Google OAuth Client ID' },
+          { key: 'client_secret', label: 'Client Secret', type: 'password', placeholder: 'Google OAuth Client Secret' },
+          { key: 'refresh_token', label: 'Refresh Token', type: 'password', placeholder: 'OAuth Refresh Token' }
+        ];
+      case 'documentum':
+        return [
+          { key: 'server_url', label: 'Documentum Server URL', type: 'text', placeholder: 'http://documentum-server:port' },
+          { key: 'repository', label: 'Repository Name', type: 'text', placeholder: 'Repository name' },
+          { key: 'username', label: 'Username', type: 'text' },
+          { key: 'password', label: 'Password', type: 'password' },
+          { key: 'cabinet_path', label: 'Cabinet Path', type: 'text', placeholder: '/Cabinet/Folder' }
+        ];
+      case 'filebound':
+        return [
+          { key: 'server_url', label: 'FileBound Server URL', type: 'text', placeholder: 'https://filebound-server' },
+          { key: 'api_key', label: 'API Key', type: 'password' },
+          { key: 'project_id', label: 'Project ID', type: 'text' },
+          { key: 'separator_id', label: 'Separator ID', type: 'text' }
+        ];
+      case 'google-calendar':
+        return [
+          { key: 'client_id', label: 'Client ID', type: 'text', placeholder: 'Google OAuth Client ID' },
+          { key: 'client_secret', label: 'Client Secret', type: 'password' },
+          { key: 'refresh_token', label: 'Refresh Token', type: 'password' },
+          { key: 'calendar_id', label: 'Calendar ID', type: 'text', placeholder: 'primary or calendar@group.calendar.google.com' }
+        ];
+      case 'dropbox':
+        return [
+          { key: 'access_token', label: 'Access Token', type: 'password', placeholder: 'Dropbox Access Token' },
+          { key: 'folder_path', label: 'Folder Path', type: 'text', placeholder: '/Documents' }
+        ];
+      case 'box':
+        return [
+          { key: 'client_id', label: 'Client ID', type: 'text' },
+          { key: 'client_secret', label: 'Client Secret', type: 'password' },
+          { key: 'access_token', label: 'Access Token', type: 'password' },
+          { key: 'folder_id', label: 'Folder ID', type: 'text', placeholder: '0 for root folder' }
+        ];
       default:
         return [
           { key: 'api_key', label: 'API Key', type: 'password', placeholder: 'Enter API key' },
@@ -646,7 +690,77 @@ export default function IntegrationMarketplace() {
                       <li>Copy the webhook URL and paste below</li>
                     </ol>
                   )}
-                  {!['quickbooks', 'salesforce', 'sharepoint', 'teams', 'slack'].includes(configureIntegration) && (
+                  {configureIntegration === 'zapier' && (
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                      <li>Log into Zapier and click "Create Zap"</li>
+                      <li>Search for and select "Webhooks by Zapier" as trigger</li>
+                      <li>Choose "Catch Hook" and continue</li>
+                      <li>Copy the webhook URL provided by Zapier</li>
+                      <li>Paste the URL below and save</li>
+                      <li>Complete your Zap by adding actions (Gmail, Sheets, etc.)</li>
+                    </ol>
+                  )}
+                  {configureIntegration === 'gmail' && (
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                      <li>Go to Google Cloud Console → APIs & Services</li>
+                      <li>Create OAuth 2.0 Client ID credentials</li>
+                      <li>Enable Gmail API for your project</li>
+                      <li>Copy Client ID and Client Secret</li>
+                      <li>Use OAuth Playground to generate refresh token</li>
+                      <li>Enter all credentials below</li>
+                    </ol>
+                  )}
+                  {configureIntegration === 'documentum' && (
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                      <li>Contact your Documentum administrator for server details</li>
+                      <li>Get the Documentum REST Services URL</li>
+                      <li>Obtain repository name from your admin</li>
+                      <li>Request API access credentials (username/password)</li>
+                      <li>Identify the cabinet and folder path for document storage</li>
+                      <li>Enter all connection details below</li>
+                    </ol>
+                  )}
+                  {configureIntegration === 'filebound' && (
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                      <li>Log into FileBound Administration Console</li>
+                      <li>Navigate to System Settings → API Settings</li>
+                      <li>Generate or retrieve your API key</li>
+                      <li>Note your FileBound server URL</li>
+                      <li>Get Project ID and Separator ID from project settings</li>
+                      <li>Enter all details below to connect</li>
+                    </ol>
+                  )}
+                  {configureIntegration === 'google-calendar' && (
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                      <li>Go to Google Cloud Console → APIs & Services</li>
+                      <li>Create OAuth 2.0 credentials</li>
+                      <li>Enable Google Calendar API</li>
+                      <li>Use OAuth Playground to get refresh token</li>
+                      <li>Find Calendar ID in Google Calendar settings (use "primary" for main calendar)</li>
+                      <li>Enter all OAuth credentials below</li>
+                    </ol>
+                  )}
+                  {configureIntegration === 'dropbox' && (
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                      <li>Go to Dropbox App Console (dropbox.com/developers)</li>
+                      <li>Create a new app or select existing app</li>
+                      <li>Choose "Full Dropbox" or "App folder" access</li>
+                      <li>Generate access token in OAuth 2 section</li>
+                      <li>Copy the access token</li>
+                      <li>Specify folder path (e.g., /Documents)</li>
+                    </ol>
+                  )}
+                  {configureIntegration === 'box' && (
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                      <li>Go to Box Developer Console (box.com/developers)</li>
+                      <li>Create a new app or select existing (Custom App)</li>
+                      <li>Configure OAuth 2.0 authentication</li>
+                      <li>Copy Client ID and Client Secret</li>
+                      <li>Generate access token (or use refresh token flow)</li>
+                      <li>Get Folder ID from Box (0 = root folder)</li>
+                    </ol>
+                  )}
+                  {!['quickbooks', 'salesforce', 'sharepoint', 'teams', 'slack', 'zapier', 'gmail', 'documentum', 'filebound', 'google-calendar', 'dropbox', 'box'].includes(configureIntegration) && (
                     <p className="text-muted-foreground">
                       Please refer to the integration's documentation for setup instructions.
                       Enter your API credentials below to connect.
