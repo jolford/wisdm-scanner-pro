@@ -23,17 +23,55 @@ export default function SmartRouting() {
   const handleSave = async () => {
     setLoading(true);
     try {
-      // Save routing configuration to database (we'll create a routing_config table)
-      const config = {
-        enabled,
-        high_confidence_threshold: highConfidenceThreshold,
-        medium_confidence_threshold: mediumConfidenceThreshold,
-        auto_validate_enabled: autoValidateEnabled,
-        updated_at: new Date().toISOString(),
-      };
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error("Not authenticated");
 
-      // Store in localStorage for now (could be database in production)
-      localStorage.setItem("smart_routing_config", JSON.stringify(config));
+      // Get user's customer_id
+      const { data: userCustomers } = await supabase
+        .from("user_customers")
+        .select("customer_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .single();
+
+      if (!userCustomers?.customer_id) {
+        throw new Error("No customer found");
+      }
+
+      // Check if config exists
+      const { data: existing } = await supabase
+        .from("routing_config")
+        .select("id")
+        .eq("customer_id", userCustomers.customer_id)
+        .maybeSingle();
+
+      if (existing) {
+        // Update existing config
+        const { error } = await supabase
+          .from("routing_config")
+          .update({
+            enabled,
+            high_confidence_threshold: highConfidenceThreshold,
+            medium_confidence_threshold: mediumConfidenceThreshold,
+            auto_validate_enabled: autoValidateEnabled,
+          })
+          .eq("id", existing.id);
+
+        if (error) throw error;
+      } else {
+        // Insert new config
+        const { error } = await supabase
+          .from("routing_config")
+          .insert({
+            customer_id: userCustomers.customer_id,
+            enabled,
+            high_confidence_threshold: highConfidenceThreshold,
+            medium_confidence_threshold: mediumConfidenceThreshold,
+            auto_validate_enabled: autoValidateEnabled,
+          });
+
+        if (error) throw error;
+      }
 
       toast({
         title: "Configuration Saved",
@@ -43,7 +81,7 @@ export default function SmartRouting() {
       console.error("Error saving configuration:", error);
       toast({
         title: "Error",
-        description: "Failed to save routing configuration",
+        description: error.message || "Failed to save routing configuration",
         variant: "destructive",
       });
     } finally {
@@ -52,15 +90,40 @@ export default function SmartRouting() {
   };
 
   useEffect(() => {
-    // Load existing configuration
-    const savedConfig = localStorage.getItem("smart_routing_config");
-    if (savedConfig) {
-      const config = JSON.parse(savedConfig);
-      setEnabled(config.enabled ?? true);
-      setHighConfidenceThreshold(config.high_confidence_threshold ?? 90);
-      setMediumConfidenceThreshold(config.medium_confidence_threshold ?? 70);
-      setAutoValidateEnabled(config.auto_validate_enabled ?? false);
-    }
+    const loadConfig = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        // Get user's customer_id
+        const { data: userCustomers } = await supabase
+          .from("user_customers")
+          .select("customer_id")
+          .eq("user_id", user.id)
+          .limit(1)
+          .single();
+
+        if (!userCustomers?.customer_id) return;
+
+        // Load routing config
+        const { data: config } = await supabase
+          .from("routing_config")
+          .select("*")
+          .eq("customer_id", userCustomers.customer_id)
+          .maybeSingle();
+
+        if (config) {
+          setEnabled(config.enabled ?? true);
+          setHighConfidenceThreshold(config.high_confidence_threshold ?? 90);
+          setMediumConfidenceThreshold(config.medium_confidence_threshold ?? 70);
+          setAutoValidateEnabled(config.auto_validate_enabled ?? false);
+        }
+      } catch (error) {
+        console.error("Error loading config:", error);
+      }
+    };
+
+    loadConfig();
   }, []);
 
   return (
