@@ -880,21 +880,18 @@ const { toast } = useToast();
             * { margin: 0; padding: 0; box-sizing: border-box; }
             body { 
               background: #0a0a0a; 
-              display: flex; 
-              align-items: center; 
-              justify-content: center; 
               height: 100vh; 
               overflow: hidden;
             }
-            img { 
-              max-width: 100%; 
-              max-height: 100vh; 
-              object-fit: contain; 
+            iframe { 
+              width: 100%; 
+              height: 100vh; 
+              border: none;
             }
           </style>
         </head>
         <body>
-          <img src="${fileUrl}" alt="${fileName}" />
+          <iframe src="${fileUrl}" title="${fileName}"></iframe>
         </body>
       </html>
     `);
