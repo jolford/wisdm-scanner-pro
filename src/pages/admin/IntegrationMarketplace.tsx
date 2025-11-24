@@ -188,38 +188,30 @@ export default function IntegrationMarketplace() {
     if (!user) return;
     
     try {
-      // Get customer_id from user's license
-      const { data: licenseUsage } = await supabase
-        .from('license_usage')
-        .select('license_id')
+      // Get customer_id from user_customers table
+      const { data: userCustomer } = await supabase
+        .from('user_customers')
+        .select('customer_id')
         .eq('user_id', user.id)
-        .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (licenseUsage) {
-        const { data: license } = await supabase
-          .from('licenses')
-          .select('customer_id')
-          .eq('id', licenseUsage.license_id)
-          .single();
+      if (userCustomer?.customer_id) {
+        setCustomerId(userCustomer.customer_id);
 
-        if (license?.customer_id) {
-          setCustomerId(license.customer_id);
+        // Fetch installed integrations for this customer
+        const { data: installed } = await supabase
+          .from('installed_integrations')
+          .select('integration_id')
+          .eq('customer_id', userCustomer.customer_id)
+          .eq('is_active', true);
 
-          // Fetch installed integrations for this customer
-          const { data: installed } = await supabase
-            .from('installed_integrations')
-            .select('integration_id')
-            .eq('customer_id', license.customer_id)
-            .eq('is_active', true);
-
-          if (installed) {
-            setInstalledIntegrations(new Set(installed.map(i => i.integration_id)));
-          }
+        if (installed) {
+          setInstalledIntegrations(new Set(installed.map(i => i.integration_id)));
         }
       }
     } catch (error) {
       console.error('Error fetching installed integrations:', error);
+      toast.error('Failed to load integration data');
     } finally {
       setLoading(false);
     }
