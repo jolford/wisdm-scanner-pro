@@ -1013,31 +1013,21 @@ useEffect(() => {
       <div className="grid grid-cols-[2fr_1fr_2fr] gap-6 min-h-[calc(100vh-12rem)] pb-40">
         {/* Left: Document Viewer */}
         {useInteractiveViewer ? (
-          <div className="relative">
-            <Button
-              onClick={handlePopoutViewer}
-              size="sm"
-              variant="outline"
-              className="absolute top-2 right-2 z-10 bg-background/80 backdrop-blur-sm"
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Pop-out
-            </Button>
-            <InteractiveDocumentViewer
-              imageUrl={previewUrl || displayUrl || currentImageUrl}
-              fileName={fileName}
-              documentId={documentId}
-              boundingBoxes={boundingBoxes}
-              onFieldClick={handleFieldFocus}
-              onRegionClick={handleRegionClick}
-              highlightedField={focusedField}
-              offensiveHighlights={offensiveHighlights}
-              piiRegions={detectedPiiRegions}
+          <InteractiveDocumentViewer
+            imageUrl={previewUrl || displayUrl || currentImageUrl}
+            fileName={fileName}
+            documentId={documentId}
+            boundingBoxes={boundingBoxes}
+            onFieldClick={handleFieldFocus}
+            onRegionClick={handleRegionClick}
+            highlightedField={focusedField}
+            offensiveHighlights={offensiveHighlights}
+            piiRegions={detectedPiiRegions}
             showingOriginal={showingOriginal}
             onToggleOriginal={() => setShowingOriginal(!showingOriginal)}
             piiDebug={piiDebug}
+            onPopout={handlePopoutViewer}
           />
-          </div>
         ) : (
           <Card className="p-6 flex flex-col" key="traditional-viewer">
             <div className="flex items-center justify-between mb-4">

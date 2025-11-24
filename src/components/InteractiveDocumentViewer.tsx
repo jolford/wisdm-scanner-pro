@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ZoomIn, ZoomOut, RotateCw, MousePointer, Highlighter, Maximize2, Minimize2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCw, MousePointer, Highlighter, Maximize2, Minimize2, ExternalLink } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { ViewOriginalButton } from './ViewOriginalButton';
@@ -33,6 +33,7 @@ interface InteractiveDocumentViewerProps {
   showingOriginal?: boolean;
   onToggleOriginal?: () => void;
   piiDebug?: boolean;
+  onPopout?: () => void;
 }
 
 export const InteractiveDocumentViewer = ({
@@ -47,7 +48,8 @@ export const InteractiveDocumentViewer = ({
   piiRegions = [],
   showingOriginal = false,
   onToggleOriginal,
-  piiDebug = false
+  piiDebug = false,
+  onPopout
 }: InteractiveDocumentViewerProps) => {
   const { toast } = useToast();
   const [imageZoom, setImageZoom] = useState(1);
@@ -371,6 +373,22 @@ export const InteractiveDocumentViewer = ({
               Document Viewer
             </h3>
             <div className="flex items-center gap-3">
+              {onPopout && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={onPopout}
+                      size="sm"
+                      variant="outline"
+                      className="hover:bg-primary/20 hover:text-primary transition-all duration-200"
+                    >
+                      <ExternalLink className="h-4 w-4 mr-2" />
+                      Pop-out
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Open in separate window for dual monitor</TooltipContent>
+                </Tooltip>
+              )}
               <Badge variant="secondary" className="text-sm font-mono px-3 py-1.5 bg-gradient-to-r from-primary/30 to-primary/15 border-primary/30 shadow-md">
                 {Math.round(imageZoom * 100)}%
               </Badge>
