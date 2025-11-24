@@ -17,6 +17,13 @@ interface WorkflowNode {
   config: Record<string, any>;
 }
 
+interface WorkflowTemplate {
+  name: string;
+  description: string;
+  steps: number;
+  nodes: WorkflowNode[];
+}
+
 const nodeTypes = {
   trigger: [
     { value: 'document_uploaded', label: 'Document Uploaded' },
@@ -82,6 +89,46 @@ export default function WorkflowBuilder() {
   const testWorkflow = () => {
     toast.info('Testing workflow...');
     // TODO: Test workflow execution
+  };
+
+  const workflowTemplates: WorkflowTemplate[] = [
+    {
+      name: 'High Confidence Auto-Validation',
+      description: 'Automatically validate documents with >90% confidence',
+      steps: 3,
+      nodes: [
+        { id: '1', type: 'trigger', label: 'Document Uploaded', config: {} },
+        { id: '2', type: 'condition', label: 'Confidence Threshold', config: { threshold: '90' } },
+        { id: '3', type: 'action', label: 'Auto-Validate', config: {} },
+      ],
+    },
+    {
+      name: 'Invoice Fast-Track',
+      description: 'Route invoices from known vendors directly to export',
+      steps: 4,
+      nodes: [
+        { id: '1', type: 'trigger', label: 'Document Uploaded', config: {} },
+        { id: '2', type: 'condition', label: 'Document Type', config: { docType: 'invoice' } },
+        { id: '3', type: 'condition', label: 'Field Value Match', config: { field: 'Vendor Name' } },
+        { id: '4', type: 'action', label: 'Route to Queue', config: { queue: 'export' } },
+      ],
+    },
+    {
+      name: 'Low Confidence Alert',
+      description: 'Send webhook when documents have <70% confidence',
+      steps: 2,
+      nodes: [
+        { id: '1', type: 'trigger', label: 'Validation Completed', config: {} },
+        { id: '2', type: 'condition', label: 'Confidence Threshold', config: { threshold: '70', below: true } },
+        { id: '3', type: 'action', label: 'Send Webhook', config: {} },
+      ],
+    },
+  ];
+
+  const loadTemplate = (template: WorkflowTemplate) => {
+    setWorkflowName(template.name);
+    setNodes(template.nodes);
+    toast.success(`Loaded template: ${template.name}`);
   };
 
   return (
@@ -258,33 +305,21 @@ export default function WorkflowBuilder() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {[
-                {
-                  name: 'High Confidence Auto-Validation',
-                  description: 'Automatically validate documents with >90% confidence',
-                  steps: 3,
-                },
-                {
-                  name: 'Invoice Fast-Track',
-                  description: 'Route invoices from known vendors directly to export',
-                  steps: 4,
-                },
-                {
-                  name: 'Low Confidence Alert',
-                  description: 'Send webhook when documents have <70% confidence',
-                  steps: 2,
-                },
-              ].map((workflow) => (
-                <Card key={workflow.name} className="cursor-pointer hover:bg-accent transition-colors">
+              {workflowTemplates.map((template) => (
+                <Card key={template.name} className="cursor-pointer hover:bg-accent transition-colors">
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
-                        <div className="font-medium">{workflow.name}</div>
-                        <div className="text-sm text-muted-foreground">{workflow.description}</div>
+                        <div className="font-medium">{template.name}</div>
+                        <div className="text-sm text-muted-foreground">{template.description}</div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant="outline">{workflow.steps} steps</Badge>
-                        <Button size="sm" variant="ghost">
+                        <Badge variant="outline">{template.steps} steps</Badge>
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => loadTemplate(template)}
+                        >
                           Use Template
                         </Button>
                       </div>
