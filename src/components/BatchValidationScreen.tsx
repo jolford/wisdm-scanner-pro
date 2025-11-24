@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { SignatureValidator } from './SignatureValidator';
 
 // Icon imports from lucide-react
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles, FileText, ShieldAlert, Pencil, Plus } from 'lucide-react';
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles, FileText, ShieldAlert, Pencil, Plus, ExternalLink } from 'lucide-react';
 
 // Backend and utility imports
 import { supabase } from '@/integrations/supabase/client';
@@ -212,6 +212,7 @@ export const BatchValidationScreen = ({
 const { toast } = useToast();
   const [signatureDialogDocId, setSignatureDialogDocId] = useState<string | null>(null);
   const [redactionDialogDocId, setRedactionDialogDocId] = useState<string | null>(null);
+  const [viewerPopouts, setViewerPopouts] = useState<Record<string, Window | null>>({});
   
   // Filter documents based on search and filters
   const filteredDocuments = documents.filter(doc => {
@@ -853,6 +854,54 @@ const { toast } = useToast();
   };
 
   /**
+   * Handle pop-out viewer for a document
+   */
+  const handlePopout = (docId: string, fileUrl: string, fileName: string) => {
+    const existingPopout = viewerPopouts[docId];
+    if (existingPopout && !existingPopout.closed) {
+      existingPopout.focus();
+      return;
+    }
+
+    const popout = window.open('', `DocumentViewer_${docId}`, 'width=1200,height=900,menubar=no,toolbar=no,location=no,status=no');
+    if (!popout) {
+      toast({ title: 'Pop-up blocked', description: 'Please allow pop-ups for this site', variant: 'destructive' });
+      return;
+    }
+
+    setViewerPopouts(prev => ({ ...prev, [docId]: popout }));
+
+    popout.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Document Viewer - ${fileName}</title>
+          <style>
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+              background: #0a0a0a; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+              height: 100vh; 
+              overflow: hidden;
+            }
+            img { 
+              max-width: 100%; 
+              max-height: 100vh; 
+              object-fit: contain; 
+            }
+          </style>
+        </head>
+        <body>
+          <img src="${fileUrl}" alt="${fileName}" />
+        </body>
+      </html>
+    `);
+    popout.document.close();
+  };
+
+  /**
    * Handle print for a document
    */
   const handlePrint = async (docId: string, fileUrl: string) => {
@@ -1463,6 +1512,15 @@ const { toast } = useToast();
                                 title="Download"
                               >
                                 <Download className="h-3 w-3 sm:h-4 sm:w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handlePopout(doc.id, doc.file_url, doc.file_name)}
+                                className="h-7 sm:h-8 px-1 sm:px-2"
+                                title="Pop-out to separate window"
+                              >
+                                <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
                               </Button>
                             </div>
                           </div>
