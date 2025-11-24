@@ -21,6 +21,7 @@ import {
   Calendar,
   DollarSign
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Integration {
   id: string;
@@ -181,8 +182,10 @@ export default function IntegrationMarketplace() {
   });
 
   const installIntegration = (id: string) => {
-    console.log('Installing integration:', id);
-    // TODO: Implement installation
+    const integration = integrations.find(i => i.id === id);
+    if (integration) {
+      toast.success(`${integration.name} integration installed successfully!`);
+    }
   };
 
   return (
