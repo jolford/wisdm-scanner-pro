@@ -132,6 +132,9 @@ export const BatchValidationScreen = ({
   // Store user edits to line items (keyed by document ID)
   const [editedLineItems, setEditedLineItems] = useState<Record<string, Array<Record<string, any>>>>({});
   
+  // Store validation notes for each document (keyed by document ID)
+  const [validationNotes, setValidationNotes] = useState<Record<string, string>>({});
+  
   // Track which document's line items are expanded
   const [expandedLineItems, setExpandedLineItems] = useState<Record<string, boolean>>({});
   
@@ -1024,6 +1027,7 @@ const { toast } = useToast();
           extracted_metadata: normalizedMetadata,
           line_items: editedLineItems[doc.id] || doc.line_items || [],
           validation_status: status,
+          validation_notes: validationNotes[doc.id] || null,
           validated_at: new Date().toISOString(),
           validated_by: user?.id,
         })
@@ -1750,6 +1754,21 @@ const { toast } = useToast();
                                 </div>
                               );
                             })}
+
+                            {/* Validation Notes Section */}
+                            <div className="mt-6 pt-6 border-t">
+                              <Label htmlFor={`${doc.id}-validation-notes`} className="text-sm font-medium mb-2 block">
+                                Validation Notes
+                                <span className="text-xs text-muted-foreground ml-2">(Optional - Add notes for suspension, rejection, or special handling)</span>
+                              </Label>
+                              <Textarea
+                                id={`${doc.id}-validation-notes`}
+                                value={validationNotes[doc.id] || ''}
+                                onChange={(e) => setValidationNotes(prev => ({ ...prev, [doc.id]: e.target.value }))}
+                                placeholder="Enter notes about document status, reasons for rejection/suspension, or any special handling instructions..."
+                                className="min-h-[80px] resize-y"
+                              />
+                            </div>
 
                             {/* Line Items Table - Only show if table extraction is configured or line items exist */}
                             {(() => {
