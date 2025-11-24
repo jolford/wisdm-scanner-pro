@@ -3,7 +3,7 @@ import {
   Target, AlertTriangle, Webhook, Copy, Shield, Clock,
   BarChart2, DollarSign, TrendingUp, Edit3, GitCompare,
   Brain, TestTube2, RefreshCw, Database, Palette, Activity,
-  BookOpen, Settings, LogOut, HelpCircle
+  BookOpen, Settings, LogOut, HelpCircle, GitBranch, FileType
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useNavigate } from 'react-router-dom';
@@ -43,6 +43,14 @@ const menuItems = [
     ],
   },
   {
+    title: 'ML & Intelligence',
+    items: [
+      { title: 'ML Learning', url: '/admin/ml-learning', icon: Brain },
+      { title: 'Smart Routing', url: '/admin/smart-routing', icon: GitBranch },
+      { title: 'ML Templates', url: '/admin/ml-templates', icon: FileType },
+    ],
+  },
+  {
     title: 'Quality & Monitoring',
     items: [
       { title: 'Validation Lookups', url: '/admin/validation-lookups', icon: Database },
@@ -78,7 +86,6 @@ const menuItems = [
   {
     title: 'Advanced Tools',
     items: [
-      { title: 'ML Templates', url: '/admin/ml-templates', icon: Brain },
       { title: 'Barcode Test', url: '/admin/barcode-test', icon: TestTube2 },
       { title: 'Document Reprocessing', url: '/admin/document-reprocessing', icon: RefreshCw },
     ],
