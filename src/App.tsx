@@ -74,6 +74,8 @@ import DocumentComparison from "./pages/admin/DocumentComparison";
 import QAMetrics from "./pages/admin/QAMetrics";
 import Downloads from "./pages/Downloads";
 import CredentialMigration from "./pages/admin/CredentialMigration";
+import MLLearning from "./pages/admin/MLLearning";
+import SmartRouting from "./pages/admin/SmartRouting";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -211,6 +213,10 @@ const App = () => {
           <Route path="/admin/scheduled-batches" element={<ScheduledBatches />} />
           <Route path="/admin/release-notes" element={<ReleaseNotesManager />} />
           <Route path="/admin/credential-migration" element={<CredentialMigration />} />
+          
+          {/* Phase 1 Enhancements */}
+          <Route path="/admin/ml-learning" element={<MLLearning />} />
+          <Route path="/admin/smart-routing" element={<SmartRouting />} />
           
           {/* Phase 3: Bulk Operations & QA */}
           <Route path="/admin/bulk-edit" element={<BulkEdit />} />

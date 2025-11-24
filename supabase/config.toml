@@ -96,3 +96,13 @@ verify_jwt = true
 
 [functions.detect-fraud-patterns]
 verify_jwt = true
+
+# Public REST API v1
+[functions.api-v1-submit]
+verify_jwt = false
+
+[functions.api-v1-status]
+verify_jwt = false
+
+[functions.api-v1-retrieve]
+verify_jwt = false
