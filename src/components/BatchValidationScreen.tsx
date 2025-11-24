@@ -201,6 +201,9 @@ export const BatchValidationScreen = ({
   // Translated text cache per document
   const [translatedTexts, setTranslatedTexts] = useState<Record<string, string>>({});
   
+  // Track focused field for region selection
+  const [focusedField, setFocusedField] = useState<Record<string, string>>({});
+  
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [filters, setFilters] = useState<DocumentFilters>({});
@@ -989,23 +992,45 @@ const { toast } = useToast();
   /**
    * Handle metadata updates from the ImageRegionSelector
    * Called when user selects a region on the document and extracts data from it
+   * Only updates the currently focused field, not all fields
    * @param docId - The document being updated
    * @param newMetadata - The newly extracted metadata from the selected region
    */
   const handleRegionUpdate = (docId: string, newMetadata: Record<string, string>) => {
-    setEditedMetadata(prev => ({
-      ...prev,
-      [docId]: {
-        ...(prev[docId] || {}),
-        ...newMetadata
-      }
-    }));
+    const fieldName = focusedField[docId];
     
-    // Notify user that region extraction completed
-    toast({
-      title: 'Region Updated',
-      description: 'Metadata updated from selected region',
-    });
+    if (!fieldName) {
+      toast({
+        title: 'No Field Selected',
+        description: 'Please focus on a field before selecting a region',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Only update the focused field
+    const fieldValue = newMetadata[fieldName];
+    
+    if (fieldValue) {
+      setEditedMetadata(prev => ({
+        ...prev,
+        [docId]: {
+          ...(prev[docId] || {}),
+          [fieldName]: fieldValue
+        }
+      }));
+      
+      toast({
+        title: 'Field Updated',
+        description: `${fieldName} updated from selected region`,
+      });
+    } else {
+      toast({
+        title: 'Field Not Found',
+        description: `Could not extract ${fieldName} from the selected region`,
+        variant: 'destructive',
+      });
+    }
   };
 
   /**
@@ -1739,6 +1764,10 @@ const { toast } = useToast();
                               const confidence = fieldConfidence[doc.id]?.[field.name];
                               const hasValue = fieldValue && fieldValue !== '';
                               
+                              // Check if field requires manual validation due to low confidence
+                              const confidenceThreshold = (field as any).confidenceThreshold;
+                              const needsManualValidation = confidenceThreshold && confidence !== undefined && (confidence * 100) < confidenceThreshold;
+                              
                               return (
                                 <div key={field.name}>
                                   <div className="flex items-center justify-between mb-1">
@@ -1755,6 +1784,11 @@ const { toast } = useToast();
                                           className="ml-2 text-xs"
                                         >
                                           {Math.round(confidence * 100)}% confident
+                                        </Badge>
+                                      )}
+                                      {needsManualValidation && (
+                                        <Badge variant="destructive" className="ml-2 text-xs">
+                                          Below {confidenceThreshold}% - Validation Required
                                         </Badge>
                                       )}
                                     </Label>
@@ -1785,8 +1819,9 @@ const { toast } = useToast();
                                     onChange={(e) =>
                                       handleFieldChange(doc.id, field.name, e.target.value)
                                     }
+                                    onFocus={() => setFocusedField(prev => ({ ...prev, [doc.id]: field.name }))}
                                     placeholder={`Enter ${field.name}`}
-                                    className="mt-1"
+                                    className={`mt-1 ${needsManualValidation ? 'border-destructive' : ''}`}
                                   />
                                 </div>
                               );
