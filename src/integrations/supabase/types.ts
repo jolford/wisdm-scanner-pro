@@ -2696,6 +2696,9 @@ export type Database = {
           default_starting_page: string | null
           id: string
           notifications_enabled: boolean | null
+          onboarding_completed_steps: string[] | null
+          onboarding_dismissed: boolean | null
+          saved_filters: Json | null
           show_tooltips: boolean | null
           updated_at: string | null
           user_id: string
@@ -2707,6 +2710,9 @@ export type Database = {
           default_starting_page?: string | null
           id?: string
           notifications_enabled?: boolean | null
+          onboarding_completed_steps?: string[] | null
+          onboarding_dismissed?: boolean | null
+          saved_filters?: Json | null
           show_tooltips?: boolean | null
           updated_at?: string | null
           user_id: string
@@ -2718,6 +2724,9 @@ export type Database = {
           default_starting_page?: string | null
           id?: string
           notifications_enabled?: boolean | null
+          onboarding_completed_steps?: string[] | null
+          onboarding_dismissed?: boolean | null
+          saved_filters?: Json | null
           show_tooltips?: boolean | null
           updated_at?: string | null
           user_id?: string
