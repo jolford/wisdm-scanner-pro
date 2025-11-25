@@ -104,6 +104,65 @@ interface BatchValidationScreenProps {
   detectPii?: boolean; // Whether PII detection is enabled for this project
 }
 
+interface DocumentViewerWithSignedUrlProps {
+  doc: Document;
+  imageUrl: string;
+  boundingBoxes: Record<string, { x: number; y: number; width: number; height: number }>;
+  highlightedField?: string;
+  piiRegions?: Array<{ type: string; category: string; text: string; bbox?: any }>;
+  showingOriginal: boolean;
+  onToggleOriginal: () => void;
+  onPopout: () => void;
+  onFieldClick?: (fieldName: string) => void;
+}
+
+const DocumentViewerWithSignedUrl = ({
+  doc,
+  imageUrl,
+  boundingBoxes,
+  highlightedField,
+  piiRegions = [],
+  showingOriginal,
+  onToggleOriginal,
+  onPopout,
+  onFieldClick,
+}: DocumentViewerWithSignedUrlProps) => {
+  const { signedUrl, loading } = useSignedUrl(imageUrl);
+
+  if (!imageUrl) {
+    return (
+      <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">
+        No document image available
+      </div>
+    );
+  }
+
+  if (loading && !signedUrl) {
+    return (
+      <div className="flex items-center justify-center h-48">
+        <LoadingSpinner size="md" />
+      </div>
+    );
+  }
+
+  const finalUrl = signedUrl || imageUrl;
+
+  return (
+    <InteractiveDocumentViewer
+      imageUrl={finalUrl}
+      fileName={doc.file_name}
+      documentId={doc.id}
+      boundingBoxes={boundingBoxes}
+      highlightedField={highlightedField}
+      piiRegions={piiRegions}
+      showingOriginal={showingOriginal}
+      onToggleOriginal={onToggleOriginal}
+      onPopout={onPopout}
+      onFieldClick={onFieldClick}
+    />
+  );
+};
+
 /**
  * BatchValidationScreen Component
  * Displays a queue of documents for validation, allowing users to review extracted metadata,
@@ -1600,10 +1659,9 @@ const { toast } = useToast();
                         
                         {/* Interactive Document Viewer with Field Highlighting */}
                         <div className="overflow-auto max-h-[300px] sm:max-h-[400px] bg-muted/30 rounded-lg p-2 sm:p-4">
-                          <InteractiveDocumentViewer
+                          <DocumentViewerWithSignedUrl
+                            doc={doc}
                             imageUrl={(doc as any).redacted_file_url || doc.file_url}
-                            fileName={doc.file_name}
-                            documentId={doc.id}
                             boundingBoxes={fieldBoundingBoxes[doc.id] || {}}
                             highlightedField={focusedField[doc.id]}
                             piiRegions={(doc as any).detected_pii_regions || []}
@@ -1625,7 +1683,7 @@ const { toast } = useToast();
                               const fieldElement = document.getElementById(`${doc.id}-${fieldName}`);
                               if (fieldElement) {
                                 fieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                fieldElement.focus();
+                                (fieldElement as HTMLElement).focus();
                               }
                             }}
                           />
