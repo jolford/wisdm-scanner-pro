@@ -151,14 +151,16 @@ export default function MobileValidation() {
                               <span className="text-sm text-center max-w-xs">
                                 PDF preview is not available here, but you can open the document in a new tab.
                               </span>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => window.open(imageUrl, '_blank', 'noopener,noreferrer')}
+                              <a
+                                href={imageUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
                               >
-                                <Maximize2 className="h-4 w-4 mr-2" />
-                                Open PDF
-                              </Button>
+                                <Button size="sm" variant="outline" type="button">
+                                  <Maximize2 className="h-4 w-4 mr-2" />
+                                  Open PDF
+                                </Button>
+                              </a>
                             </div>
                           ) : (
                             <img
