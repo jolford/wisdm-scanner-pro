@@ -142,50 +142,65 @@ export default function MobileValidation() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                      {/* Image Viewer */}
+                      {/* Image / PDF Viewer */}
                       <div className="relative bg-muted rounded-lg overflow-hidden" style={{ minHeight: '300px' }}>
                         {imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt="Document"
-                            className="w-full h-auto"
-                            style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
-                          />
+                          selectedDoc.file_type?.includes('pdf') ? (
+                            <object
+                              data={imageUrl}
+                              type="application/pdf"
+                              className="w-full h-[420px]"
+                            >
+                              <div className="flex items-center justify-center h-64 text-muted-foreground">
+                                <ImageIcon className="h-12 w-12 mr-2" />
+                                <span>PDF preview not available</span>
+                              </div>
+                            </object>
+                          ) : (
+                            <img
+                              src={imageUrl}
+                              alt="Document"
+                              className="w-full h-auto"
+                              style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
+                            />
+                          )
                         ) : (
                           <div className="flex items-center justify-center h-64 text-muted-foreground">
                             <ImageIcon className="h-12 w-12" />
                           </div>
                         )}
                       </div>
-
-                      {/* Zoom Controls */}
-                      <div className="flex items-center justify-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setZoom(Math.max(0.5, zoom - 0.25))}
-                        >
-                          <ZoomOut className="h-4 w-4" />
-                        </Button>
-                        <span className="text-sm text-muted-foreground min-w-16 text-center">
-                          {Math.round(zoom * 100)}%
-                        </span>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setZoom(Math.min(3, zoom + 0.25))}
-                        >
-                          <ZoomIn className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setZoom(1)}
-                        >
-                          Reset
-                        </Button>
-                      </div>
-
+ 
+                      {/* Zoom Controls (images only) */}
+                      {!selectedDoc.file_type?.includes('pdf') && (
+                        <div className="flex items-center justify-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setZoom(Math.max(0.5, zoom - 0.25))}
+                          >
+                            <ZoomOut className="h-4 w-4" />
+                          </Button>
+                          <span className="text-sm text-muted-foreground min-w-16 text-center">
+                            {Math.round(zoom * 100)}%
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setZoom(Math.min(3, zoom + 0.25))}
+                          >
+                            <ZoomIn className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setZoom(1)}
+                          >
+                            Reset
+                          </Button>
+                        </div>
+                      )}
+ 
                       <Separator />
 
                       {/* Extracted Data */}
