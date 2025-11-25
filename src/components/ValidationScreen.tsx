@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { auditLog } from '@/lib/audit-logger';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -987,6 +988,11 @@ useEffect(() => {
           .single();
 
         if (error) throw error;
+
+        // Log audit event
+        if (status === 'validated') {
+          await auditLog.documentValidated(documentId, status);
+        }
 
         // Trigger webhook notification for document validation
         if (updatedDoc && status === 'validated') {

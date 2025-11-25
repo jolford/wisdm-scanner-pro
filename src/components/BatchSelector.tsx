@@ -41,6 +41,7 @@ import { FolderOpen, Plus, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { Badge } from '@/components/ui/badge';
+import { auditLog } from '@/lib/audit-logger';
 
 // Component props interface
 interface BatchSelectorProps {
@@ -101,6 +102,9 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
         .single();
 
       if (error) throw error;
+
+      // Log audit event
+      await auditLog.batchCreated(data.id, batchName);
 
       toast({
         title: t('batch.batchCreated'),
