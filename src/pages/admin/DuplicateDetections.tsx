@@ -10,14 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertCircle, CheckCircle, Copy, FileText, XCircle, Search } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { BatchSelector } from "@/components/BatchSelector";
 
 export default function DuplicateDetections() {
   useRequireAuth(true);
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [selectedBatchId, setSelectedBatchId] = useState<string>("");
-  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
   const [isScanning, setIsScanning] = useState(false);
 
   const { data: duplicates, isLoading } = useQuery({
@@ -78,35 +75,30 @@ export default function DuplicateDetections() {
     }
   };
 
-  const scanBatchForDuplicates = async () => {
-    if (!selectedBatchId) {
-      toast.error("Please select a batch to scan");
-      return;
-    }
-
+  const scanForDuplicates = async () => {
     setIsScanning(true);
     try {
-      // Get all documents in the batch
+      // Get all documents that belong to a batch
       const { data: docs, error: docsError } = await supabase
         .from('documents')
-        .select('id')
-        .eq('batch_id', selectedBatchId);
+        .select('id, batch_id')
+        .not('batch_id', 'is', null);
 
       if (docsError) throw docsError;
       if (!docs || docs.length === 0) {
-        toast.error("No documents found in selected batch");
+        toast.error("No documents found to scan");
         setIsScanning(false);
         return;
       }
 
-      // Trigger duplicate detection for each document
       let successCount = 0;
       for (const doc of docs) {
+        if (!doc.batch_id) continue;
         try {
           await supabase.functions.invoke('detect-duplicates', {
             body: {
               documentId: doc.id,
-              batchId: selectedBatchId,
+              batchId: doc.batch_id,
               checkCrossBatch: false,
               thresholds: { name: 0.85, address: 0.90 }
             }
@@ -121,7 +113,7 @@ export default function DuplicateDetections() {
       toast.success(`Scanned ${successCount} of ${docs.length} documents for duplicates`);
     } catch (error) {
       console.error('Duplicate scan error:', error);
-      toast.error("Failed to scan batch for duplicates");
+      toast.error("Failed to scan for duplicates");
     } finally {
       setIsScanning(false);
     }
@@ -145,18 +137,13 @@ export default function DuplicateDetections() {
                 <CardDescription>Documents flagged as potential duplicates</CardDescription>
               </div>
               <div className="flex gap-2">
-                <BatchSelector
-                  projectId={selectedProjectId}
-                  selectedBatchId={selectedBatchId}
-                  onBatchSelect={setSelectedBatchId}
-                />
                 <Button 
-                  onClick={scanBatchForDuplicates}
-                  disabled={!selectedBatchId || isScanning}
+                  onClick={scanForDuplicates}
+                  disabled={isScanning}
                   size="sm"
                 >
                   <Search className="h-4 w-4 mr-2" />
-                  {isScanning ? "Scanning..." : "Scan for Duplicates"}
+                  {isScanning ? "Scanning..." : "Scan All for Duplicates"}
                 </Button>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="w-40">
@@ -165,9 +152,9 @@ export default function DuplicateDetections() {
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="confirmed">Confirmed</SelectItem>
-                  <SelectItem value="dismissed">Dismissed</SelectItem>
-                </SelectContent>
+                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="dismissed">Dismissed</SelectItem>
+                  </SelectContent>
                 </Select>
               </div>
             </div>
