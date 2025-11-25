@@ -549,7 +549,8 @@ const [isExporting, setIsExporting] = useState(false);
       if (!docsData) throw lastError;
 
       // Only show documents in Quality Control if batch is NOT complete
-      const batchIsComplete = selectedBatch?.status === 'complete';
+      // Use batchCheck (fresh data) instead of selectedBatch (stale state)
+      const batchIsComplete = batchCheck?.status === 'complete';
       setValidationQueue(docsData?.filter(d => d.validation_status === 'pending') || []);
       setValidatedDocs(batchIsComplete ? [] : (docsData?.filter(d => d.validation_status === 'validated') || []));
     } catch (error) {
