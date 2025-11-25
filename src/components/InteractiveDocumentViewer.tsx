@@ -65,17 +65,20 @@ export const InteractiveDocumentViewer = ({
   const imageRef = useRef<HTMLImageElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  // Load image and get dimensions
+  const isPdf = typeof imageUrl === 'string' && imageUrl.toLowerCase().includes('.pdf');
+  // Load image and get dimensions (only for non-PDF images)
   useEffect(() => {
+    if (!imageUrl || isPdf) return;
     const img = new Image();
     img.onload = () => {
       setImageDimensions({ width: img.width, height: img.height });
     };
     img.src = imageUrl;
-  }, [imageUrl]);
+  }, [imageUrl, isPdf]);
 
-  // Keep canvas in sync with image size (handles page/container resize)
+  // Keep canvas in sync with image size (handles page/container resize) - images only
   useEffect(() => {
+    if (isPdf) return; // no canvas overlay sizing for PDFs
     const imgEl = imageRef.current;
     const canvas = canvasRef.current;
     if (!imgEl || !canvas) return;
@@ -100,10 +103,11 @@ export const InteractiveDocumentViewer = ({
       ro.disconnect();
       window.removeEventListener('resize', updateSize);
     };
-  }, [imageUrl]);
+  }, [imageUrl, isPdf]);
 
-  // Draw highlights on canvas
+  // Draw highlights on canvas (images only)
   useEffect(() => {
+    if (isPdf) return;
     if (!canvasRef.current || !imageRef.current || !boundingBoxes) return;
     
     const canvas = canvasRef.current;
@@ -201,7 +205,7 @@ export const InteractiveDocumentViewer = ({
         }
       });
     }
-  }, [boundingBoxes, highlightedField, imageZoom, offensiveHighlights, canvasSize, piiRegions, showingOriginal, piiDebug]);
+  }, [boundingBoxes, highlightedField, imageZoom, offensiveHighlights, canvasSize, piiRegions, showingOriginal, piiDebug, isPdf]);
 
   // Pan handling
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -566,44 +570,54 @@ export const InteractiveDocumentViewer = ({
           style={{ cursor: isPanning ? 'grabbing' : (imageZoom > 1 ? 'grab' : 'default') }}
         >
           <div 
-            className="relative inline-block transition-transform duration-200 ease-out"
+            className="relative inline-block transition-transform duration-200 ease-out w-full h-full"
             style={{
               transform: `translate(${panOffset.x}px, ${panOffset.y}px)`
             }}
           >
-            <img
-              ref={imageRef}
-              src={imageUrl}
-              alt="Document"
-              className="w-full h-auto object-contain transition-all duration-300 ease-out select-none shadow-2xl rounded-lg border-2 border-primary/10 hover:border-primary/30 hover:shadow-primary/20"
-              style={{
-                transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
-                transformOrigin: 'center center',
-                filter: 'contrast(1.03) brightness(1.02) saturate(1.05)'
-              }}
-              onLoad={() => {
-                // Trigger canvas redraw when image loads
-                if (canvasRef.current && imageRef.current) {
-                  const canvas = canvasRef.current;
-                  const w = imageRef.current.offsetWidth;
-                  const h = imageRef.current.offsetHeight;
-                  canvas.width = w;
-                  canvas.height = h;
-                  setCanvasSize({ width: w, height: h });
-                }
-              }}
-              draggable={false}
-            />
-            <canvas
-              ref={canvasRef}
-              onClick={handleCanvasClick}
-              className="absolute top-0 left-0 pointer-events-auto select-none rounded-lg"
-              style={{
-                transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
-                transformOrigin: 'center center',
-                cursor: isPanning ? 'grabbing' : (clickMode === 'extract' ? 'crosshair' : 'pointer')
-              }}
-            />
+            {isPdf ? (
+              <iframe
+                src={imageUrl}
+                title={fileName}
+                className="w-full h-full rounded-lg border-2 border-primary/10 bg-background"
+              />
+            ) : (
+              <>
+                <img
+                  ref={imageRef}
+                  src={imageUrl}
+                  alt="Document"
+                  className="w-full h-auto object-contain transition-all duration-300 ease-out select-none shadow-2xl rounded-lg border-2 border-primary/10 hover:border-primary/30 hover:shadow-primary/20"
+                  style={{
+                    transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
+                    transformOrigin: 'center center',
+                    filter: 'contrast(1.03) brightness(1.02) saturate(1.05)'
+                  }}
+                  onLoad={() => {
+                    // Trigger canvas redraw when image loads
+                    if (canvasRef.current && imageRef.current) {
+                      const canvas = canvasRef.current;
+                      const w = imageRef.current.offsetWidth;
+                      const h = imageRef.current.offsetHeight;
+                      canvas.width = w;
+                      canvas.height = h;
+                      setCanvasSize({ width: w, height: h });
+                    }
+                  }}
+                  draggable={false}
+                />
+                <canvas
+                  ref={canvasRef}
+                  onClick={handleCanvasClick}
+                  className="absolute top-0 left-0 pointer-events-auto select-none rounded-lg"
+                  style={{
+                    transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
+                    transformOrigin: 'center center',
+                    cursor: isPanning ? 'grabbing' : (clickMode === 'extract' ? 'crosshair' : 'pointer')
+                  }}
+                />
+              </>
+            )}
           </div>
 
           {/* Enhanced info section with gradient and animations */}
