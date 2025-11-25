@@ -1119,13 +1119,13 @@ const EditProject = () => {
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-4">
-                    {/* Enable/Disable Export Types with Collapsible Groups */}
+                    {/* Data Formats */}
                     <Collapsible defaultOpen>
                       <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                         <Label className="text-sm font-medium cursor-pointer">Data Formats (CSV, JSON, XML, TXT, SQL)</Label>
                         <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       </CollapsibleTrigger>
-                      <CollapsibleContent className="pt-3">
+                      <CollapsibleContent className="pt-3 space-y-3">
                         <div className="grid grid-cols-3 gap-2">
                           {['csv', 'json', 'xml', 'txt', 'sql'].map((type) => {
                             const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
@@ -1148,15 +1148,38 @@ const EditProject = () => {
                             );
                           })}
                         </div>
+                        
+                        {/* Configuration for enabled data formats */}
+                        {['csv', 'json', 'xml', 'txt', 'sql'].filter(type => exportConfig[type]?.enabled).map((type) => {
+                          const config = exportConfig[type];
+                          return (
+                            <div key={`config-${type}`} className="p-3 bg-background rounded-lg border">
+                              <h5 className="text-xs font-medium mb-2 uppercase text-muted-foreground">{type} Settings</h5>
+                              <div>
+                                <Label htmlFor={`dest-${type}`} className="text-xs mb-1">Export Destination</Label>
+                                <FolderPicker
+                                  value={config.destination}
+                                  onChange={(path) => 
+                                    setExportConfig(prev => ({ 
+                                      ...prev, 
+                                      [type]: { ...prev[type], destination: path }
+                                    }))
+                                  }
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
                       </CollapsibleContent>
                     </Collapsible>
 
+                    {/* Documents & Images */}
                     <Collapsible defaultOpen>
                       <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                         <Label className="text-sm font-medium cursor-pointer">Documents & Images (PDF, Images)</Label>
                         <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       </CollapsibleTrigger>
-                      <CollapsibleContent className="pt-3">
+                      <CollapsibleContent className="pt-3 space-y-3">
                         <div className="grid grid-cols-2 gap-2">
                           {['pdf', 'images'].map((type) => {
                             const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
@@ -1179,15 +1202,62 @@ const EditProject = () => {
                             );
                           })}
                         </div>
+                        
+                        {/* Configuration for enabled document formats */}
+                        {['pdf', 'images'].filter(type => exportConfig[type]?.enabled).map((type) => {
+                          const config = exportConfig[type];
+                          return (
+                            <div key={`config-${type}`} className="p-3 bg-background rounded-lg border">
+                              <h5 className="text-xs font-medium mb-2 uppercase text-muted-foreground">{type} Settings</h5>
+                              <div className="space-y-3">
+                                <div>
+                                  <Label htmlFor={`dest-${type}`} className="text-xs mb-1">Export Destination</Label>
+                                  <FolderPicker
+                                    value={config.destination}
+                                    onChange={(path) => 
+                                      setExportConfig(prev => ({ 
+                                        ...prev, 
+                                        [type]: { ...prev[type], destination: path }
+                                      }))
+                                    }
+                                  />
+                                </div>
+                                <div>
+                                  <Label htmlFor={`convert-${type}`} className="text-xs mb-1">Convert Format on Export</Label>
+                                  <Select
+                                    value={config.convertFormat || 'none'}
+                                    onValueChange={(value) => 
+                                      setExportConfig(prev => ({ 
+                                        ...prev, 
+                                        [type]: { ...prev[type], convertFormat: value as 'none' | 'pdf' | 'jpg' | 'tiff' }
+                                      }))
+                                    }
+                                  >
+                                    <SelectTrigger id={`convert-${type}`}>
+                                      <SelectValue placeholder="Select format" />
+                                    </SelectTrigger>
+                                    <SelectContent className="bg-popover z-50">
+                                      <SelectItem value="none">No Conversion</SelectItem>
+                                      <SelectItem value="pdf">Convert to PDF</SelectItem>
+                                      <SelectItem value="jpg">Convert to JPG</SelectItem>
+                                      <SelectItem value="tiff">Convert to TIFF</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </CollapsibleContent>
                     </Collapsible>
 
+                    {/* Database Systems */}
                     <Collapsible>
                       <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                         <Label className="text-sm font-medium cursor-pointer">Database Systems (Access, Oracle)</Label>
                         <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       </CollapsibleTrigger>
-                      <CollapsibleContent className="pt-3">
+                      <CollapsibleContent className="pt-3 space-y-3">
                         <div className="grid grid-cols-2 gap-2">
                           {['access', 'oracle'].map((type) => {
                             const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
@@ -1210,15 +1280,38 @@ const EditProject = () => {
                             );
                           })}
                         </div>
+                        
+                        {/* Configuration for enabled database systems */}
+                        {['access', 'oracle'].filter(type => exportConfig[type]?.enabled).map((type) => {
+                          const config = exportConfig[type];
+                          return (
+                            <div key={`config-${type}`} className="p-3 bg-background rounded-lg border">
+                              <h5 className="text-xs font-medium mb-2 uppercase text-muted-foreground">{type} Settings</h5>
+                              <div>
+                                <Label htmlFor={`dest-${type}`} className="text-xs mb-1">Export Destination</Label>
+                                <FolderPicker
+                                  value={config.destination}
+                                  onChange={(path) => 
+                                    setExportConfig(prev => ({ 
+                                      ...prev, 
+                                      [type]: { ...prev[type], destination: path }
+                                    }))
+                                  }
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
                       </CollapsibleContent>
                     </Collapsible>
 
+                    {/* ECM Systems */}
                     <Collapsible>
                       <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                         <Label className="text-sm font-medium cursor-pointer">ECM Systems (FileBound, Documentum, SharePoint)</Label>
                         <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       </CollapsibleTrigger>
-                      <CollapsibleContent className="pt-3">
+                      <CollapsibleContent className="pt-3 space-y-3">
                         <div className="grid grid-cols-2 gap-2">
                           {['filebound', 'documentum', 'sharepoint'].map((type) => {
                             const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
@@ -1241,15 +1334,38 @@ const EditProject = () => {
                             );
                           })}
                         </div>
+                        
+                        {/* Configuration for enabled ECM systems */}
+                        {['filebound', 'documentum', 'sharepoint'].filter(type => exportConfig[type]?.enabled).map((type) => {
+                          const config = exportConfig[type];
+                          return (
+                            <div key={`config-${type}`} className="p-3 bg-background rounded-lg border">
+                              <h5 className="text-xs font-medium mb-2 uppercase text-muted-foreground">{type} Configuration</h5>
+                              <ECMExportConfig
+                                type={type as 'filebound' | 'documentum' | 'sharepoint'}
+                                config={config}
+                                extractionFields={fields}
+                                onConfigChange={(newConfig) => 
+                                  setExportConfig(prev => ({ 
+                                    ...prev, 
+                                    [type]: newConfig 
+                                  }))
+                                }
+                                disabled={!config.enabled}
+                              />
+                            </div>
+                          );
+                        })}
                       </CollapsibleContent>
                     </Collapsible>
 
+                    {/* Accounting Systems */}
                     <Collapsible>
                       <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
                         <Label className="text-sm font-medium cursor-pointer">Accounting Systems (QuickBooks, Great Plains)</Label>
                         <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       </CollapsibleTrigger>
-                      <CollapsibleContent className="pt-3">
+                      <CollapsibleContent className="pt-3 space-y-3">
                         <div className="grid grid-cols-2 gap-2">
                           {['quickbooks', 'greatplains'].map((type) => {
                             const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
@@ -1272,83 +1388,30 @@ const EditProject = () => {
                             );
                           })}
                         </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-
-                    {/* Configuration sections for enabled exports */}
-                    {Object.entries(exportConfig)
-                      .filter(([type]) => !['filebound', 'documentum', 'sharepoint', 'quickbooks', 'greatplains'].includes(type) && exportConfig[type].enabled)
-                      .map(([type, config]) => (
-                        <Card key={type} className="p-4 bg-muted/50 mt-4">
-                          <h4 className="text-sm font-medium mb-3 uppercase">{type} Settings</h4>
-                          <div className="space-y-3">
-                            <div>
-                              <Label htmlFor={`dest-${type}`} className="text-xs mb-1">
-                                Export Destination
-                              </Label>
-                              <FolderPicker
-                                value={config.destination}
-                                onChange={(path) => 
+                        
+                        {/* Configuration for enabled accounting systems */}
+                        {['quickbooks', 'greatplains'].filter(type => exportConfig[type]?.enabled).map((type) => {
+                          const config = exportConfig[type];
+                          return (
+                            <div key={`config-${type}`} className="p-3 bg-background rounded-lg border">
+                              <h5 className="text-xs font-medium mb-2 uppercase text-muted-foreground">{type} Configuration</h5>
+                              <ECMExportConfig
+                                type={type as 'quickbooks' | 'greatplains'}
+                                config={config}
+                                extractionFields={fields}
+                                onConfigChange={(newConfig) => 
                                   setExportConfig(prev => ({ 
                                     ...prev, 
-                                    [type]: { ...prev[type], destination: path }
+                                    [type]: newConfig 
                                   }))
                                 }
                                 disabled={!config.enabled}
                               />
                             </div>
-                            
-                            {(type === 'pdf' || type === 'images') && (
-                              <div>
-                                <Label htmlFor={`convert-${type}`} className="text-xs mb-1">
-                                  Convert Format on Export
-                                </Label>
-                                <Select
-                                  value={config.convertFormat || 'none'}
-                                  onValueChange={(value) => 
-                                    setExportConfig(prev => ({ 
-                                      ...prev, 
-                                      [type]: { ...prev[type], convertFormat: value as 'none' | 'pdf' | 'jpg' | 'tiff' }
-                                    }))
-                                  }
-                                  disabled={!config.enabled}
-                                >
-                                  <SelectTrigger id={`convert-${type}`}>
-                                    <SelectValue placeholder="Select format" />
-                                  </SelectTrigger>
-                                  <SelectContent className="bg-popover z-50">
-                                    <SelectItem value="none">No Conversion</SelectItem>
-                                    <SelectItem value="pdf">Convert to PDF</SelectItem>
-                                    <SelectItem value="jpg">Convert to JPG</SelectItem>
-                                    <SelectItem value="tiff">Convert to TIFF</SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </div>
-                            )}
-                          </div>
-                        </Card>
-                      ))}
-
-                    {/* ECM & Accounting Configuration */}
-                    {Object.entries(exportConfig)
-                      .filter(([type]) => ['filebound', 'documentum', 'sharepoint', 'quickbooks', 'greatplains'].includes(type) && exportConfig[type].enabled)
-                      .map(([type, config]) => (
-                        <Card key={type} className="p-4 bg-muted/50 mt-4">
-                          <h4 className="text-sm font-medium mb-3 uppercase">{type} Configuration</h4>
-                          <ECMExportConfig
-                            type={type as 'filebound' | 'documentum' | 'sharepoint' | 'quickbooks' | 'greatplains'}
-                            config={config}
-                            extractionFields={fields}
-                            onConfigChange={(newConfig) => 
-                              setExportConfig(prev => ({ 
-                                ...prev, 
-                                [type]: newConfig 
-                              }))
-                            }
-                            disabled={!config.enabled}
-                          />
-                        </Card>
-                      ))}
+                          );
+                        })}
+                      </CollapsibleContent>
+                    </Collapsible>
                   </div>
                 </AccordionContent>
               </AccordionItem>
