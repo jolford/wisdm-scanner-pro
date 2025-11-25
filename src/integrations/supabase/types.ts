@@ -2876,6 +2876,7 @@ export type Database = {
           project_id: string
           trigger_events: string[]
           updated_at: string
+          workflow_edges: Json | null
           workflow_nodes: Json
         }
         Insert: {
@@ -2889,6 +2890,7 @@ export type Database = {
           project_id: string
           trigger_events?: string[]
           updated_at?: string
+          workflow_edges?: Json | null
           workflow_nodes?: Json
         }
         Update: {
@@ -2902,6 +2904,7 @@ export type Database = {
           project_id?: string
           trigger_events?: string[]
           updated_at?: string
+          workflow_edges?: Json | null
           workflow_nodes?: Json
         }
         Relationships: [
