@@ -71,7 +71,7 @@ const onboardingSteps: OnboardingStep[] = [
     id: 'validate_document',
     title: 'Validate a Document',
     description: 'Review and validate extracted data from your document',
-    action: { label: 'Go to Queue', route: '/queue' },
+    action: { label: 'Go to Queue', route: '/' },
     checkComplete: async () => {
       const { count } = await supabase
         .from('documents')

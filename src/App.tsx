@@ -131,7 +131,7 @@ function GlobalKeyboardShortcuts({
       handler: () => navigate('/batches')
     }, {
       ...GLOBAL_SHORTCUTS.GO_QUEUE,
-      handler: () => navigate('/queue')
+      handler: () => navigate('/')
     }, {
       ...GLOBAL_SHORTCUTS.GO_ADMIN,
       handler: () => navigate('/admin/dashboard')

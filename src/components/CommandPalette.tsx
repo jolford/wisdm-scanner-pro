@@ -60,7 +60,7 @@ export function CommandPalette() {
             <Boxes className="mr-2 h-4 w-4" />
             <span>Batches</span>
           </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => navigate("/queue"))}>
+          <CommandItem onSelect={() => runCommand(() => navigate("/"))}>
             <ClipboardList className="mr-2 h-4 w-4" />
             <span>Queue</span>
           </CommandItem>
