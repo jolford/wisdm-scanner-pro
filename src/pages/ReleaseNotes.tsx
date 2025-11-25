@@ -4,8 +4,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { CheckCircle2, Rocket, Zap, Shield, TrendingUp, Calendar, Package } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, Rocket, Zap, Shield, TrendingUp, Calendar, Package, Download } from "lucide-react";
 import { format } from "date-fns";
+import { jsPDF } from "jspdf";
 
 // Helper function to compare semantic versions
 const compareVersions = (a: string, b: string): number => {
@@ -42,6 +44,74 @@ export default function ReleaseNotes() {
   const latestRelease = releases?.find(r => r.is_latest) || releases?.[0];
   const olderReleases = releases?.filter(r => r.id !== latestRelease?.id) || [];
 
+  const handleDownloadPDF = () => {
+    if (!releases || releases.length === 0) return;
+
+    const doc = new jsPDF();
+    let yPos = 20;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 20;
+    const maxWidth = pageWidth - 2 * margin;
+
+    // Title
+    doc.setFontSize(20);
+    doc.text("WISDM Capture Pro - Release Notes", margin, yPos);
+    yPos += 15;
+
+    releases.forEach((release: any, releaseIndex: number) => {
+      // Check if we need a new page
+      if (yPos > 250) {
+        doc.addPage();
+        yPos = 20;
+      }
+
+      // Version header
+      doc.setFontSize(16);
+      doc.text(`Version ${release.version} - ${release.version_name}`, margin, yPos);
+      yPos += 7;
+
+      doc.setFontSize(10);
+      doc.text(`Released: ${format(new Date(release.release_date), "MMMM d, yyyy")}`, margin, yPos);
+      yPos += 10;
+
+      // Description
+      doc.setFontSize(11);
+      const descLines = doc.splitTextToSize(release.description, maxWidth);
+      doc.text(descLines, margin, yPos);
+      yPos += descLines.length * 5 + 5;
+
+      // Features
+      if (release.features && Array.isArray(release.features)) {
+        release.features.forEach((feature: any) => {
+          if (yPos > 250) {
+            doc.addPage();
+            yPos = 20;
+          }
+
+          doc.setFontSize(12);
+          doc.text(feature.section, margin, yPos);
+          yPos += 6;
+
+          doc.setFontSize(10);
+          feature.items?.forEach((item: string) => {
+            const itemLines = doc.splitTextToSize(`• ${item}`, maxWidth - 5);
+            if (yPos + itemLines.length * 5 > 280) {
+              doc.addPage();
+              yPos = 20;
+            }
+            doc.text(itemLines, margin + 5, yPos);
+            yPos += itemLines.length * 5;
+          });
+          yPos += 3;
+        });
+      }
+
+      yPos += 10;
+    });
+
+    doc.save(`WISDM-Release-Notes-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
       <div className="container mx-auto px-4 py-12 max-w-5xl">
@@ -55,14 +125,20 @@ export default function ReleaseNotes() {
             Stay up to date with the latest features, improvements, and updates to WISDM Capture Pro
           </p>
           {latestRelease && (
-            <div className="flex items-center justify-center gap-4 mt-6">
-              <Badge variant="default" className="text-sm py-1.5">
-                <Calendar className="h-3 w-3 mr-1" />
-                Version {latestRelease.version}
-              </Badge>
-              <Badge variant="outline" className="text-sm py-1.5">
-                {format(new Date(latestRelease.release_date), "MMMM yyyy")}
-              </Badge>
+            <div className="flex flex-col items-center gap-4 mt-6">
+              <div className="flex items-center gap-4">
+                <Badge variant="default" className="text-sm py-1.5">
+                  <Calendar className="h-3 w-3 mr-1" />
+                  Version {latestRelease.version}
+                </Badge>
+                <Badge variant="outline" className="text-sm py-1.5">
+                  {format(new Date(latestRelease.release_date), "MMMM yyyy")}
+                </Badge>
+              </div>
+              <Button onClick={handleDownloadPDF} variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Download Release Notes
+              </Button>
             </div>
           )}
         </div>
