@@ -75,7 +75,7 @@ serve(async (req) => {
           original_value: correction.original_value,
           corrected_value: correction.corrected_value,
           confidence_score: confidenceScore,
-          document_type: document.document_type || 'unknown',
+          document_type: document.document_type || 'other',
           correction_count: 1,
         });
       }
@@ -90,7 +90,7 @@ serve(async (req) => {
       .from('ml_document_templates')
       .select('*')
       .eq('project_id', projectId)
-      .eq('document_type', document.document_type || 'unknown')
+      .eq('document_type', document.document_type || 'other')
       .eq('is_active', true)
       .limit(1);
 
@@ -140,7 +140,7 @@ serve(async (req) => {
       await supabaseClient.from('ml_document_templates').insert({
         project_id: projectId,
         template_name: `Learned from ${document.document_type || 'documents'}`,
-        document_type: document.document_type || 'unknown',
+        document_type: document.document_type || 'other',
         field_patterns: fieldPatterns,
         training_data_count: 1,
         is_active: true,

@@ -402,7 +402,21 @@ IMPORTANT: Also identify any company or brand logos present in the document. Pay
       
       systemPrompt = `CRITICAL: You MUST return ONLY valid JSON with no additional text, explanations, or markdown formatting.
 
-You are an advanced OCR system. Return this EXACT JSON structure: ${baseJson.slice(0, -1)}${tableJson}}
+You are an advanced OCR system with strong document classification capabilities. Return this EXACT JSON structure: ${baseJson.slice(0, -1)}${tableJson}}
+
+DOCUMENT CLASSIFICATION RULES:
+1. INVOICE: Contains "Invoice", "Invoice #", "Invoice Number", "Bill To", vendor/customer details, line items with prices, subtotal, tax, total amount due. Common indicators: "Amount Due", "Payment Terms", "PO Number"
+2. RECEIPT: Contains "Receipt", proof of payment/transaction, may have items purchased, typically shows "Paid", "Payment Method", transaction date
+3. PURCHASE_ORDER: Contains "Purchase Order", "PO #", ordered items, quantities, requested delivery date, buyer information
+4. CHECK: Bank check with check number, date, payee, amount in numbers and words, signature line, bank routing info
+5. FORM: Structured document with fill-in fields, checkboxes, may include medical forms, applications, surveys
+6. LETTER: Correspondence with greeting, body text, closing, may have letterhead
+7. OTHER: Use ONLY if document doesn't clearly fit any category above
+
+CLASSIFICATION PRIORITY:
+- If document has "Invoice" text AND billing/payment details → classify as "invoice"
+- If document shows line items with prices and totals → likely "invoice" or "receipt"
+- Be confident with classification - avoid "other" unless truly unclear
 
 RESPONSE REQUIREMENTS:
 - Return ONLY the JSON object
@@ -417,7 +431,7 @@ RESPONSE REQUIREMENTS:
         tableInstructions = ` Extract ALL rows from line item tables into "lineItems" array with fields: ${tableExtractionFields.map((f: any) => f.name).join(', ')}.`;
       }
       
-      userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'}.${tableInstructions} Classify document type. RESPOND WITH ONLY THE JSON OBJECT - NO OTHER TEXT.`;
+      userPrompt = `Extract all text from this ${isPdf ? 'PDF' : 'image'}.${tableInstructions} CAREFULLY classify the document type based on its content and structure - look for key indicators like "Invoice", billing details, line items, totals. RESPOND WITH ONLY THE JSON OBJECT - NO OTHER TEXT.`;
     }
 
 
