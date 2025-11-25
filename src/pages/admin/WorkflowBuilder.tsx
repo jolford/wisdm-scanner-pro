@@ -7,7 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { GitBranch, Plus, Trash2, Save, Play, Settings, ArrowRight, CheckCircle2, FolderKanban } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { GitBranch, Plus, Trash2, Save, Play, Settings, ArrowRight, CheckCircle2, FolderKanban, HelpCircle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
@@ -65,6 +67,7 @@ export default function WorkflowBuilder() {
       config: {},
     },
   ]);
+  const [showInstructions, setShowInstructions] = useState(true);
 
   // Fetch customer ID
   useEffect(() => {
@@ -320,6 +323,100 @@ export default function WorkflowBuilder() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
+              {/* Instructions */}
+              <Collapsible open={showInstructions} onOpenChange={setShowInstructions}>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-between p-0 hover:bg-transparent">
+                    <div className="flex items-center gap-2">
+                      <HelpCircle className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">How to Use Workflow Builder</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {showInstructions ? 'Hide' : 'Show'}
+                    </span>
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="space-y-4 pt-4">
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertDescription className="space-y-2">
+                      <div className="space-y-3 text-sm">
+                        <div>
+                          <p className="font-semibold mb-1">What are Workflows?</p>
+                          <p className="text-muted-foreground">
+                            Workflows automate document processing by executing actions when specific conditions are met.
+                            For example: "When a document is uploaded AND its confidence is above 90%, automatically validate it."
+                          </p>
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div>
+                          <p className="font-semibold mb-2">Building a Workflow:</p>
+                          <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                            <li><strong>Select a Project</strong> - Choose which project this workflow applies to</li>
+                            <li><strong>Set Trigger</strong> - Define the event that starts the workflow (Document Uploaded, Batch Created, etc.)</li>
+                            <li><strong>Add Conditions</strong> - Set rules that must be met (confidence threshold, document type, field values)</li>
+                            <li><strong>Add Actions</strong> - Define what happens when conditions are met (auto-validate, route to queue, send notifications)</li>
+                            <li><strong>Save & Activate</strong> - Save your workflow and toggle it active to start automation</li>
+                          </ol>
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div>
+                          <p className="font-semibold mb-2">Node Types:</p>
+                          <div className="space-y-2 text-muted-foreground">
+                            <div>
+                              <Badge variant="default" className="mr-2">Trigger</Badge>
+                              <span>The event that starts the workflow (e.g., document uploaded)</span>
+                            </div>
+                            <div>
+                              <Badge variant="secondary" className="mr-2">Condition</Badge>
+                              <span>Rules that must be true for actions to execute (e.g., confidence &gt; 90%)</span>
+                            </div>
+                            <div>
+                              <Badge variant="outline" className="mr-2">Action</Badge>
+                              <span>What happens when conditions pass (e.g., auto-validate document)</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <Separator />
+                        
+                        <div>
+                          <p className="font-semibold mb-1">Example Workflow:</p>
+                          <div className="bg-muted/50 p-3 rounded-md text-xs space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="default" className="text-xs">Trigger</Badge>
+                              <ArrowRight className="h-3 w-3" />
+                              <span>Document Uploaded</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="text-xs">Condition</Badge>
+                              <ArrowRight className="h-3 w-3" />
+                              <span>Document Type = Invoice</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary" className="text-xs">Condition</Badge>
+                              <ArrowRight className="h-3 w-3" />
+                              <span>Confidence ≥ 90%</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge variant="outline" className="text-xs">Action</Badge>
+                              <ArrowRight className="h-3 w-3" />
+                              <span>Auto-Validate Document</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                </CollapsibleContent>
+              </Collapsible>
+
+              <Separator />
+
               {/* Project Selection */}
               <div className="space-y-2">
                 <Label className="flex items-center gap-2">
