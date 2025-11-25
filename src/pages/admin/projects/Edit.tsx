@@ -12,7 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { Plus, Trash2, ArrowLeft, ArrowUp, ArrowDown } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Plus, Trash2, ArrowLeft, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { projectSchema } from '@/lib/validation-schemas';
@@ -1118,140 +1119,161 @@ const EditProject = () => {
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="space-y-4">
-                    {/* Data Formats Group */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Data Formats</Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {['csv', 'json', 'xml', 'txt', 'sql'].map((type) => {
-                          const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
-                          return (
-                            <div key={type} className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
-                              <Checkbox
-                                id={`export-${type}`}
-                                checked={config.enabled}
-                                onCheckedChange={(checked) => 
-                                  setExportConfig(prev => ({ 
-                                    ...prev, 
-                                    [type]: { ...prev[type], enabled: checked === true }
-                                  }))
-                                }
-                              />
-                              <Label htmlFor={`export-${type}`} className="text-xs cursor-pointer uppercase">
-                                {type}
-                              </Label>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    {/* Enable/Disable Export Types with Collapsible Groups */}
+                    <Collapsible defaultOpen>
+                      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                        <Label className="text-sm font-medium cursor-pointer">Data Formats (CSV, JSON, XML, TXT, SQL)</Label>
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-3">
+                        <div className="grid grid-cols-3 gap-2">
+                          {['csv', 'json', 'xml', 'txt', 'sql'].map((type) => {
+                            const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
+                            return (
+                              <div key={type} className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
+                                <Checkbox
+                                  id={`export-${type}`}
+                                  checked={config.enabled}
+                                  onCheckedChange={(checked) => 
+                                    setExportConfig(prev => ({ 
+                                      ...prev, 
+                                      [type]: { ...prev[type], enabled: checked === true }
+                                    }))
+                                  }
+                                />
+                                <Label htmlFor={`export-${type}`} className="text-xs cursor-pointer uppercase">
+                                  {type}
+                                </Label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
 
-                    {/* Documents & Images Group */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Documents & Images</Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {['pdf', 'images'].map((type) => {
-                          const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
-                          return (
-                            <div key={type} className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
-                              <Checkbox
-                                id={`export-${type}`}
-                                checked={config.enabled}
-                                onCheckedChange={(checked) => 
-                                  setExportConfig(prev => ({ 
-                                    ...prev, 
-                                    [type]: { ...prev[type], enabled: checked === true }
-                                  }))
-                                }
-                              />
-                              <Label htmlFor={`export-${type}`} className="text-xs cursor-pointer uppercase">
-                                {type}
-                              </Label>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    <Collapsible defaultOpen>
+                      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                        <Label className="text-sm font-medium cursor-pointer">Documents & Images (PDF, Images)</Label>
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-3">
+                        <div className="grid grid-cols-2 gap-2">
+                          {['pdf', 'images'].map((type) => {
+                            const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
+                            return (
+                              <div key={type} className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
+                                <Checkbox
+                                  id={`export-${type}`}
+                                  checked={config.enabled}
+                                  onCheckedChange={(checked) => 
+                                    setExportConfig(prev => ({ 
+                                      ...prev, 
+                                      [type]: { ...prev[type], enabled: checked === true }
+                                    }))
+                                  }
+                                />
+                                <Label htmlFor={`export-${type}`} className="text-xs cursor-pointer uppercase">
+                                  {type}
+                                </Label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
 
-                    {/* Databases Group */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Database Systems</Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {['access', 'oracle'].map((type) => {
-                          const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
-                          return (
-                            <div key={type} className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
-                              <Checkbox
-                                id={`export-${type}`}
-                                checked={config.enabled}
-                                onCheckedChange={(checked) => 
-                                  setExportConfig(prev => ({ 
-                                    ...prev, 
-                                    [type]: { ...prev[type], enabled: checked === true }
-                                  }))
-                                }
-                              />
-                              <Label htmlFor={`export-${type}`} className="text-xs cursor-pointer uppercase">
-                                {type}
-                              </Label>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    <Collapsible>
+                      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                        <Label className="text-sm font-medium cursor-pointer">Database Systems (Access, Oracle)</Label>
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-3">
+                        <div className="grid grid-cols-2 gap-2">
+                          {['access', 'oracle'].map((type) => {
+                            const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
+                            return (
+                              <div key={type} className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
+                                <Checkbox
+                                  id={`export-${type}`}
+                                  checked={config.enabled}
+                                  onCheckedChange={(checked) => 
+                                    setExportConfig(prev => ({ 
+                                      ...prev, 
+                                      [type]: { ...prev[type], enabled: checked === true }
+                                    }))
+                                  }
+                                />
+                                <Label htmlFor={`export-${type}`} className="text-xs cursor-pointer uppercase">
+                                  {type}
+                                </Label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
 
-                    {/* ECM Systems Group */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">ECM Systems</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {['filebound', 'documentum', 'sharepoint'].map((type) => {
-                          const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
-                          return (
-                            <div key={type} className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
-                              <Checkbox
-                                id={`export-${type}`}
-                                checked={config.enabled}
-                                onCheckedChange={(checked) => 
-                                  setExportConfig(prev => ({ 
-                                    ...prev, 
-                                    [type]: { ...prev[type], enabled: checked === true }
-                                  }))
-                                }
-                              />
-                              <Label htmlFor={`export-${type}`} className="text-xs cursor-pointer uppercase">
-                                {type}
-                              </Label>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    <Collapsible>
+                      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                        <Label className="text-sm font-medium cursor-pointer">ECM Systems (FileBound, Documentum, SharePoint)</Label>
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-3">
+                        <div className="grid grid-cols-2 gap-2">
+                          {['filebound', 'documentum', 'sharepoint'].map((type) => {
+                            const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
+                            return (
+                              <div key={type} className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
+                                <Checkbox
+                                  id={`export-${type}`}
+                                  checked={config.enabled}
+                                  onCheckedChange={(checked) => 
+                                    setExportConfig(prev => ({ 
+                                      ...prev, 
+                                      [type]: { ...prev[type], enabled: checked === true }
+                                    }))
+                                  }
+                                />
+                                <Label htmlFor={`export-${type}`} className="text-xs cursor-pointer uppercase">
+                                  {type}
+                                </Label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
 
-                    {/* Accounting Systems Group */}
-                    <div className="space-y-2">
-                      <Label className="text-sm font-medium text-muted-foreground">Accounting Systems</Label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {['quickbooks', 'greatplains'].map((type) => {
-                          const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
-                          return (
-                            <div key={type} className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
-                              <Checkbox
-                                id={`export-${type}`}
-                                checked={config.enabled}
-                                onCheckedChange={(checked) => 
-                                  setExportConfig(prev => ({ 
-                                    ...prev, 
-                                    [type]: { ...prev[type], enabled: checked === true }
-                                  }))
-                                }
-                              />
-                              <Label htmlFor={`export-${type}`} className="text-xs cursor-pointer uppercase">
-                                {type}
-                              </Label>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
+                    <Collapsible>
+                      <CollapsibleTrigger className="flex items-center justify-between w-full p-3 bg-muted/50 rounded-lg hover:bg-muted transition-colors">
+                        <Label className="text-sm font-medium cursor-pointer">Accounting Systems (QuickBooks, Great Plains)</Label>
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="pt-3">
+                        <div className="grid grid-cols-2 gap-2">
+                          {['quickbooks', 'greatplains'].map((type) => {
+                            const config = exportConfig[type] || { enabled: false, destination: '', convertFormat: 'none' };
+                            return (
+                              <div key={type} className="flex items-center space-x-2 p-2 bg-muted/30 rounded">
+                                <Checkbox
+                                  id={`export-${type}`}
+                                  checked={config.enabled}
+                                  onCheckedChange={(checked) => 
+                                    setExportConfig(prev => ({ 
+                                      ...prev, 
+                                      [type]: { ...prev[type], enabled: checked === true }
+                                    }))
+                                  }
+                                />
+                                <Label htmlFor={`export-${type}`} className="text-xs cursor-pointer uppercase">
+                                  {type}
+                                </Label>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
 
                     {/* Configuration sections for enabled exports */}
                     {Object.entries(exportConfig)
