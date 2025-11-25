@@ -556,7 +556,8 @@ const [isExporting, setIsExporting] = useState(false);
       const validationDocs = docsData?.filter(d => d.validation_status === 'pending' && d.confidence_score !== null) || [];
       setValidationQueue(validationDocs);
 
-      setValidatedDocs(batchIsComplete ? [] : (docsData?.filter(d => d.validation_status === 'validated') || []));
+      // Show validated docs for export even when batch is complete
+      setValidatedDocs(docsData?.filter(d => d.validation_status === 'validated') || []);
     } catch (error) {
       console.error('Error loading queue:', error);
     }
