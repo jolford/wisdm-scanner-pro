@@ -67,7 +67,7 @@ export const SavedFiltersManager = ({
         .select('saved_filters')
         .single();
 
-      const existingSaved = currentPrefs?.saved_filters || {};
+      const existingSaved = ((currentPrefs?.saved_filters || {}) as unknown) as Record<string, SavedFilter[]>;
       const typeFilters = existingSaved[filterType] || [];
 
       const newFilter = {
@@ -79,7 +79,7 @@ export const SavedFiltersManager = ({
       const updated = {
         ...existingSaved,
         [filterType]: [...typeFilters, newFilter],
-      };
+      } as any;
 
       const { error } = await supabase
         .from('user_preferences')
@@ -106,7 +106,7 @@ export const SavedFiltersManager = ({
         .select('saved_filters')
         .single();
 
-      const existingSaved = currentPrefs?.saved_filters || {};
+      const existingSaved = ((currentPrefs?.saved_filters || {}) as unknown) as Record<string, SavedFilter[]>;
       const typeFilters = (existingSaved[filterType] || []).filter(
         (f: SavedFilter) => f.id !== filterId
       );
@@ -114,7 +114,7 @@ export const SavedFiltersManager = ({
       const updated = {
         ...existingSaved,
         [filterType]: typeFilters,
-      };
+      } as any;
 
       const { error } = await supabase
         .from('user_preferences')

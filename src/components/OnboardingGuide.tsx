@@ -80,6 +80,25 @@ const onboardingSteps: OnboardingStep[] = [
       return (count || 0) > 0;
     },
   },
+  {
+    id: 'advanced_search',
+    title: 'Try Advanced Search',
+    description: 'Search documents by content, metadata, field values, and validation notes',
+    action: { label: 'Open Search', route: '/admin/advanced-search' },
+    checkComplete: async () => false, // Always show as incomplete to encourage exploration
+  },
+  {
+    id: 'batch_templates',
+    title: 'Create a Batch Template',
+    description: 'Save time by creating reusable batch configurations with auto-apply rules',
+    action: { label: 'Batch Templates', route: '/admin/batch-templates' },
+    checkComplete: async () => {
+      const { count } = await supabase
+        .from('batch_templates')
+        .select('*', { count: 'exact', head: true });
+      return (count || 0) > 0;
+    },
+  },
 ];
 
 export const OnboardingGuide = () => {
