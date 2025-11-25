@@ -366,6 +366,7 @@ const [isExporting, setIsExporting] = useState(false);
     } else {
       setValidationQueue([]);
       setValidatedDocs([]);
+      setProcessing(false); // Clear processing state when no batch selected
     }
   }, [selectedBatchId]);
 
@@ -563,6 +564,12 @@ const [isExporting, setIsExporting] = useState(false);
 
       // Show validated docs for export even when batch is complete
       setValidatedDocs(docsData?.filter(d => d.validation_status === 'validated') || []);
+
+      // Clear processing state if all documents have been processed (have confidence scores)
+      const allProcessed = docsData.every(d => typeof d.confidence_score === 'number' && d.confidence_score > 0);
+      if (allProcessed && docsData.length > 0) {
+        setProcessing(false);
+      }
     } catch (error) {
       console.error('Error loading queue:', error);
     }
