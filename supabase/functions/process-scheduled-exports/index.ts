@@ -127,12 +127,12 @@ serve(async (req) => {
 
         console.log(`Processing schedule ${schedule.id} for project ${schedule.project_id}`);
 
-        // Get validated batches for this project
+        // Get completed batches ready for export
         const { data: batches, error: batchesError } = await supabase
           .from('batches')
           .select('id, batch_name')
           .eq('project_id', schedule.project_id)
-          .eq('status', 'validated')
+          .eq('status', 'complete')
           .is('exported_at', null)
           .limit(10);
 
