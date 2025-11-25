@@ -77,8 +77,11 @@ export default function ReleaseNotes() {
       // Description
       doc.setFontSize(11);
       const descLines = doc.splitTextToSize(release.description, maxWidth);
-      doc.text(descLines, margin, yPos);
-      yPos += descLines.length * 5 + 5;
+      descLines.forEach((line: string) => {
+        doc.text(line, margin, yPos);
+        yPos += 5;
+      });
+      yPos += 5;
 
       // Features
       if (release.features && Array.isArray(release.features)) {
@@ -99,8 +102,10 @@ export default function ReleaseNotes() {
               doc.addPage();
               yPos = 20;
             }
-            doc.text(itemLines, margin + 5, yPos);
-            yPos += itemLines.length * 5;
+            itemLines.forEach((line: string) => {
+              doc.text(line, margin + 5, yPos);
+              yPos += 5;
+            });
           });
           yPos += 3;
         });
