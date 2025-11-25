@@ -265,7 +265,7 @@ const DocumentReprocessing = () => {
         }
       }
       
-      navigate(`/queue?tab=validation`);
+      navigate(`/?tab=validation`);
     } else {
       // Mixed batches or no batch, just reload the list
       loadBadDocuments();
