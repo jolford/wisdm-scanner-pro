@@ -28,7 +28,6 @@ import { SkeletonStats } from '@/components/ui/skeleton-card';
 import { DashboardMetrics } from '@/components/admin/DashboardMetrics';
 import { RecentActivityFeed } from '@/components/admin/RecentActivityFeed';
 import { QuickActionsMenu } from '@/components/admin/QuickActionsMenu';
-import { OnboardingGuide } from '@/components/OnboardingGuide';
 import { LicenseWarning } from '@/components/LicenseWarning';
 
 const AdminDashboard = () => {
@@ -100,9 +99,6 @@ const AdminDashboard = () => {
       <div className="space-y-8">
         {/* License Warnings */}
         <LicenseWarning />
-
-        {/* Onboarding Guide for New Users */}
-        <OnboardingGuide />
 
         {/* At-a-Glance Real-time Metrics */}
         <DashboardMetrics />
@@ -214,36 +210,6 @@ const AdminDashboard = () => {
         <div className="grid gap-6 md:grid-cols-2">
           <QuickActionsMenu />
           <RecentActivityFeed />
-        </div>
-
-        {/* Quick Actions */}
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Quick Actions</h2>
-          <div className="grid md:grid-cols-3 gap-6">
-            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)] hover:shadow-xl transition-shadow cursor-pointer" onClick={() => navigate('/admin/projects/new')}>
-              <Plus className="h-8 w-8 text-primary mb-3" />
-              <h3 className="text-xl font-semibold mb-2">New Project</h3>
-              <p className="text-muted-foreground">
-                Create a new document processing project
-              </p>
-            </Card>
-
-            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)] hover:shadow-xl transition-shadow cursor-pointer" onClick={() => navigate('/admin/batches/new')}>
-              <FolderOpen className="h-8 w-8 text-primary mb-3" />
-              <h3 className="text-xl font-semibold mb-2">New Batch</h3>
-              <p className="text-muted-foreground">
-                Start a new document batch for processing
-              </p>
-            </Card>
-
-            <Card className="p-6 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)] hover:shadow-xl transition-shadow cursor-pointer" onClick={() => navigate('/admin/users/new')}>
-              <Users className="h-8 w-8 text-primary mb-3" />
-              <h3 className="text-xl font-semibold mb-2">New User</h3>
-              <p className="text-muted-foreground">
-                Add a new user to the system
-              </p>
-            </Card>
-          </div>
         </div>
 
         {/* Sales Tools */}
