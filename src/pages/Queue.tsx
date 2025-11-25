@@ -499,10 +499,10 @@ const [isExporting, setIsExporting] = useState(false);
     if (!selectedBatchId) return;
 
     try {
-      // First check if the batch still exists
+      // First check if the batch still exists and get its current status
       const { data: batchCheck, error: batchError } = await supabase
         .from('batches')
-        .select('id')
+        .select('*')
         .eq('id', selectedBatchId)
         .maybeSingle();
 
@@ -519,6 +519,9 @@ const [isExporting, setIsExporting] = useState(false);
         setValidatedDocs([]);
         return;
       }
+
+      // Update selected batch with latest data
+      setSelectedBatch(batchCheck);
 
       let docsData: any[] | null = null;
       let lastError: any = null;
@@ -545,8 +548,10 @@ const [isExporting, setIsExporting] = useState(false);
 
       if (!docsData) throw lastError;
 
+      // Only show documents in Quality Control if batch is NOT complete
+      const batchIsComplete = selectedBatch?.status === 'complete';
       setValidationQueue(docsData?.filter(d => d.validation_status === 'pending') || []);
-      setValidatedDocs(docsData?.filter(d => d.validation_status === 'validated') || []);
+      setValidatedDocs(batchIsComplete ? [] : (docsData?.filter(d => d.validation_status === 'validated') || []));
     } catch (error) {
       console.error('Error loading queue:', error);
     }
