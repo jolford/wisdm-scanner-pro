@@ -76,12 +76,9 @@ export default function ReleaseNotes() {
 
       // Description
       doc.setFontSize(11);
-      const descLines = doc.splitTextToSize(release.description, maxWidth);
-      descLines.forEach((line: string) => {
-        doc.text(line, margin, yPos);
-        yPos += 5;
-      });
-      yPos += 5;
+      const descriptionText = typeof release.description === "string" ? release.description : String(release.description ?? "");
+      doc.text(descriptionText, margin, yPos);
+      yPos += 10;
 
       // Features
       if (release.features && Array.isArray(release.features)) {
@@ -92,20 +89,18 @@ export default function ReleaseNotes() {
           }
 
           doc.setFontSize(12);
-          doc.text(feature.section, margin, yPos);
+          doc.text(String(feature.section ?? ""), margin, yPos);
           yPos += 6;
 
           doc.setFontSize(10);
-          feature.items?.forEach((item: string) => {
-            const itemLines = doc.splitTextToSize(`• ${item}`, maxWidth - 5);
-            if (yPos + itemLines.length * 5 > 280) {
+          feature.items?.forEach((item: any) => {
+            const itemText = `• ${typeof item === "string" ? item : String(item ?? "")}`;
+            if (yPos + 5 > 280) {
               doc.addPage();
               yPos = 20;
             }
-            itemLines.forEach((line: string) => {
-              doc.text(line, margin + 5, yPos);
-              yPos += 5;
-            });
+            doc.text(itemText, margin + 5, yPos);
+            yPos += 5;
           });
           yPos += 3;
         });
