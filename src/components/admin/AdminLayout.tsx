@@ -8,6 +8,7 @@ import {
 import { AdminSidebar } from './AdminSidebar';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -49,6 +50,7 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
           </header>
 
           <main className="flex-1 container mx-auto px-4 py-8" role="main" aria-label={title}>
+            <Breadcrumbs />
             {children}
           </main>
         </div>

@@ -25,6 +25,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { PricingPDFGenerator } from '@/components/admin/PricingPDFGenerator';
 import { SkeletonStats } from '@/components/ui/skeleton-card';
+import { DashboardMetrics } from '@/components/admin/DashboardMetrics';
+import { RecentActivityFeed } from '@/components/admin/RecentActivityFeed';
+import { QuickActionsMenu } from '@/components/admin/QuickActionsMenu';
+import { OnboardingGuide } from '@/components/OnboardingGuide';
+import { LicenseWarning } from '@/components/LicenseWarning';
 
 const AdminDashboard = () => {
   // Authentication guard - ensures only admins can access this page
@@ -93,6 +98,15 @@ const AdminDashboard = () => {
   return (
     <AdminLayout title="Admin Dashboard" description="System overview and quick actions">
       <div className="space-y-8">
+        {/* License Warnings */}
+        <LicenseWarning />
+
+        {/* Onboarding Guide for New Users */}
+        <OnboardingGuide />
+
+        {/* At-a-Glance Real-time Metrics */}
+        <DashboardMetrics />
+
         {/* Security Status Badge */}
         <Card className="p-6 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-950/20 dark:to-emerald-950/20 border-green-200 dark:border-green-900">
           <div className="flex items-start justify-between">
@@ -195,6 +209,12 @@ const AdminDashboard = () => {
             </Card>
           </div>
         )}
+
+        {/* Quick Actions & Recent Activity */}
+        <div className="grid gap-6 md:grid-cols-2">
+          <QuickActionsMenu />
+          <RecentActivityFeed />
+        </div>
 
         {/* Quick Actions */}
         <div>
