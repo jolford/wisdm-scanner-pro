@@ -1595,6 +1595,28 @@ Review the image and provide corrected text with any OCR errors fixed.`;
     let routingApplied = false;
     let suggestedStatus = 'pending';
     
+    // Helper: Check if critical invoice fields have values
+    const hasCriticalFieldData = (meta: any): boolean => {
+      if (!meta || typeof meta !== 'object') return false;
+      
+      const criticalFields = ['Invoice Number', 'Invoice Date', 'Invoice Total', 'PO Number', 'Vendor Name'];
+      
+      for (const field of criticalFields) {
+        const value = meta[field];
+        
+        // Check if field is missing, null, or empty
+        if (!value) return false;
+        
+        // Check if value is an object with empty/null value property (e.g., {value: null})
+        if (typeof value === 'object' && (!value.value || value.value === '')) return false;
+        
+        // Check if value is an empty string
+        if (typeof value === 'string' && value.trim() === '') return false;
+      }
+      
+      return true;
+    };
+    
     if (customerId && documentId && confidence) {
       try {
         const supabaseAdmin = createClient(
@@ -1609,8 +1631,28 @@ Review the image and provide corrected text with any OCR errors fixed.`;
           .eq('customer_id', customerId)
           .maybeSingle();
         
-        if (routingConfig && routingConfig.enabled) {
-          const confidencePercent = confidence * 100;
+        // Check if critical fields are populated
+        const hasCriticalData = hasCriticalFieldData(metadata);
+        const confidencePercent = confidence * 100;
+        
+        if (!hasCriticalData) {
+          // Force documents with missing critical fields to stay in validation
+          suggestedStatus = 'pending';
+          console.log('Smart Routing: Missing critical field data - forcing validation queue');
+          routingApplied = true;
+          
+          // Update document with routing decision for missing data case
+          if (documentId) {
+            await supabaseAdmin
+              .from('documents')
+              .update({
+                validation_status: 'pending',
+                processing_priority: -100, // Low priority (needs review)
+                needs_review: true
+              })
+              .eq('id', documentId);
+          }
+        } else if (routingConfig && routingConfig.enabled) {
           
           // High confidence routing
           if (confidencePercent >= routingConfig.high_confidence_threshold) {
@@ -1638,8 +1680,8 @@ Review the image and provide corrected text with any OCR errors fixed.`;
             routingApplied = true;
           }
           
-          // Update document with routing decision
-          if (routingApplied && documentId) {
+          // Update document with routing decision (only for cases with critical data)
+          if (routingApplied && documentId && hasCriticalData) {
             const updateData: any = {
               validation_status: suggestedStatus,
             };
