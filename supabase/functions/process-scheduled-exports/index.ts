@@ -45,11 +45,15 @@ serve(async (req) => {
     console.log('Starting scheduled export processing...');
 
     const now = new Date();
-    const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
+    const currentHour = now.getHours().toString().padStart(2, '0');
+    const currentMinute = now.getMinutes().toString().padStart(2, '0');
+    const currentTime = `${currentHour}:${currentMinute}:00`;
     const currentDayOfWeek = now.getDay();
     const currentDayOfMonth = now.getDate();
 
-    // Find schedules that should run now
+    console.log(`Current time: ${currentTime}, Day of week: ${currentDayOfWeek}, Day of month: ${currentDayOfMonth}`);
+
+    // Find all active schedules (we'll filter by time in code for flexibility)
     const { data: schedules, error: schedulesError } = await supabase
       .from('scheduled_exports')
       .select(`
@@ -62,9 +66,7 @@ serve(async (req) => {
           customer_id
         )
       `)
-      .eq('is_active', true)
-      .gte('time_of_day', `${currentTime}:00`)
-      .lte('time_of_day', `${currentTime}:59`);
+      .eq('is_active', true);
 
     if (schedulesError) {
       console.error('Error fetching schedules:', schedulesError);
@@ -78,6 +80,25 @@ serve(async (req) => {
 
     for (const schedule of schedules || []) {
       try {
+        // Check if schedule time matches current time (within 2-minute window)
+        const scheduleTime = schedule.time_of_day?.slice(0, 5); // HH:MM
+        const currentTimeShort = currentTime.slice(0, 5); // HH:MM
+        
+        // Parse times for comparison
+        const [schedHour, schedMin] = scheduleTime?.split(':').map(Number) || [0, 0];
+        const [currHour, currMin] = currentTime.split(':').map(Number);
+        
+        const scheduleMinutes = schedHour * 60 + schedMin;
+        const currentMinutes = currHour * 60 + currMin;
+        
+        // Allow 2-minute window for execution
+        const timeDiff = Math.abs(scheduleMinutes - currentMinutes);
+        if (timeDiff > 2) {
+          continue;
+        }
+
+        console.log(`Schedule ${schedule.id} matches current time window`);
+
         // Check if schedule should run based on frequency
         let shouldRun = false;
 
@@ -90,16 +111,16 @@ serve(async (req) => {
         }
 
         if (!shouldRun) {
-          console.log(`Schedule ${schedule.id} should not run yet`);
+          console.log(`Schedule ${schedule.id} frequency check failed`);
           continue;
         }
 
-        // Check if already ran today
+        // Check if already ran recently (within last hour to prevent duplicates)
         if (schedule.last_run_at) {
           const lastRun = new Date(schedule.last_run_at);
-          const today = new Date();
-          if (lastRun.toDateString() === today.toDateString()) {
-            console.log(`Schedule ${schedule.id} already ran today`);
+          const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+          if (lastRun > hourAgo) {
+            console.log(`Schedule ${schedule.id} already ran recently`);
             continue;
           }
         }
