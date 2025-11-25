@@ -115,13 +115,25 @@ serve(async (req) => {
           continue;
         }
 
-        // Check if already ran recently (within last hour to prevent duplicates)
+        // Check if already ran today (for daily) or this period (for weekly/monthly)
         if (schedule.last_run_at) {
           const lastRun = new Date(schedule.last_run_at);
-          const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-          if (lastRun > hourAgo) {
-            console.log(`Schedule ${schedule.id} already ran recently`);
-            continue;
+          
+          if (schedule.frequency === 'daily') {
+            // For daily schedules, check if already ran today
+            const lastRunDay = lastRun.toISOString().slice(0, 10); // YYYY-MM-DD
+            const currentDay = now.toISOString().slice(0, 10);
+            if (lastRunDay === currentDay) {
+              console.log(`Schedule ${schedule.id} already ran today`);
+              continue;
+            }
+          } else {
+            // For weekly/monthly, check if ran within last hour to prevent duplicates
+            const hourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+            if (lastRun > hourAgo) {
+              console.log(`Schedule ${schedule.id} already ran recently`);
+              continue;
+            }
           }
         }
 
