@@ -187,6 +187,8 @@ export type Database = {
           name: string
           priority: number
           template_id: string
+          trigger_schedule: string | null
+          trigger_type: string | null
           updated_at: string
         }
         Insert: {
@@ -198,6 +200,8 @@ export type Database = {
           name: string
           priority?: number
           template_id: string
+          trigger_schedule?: string | null
+          trigger_type?: string | null
           updated_at?: string
         }
         Update: {
@@ -209,6 +213,8 @@ export type Database = {
           name?: string
           priority?: number
           template_id?: string
+          trigger_schedule?: string | null
+          trigger_type?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -775,6 +781,77 @@ export type Database = {
           },
         ]
       }
+      document_versions: {
+        Row: {
+          change_summary: string | null
+          change_type: string
+          changed_at: string | null
+          changed_by: string | null
+          changed_fields: Json | null
+          classification_metadata: Json | null
+          confidence_score: number | null
+          document_id: string
+          extracted_metadata: Json | null
+          extracted_text: string | null
+          field_confidence: Json | null
+          file_name: string | null
+          file_url: string | null
+          id: string
+          line_items: Json | null
+          validation_status: string | null
+          version_number: number
+          word_bounding_boxes: Json | null
+        }
+        Insert: {
+          change_summary?: string | null
+          change_type: string
+          changed_at?: string | null
+          changed_by?: string | null
+          changed_fields?: Json | null
+          classification_metadata?: Json | null
+          confidence_score?: number | null
+          document_id: string
+          extracted_metadata?: Json | null
+          extracted_text?: string | null
+          field_confidence?: Json | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          line_items?: Json | null
+          validation_status?: string | null
+          version_number: number
+          word_bounding_boxes?: Json | null
+        }
+        Update: {
+          change_summary?: string | null
+          change_type?: string
+          changed_at?: string | null
+          changed_by?: string | null
+          changed_fields?: Json | null
+          classification_metadata?: Json | null
+          confidence_score?: number | null
+          document_id?: string
+          extracted_metadata?: Json | null
+          extracted_text?: string | null
+          field_confidence?: Json | null
+          file_name?: string | null
+          file_url?: string | null
+          id?: string
+          line_items?: Json | null
+          validation_status?: string | null
+          version_number?: number
+          word_bounding_boxes?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_versions_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       documents: {
         Row: {
           batch_id: string | null
@@ -800,6 +877,7 @@ export type Database = {
           project_id: string
           redacted_file_url: string | null
           redaction_metadata: Json | null
+          search_vector: unknown
           uploaded_by: string
           validated_at: string | null
           validated_by: string | null
@@ -834,6 +912,7 @@ export type Database = {
           project_id: string
           redacted_file_url?: string | null
           redaction_metadata?: Json | null
+          search_vector?: unknown
           uploaded_by: string
           validated_at?: string | null
           validated_by?: string | null
@@ -868,6 +947,7 @@ export type Database = {
           project_id?: string
           redacted_file_url?: string | null
           redaction_metadata?: Json | null
+          search_vector?: unknown
           uploaded_by?: string
           validated_at?: string | null
           validated_by?: string | null

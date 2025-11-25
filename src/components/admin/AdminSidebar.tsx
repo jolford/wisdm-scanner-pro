@@ -4,7 +4,7 @@ import {
   BarChart2, DollarSign, TrendingUp, Edit3, GitCompare,
   Brain, TestTube2, RefreshCw, Database, Palette, Activity,
   BookOpen, Settings, LogOut, HelpCircle, GitBranch, FileType,
-  Smartphone, Package, ChevronDown
+  Smartphone, Package, ChevronDown, Search, History, Zap
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -54,6 +54,7 @@ const menuItems = [
       { title: 'Smart Routing', url: '/admin/smart-routing', icon: GitBranch },
       { title: 'ML Templates', url: '/admin/ml-templates', icon: FileType },
       { title: 'Mobile Validation', url: '/admin/mobile-validation', icon: Smartphone },
+      { title: 'Advanced Search', url: '/admin/advanced-search', icon: Search },
       { title: 'Workflow Management', url: '/admin/workflows', icon: GitBranch },
       { title: 'Workflow Builder', url: '/admin/workflow-builder', icon: GitBranch },
       { title: 'Integrations', url: '/admin/integrations', icon: Package },
@@ -65,6 +66,7 @@ const menuItems = [
   {
     title: 'Quality & Automation',
     items: [
+      { title: 'Batch Templates', url: '/admin/batch-templates', icon: Zap },
       { title: 'Validation Lookups', url: '/admin/validation-lookups', icon: Database },
       { title: 'Confidence Scoring', url: '/admin/confidence', icon: Target },
       { title: 'Exception Queue', url: '/admin/exceptions', icon: AlertTriangle },

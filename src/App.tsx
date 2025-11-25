@@ -80,6 +80,7 @@ import MobileValidation from "./pages/admin/MobileValidation";
 import WorkflowBuilder from "./pages/admin/WorkflowBuilder";
 import Workflows from "./pages/admin/Workflows";
 import IntegrationMarketplace from "./pages/admin/IntegrationMarketplace";
+import AdvancedSearch from "./pages/admin/AdvancedSearch";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -226,6 +227,7 @@ const App = () => {
           <Route path="/admin/workflows" element={<Workflows />} />
           <Route path="/admin/workflow-builder" element={<WorkflowBuilder />} />
           <Route path="/admin/integrations" element={<IntegrationMarketplace />} />
+          <Route path="/admin/advanced-search" element={<AdvancedSearch />} />
           
           {/* Phase 3: Bulk Operations & QA */}
           <Route path="/admin/bulk-edit" element={<BulkEdit />} />
