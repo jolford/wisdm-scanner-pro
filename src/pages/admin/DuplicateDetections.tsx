@@ -7,14 +7,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertCircle, CheckCircle, Copy, FileText, XCircle } from "lucide-react";
+import { AlertCircle, CheckCircle, Copy, FileText, XCircle, Search } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { BatchSelector } from "@/components/BatchSelector";
 
 export default function DuplicateDetections() {
   useRequireAuth(true);
   const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedBatchId, setSelectedBatchId] = useState<string>("");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [isScanning, setIsScanning] = useState(false);
 
   const { data: duplicates, isLoading } = useQuery({
     queryKey: ["duplicate-detections", statusFilter],
@@ -74,6 +78,55 @@ export default function DuplicateDetections() {
     }
   };
 
+  const scanBatchForDuplicates = async () => {
+    if (!selectedBatchId) {
+      toast.error("Please select a batch to scan");
+      return;
+    }
+
+    setIsScanning(true);
+    try {
+      // Get all documents in the batch
+      const { data: docs, error: docsError } = await supabase
+        .from('documents')
+        .select('id')
+        .eq('batch_id', selectedBatchId);
+
+      if (docsError) throw docsError;
+      if (!docs || docs.length === 0) {
+        toast.error("No documents found in selected batch");
+        setIsScanning(false);
+        return;
+      }
+
+      // Trigger duplicate detection for each document
+      let successCount = 0;
+      for (const doc of docs) {
+        try {
+          await supabase.functions.invoke('detect-duplicates', {
+            body: {
+              documentId: doc.id,
+              batchId: selectedBatchId,
+              checkCrossBatch: false,
+              thresholds: { name: 0.85, address: 0.90 }
+            }
+          });
+          successCount++;
+        } catch (err) {
+          console.error(`Failed to scan document ${doc.id}:`, err);
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["duplicate-detections"] });
+      toast.success(`Scanned ${successCount} of ${docs.length} documents for duplicates`);
+    } catch (error) {
+      console.error('Duplicate scan error:', error);
+      toast.error("Failed to scan batch for duplicates");
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   return (
     <AdminLayout title="Duplicate Detections">
       <div className="space-y-6">
@@ -91,17 +144,32 @@ export default function DuplicateDetections() {
                 <CardTitle>Detected Duplicates</CardTitle>
                 <CardDescription>Documents flagged as potential duplicates</CardDescription>
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-40">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
+              <div className="flex gap-2">
+                <BatchSelector
+                  projectId={selectedProjectId}
+                  selectedBatchId={selectedBatchId}
+                  onBatchSelect={setSelectedBatchId}
+                />
+                <Button 
+                  onClick={scanBatchForDuplicates}
+                  disabled={!selectedBatchId || isScanning}
+                  size="sm"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  {isScanning ? "Scanning..." : "Scan for Duplicates"}
+                </Button>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-40">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Status</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="confirmed">Confirmed</SelectItem>
                   <SelectItem value="dismissed">Dismissed</SelectItem>
                 </SelectContent>
-              </Select>
+                </Select>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
