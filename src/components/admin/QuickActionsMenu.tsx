@@ -45,7 +45,7 @@ export const QuickActionsMenu = () => {
       icon: FileText,
       label: 'Validation Queue',
       description: 'Review pending documents',
-      action: () => navigate('/queue'),
+      action: () => window.location.href = '/queue',
       color: 'text-orange-600 bg-orange-50 hover:bg-orange-100',
     },
     {
