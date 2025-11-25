@@ -928,6 +928,22 @@ useEffect(() => {
   };
 
   const handleValidate = async (status: 'validated' | 'rejected') => {
+    // Prevent validating documents with no field data at all
+    if (status === 'validated') {
+      const hasAnyFieldValue = Object.values(editedMetadata || {}).some((v) =>
+        toFieldString(v).trim() !== ''
+      );
+
+      if (!hasAnyFieldValue) {
+        toast({
+          title: 'No data to validate',
+          description: 'At least one index field must have a value before validating. Enter data or reject the document instead.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     // Validate metadata with zod
     try {
       documentMetadataSchema.parse(editedMetadata);
