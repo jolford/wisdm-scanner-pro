@@ -149,6 +149,13 @@ export default function WorkflowBuilder() {
       .filter(n => n.type === 'trigger')
       .map(n => n.value);
 
+    // Generate edges to connect nodes in sequence
+    const edges = nodes.slice(0, -1).map((node, index) => ({
+      id: `e${node.id}-${nodes[index + 1].id}`,
+      source: node.id,
+      target: nodes[index + 1].id,
+    }));
+
     const workflowData = {
       name: workflowName,
       description: workflowDescription,
@@ -156,6 +163,7 @@ export default function WorkflowBuilder() {
       customer_id: customerId,
       created_by: user!.id,
       workflow_nodes: nodes as any,
+      workflow_edges: edges as any,
       trigger_events: triggerEvents,
       is_active: true,
     };
