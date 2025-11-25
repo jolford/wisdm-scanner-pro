@@ -32,6 +32,7 @@ import { SearchFilterBar, DocumentFilters } from './SearchFilterBar';
 import { ProgressTrackingDashboard } from './ProgressTrackingDashboard';
 import { SmartSuggestionsPanel } from './SmartSuggestionsPanel';
 import { PetitionValidationWarnings } from './PetitionValidationWarnings';
+import { InteractiveDocumentViewer } from './InteractiveDocumentViewer';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { useBulkSelection } from '@/hooks/use-bulk-selection';
 
@@ -201,8 +202,9 @@ export const BatchValidationScreen = ({
   // Translated text cache per document
   const [translatedTexts, setTranslatedTexts] = useState<Record<string, string>>({});
   
-  // Track focused field for region selection
+  // Track focused field for region selection and highlighting
   const [focusedField, setFocusedField] = useState<Record<string, string>>({});
+  const [fieldBoundingBoxes, setFieldBoundingBoxes] = useState<Record<string, Record<string, { x: number; y: number; width: number; height: number }>>>({});
   
   // Search and filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -343,6 +345,72 @@ const { toast } = useToast();
       },
     ],
   });
+
+  // Calculate field bounding boxes for highlighting based on extracted values
+  useEffect(() => {
+    documents.forEach(doc => {
+      const wordBoxes = (doc as any).word_bounding_boxes;
+      if (!wordBoxes || wordBoxes.length === 0) return;
+      
+      const metadata = getMetadataForDoc(doc);
+      const calculatedBoxes: Record<string, { x: number; y: number; width: number; height: number }> = {};
+      
+      Object.entries(metadata).forEach(([fieldName, fieldValue]) => {
+        if (!fieldValue || typeof fieldValue !== 'string') return;
+        
+        const normalizedValue = String(fieldValue).toLowerCase().trim();
+        if (!normalizedValue) return;
+        
+        const matchingBoxes: Array<{ x: number; y: number; width: number; height: number }> = [];
+        const searchTerms = normalizedValue.match(/[\w.-]+/g) || [];
+        
+        searchTerms.forEach(term => {
+          wordBoxes.forEach((wordBox: any) => {
+            const wordText = (wordBox.text || '').toLowerCase().trim();
+            if (wordText && (wordText === term || wordText.includes(term) || term.includes(wordText))) {
+              const bbox = wordBox.bbox;
+              if (bbox && typeof bbox.x === 'number' && typeof bbox.y === 'number') {
+                const isPercent = bbox.x <= 100 && bbox.y <= 100 && bbox.width <= 100 && bbox.height <= 100;
+                
+                if (isPercent) {
+                  matchingBoxes.push(bbox);
+                } else {
+                  matchingBoxes.push({
+                    x: (bbox.x / 1000) * 100,
+                    y: (bbox.y / 1000) * 100,
+                    width: (bbox.width / 1000) * 100,
+                    height: (bbox.height / 1000) * 100
+                  });
+                }
+              }
+            }
+          });
+        });
+        
+        if (matchingBoxes.length > 0) {
+          const minX = Math.min(...matchingBoxes.map(b => b.x));
+          const minY = Math.min(...matchingBoxes.map(b => b.y));
+          const maxX = Math.max(...matchingBoxes.map(b => b.x + b.width));
+          const maxY = Math.max(...matchingBoxes.map(b => b.y + b.height));
+          
+          calculatedBoxes[fieldName] = {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+          };
+        }
+      });
+      
+      if (Object.keys(calculatedBoxes).length > 0) {
+        setFieldBoundingBoxes(prev => ({
+          ...prev,
+          [doc.id]: calculatedBoxes
+        }));
+      }
+    });
+  }, [documents, editedMetadata]);
+
 
   /**
    * Bulk validate selected documents
@@ -1530,74 +1598,37 @@ const { toast } = useToast();
                           </div>
                         </div>
                         
-                        {/* Image Preview with Zoom and Rotation */}
+                        {/* Interactive Document Viewer with Field Highlighting */}
                         <div className="overflow-auto max-h-[300px] sm:max-h-[400px] bg-muted/30 rounded-lg p-2 sm:p-4">
-                          <div className="relative">
-                            <FullImageWithSignedUrl
-                              url={(doc as any).redacted_file_url || doc.file_url}
-                              alt={doc.file_name}
-                              fileType={(doc as any).file_type}
-                              zoom={documentZoom[doc.id] || 1}
-                              rotation={documentRotation[doc.id] || 0}
-                            />
-                            {/* Auto PII redaction overlay - only show if NOT viewing original */}
-                            {!showingOriginal.has(doc.id) && (() => {
-                              // Prefer server-detected regions; fallback to client detection if available
-                              const pii = (doc as any).detected_pii_regions || [];
-                              let boxes = (Array.isArray(pii) ? pii.map((r: any) => r?.bbox).filter(Boolean) : []) as Array<{ x: number; y: number; width: number; height: number }>;
-
-                              if (boxes.length === 0 && ((computedPiiCounts[doc.id] || 0) > 0)) {
-                                try {
-                                  const detected = detectKeywords(
-                                    doc.extracted_text || '',
-                                    { wordBoundingBoxes: (doc as any).word_bounding_boxes },
-                                    [],
-                                    true
-                                  ) as any[];
-                                  boxes = detected
-                                    .flatMap((d: any) => (d.matches?.map((m: any) => m.boundingBox).filter(Boolean)) || [])
-                                    .filter(Boolean);
-                                } catch {
-                                  // ignore client detection errors
+                          <InteractiveDocumentViewer
+                            imageUrl={(doc as any).redacted_file_url || doc.file_url}
+                            fileName={doc.file_name}
+                            documentId={doc.id}
+                            boundingBoxes={fieldBoundingBoxes[doc.id] || {}}
+                            highlightedField={focusedField[doc.id]}
+                            piiRegions={(doc as any).detected_pii_regions || []}
+                            showingOriginal={showingOriginal.has(doc.id)}
+                            onToggleOriginal={() => {
+                              setShowingOriginal(prev => {
+                                const newSet = new Set(prev);
+                                if (newSet.has(doc.id)) {
+                                  newSet.delete(doc.id);
+                                } else {
+                                  newSet.add(doc.id);
                                 }
+                                return newSet;
+                              });
+                            }}
+                            onPopout={() => handlePopout(doc.id, doc.file_url, doc.file_name)}
+                            onFieldClick={(fieldName) => {
+                              setFocusedField(prev => ({ ...prev, [doc.id]: fieldName }));
+                              const fieldElement = document.getElementById(`${doc.id}-${fieldName}`);
+                              if (fieldElement) {
+                                fieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                fieldElement.focus();
                               }
-
-                              if (boxes.length > 0) {
-                                const viewW = Math.max(1000, ...boxes.map((b: any) => (b.x + b.width)));
-                                const viewH = Math.max(1000, ...boxes.map((b: any) => (b.y + b.height)));
-                                return (
-                                  <svg
-                                    className="absolute top-0 left-0 w-full h-full pointer-events-none"
-                                    preserveAspectRatio="none"
-                                    viewBox={`0 0 ${viewW} ${viewH}`}
-                                  >
-                                    {boxes.map((b: any, idx: number) => (
-                                      <rect
-                                        key={idx}
-                                        x={b.x}
-                                        y={b.y}
-                                        width={b.width}
-                                        height={b.height}
-                                        fill="rgba(0,0,0,0.85)"
-                                        stroke="rgba(0,0,0,0.9)"
-                                        strokeWidth="2"
-                                      />
-                                    ))}
-                                  </svg>
-                                );
-                              }
-
-                              if ((doc as any).pii_detected) {
-                                return (
-                                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
-                                    <span className="text-[10px] sm:text-xs text-white/90 bg-black/60 px-2 py-1 rounded">PII auto‑redacted</span>
-                                  </div>
-                                );
-                              }
-
-                              return null;
-                            })()}
-                          </div>
+                            }}
+                          />
                         </div>
 
                         {/* View Original Toggle (for PII documents) */}
