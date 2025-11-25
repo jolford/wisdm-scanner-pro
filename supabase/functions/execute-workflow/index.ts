@@ -179,122 +179,149 @@ async function executeNextNodes(
   return { success: true };
 }
 
-async function evaluateCondition(node: WorkflowNode, context: any, supabaseClient: any): Promise<boolean> {
-  const { conditionType, field, operator, value } = node.data || {};
+async function evaluateCondition(node: any, context: any, supabaseClient: any): Promise<boolean> {
+  // Node structure from database: { type: 'condition', value: 'confidence_threshold', config: { threshold: 90 } }
+  const conditionType = node.value;
+  const config = node.config || {};
+  
+  console.log(`Evaluating ${conditionType} condition with config:`, config);
 
-  console.log(`Evaluating condition: ${field} ${operator} ${value}`);
-
-  let actualValue;
-
-  // Get the actual value to compare
-  if (conditionType === 'confidence') {
-    // Get document confidence
-    if (!context.documentId) return false;
-    
-    const { data: doc } = await supabaseClient
-      .from('documents')
-      .select('confidence_score, field_confidence')
-      .eq('id', context.documentId)
-      .single();
-
-    if (!doc) return false;
-
-    if (field === 'overall') {
-      actualValue = doc.confidence_score || 0;
-    } else {
-      const fieldConfidence = doc.field_confidence || {};
-      actualValue = fieldConfidence[field] || 0;
-    }
-  } else if (conditionType === 'documentType') {
-    // Get document type
-    if (!context.documentId) return false;
-    
-    const { data: doc } = await supabaseClient
-      .from('documents')
-      .select('document_type, extracted_metadata')
-      .eq('id', context.documentId)
-      .single();
-
-    if (!doc) return false;
-    actualValue = doc.document_type || context.metadata?.documentType;
-  } else if (conditionType === 'field') {
-    // Get field value from metadata
-    actualValue = context.metadata?.[field];
-  } else {
-    console.warn(`Unknown condition type: ${conditionType}`);
+  if (!conditionType) {
+    console.warn('Missing condition type');
     return false;
   }
 
-  // Evaluate operator
-  switch (operator) {
-    case '>':
-      return Number(actualValue) > Number(value);
-    case '<':
-      return Number(actualValue) < Number(value);
-    case '>=':
-      return Number(actualValue) >= Number(value);
-    case '<=':
-      return Number(actualValue) <= Number(value);
-    case '==':
-    case '===':
-      return actualValue == value;
-    case '!=':
-    case '!==':
-      return actualValue != value;
-    case 'contains':
-      return String(actualValue).toLowerCase().includes(String(value).toLowerCase());
+  switch (conditionType) {
+    case 'confidence_threshold': {
+      // Check if document confidence meets threshold
+      if (!context.documentId) return false;
+      
+      const { data: doc } = await supabaseClient
+        .from('documents')
+        .select('confidence_score')
+        .eq('id', context.documentId)
+        .single();
+
+      if (!doc) return false;
+
+      const threshold = parseFloat(config.threshold || '0');
+      const confidence = (doc.confidence_score || 0) * 100; // Convert to percentage
+      
+      console.log(`Confidence check: ${confidence}% >= ${threshold}%`);
+      return confidence >= threshold;
+    }
+
+    case 'document_type': {
+      // Check if document type matches
+      if (!context.documentId) return false;
+      
+      const { data: doc } = await supabaseClient
+        .from('documents')
+        .select('document_type')
+        .eq('id', context.documentId)
+        .single();
+
+      if (!doc) return false;
+
+      const expectedType = config.docType;
+      console.log(`Document type check: ${doc.document_type} === ${expectedType}`);
+      return doc.document_type === expectedType;
+    }
+
+    case 'field_value': {
+      // Check if a field value contains/matches expected value
+      if (!context.documentId) return false;
+      
+      const { data: doc } = await supabaseClient
+        .from('documents')
+        .select('extracted_metadata')
+        .eq('id', context.documentId)
+        .single();
+
+      if (!doc || !doc.extracted_metadata) return false;
+
+      const fieldName = config.field;
+      const expectedValue = config.value || '';
+      const fieldValue = doc.extracted_metadata[fieldName];
+
+      if (!fieldValue) {
+        console.log(`Field ${fieldName} not found in metadata`);
+        return false;
+      }
+
+      const matches = String(fieldValue).toLowerCase().includes(String(expectedValue).toLowerCase());
+      console.log(`Field value check: ${fieldName} = "${fieldValue}" contains "${expectedValue}" = ${matches}`);
+      return matches;
+    }
+
     default:
-      console.warn(`Unknown operator: ${operator}`);
+      console.warn(`Unknown condition type: ${conditionType}`);
       return false;
   }
 }
 
-async function executeAction(node: WorkflowNode, context: any, supabaseClient: any) {
-  const { actionType, status, assignTo, priority, notification } = node.data || {};
+async function executeAction(node: any, context: any, supabaseClient: any) {
+  // Node structure from database: { type: 'action', value: 'auto_validate', config: { queue: 'export' } }
+  const actionType = node.value;
+  const config = node.config || {};
 
-  console.log(`Executing action: ${actionType}`);
+  console.log(`Executing ${actionType} action with config:`, config);
+
+  if (!actionType) {
+    console.warn('Missing action type');
+    return;
+  }
 
   switch (actionType) {
-    case 'setStatus':
-      if (context.documentId && status) {
+    case 'auto_validate':
+      if (context.documentId) {
+        await supabaseClient
+          .from('documents')
+          .update({ validation_status: 'validated' })
+          .eq('id', context.documentId);
+        console.log(`Auto-validated document ${context.documentId}`);
+      }
+      break;
+
+    case 'route_to_queue':
+      if (context.documentId && config.queue) {
+        // Map queue to validation status
+        const statusMap: Record<string, string> = {
+          'validation': 'pending',
+          'export': 'validated',
+          'review': 'needs_review',
+          'scan': 'pending'
+        };
+        const status = statusMap[config.queue] || 'pending';
+        
         await supabaseClient
           .from('documents')
           .update({ validation_status: status })
           .eq('id', context.documentId);
-        console.log(`Set document ${context.documentId} status to: ${status}`);
+        console.log(`Routed document ${context.documentId} to ${config.queue} queue (status: ${status})`);
       }
       break;
 
-    case 'assignBatch':
-      if (context.batchId && assignTo) {
+    case 'set_priority':
+      if (context.batchId && config.priority !== undefined) {
         await supabaseClient
           .from('batches')
-          .update({ assigned_to: assignTo })
+          .update({ priority: parseInt(config.priority) })
           .eq('id', context.batchId);
-        console.log(`Assigned batch ${context.batchId} to: ${assignTo}`);
-      }
-      break;
-
-    case 'setPriority':
-      if (context.documentId && priority !== undefined) {
+        console.log(`Set batch ${context.batchId} priority to: ${config.priority}`);
+      } else if (context.documentId && config.priority !== undefined) {
         await supabaseClient
           .from('documents')
-          .update({ processing_priority: priority })
+          .update({ processing_priority: parseInt(config.priority) })
           .eq('id', context.documentId);
-        console.log(`Set document ${context.documentId} priority to: ${priority}`);
-      } else if (context.batchId && priority !== undefined) {
-        await supabaseClient
-          .from('batches')
-          .update({ priority })
-          .eq('id', context.batchId);
-        console.log(`Set batch ${context.batchId} priority to: ${priority}`);
+        console.log(`Set document ${context.documentId} priority to: ${config.priority}`);
       }
       break;
 
-    case 'sendNotification':
-      if (notification) {
-        // Log notification (could be extended to send via webhook/email)
-        console.log(`Notification: ${notification}`);
+    case 'send_notification':
+      if (config.message) {
+        console.log(`Notification: ${config.message}`);
+        // TODO: Could be extended to trigger webhooks
       }
       break;
 
