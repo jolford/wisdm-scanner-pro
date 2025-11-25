@@ -146,10 +146,10 @@ serve(async (req) => {
       );
     }
 
+    // Use service role for database operations (system function)
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      { global: { headers: { Authorization: authHeader } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     );
 
     const body = await req.json();
@@ -336,7 +336,7 @@ serve(async (req) => {
         });
 
         // Save to database
-        await supabaseClient
+        const { error: insertError } = await supabaseClient
           .from('duplicate_detections')
           .insert({
             document_id: documentId,
@@ -347,6 +347,10 @@ serve(async (req) => {
             duplicate_fields: matchingFields,
             status: 'pending'
           });
+        
+        if (insertError) {
+          console.error('Failed to insert duplicate detection:', insertError);
+        }
       }
     }
 
