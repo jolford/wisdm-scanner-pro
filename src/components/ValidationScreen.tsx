@@ -832,7 +832,10 @@ useEffect(() => {
 
   // Calculate bounding boxes for all fields based on their values
   useEffect(() => {
-    if (!wordBoundingBoxes || wordBoundingBoxes.length === 0) return;
+    if (!wordBoundingBoxes || wordBoundingBoxes.length === 0) {
+      console.log('No word bounding boxes available for highlighting');
+      return;
+    }
     
     const calculatedBoxes: Record<string, { x: number; y: number; width: number; height: number }> = {};
     
@@ -844,15 +847,31 @@ useEffect(() => {
       
       // Find matching words in wordBoundingBoxes
       const matchingBoxes: Array<{ x: number; y: number; width: number; height: number }> = [];
-      const words = normalizedValue.split(/\s+/);
       
-      words.forEach(word => {
+      // Split value into words and numbers, keeping punctuation attached
+      const searchTerms = normalizedValue.match(/[\w.-]+/g) || [];
+      
+      searchTerms.forEach(term => {
         wordBoundingBoxes.forEach((wordBox: any) => {
           const wordText = (wordBox.text || '').toLowerCase().trim();
-          if (wordText === word || wordText.includes(word) || word.includes(wordText)) {
+          // Match if the word contains the term or vice versa (handles partial matches)
+          if (wordText && (wordText === term || wordText.includes(term) || term.includes(wordText))) {
             const bbox = wordBox.bbox;
-            if (bbox && typeof bbox.x === 'number') {
-              matchingBoxes.push(bbox);
+            if (bbox && typeof bbox.x === 'number' && typeof bbox.y === 'number') {
+              // Ensure coordinates are in percentage format (0-100)
+              const isPercent = bbox.x <= 100 && bbox.y <= 100 && bbox.width <= 100 && bbox.height <= 100;
+              
+              if (isPercent) {
+                matchingBoxes.push(bbox);
+              } else {
+                // Convert from absolute to percentage if needed (assume 1000x1000 default)
+                matchingBoxes.push({
+                  x: (bbox.x / 1000) * 100,
+                  y: (bbox.y / 1000) * 100,
+                  width: (bbox.width / 1000) * 100,
+                  height: (bbox.height / 1000) * 100
+                });
+              }
             }
           }
         });
@@ -871,9 +890,12 @@ useEffect(() => {
           width: maxX - minX,
           height: maxY - minY
         };
+        
+        console.log(`Calculated highlight for ${fieldName}:`, calculatedBoxes[fieldName], `from ${matchingBoxes.length} matches`);
       }
     });
     
+    console.log('Field bounding boxes calculated:', Object.keys(calculatedBoxes));
     setFieldBoundingBoxes(calculatedBoxes);
   }, [editedMetadata, wordBoundingBoxes]);
 
