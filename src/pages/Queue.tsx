@@ -764,6 +764,8 @@ const [isExporting, setIsExporting] = useState(false);
                     ? selectedProject?.metadata?.table_extraction_config?.fields || []
                     : [];
 
+                  const tempPdfDoc = await saveDocument(docName, 'application/pdf', publicUrl, '', {}, [], 0, false, []);
+                  
                   const data = await invokeOcr({
                     imageData: payloadImageData,
                     isPdf: false,
@@ -771,12 +773,24 @@ const [isExporting, setIsExporting] = useState(false);
                     tableExtractionFields: tableFields,
                     enableCheckScanning: enableMICR,
                     customerId: selectedProject?.customer_id,
+                    documentId: tempPdfDoc?.id,
+                    projectId: selectedProjectId,
                   });
                   if (!data) {
                     throw new Error('OCR service returned no data');
                   }
 
-                  await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || [], data.confidence || 0, data.piiDetected || false, data.detectedPiiRegions || []);
+                  // Update document with OCR results
+                  if (tempPdfDoc?.id) {
+                    await supabase.from('documents').update({
+                      extracted_text: data.text,
+                      extracted_metadata: data.metadata || {},
+                      line_items: data.lineItems || [],
+                      confidence_score: data.confidence || 0,
+                      pii_detected: data.piiDetected || false,
+                      detected_pii_regions: data.detectedPiiRegions || []
+                    }).eq('id', tempPdfDoc.id);
+                  }
                   
                   // Show PII warning if detected
                   if (data.piiDetected) {
@@ -817,6 +831,8 @@ const [isExporting, setIsExporting] = useState(false);
                 }
               } catch {}
               
+              const tempDoc2 = await saveDocument(docName, 'application/pdf', publicUrl, '', {}, [], 0, false, []);
+              
               const data = await invokeOcr({ 
                 textData: extractedPdfText,
                 imageData: payloadImageData,
@@ -825,12 +841,24 @@ const [isExporting, setIsExporting] = useState(false);
                 tableExtractionFields: tableFields,
                 enableCheckScanning: enableMICR,
                 customerId: selectedProject?.customer_id,
+                documentId: tempDoc2?.id,
+                projectId: selectedProjectId,
               });
               if (!data) {
                 throw new Error('OCR service returned no data');
               }
               
-              await saveDocument(docName, 'application/pdf', publicUrl, data.text, data.metadata || {}, data.lineItems || [], data.confidence || 0, data.piiDetected || false, data.detectedPiiRegions || []);
+                  // Update document with OCR results
+              if (tempDoc2?.id) {
+                await supabase.from('documents').update({
+                  extracted_text: data.text,
+                  extracted_metadata: data.metadata || {},
+                  line_items: data.lineItems || [],
+                  confidence_score: data.confidence || 0,
+                  pii_detected: data.piiDetected || false,
+                  detected_pii_regions: data.detectedPiiRegions || []
+                }).eq('id', tempDoc2.id);
+              }
               
               // Show PII warning if detected
               if (data.piiDetected) {
