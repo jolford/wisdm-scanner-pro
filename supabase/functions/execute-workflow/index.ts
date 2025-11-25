@@ -343,32 +343,31 @@ async function executeAction(node: any, context: any, supabaseClient: any) {
         } else {
           console.log(`Auto-validated document ${context.documentId}`);
 
-          // Trigger webhook notification for auto-validated document
-          try {
-            const targetCustomerId = updatedDoc?.project?.customer_id;
-            
-            await supabaseClient.functions.invoke('send-webhook', {
-              body: {
-                customer_id: targetCustomerId,
-                event_type: 'document.validated',
-                payload: {
-                  document_id: context.documentId,
-                  document_name: updatedDoc?.file_name,
-                  batch_id: updatedDoc?.batch_id,
-                  batch_name: updatedDoc?.batch?.batch_name,
-                  project_name: updatedDoc?.project?.name,
-                  validated_by: validatedBy,
-                  validated_at: new Date().toISOString(),
-                  metadata: updatedDoc?.extracted_metadata,
-                  auto_validated: true
-                }
+          // Trigger webhook notification for auto-validated document (fire-and-forget)
+          const targetCustomerId = updatedDoc?.project?.customer_id;
+          
+          supabaseClient.functions.invoke('send-webhook', {
+            body: {
+              customer_id: targetCustomerId,
+              event_type: 'document.validated',
+              payload: {
+                document_id: context.documentId,
+                document_name: updatedDoc?.file_name,
+                batch_id: updatedDoc?.batch_id,
+                batch_name: updatedDoc?.batch?.batch_name,
+                project_name: updatedDoc?.project?.name,
+                validated_by: validatedBy,
+                validated_at: new Date().toISOString(),
+                metadata: updatedDoc?.extracted_metadata,
+                auto_validated: true
               }
-            });
-            console.log(`Webhook triggered for auto-validated document ${context.documentId}`);
-          } catch (webhookError) {
+            }
+          }).catch((webhookError: any) => {
             console.error('Webhook notification failed:', webhookError);
             // Don't fail validation if webhook fails
-          }
+          });
+          
+          console.log(`Webhook triggered for auto-validated document ${context.documentId}`);
         }
       }
       break;
