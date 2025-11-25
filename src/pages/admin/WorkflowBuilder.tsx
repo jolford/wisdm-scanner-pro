@@ -30,7 +30,7 @@ interface WorkflowTemplate {
   nodes: WorkflowNode[];
 }
 
-const nodeTypes = {
+const baseNodeTypes = {
   trigger: [
     { value: 'document_uploaded', label: 'Document Uploaded' },
     { value: 'batch_created', label: 'Batch Created' },
@@ -68,6 +68,16 @@ export default function WorkflowBuilder() {
     },
   ]);
   const [showInstructions, setShowInstructions] = useState(true);
+  const [availableIntegrations, setAvailableIntegrations] = useState<Array<{ value: string; label: string }>>([]);
+
+  // Dynamic node types that include filtered integrations
+  const nodeTypes = {
+    ...baseNodeTypes,
+    action: [
+      ...baseNodeTypes.action,
+      ...availableIntegrations
+    ]
+  };
 
   // Fetch customer ID
   useEffect(() => {
@@ -88,11 +98,12 @@ export default function WorkflowBuilder() {
     fetchCustomerId();
   }, [user]);
 
-  // Fetch existing workflows when project changes
+  // Fetch existing workflows and integrations when project changes
   useEffect(() => {
     const fetchWorkflows = async () => {
       if (!selectedProject) {
         setExistingWorkflows([]);
+        setAvailableIntegrations([]);
         return;
       }
 
@@ -107,7 +118,41 @@ export default function WorkflowBuilder() {
       }
     };
 
+    const fetchProjectIntegrations = async () => {
+      if (!selectedProject) {
+        setAvailableIntegrations([]);
+        return;
+      }
+
+      try {
+        // Get installed integrations assigned to this project
+        const { data: projectIntegrations } = await supabase
+          .from('project_integrations')
+          .select(`
+            installed_integration_id,
+            installed_integrations!inner(
+              integration_id,
+              integration_name
+            )
+          `)
+          .eq('project_id', selectedProject);
+
+        if (projectIntegrations) {
+          const integrationActions = projectIntegrations.map((pi: any) => ({
+            value: `integration_${pi.installed_integrations.integration_id}`,
+            label: `Send to ${pi.installed_integrations.integration_name}`
+          }));
+
+          setAvailableIntegrations(integrationActions);
+        }
+      } catch (error) {
+        console.error('Error fetching project integrations:', error);
+        setAvailableIntegrations([]);
+      }
+    };
+
     fetchWorkflows();
+    fetchProjectIntegrations();
   }, [selectedProject]);
 
   const addNode = (type: 'condition' | 'action') => {

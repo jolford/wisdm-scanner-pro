@@ -188,10 +188,12 @@ export default function IntegrationMarketplace() {
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
   const [installedIntegrationId, setInstalledIntegrationId] = useState<string | null>(null);
+  const [projectCounts, setProjectCounts] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchCustomerAndInstalledIntegrations();
     fetchProjects();
+    fetchProjectCounts();
   }, [user]);
 
   const fetchCustomerAndInstalledIntegrations = async () => {
@@ -260,6 +262,34 @@ export default function IntegrationMarketplace() {
       }
     } catch (error) {
       console.error('Error fetching projects:', error);
+    }
+  };
+
+  const fetchProjectCounts = async () => {
+    if (!customerId) return;
+
+    try {
+      const { data: installed } = await supabase
+        .from('installed_integrations')
+        .select('id, integration_id')
+        .eq('customer_id', customerId);
+
+      if (installed) {
+        const counts: Record<string, number> = {};
+        
+        for (const integration of installed) {
+          const { data: assignments } = await supabase
+            .from('project_integrations')
+            .select('id')
+            .eq('installed_integration_id', integration.id);
+          
+          counts[integration.integration_id] = assignments?.length || 0;
+        }
+
+        setProjectCounts(counts);
+      }
+    } catch (error) {
+      console.error('Error fetching project counts:', error);
     }
   };
 
@@ -366,6 +396,12 @@ export default function IntegrationMarketplace() {
   const saveConfiguration = async () => {
     if (!customerId || !configureIntegration || !installedIntegrationId || !user) return;
     
+    // Validation: Require at least one project
+    if (selectedProjects.size === 0) {
+      toast.error('Please select at least one project for this integration');
+      return;
+    }
+    
     try {
       // Save configuration
       const { error: configError } = await supabase
@@ -401,6 +437,9 @@ export default function IntegrationMarketplace() {
       toast.success('Configuration and project assignments saved successfully');
       setConfigureIntegration(null);
       setSelectedProjects(new Set());
+      
+      // Refresh project counts
+      fetchProjectCounts();
     } catch (error) {
       console.error('Error saving configuration:', error);
       toast.error('Failed to save configuration');
@@ -417,6 +456,14 @@ export default function IntegrationMarketplace() {
       }
       return newSet;
     });
+  };
+
+  const selectAllProjects = () => {
+    setSelectedProjects(new Set(projects.map(p => p.id)));
+  };
+
+  const deselectAllProjects = () => {
+    setSelectedProjects(new Set());
   };
 
   const getConfigFields = (integrationId: string) => {
@@ -573,6 +620,11 @@ export default function IntegrationMarketplace() {
                                     <Download className="h-4 w-4" />
                                     {integration.installs.toLocaleString()}
                                   </div>
+                                  {integration.installed && projectCounts[integration.id] !== undefined && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {projectCounts[integration.id]} project{projectCounts[integration.id] !== 1 ? 's' : ''}
+                                    </Badge>
+                                  )}
                                 </div>
                                  {integration.installed ? (
                                   <div className="flex gap-2 w-full">
@@ -639,6 +691,11 @@ export default function IntegrationMarketplace() {
                                 <Star className="h-4 w-4 fill-primary text-primary" />
                                 {integration.rating}
                               </div>
+                              {integration.installed && projectCounts[integration.id] !== undefined && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {projectCounts[integration.id]} project{projectCounts[integration.id] !== 1 ? 's' : ''}
+                                </Badge>
+                              )}
                               {integration.installed ? (
                                 <div className="flex gap-2">
                                   <Button
@@ -879,11 +936,33 @@ export default function IntegrationMarketplace() {
 
               {/* Project Assignment Section */}
               <div className="space-y-3 pt-4 border-t">
-                <div>
-                  <Label className="text-base font-semibold">Assign to Projects</Label>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Select which projects can use this integration
-                  </p>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base font-semibold">Assign to Projects</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Select which projects can use this integration
+                    </p>
+                  </div>
+                  {projects.length > 1 && (
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={selectAllProjects}
+                      >
+                        Select All
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={deselectAllProjects}
+                      >
+                        Deselect All
+                      </Button>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-lg p-3">
                   {projects.length === 0 ? (
@@ -906,9 +985,13 @@ export default function IntegrationMarketplace() {
                     ))
                   )}
                 </div>
-                {selectedProjects.size > 0 && (
+                {selectedProjects.size > 0 ? (
                   <p className="text-xs text-muted-foreground">
                     {selectedProjects.size} project{selectedProjects.size !== 1 ? 's' : ''} selected
+                  </p>
+                ) : (
+                  <p className="text-xs text-destructive">
+                    At least one project must be selected
                   </p>
                 )}
               </div>
