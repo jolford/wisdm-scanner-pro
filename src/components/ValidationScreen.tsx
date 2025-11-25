@@ -98,6 +98,7 @@ export const ValidationScreen = ({
   const [signatureImage, setSignatureImage] = useState<string>('');
   const [signatureValidationResult, setSignatureValidationResult] = useState<any>(null);
   const [isValidatingSignature, setIsValidatingSignature] = useState(false);
+  const [fieldBoundingBoxes, setFieldBoundingBoxes] = useState<Record<string, { x: number; y: number; width: number; height: number }>>({});
   const [viewerPopout, setViewerPopout] = useState<Window | null>(null);
   const [referenceSignatures, setReferenceSignatures] = useState<any[]>([]);
   const [selectedReferenceId, setSelectedReferenceId] = useState<string | null>(null);
@@ -829,6 +830,53 @@ useEffect(() => {
     });
   };
 
+  // Calculate bounding boxes for all fields based on their values
+  useEffect(() => {
+    if (!wordBoundingBoxes || wordBoundingBoxes.length === 0) return;
+    
+    const calculatedBoxes: Record<string, { x: number; y: number; width: number; height: number }> = {};
+    
+    Object.entries(editedMetadata).forEach(([fieldName, fieldValue]) => {
+      if (!fieldValue || typeof fieldValue !== 'string') return;
+      
+      const normalizedValue = String(fieldValue).toLowerCase().trim();
+      if (!normalizedValue) return;
+      
+      // Find matching words in wordBoundingBoxes
+      const matchingBoxes: Array<{ x: number; y: number; width: number; height: number }> = [];
+      const words = normalizedValue.split(/\s+/);
+      
+      words.forEach(word => {
+        wordBoundingBoxes.forEach((wordBox: any) => {
+          const wordText = (wordBox.text || '').toLowerCase().trim();
+          if (wordText === word || wordText.includes(word) || word.includes(wordText)) {
+            const bbox = wordBox.bbox;
+            if (bbox && typeof bbox.x === 'number') {
+              matchingBoxes.push(bbox);
+            }
+          }
+        });
+      });
+      
+      // If we found matches, calculate the bounding rectangle
+      if (matchingBoxes.length > 0) {
+        const minX = Math.min(...matchingBoxes.map(b => b.x));
+        const minY = Math.min(...matchingBoxes.map(b => b.y));
+        const maxX = Math.max(...matchingBoxes.map(b => b.x + b.width));
+        const maxY = Math.max(...matchingBoxes.map(b => b.y + b.height));
+        
+        calculatedBoxes[fieldName] = {
+          x: minX,
+          y: minY,
+          width: maxX - minX,
+          height: maxY - minY
+        };
+      }
+    });
+    
+    setFieldBoundingBoxes(calculatedBoxes);
+  }, [editedMetadata, wordBoundingBoxes]);
+
   const handleFieldFocus = (fieldName: string) => {
     setFocusedField(fieldName);
     // Scroll to the field in the form
@@ -1140,71 +1188,19 @@ useEffect(() => {
             className="flex-1 overflow-auto bg-muted/30 rounded-lg p-4"
           >
             {currentImageUrl ? (
-              <div className="relative inline-block w-full">
-                <img
-                  src={previewUrl || displayUrl || currentImageUrl}
-                  alt="Scanned document"
-                  className="w-full h-auto object-contain transition-transform cursor-move"
-                  style={{
-                    transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
-                    transformOrigin: 'center center'
-                  }}
-                />
-                {/* Auto PII redaction overlay - only show if NOT viewing original */}
-                {!showingOriginal && piiDetected && (() => {
-                  let boxes = (Array.isArray(detectedPiiRegions) ? detectedPiiRegions.map((r: any) => r?.bbox).filter(Boolean) : []) as Array<{ x: number; y: number; width: number; height: number }>;
-
-                  // Fallback to client-side detection if no boxes
-                  if (boxes.length === 0 && extractedText) {
-                    try {
-                      const detected = detectKeywords(
-                        extractedText,
-                        { wordBoundingBoxes: resolvedWordBoxes },
-                        [],
-                        true
-                      ) as any[];
-                      boxes = detected
-                        .flatMap((d: any) => (d.matches?.map((m: any) => m.boundingBox).filter(Boolean)) || [])
-                        .filter(Boolean);
-                    } catch {
-                      // ignore
-                    }
-                  }
-
-                  if (boxes.length > 0) {
-                    const isPercent = boxes.every((b: any) => b.x <= 100 && b.y <= 100 && b.width <= 100 && b.height <= 100);
-                    const viewW = isPercent ? 100 : Math.max(1000, ...boxes.map((b: any) => (b.x + b.width)));
-                    const viewH = isPercent ? 100 : Math.max(1000, ...boxes.map((b: any) => (b.y + b.height)));
-                    return (
-                      <svg
-                        className="absolute top-0 left-0 w-full h-full pointer-events-none"
-                        preserveAspectRatio="none"
-                        viewBox={`0 0 ${viewW} ${viewH}`}
-                      >
-                        {boxes.map((b: any, idx: number) => (
-                          <rect
-                            key={idx}
-                            x={b.x}
-                            y={b.y}
-                            width={b.width}
-                            height={b.height}
-                            fill="rgba(0,0,0,0.85)"
-                            stroke="rgba(0,0,0,0.9)"
-                            strokeWidth="2"
-                          />
-                        ))}
-                      </svg>
-                    );
-                  }
-
-                  // Fallback: if PII detected but no boxes, show generic overlay
-                  return (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
-                      <span className="text-xs text-white/90 bg-black/60 px-3 py-1.5 rounded">PII auto‑redacted</span>
-                    </div>
-                  );
-                })()}
-              </div>
+              <InteractiveDocumentViewer
+                imageUrl={previewUrl || displayUrl || currentImageUrl}
+                fileName={fileName}
+                documentId={documentId}
+                boundingBoxes={fieldBoundingBoxes}
+                highlightedField={focusedField}
+                offensiveHighlights={offensiveHighlights}
+                piiRegions={detectedPiiRegions}
+                showingOriginal={showingOriginal}
+                onToggleOriginal={() => setShowingOriginal(!showingOriginal)}
+                onFieldClick={handleFieldFocus}
+                onPopout={handlePopoutViewer}
+              />
             ) : (
               <div className="h-full flex items-center justify-center text-muted-foreground">
                 <FileText className="h-12 w-12" />
