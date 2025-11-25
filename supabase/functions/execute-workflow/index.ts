@@ -275,11 +275,64 @@ async function executeAction(node: any, context: any, supabaseClient: any) {
   switch (actionType) {
     case 'auto_validate':
       if (context.documentId) {
-        await supabaseClient
+        // Get workflow creator as the "validated_by" user
+        const { data: workflowData } = await supabaseClient
+          .from('workflows')
+          .select('created_by')
+          .eq('project_id', context.projectId)
+          .limit(1)
+          .single();
+
+        const validatedBy = workflowData?.created_by || null;
+
+        // Update document with validation status and timestamps
+        const { data: updatedDoc, error: updateError } = await supabaseClient
           .from('documents')
-          .update({ validation_status: 'validated' })
-          .eq('id', context.documentId);
-        console.log(`Auto-validated document ${context.documentId}`);
+          .update({ 
+            validation_status: 'validated',
+            validated_at: new Date().toISOString(),
+            validated_by: validatedBy
+          })
+          .eq('id', context.documentId)
+          .select(`
+            *,
+            batch:batches!inner(batch_name),
+            project:projects!inner(name, customer_id)
+          `)
+          .single();
+        
+        if (updateError) {
+          console.error('Failed to auto-validate document:', updateError);
+        } else {
+          console.log(`Auto-validated document ${context.documentId}`);
+
+          // Trigger webhook notification for auto-validated document
+          try {
+            const targetCustomerId = updatedDoc?.project?.customer_id;
+            
+            await supabaseClient.functions.invoke('send-webhook', {
+              body: {
+                customer_id: targetCustomerId,
+                event_type: 'document.validated',
+                payload: {
+                  document_id: context.documentId,
+                  document_name: updatedDoc?.file_name,
+                  batch_id: updatedDoc?.batch_id,
+                  batch_name: updatedDoc?.batch?.batch_name,
+                  project_name: updatedDoc?.project?.name,
+                  validated_by: validatedBy,
+                  validated_at: new Date().toISOString(),
+                  metadata: updatedDoc?.extracted_metadata,
+                  auto_validated: true
+                }
+              }
+            });
+            console.log(`Webhook triggered for auto-validated document ${context.documentId}`);
+          } catch (webhookError) {
+            console.error('Webhook notification failed:', webhookError);
+            // Don't fail validation if webhook fails
+          }
+        }
       }
       break;
 
