@@ -1945,11 +1945,54 @@ const [isExporting, setIsExporting] = useState(false);
                   <p className="text-muted-foreground">You don't have permission to validate documents. Contact your administrator.</p>
                 </Card>
               ) : validationQueue.length === 0 ? (
-                <Card className="p-12 text-center">
-                  <Eye className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-xl font-semibold mb-2">No Documents Awaiting Validation</h3>
-                  <p className="text-muted-foreground">Scan documents to add them to the validation queue</p>
-                </Card>
+                <>
+                  {validatedDocs.length > 0 && selectedBatchId && selectedBatch?.status !== 'complete' && (
+                    <Card className="p-4 border-success/40 bg-success/5 mb-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h4 className="font-semibold text-success">All Documents Validated</h4>
+                          <p className="text-sm text-muted-foreground">Ready to complete the batch and move to export queue.</p>
+                        </div>
+                        <Button 
+                          variant="default" 
+                          onClick={async () => {
+                            try {
+                              const { error } = await supabase
+                                .from('batches')
+                                .update({ status: 'complete', completed_at: new Date().toISOString() })
+                                .eq('id', selectedBatchId);
+                              
+                              if (error) throw error;
+                              
+                              toast({
+                                title: 'Batch Completed',
+                                description: 'Batch moved to export queue',
+                              });
+                              
+                              loadQueueDocuments();
+                              handleTabChange('export');
+                            } catch (error: any) {
+                              toast({
+                                title: 'Error',
+                                description: error.message || 'Failed to complete batch',
+                                variant: 'destructive',
+                              });
+                            }
+                          }}
+                          className="bg-success hover:bg-success/90"
+                        >
+                          <CheckCircle className="h-4 w-4 mr-2" />
+                          Complete Batch
+                        </Button>
+                      </div>
+                    </Card>
+                  )}
+                  <Card className="p-12 text-center">
+                    <Eye className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                    <h3 className="text-xl font-semibold mb-2">No Documents Awaiting Validation</h3>
+                    <p className="text-muted-foreground">Scan documents to add them to the validation queue</p>
+                  </Card>
+                </>
               ) : (
                 <BatchValidationScreen
                   documents={validationQueue}
