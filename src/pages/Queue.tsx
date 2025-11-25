@@ -551,7 +551,11 @@ const [isExporting, setIsExporting] = useState(false);
       // Only show documents in Quality Control if batch is NOT complete
       // Use batchCheck (fresh data) instead of selectedBatch (stale state)
       const batchIsComplete = batchCheck?.status === 'complete';
-      setValidationQueue(docsData?.filter(d => d.validation_status === 'pending') || []);
+
+      // Only show documents in Validation once OCR has completed
+      const validationDocs = docsData?.filter(d => d.validation_status === 'pending' && d.confidence_score !== null) || [];
+      setValidationQueue(validationDocs);
+
       setValidatedDocs(batchIsComplete ? [] : (docsData?.filter(d => d.validation_status === 'validated') || []));
     } catch (error) {
       console.error('Error loading queue:', error);
