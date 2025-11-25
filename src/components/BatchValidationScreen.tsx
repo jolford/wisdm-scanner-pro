@@ -2361,70 +2361,19 @@ const ThumbnailWithSignedUrl = ({
   useEffect(() => {
     const makeThumb = async () => {
       const src = signedUrl || url;
-      try {
-        // Quick path: if not a PDF, use the URL directly as thumbnail
-        if (!isPdf) {
-          setThumb(src);
-          return;
-        }
-        // For PDFs: Render first page as thumbnail image
-        // Try to render first page of PDF into a small canvas
-        // Fetch PDF file as array buffer
-        const resp = await fetch(src, { cache: 'no-store' });
-        const buffer = await resp.arrayBuffer();
-        // Load PDF document
-        const loadingTask = pdfjsLib.getDocument({ data: buffer });
-        const pdf = await loadingTask.promise;
-        // Get first page
-        const page = await pdf.getPage(1);
-        const viewport = page.getViewport({ scale: 0.5 });
-        // Create canvas to render PDF page
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        if (!context) return;
-        // Scale to thumbnail size (64px wide)
-        const targetWidth = 64;
-        const scale = targetWidth / viewport.width;
-        const scaledVp = page.getViewport({ scale });
-        canvas.width = Math.round(scaledVp.width);
-        canvas.height = Math.round(scaledVp.height);
-        // Render PDF page to canvas
-        await page.render({ canvasContext: context, viewport: scaledVp }).promise;
-        // Convert canvas to data URL and store as thumbnail
-        setThumb(canvas.toDataURL('image/png'));
-      } catch (e) {
-        // First method failed, try alternative URL-based loading
-        console.error('PDF thumbnail render failed (bytes path)', { src, error: e });
-        console.warn('Thumbnail render failed, trying URL method', e);
-        try {
-          // Alternative method: load PDF directly from URL
-          const loadingTask = pdfjsLib.getDocument({ url: src });
-          const pdf = await loadingTask.promise;
-          const page = await pdf.getPage(1);
-          const viewport = page.getViewport({ scale: 0.5 });
-          const canvas = document.createElement('canvas');
-          const context = canvas.getContext('2d');
-          if (!context) { setThumb(null); return; }
-          const targetWidth = 64;
-          const scale = targetWidth / viewport.width;
-          const scaledVp = page.getViewport({ scale });
-          canvas.width = Math.round(scaledVp.width);
-          canvas.height = Math.round(scaledVp.height);
-          await page.render({ canvasContext: context, viewport: scaledVp }).promise;
-          setThumb(canvas.toDataURL('image/png'));
-        } catch (e2) {
-          // Both methods failed - show appropriate fallback
-          // If it's a PDF, prefer showing the icon placeholder
-          if (isPdf) {
-            setThumb(null);
-          } else {
-            // For images, try to use the URL directly
-            setThumb(src);
-          }
-        }
+
+      // If it's not a PDF, just use the URL directly
+      if (!isPdf) {
+        setThumb(src);
+        return;
       }
+
+      // For PDFs in this environment, skip byte fetching (which is failing)
+      // and fall back to the standard placeholder/link UI instead of
+      // trying to render the first page via pdfjs.
+      setThumb(null);
     };
-    // Run thumbnail generation
+
     makeThumb();
   }, [signedUrl, url, alt, fileType]);
 
