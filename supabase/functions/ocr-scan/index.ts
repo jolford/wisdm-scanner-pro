@@ -1665,6 +1665,37 @@ Review the image and provide corrected text with any OCR errors fixed.`;
       }
     }
     
+    // --- SAVE OCR RESULTS TO DATABASE ---
+    // Save document_type and confidence_score before triggering workflows
+    if (documentId) {
+      try {
+        const supabaseAdmin = createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        );
+        
+        await supabaseAdmin
+          .from('documents')
+          .update({
+            document_type: documentType,
+            confidence_score: confidence,
+            extracted_metadata: metadata,
+            extracted_text: extractedText,
+            line_items: lineItems && lineItems.length > 0 ? lineItems : null,
+            field_confidence: fieldConfidence || {},
+            pii_detected: piiDetected,
+            detected_pii_regions: detectedPiiRegions.length > 0 ? detectedPiiRegions : null,
+            word_bounding_boxes: wordBoundingBoxes && wordBoundingBoxes.length > 0 ? wordBoundingBoxes : null
+          })
+          .eq('id', documentId);
+          
+        console.log(`Saved OCR results to database for document ${documentId}`);
+      } catch (dbError) {
+        console.error('Failed to save OCR results to database:', dbError);
+        // Continue even if save fails - we'll still return the data
+      }
+    }
+    
     // --- TRIGGER WORKFLOW EXECUTION ---
     // Execute workflows after successful OCR completion
     try {
