@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Smartphone, Check, X, Image as ImageIcon, Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { useSignedUrl } from '@/hooks/use-signed-url';
 
 export default function MobileValidation() {
   const isMobile = useIsMobile();
@@ -17,6 +18,7 @@ export default function MobileValidation() {
   const [selectedDoc, setSelectedDoc] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [zoom, setZoom] = useState(1);
+  const { signedUrl: imageUrl } = useSignedUrl(selectedDoc?.file_url);
 
   useEffect(() => {
     loadPendingDocuments();
@@ -142,9 +144,9 @@ export default function MobileValidation() {
                     <CardContent className="space-y-4">
                       {/* Image Viewer */}
                       <div className="relative bg-muted rounded-lg overflow-hidden" style={{ minHeight: '300px' }}>
-                        {selectedDoc.file_url ? (
+                        {imageUrl ? (
                           <img
-                            src={selectedDoc.file_url}
+                            src={imageUrl}
                             alt="Document"
                             className="w-full h-auto"
                             style={{ transform: `scale(${zoom})`, transformOrigin: 'top left' }}
