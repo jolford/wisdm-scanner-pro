@@ -661,12 +661,6 @@ const [isExporting, setIsExporting] = useState(false);
         }
       }
 
-      try {
-        await loadQueueDocuments();
-      } catch (e) {
-        console.warn('loadQueueDocuments failed post-insert; will refresh later', e);
-      }
-
       if (selectedBatchId && selectedBatch) {
         await supabase
           .from('batches')
@@ -787,42 +781,8 @@ const [isExporting, setIsExporting] = useState(false);
                     ? selectedProject?.metadata?.table_extraction_config?.fields || []
                     : [];
 
-                  const tempPdfDoc = await saveDocument(docName, 'application/pdf', publicUrl, '', {}, [], 0, false, []);
-                  
-                  const data = await invokeOcr({
-                    imageData: payloadImageData,
-                    isPdf: false,
-                    extractionFields,
-                    tableExtractionFields: tableFields,
-                    enableCheckScanning: enableMICR,
-                    customerId: selectedProject?.customer_id,
-                    documentId: tempPdfDoc?.id,
-                    projectId: selectedProjectId,
-                  });
-                  if (!data) {
-                    throw new Error('OCR service returned no data');
-                  }
-
-                  // Update document with OCR results
-                  if (tempPdfDoc?.id) {
-                    await supabase.from('documents').update({
-                      extracted_text: data.text,
-                      extracted_metadata: data.metadata || {},
-                      line_items: data.lineItems || [],
-                      confidence_score: data.confidence || 0,
-                      pii_detected: data.piiDetected || false,
-                      detected_pii_regions: data.detectedPiiRegions || []
-                    }).eq('id', tempPdfDoc.id);
-                  }
-                  
-                  // Show PII warning if detected
-                  if (data.piiDetected) {
-                    toast({
-                      title: 'PII Detected',
-                      description: `Found ${data.detectedPiiRegions?.length || 0} potentially sensitive items in ${docName}. Use redaction tool to protect sensitive data.`,
-                      variant: 'default',
-                    });
-                  }
+              // Save document without OCR results first
+                  await saveDocument(docName, 'application/pdf', publicUrl, '', {}, [], null, false, []);
                   return;
                 } catch (fallbackErr: any) {
                   console.error('PDF OCR fallback failed:', fallbackErr);
@@ -854,43 +814,8 @@ const [isExporting, setIsExporting] = useState(false);
                 }
               } catch {}
               
-              const tempDoc2 = await saveDocument(docName, 'application/pdf', publicUrl, '', {}, [], 0, false, []);
-              
-              const data = await invokeOcr({ 
-                textData: extractedPdfText,
-                imageData: payloadImageData,
-                isPdf: true,
-                extractionFields,
-                tableExtractionFields: tableFields,
-                enableCheckScanning: enableMICR,
-                customerId: selectedProject?.customer_id,
-                documentId: tempDoc2?.id,
-                projectId: selectedProjectId,
-              });
-              if (!data) {
-                throw new Error('OCR service returned no data');
-              }
-              
-                  // Update document with OCR results
-              if (tempDoc2?.id) {
-                await supabase.from('documents').update({
-                  extracted_text: data.text,
-                  extracted_metadata: data.metadata || {},
-                  line_items: data.lineItems || [],
-                  confidence_score: data.confidence || 0,
-                  pii_detected: data.piiDetected || false,
-                  detected_pii_regions: data.detectedPiiRegions || []
-                }).eq('id', tempDoc2.id);
-              }
-              
-              // Show PII warning if detected
-              if (data.piiDetected) {
-                toast({
-                  title: 'PII Detected',
-                  description: `Found ${data.detectedPiiRegions?.length || 0} potentially sensitive items in ${docName}. Use redaction tool to protect sensitive data.`,
-                  variant: 'default',
-                });
-              }
+              // Save document without OCR results first
+              await saveDocument(docName, 'application/pdf', publicUrl, '', {}, [], null, false, []);
             } catch (err: any) {
               console.error(`Failed to process document ${docName}:`, err);
               processingErrors.push(`${docName}: ${err.message}`);
@@ -908,13 +833,23 @@ const [isExporting, setIsExporting] = useState(false);
       }
       
       toast({ 
-        title: 'PDF Processed', 
-        description: `Successfully separated into ${boundaries.length} document(s).` 
+        title: 'PDF Uploaded', 
+        description: `Separated into ${boundaries.length} document(s). Processing...` 
       });
 
-      // Refresh validation queue and switch to validation tab
+      // Trigger batch OCR processing for all documents in parallel
+      if (selectedBatchId) {
+        try {
+          await safeInvokeEdgeFunction('parallel-ocr-batch', {
+            body: { batchId: selectedBatchId, maxParallel: 5 }
+          });
+        } catch (ocrError) {
+          console.error('Batch OCR error:', ocrError);
+        }
+      }
+
+      // Refresh validation queue
       await loadQueueDocuments();
-      setTimeout(() => handleTabChange('validation'), 0);
     } catch (error: any) {
       console.error('Error processing PDF:', error);
       toast({
@@ -1013,11 +948,21 @@ const [isExporting, setIsExporting] = useState(false);
       });
     }
 
-    toast({ title: 'Batch Complete', description: `Successfully processed ${processed} of ${total} files` });
+    toast({ title: 'Batch Upload Complete', description: `Uploaded ${processed} of ${total} files. Processing...` });
 
-    // After processing all files, go to Validation tab
+    // Trigger batch OCR processing for all documents in parallel
+    if (selectedBatchId) {
+      try {
+        await safeInvokeEdgeFunction('parallel-ocr-batch', {
+          body: { batchId: selectedBatchId, maxParallel: 5 }
+        });
+      } catch (ocrError) {
+        console.error('Batch OCR error:', ocrError);
+      }
+    }
+
+    // Refresh queue
     await loadQueueDocuments();
-    setTimeout(() => handleTabChange('validation'), 0);
   };
 
   const handleScanComplete = async (text: string, imageUrl: string, fileName = 'scan.jpg') => {
@@ -1053,53 +998,27 @@ const [isExporting, setIsExporting] = useState(false);
     setProcessing(true);
 
     try {
-      const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled
-        ? selectedProject?.metadata?.table_extraction_config?.fields || []
-        : [];
-      
-      // Downscale large inline images quickly
-      let payloadImageData = imageUrl;
-      if (typeof payloadImageData === 'string' && payloadImageData.startsWith('data:')) {
-        try {
-          payloadImageData = await downscaleDataUrl(payloadImageData, 1600, 0.85);
-        } catch (e) {
-          console.warn('Image downscale failed, sending original');
-        }
-      }
-      
-      const data = await invokeOcr({ 
-        imageData: payloadImageData,
-        isPdf: false,
-        extractionFields,
-        tableExtractionFields: tableFields,
-        enableCheckScanning: enableMICR,
-        customerId: selectedProject?.customer_id,
-      });
-
-      if (!data) {
-        throw new Error('OCR service returned no data');
-      }
-
-      await saveDocument(fileName, 'image', imageUrl, data.text, data.metadata || {}, data.lineItems || [], data.confidence || 0, data.piiDetected || false, data.detectedPiiRegions || []);
-
-      // Show PII warning if detected
-      if (data.piiDetected) {
-        toast({
-          title: 'PII Detected',
-          description: `Found ${data.detectedPiiRegions?.length || 0} potentially sensitive items. Use redaction tool to protect sensitive data.`,
-          variant: 'default',
-        });
-      }
+      // Save document without OCR results first
+      await saveDocument(fileName, 'image', imageUrl, '', {}, [], null, false, []);
 
       toast({
-        title: 'Scan Complete',
-        description: 'Text and metadata extracted successfully.',
+        title: 'Image Uploaded',
+        description: 'Processing document...',
       });
 
-      // Refresh validation queue and switch to validation tab
+      // Trigger batch OCR processing for all pending documents in parallel
+      if (selectedBatchId) {
+        try {
+          await safeInvokeEdgeFunction('parallel-ocr-batch', {
+            body: { batchId: selectedBatchId, maxParallel: 5 }
+          });
+        } catch (ocrError) {
+          console.error('Batch OCR error:', ocrError);
+        }
+      }
+
+      // Refresh validation queue
       await loadQueueDocuments();
-      // Defer tab switch to avoid race conditions with Radix Tabs rendering
-      setTimeout(() => handleTabChange('validation'), 0);
     } catch (error: any) {
       console.error('Error processing scan:', error);
       logError('Queue.handleScanComplete', error);
