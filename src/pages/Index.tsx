@@ -368,12 +368,65 @@ const Index = () => {
 
     await Promise.all(uploadPromises);
     
+    // Trigger parallel OCR processing for the batch
+    if (successCount > 0 && selectedBatchId) {
+      console.log(`Triggering parallel OCR for batch ${selectedBatchId} with ${successCount} documents`);
+      try {
+        const { error: parallelError } = await supabase.functions.invoke('parallel-ocr-batch', {
+          body: { 
+            batchId: selectedBatchId,
+            maxParallel: 3
+          }
+        });
+        
+        if (parallelError) {
+          console.error('Failed to trigger parallel OCR:', parallelError);
+        } else {
+          console.log('✓ Parallel OCR triggered successfully');
+        }
+      } catch (e) {
+        console.error('Error triggering parallel OCR:', e);
+      }
+
+      // Trigger duplicate detection for the batch
+      console.log(`Triggering duplicate detection for batch ${selectedBatchId}`);
+      try {
+        // Give OCR a moment to process, then check duplicates
+        setTimeout(async () => {
+          const { data: batchDocs } = await supabase
+            .from('documents')
+            .select('id')
+            .eq('batch_id', selectedBatchId);
+          
+          if (batchDocs && batchDocs.length > 1) {
+            for (const doc of batchDocs) {
+              try {
+                await supabase.functions.invoke('detect-duplicates', {
+                  body: {
+                    documentId: doc.id,
+                    batchId: selectedBatchId,
+                    checkCrossBatch: false,
+                    thresholds: { name: 0.85, address: 0.90, signature: 0.85 }
+                  }
+                });
+              } catch (dupError) {
+                console.error(`Duplicate detection failed for ${doc.id}:`, dupError);
+              }
+            }
+            console.log('✓ Duplicate detection triggered');
+          }
+        }, 3000); // Wait 3 seconds for OCR to complete
+      } catch (e) {
+        console.error('Error triggering duplicate detection:', e);
+      }
+    }
+    
     setIsProcessing(false);
     
     if (errorCount === 0) {
       toast({
         title: 'Upload Complete',
-        description: `${successCount} file(s) uploaded. Processing in background - check the Validation or Queue tab.`,
+        description: `${successCount} file(s) uploaded. Processing in parallel...`,
       });
     } else {
       toast({
