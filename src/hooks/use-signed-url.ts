@@ -65,7 +65,10 @@ export const useSignedUrl = (publicUrl: string | null | undefined, expiresIn: nu
           console.warn('Falling back to original URL due to signing error', urlError);
           setSignedUrl(publicUrl);
         } else {
-          setSignedUrl(data.signedUrl);
+          const signed = data.signedUrl.startsWith('http')
+            ? data.signedUrl
+            : `${import.meta.env.VITE_SUPABASE_URL}${data.signedUrl}`;
+          setSignedUrl(signed);
         }
       } catch (err) {
         console.error('Error in useSignedUrl:', err);
@@ -129,5 +132,9 @@ export const getSignedUrl = async (
     return publicUrl;
   }
 
-  return data.signedUrl;
+  const signed = data.signedUrl.startsWith('http')
+    ? data.signedUrl
+    : `${import.meta.env.VITE_SUPABASE_URL}${data.signedUrl}`;
+
+  return signed;
 };
