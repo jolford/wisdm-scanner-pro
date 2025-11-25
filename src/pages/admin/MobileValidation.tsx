@@ -146,16 +146,20 @@ export default function MobileValidation() {
                       <div className="relative bg-muted rounded-lg overflow-hidden" style={{ minHeight: '300px' }}>
                         {imageUrl ? (
                           selectedDoc.file_type?.includes('pdf') ? (
-                            <object
-                              data={imageUrl}
-                              type="application/pdf"
-                              className="w-full h-[420px]"
-                            >
-                              <div className="flex items-center justify-center h-64 text-muted-foreground">
-                                <ImageIcon className="h-12 w-12 mr-2" />
-                                <span>PDF preview not available</span>
-                              </div>
-                            </object>
+                            <div className="flex flex-col items-center justify-center h-64 text-muted-foreground gap-3 p-4">
+                              <ImageIcon className="h-12 w-12" />
+                              <span className="text-sm text-center max-w-xs">
+                                PDF preview is not available here, but you can open the document in a new tab.
+                              </span>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => window.open(imageUrl, '_blank', 'noopener,noreferrer')}
+                              >
+                                <Maximize2 className="h-4 w-4 mr-2" />
+                                Open PDF
+                              </Button>
+                            </div>
                           ) : (
                             <img
                               src={imageUrl}
