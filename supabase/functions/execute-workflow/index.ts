@@ -275,6 +275,43 @@ async function executeAction(node: any, context: any, supabaseClient: any) {
   switch (actionType) {
     case 'auto_validate':
       if (context.documentId) {
+        // Get document to check critical fields before auto-validating
+        const { data: doc } = await supabaseClient
+          .from('documents')
+          .select('extracted_metadata')
+          .eq('id', context.documentId)
+          .single();
+
+        // Helper: Check if critical invoice fields have values
+        const hasCriticalFieldData = (meta: any): boolean => {
+          if (!meta || typeof meta !== 'object') return false;
+          
+          const criticalFields = ['Invoice Number', 'Invoice Date', 'Invoice Total', 'PO Number', 'Vendor Name'];
+          
+          for (const field of criticalFields) {
+            const value = meta[field];
+            
+            // Check if field is missing, null, or empty
+            if (!value) return false;
+            
+            // Check if value is an object with empty/null value property (e.g., {value: null})
+            if (typeof value === 'object' && (!value.value || value.value === '')) return false;
+            
+            // Check if value is an empty string
+            if (typeof value === 'string' && value.trim() === '') return false;
+          }
+          
+          return true;
+        };
+
+        const hasCriticalData = hasCriticalFieldData(doc?.extracted_metadata);
+
+        if (!hasCriticalData) {
+          console.log(`Workflow: Skipping auto-validate for document ${context.documentId} - missing critical field data`);
+          // Do not auto-validate documents with incomplete data
+          return;
+        }
+
         // Get workflow creator as the "validated_by" user
         const { data: workflowData } = await supabaseClient
           .from('workflows')
