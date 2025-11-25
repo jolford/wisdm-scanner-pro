@@ -552,8 +552,13 @@ const [isExporting, setIsExporting] = useState(false);
       // Use batchCheck (fresh data) instead of selectedBatch (stale state)
       const batchIsComplete = batchCheck?.status === 'complete';
 
-      // Only show documents in Validation once OCR has completed
-      const validationDocs = docsData?.filter(d => d.validation_status === 'pending' && d.confidence_score !== null) || [];
+      // Only show documents in Validation once OCR has completed and data is available
+      const validationDocs = docsData?.filter(d => {
+        const hasConfidence = typeof d.confidence_score === 'number' && d.confidence_score > 0;
+        const hasMetadata = d.extracted_metadata && Object.keys(d.extracted_metadata || {}).length > 0;
+        const hasText = typeof d.extracted_text === 'string' && d.extracted_text.trim().length > 0;
+        return d.validation_status === 'pending' && hasConfidence && (hasMetadata || hasText);
+      }) || [];
       setValidationQueue(validationDocs);
 
       // Show validated docs for export even when batch is complete
@@ -570,7 +575,7 @@ const [isExporting, setIsExporting] = useState(false);
     text: string,
     metadata: any,
     lineItems: any[] = [],
-    confidence: number = 0,
+    confidence: number | null = null,
     piiDetected: boolean = false,
     detectedPiiRegions: any[] = []
   ) => {
@@ -626,7 +631,7 @@ const [isExporting, setIsExporting] = useState(false);
             extracted_text: text,
             extracted_metadata: metadata,
             line_items: lineItems,
-            confidence_score: confidence || 0,
+            confidence_score: typeof confidence === 'number' ? confidence : null,
             uploaded_by: user?.id,
             pii_detected: piiDetected,
             detected_pii_regions: detectedPiiRegions,
