@@ -40,6 +40,18 @@ export const ScheduledExportConfig = ({ projectId, availableExportTypes }: Sched
   const [schedules, setSchedules] = useState<ScheduledExport[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Convert UTC time to local time
+  const utcToLocal = (utcTime: string): string => {
+    const [hours, minutes] = utcTime.split(':').map(Number);
+    const utcDate = new Date();
+    utcDate.setUTCHours(hours, minutes, 0);
+    
+    const localHours = utcDate.getHours().toString().padStart(2, '0');
+    const localMinutes = utcDate.getMinutes().toString().padStart(2, '0');
+    
+    return `${localHours}:${localMinutes}`;
+  };
+
   // Load existing schedules
   const loadSchedules = async () => {
     try {
@@ -54,7 +66,7 @@ export const ScheduledExportConfig = ({ projectId, availableExportTypes }: Sched
         setSchedules(data.map(s => ({
           id: s.id,
           frequency: s.frequency as 'daily' | 'weekly' | 'monthly',
-          time_of_day: s.time_of_day,
+          time_of_day: utcToLocal(s.time_of_day), // Convert from UTC to local
           day_of_week: s.day_of_week || undefined,
           day_of_month: s.day_of_month || undefined,
           is_active: s.is_active,
@@ -122,6 +134,18 @@ export const ScheduledExportConfig = ({ projectId, availableExportTypes }: Sched
     setSchedules(schedules.map((s, i) => (i === index ? { ...s, ...updates } : s)));
   };
 
+  // Convert local time to UTC for storage
+  const localToUtc = (localTime: string): string => {
+    const [hours, minutes] = localTime.split(':').map(Number);
+    const localDate = new Date();
+    localDate.setHours(hours, minutes, 0);
+    
+    const utcHours = localDate.getUTCHours().toString().padStart(2, '0');
+    const utcMinutes = localDate.getUTCMinutes().toString().padStart(2, '0');
+    
+    return `${utcHours}:${utcMinutes}:00`;
+  };
+
   const saveSchedules = async () => {
     setLoading(true);
     try {
@@ -132,7 +156,7 @@ export const ScheduledExportConfig = ({ projectId, availableExportTypes }: Sched
         const scheduleData = {
           project_id: projectId,
           frequency: schedule.frequency,
-          time_of_day: schedule.time_of_day,
+          time_of_day: localToUtc(schedule.time_of_day), // Convert from local to UTC
           day_of_week: schedule.day_of_week || null,
           day_of_month: schedule.day_of_month || null,
           is_active: schedule.is_active,
@@ -228,12 +252,15 @@ export const ScheduledExportConfig = ({ projectId, availableExportTypes }: Sched
               </div>
 
               <div>
-                <Label>Time</Label>
+                <Label>Time (Your Local Time)</Label>
                 <Input
                   type="time"
                   value={schedule.time_of_day}
                   onChange={(e) => updateSchedule(index, { time_of_day: e.target.value })}
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Automatically converted to UTC for scheduling
+                </p>
               </div>
 
               {schedule.frequency === 'weekly' && (
