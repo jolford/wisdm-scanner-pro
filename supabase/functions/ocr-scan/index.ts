@@ -1697,7 +1697,7 @@ Review the image and provide corrected text with any OCR errors fixed.`;
       if (workflowProjectId) {
         const workflowResult = await supabaseAdmin.functions.invoke('execute-workflow', {
           body: {
-            eventType: 'Document Uploaded',
+            eventType: 'document_uploaded',
             projectId: workflowProjectId,
             documentId: documentId,
             batchId: workflowBatchId,
