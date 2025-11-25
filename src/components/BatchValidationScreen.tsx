@@ -1659,34 +1659,47 @@ const { toast } = useToast();
                         
                         {/* Interactive Document Viewer with Field Highlighting */}
                         <div className="overflow-auto max-h-[300px] sm:max-h-[400px] bg-muted/30 rounded-lg p-2 sm:p-4">
-                          <DocumentViewerWithSignedUrl
-                            doc={doc}
-                            imageUrl={(doc as any).redacted_file_url || doc.file_url}
-                            boundingBoxes={fieldBoundingBoxes[doc.id] || {}}
-                            highlightedField={focusedField[doc.id]}
-                            piiRegions={(doc as any).detected_pii_regions || []}
-                            showingOriginal={showingOriginal.has(doc.id)}
-                            onToggleOriginal={() => {
-                              setShowingOriginal(prev => {
-                                const newSet = new Set(prev);
-                                if (newSet.has(doc.id)) {
-                                  newSet.delete(doc.id);
-                                } else {
-                                  newSet.add(doc.id);
+                          {(
+                            String((doc as any).file_type || '').toLowerCase().includes('pdf') ||
+                            /\.pdf($|\?)/i.test(doc.file_name || '')
+                          ) ? (
+                            <FullImageWithSignedUrl
+                              url={(doc as any).redacted_file_url || doc.file_url}
+                              alt={doc.file_name}
+                              fileType={(doc as any).file_type}
+                              zoom={1}
+                              rotation={0}
+                            />
+                          ) : (
+                            <DocumentViewerWithSignedUrl
+                              doc={doc}
+                              imageUrl={(doc as any).redacted_file_url || doc.file_url}
+                              boundingBoxes={fieldBoundingBoxes[doc.id] || {}}
+                              highlightedField={focusedField[doc.id]}
+                              piiRegions={(doc as any).detected_pii_regions || []}
+                              showingOriginal={showingOriginal.has(doc.id)}
+                              onToggleOriginal={() => {
+                                setShowingOriginal(prev => {
+                                  const newSet = new Set(prev);
+                                  if (newSet.has(doc.id)) {
+                                    newSet.delete(doc.id);
+                                  } else {
+                                    newSet.add(doc.id);
+                                  }
+                                  return newSet;
+                                });
+                              }}
+                              onPopout={() => handlePopout(doc.id, doc.file_url, doc.file_name)}
+                              onFieldClick={(fieldName) => {
+                                setFocusedField(prev => ({ ...prev, [doc.id]: fieldName }));
+                                const fieldElement = document.getElementById(`${doc.id}-${fieldName}`);
+                                if (fieldElement) {
+                                  fieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                  (fieldElement as HTMLElement).focus();
                                 }
-                                return newSet;
-                              });
-                            }}
-                            onPopout={() => handlePopout(doc.id, doc.file_url, doc.file_name)}
-                            onFieldClick={(fieldName) => {
-                              setFocusedField(prev => ({ ...prev, [doc.id]: fieldName }));
-                              const fieldElement = document.getElementById(`${doc.id}-${fieldName}`);
-                              if (fieldElement) {
-                                fieldElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                (fieldElement as HTMLElement).focus();
-                              }
-                            }}
-                          />
+                              }}
+                            />
+                          )}
                         </div>
 
                         {/* View Original Toggle (for PII documents) */}
