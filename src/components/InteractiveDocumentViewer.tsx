@@ -368,7 +368,7 @@ export const InteractiveDocumentViewer = ({
 
   return (
     <TooltipProvider>
-      <Card ref={cardRef} className="p-0 flex flex-col h-full overflow-hidden border-2 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-background via-background to-primary/5">
+      <Card ref={cardRef} className="p-0 flex flex-col min-h-[280px] overflow-hidden border-2 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-background via-background to-primary/5">
         {/* Header with enhanced gradient */}
         <div className="bg-gradient-to-r from-primary/15 via-primary/8 to-primary/5 px-6 py-4 border-b backdrop-blur-sm">
           <div className="flex items-center justify-between">
