@@ -173,7 +173,7 @@ serve(async (req) => {
     // Get current document data
     const { data: currentDoc, error: docError } = await supabaseClient
       .from('documents')
-      .select('extracted_metadata, file_url')
+      .select('extracted_metadata, file_url, document_type')
       .eq('id', documentId)
       .single();
 
@@ -185,18 +185,37 @@ serve(async (req) => {
     }
 
     const currentMeta = currentDoc.extracted_metadata || {};
-    const currentName = normalizeText(
-      currentMeta.Printed_Name || currentMeta['Printed Name'] || currentMeta.name || ''
-    );
-    const currentAddress = normalizeText(
-      [
-        currentMeta.Address || currentMeta.address || '',
-        currentMeta.City || currentMeta.city || '',
-        currentMeta.Zip || currentMeta.zip || ''
-      ].join(' ')
-    );
+    
+    // Extract fields based on document type
+    let currentName = '';
+    let currentAddress = '';
+    let currentIdentifier = ''; // Invoice number, PO number, etc.
+    
+    if (currentDoc.document_type === 'invoice') {
+      // Invoice duplicate detection
+      currentName = normalizeText(currentMeta['Vendor Name'] || currentMeta.vendor_name || '');
+      currentIdentifier = normalizeText(currentMeta['Invoice Number'] || currentMeta.invoice_number || '');
+      currentAddress = normalizeText(
+        [
+          currentMeta['Vendor Address'] || currentMeta.vendor_address || '',
+          currentMeta['Invoice Date'] || currentMeta.invoice_date || ''
+        ].join(' ')
+      );
+    } else {
+      // Petition/generic duplicate detection
+      currentName = normalizeText(
+        currentMeta.Printed_Name || currentMeta['Printed Name'] || currentMeta.name || ''
+      );
+      currentAddress = normalizeText(
+        [
+          currentMeta.Address || currentMeta.address || '',
+          currentMeta.City || currentMeta.city || '',
+          currentMeta.Zip || currentMeta.zip || ''
+        ].join(' ')
+      );
+    }
 
-    if (!currentName && !currentAddress) {
+    if (!currentName && !currentAddress && !currentIdentifier) {
       return new Response(
         JSON.stringify({
           success: true,
@@ -210,7 +229,7 @@ serve(async (req) => {
     // Build query to find potential duplicates
     let query = supabaseClient
       .from('documents')
-      .select('id, extracted_metadata, file_url, batch_id')
+      .select('id, extracted_metadata, file_url, batch_id, document_type')
       .neq('id', documentId);
 
     if (!checkCrossBatch) {
@@ -252,53 +271,68 @@ serve(async (req) => {
     // Check each candidate
     for (const candidate of candidateDocs || []) {
       const candMeta = candidate.extracted_metadata || {};
-      const candName = normalizeText(
-        candMeta.Printed_Name || candMeta['Printed Name'] || candMeta.name || ''
-      );
-      const candAddress = normalizeText(
-        [
-          candMeta.Address || candMeta.address || '',
-          candMeta.City || candMeta.city || '',
-          candMeta.Zip || candMeta.zip || ''
-        ].join(' ')
-      );
+      
+      let candName = '';
+      let candAddress = '';
+      let candIdentifier = '';
+      
+      if (candidate.document_type === 'invoice') {
+        candName = normalizeText(candMeta['Vendor Name'] || candMeta.vendor_name || '');
+        candIdentifier = normalizeText(candMeta['Invoice Number'] || candMeta.invoice_number || '');
+        candAddress = normalizeText(
+          [
+            candMeta['Vendor Address'] || candMeta.vendor_address || '',
+            candMeta['Invoice Date'] || candMeta.invoice_date || ''
+          ].join(' ')
+        );
+      } else {
+        candName = normalizeText(
+          candMeta.Printed_Name || candMeta['Printed Name'] || candMeta.name || ''
+        );
+        candAddress = normalizeText(
+          [
+            candMeta.Address || candMeta.address || '',
+            candMeta.City || candMeta.city || '',
+            candMeta.Zip || candMeta.zip || ''
+          ].join(' ')
+        );
+      }
+
+      if (!candName && !candAddress && !candIdentifier) continue;
 
       // Calculate similarities
-      const nameSimilarity = candName && currentName ? jaroWinkler(currentName, candName) : 0;
-      const addressSimilarity = candAddress && currentAddress ? levenshtein(currentAddress, candAddress) : 0;
+      const nameSim = currentName && candName 
+        ? jaroWinkler(currentName, candName)
+        : 0;
+      const addressSim = currentAddress && candAddress
+        ? levenshtein(currentAddress, candAddress)
+        : 0;
+      const identifierSim = currentIdentifier && candIdentifier
+        ? (currentIdentifier === candIdentifier ? 1.0 : 0)
+        : 0;
 
       // Determine if duplicate
-      let isDuplicate = false;
-      let duplicateType: string[] = [];
-      const duplicateFields: Record<string, number> = {};
-
-      if (nameSimilarity >= finalThresholds.name) {
-        isDuplicate = true;
-        duplicateType.push('name');
-        duplicateFields.name = nameSimilarity;
-      }
-
-      if (addressSimilarity >= finalThresholds.address) {
-        isDuplicate = true;
-        duplicateType.push('address');
-        duplicateFields.address = addressSimilarity;
-      }
+      const isNameMatch = nameSim >= finalThresholds.name;
+      const isAddressMatch = addressSim >= finalThresholds.address;
+      const isIdentifierMatch = identifierSim >= 0.95;
+      
+      const isDuplicate = isIdentifierMatch || 
+                         ((currentName && candName && isNameMatch) && 
+                          (currentAddress && candAddress && isAddressMatch));
 
       if (isDuplicate) {
-        const overallSimilarity = (nameSimilarity + addressSimilarity) / 2;
+        const overallScore = Math.max(nameSim, addressSim, identifierSim);
         
+        const matchingFields: any = {};
+        if (isNameMatch) matchingFields.name = { current: currentName, candidate: candName, similarity: nameSim };
+        if (isAddressMatch) matchingFields.address = { current: currentAddress, candidate: candAddress, similarity: addressSim };
+        if (isIdentifierMatch) matchingFields.identifier = { current: currentIdentifier, candidate: candIdentifier, similarity: identifierSim };
+
         duplicates.push({
           duplicate_document_id: candidate.id,
-          duplicate_type: duplicateType.length > 1 ? 'combined' : duplicateType[0],
-          similarity_score: overallSimilarity,
-          duplicate_fields: {
-            name: nameSimilarity,
-            address: addressSimilarity,
-            current_name: currentName,
-            candidate_name: candName,
-            current_address: currentAddress,
-            candidate_address: candAddress
-          }
+          duplicate_type: isIdentifierMatch ? 'identifier' : 'combined',
+          similarity_score: overallScore,
+          duplicate_fields: matchingFields
         });
 
         // Save to database
@@ -308,12 +342,9 @@ serve(async (req) => {
             document_id: documentId,
             batch_id: batchId,
             duplicate_document_id: candidate.id,
-            duplicate_type: duplicateType.length > 1 ? 'combined' : duplicateType[0],
-            similarity_score: overallSimilarity,
-            duplicate_fields: {
-              name: nameSimilarity,
-              address: addressSimilarity
-            },
+            duplicate_type: isIdentifierMatch ? 'identifier' : 'combined',
+            similarity_score: overallScore,
+            duplicate_fields: matchingFields,
             status: 'pending'
           });
       }
