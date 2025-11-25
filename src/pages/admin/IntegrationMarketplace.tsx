@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Store, 
   Search, 
@@ -184,9 +185,13 @@ export default function IntegrationMarketplace() {
   const [customerId, setCustomerId] = useState<string | null>(null);
   const [configureIntegration, setConfigureIntegration] = useState<string | null>(null);
   const [configData, setConfigData] = useState<Record<string, any>>({});
+  const [projects, setProjects] = useState<any[]>([]);
+  const [selectedProjects, setSelectedProjects] = useState<Set<string>>(new Set());
+  const [installedIntegrationId, setInstalledIntegrationId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchCustomerAndInstalledIntegrations();
+    fetchProjects();
   }, [user]);
 
   const fetchCustomerAndInstalledIntegrations = async () => {
@@ -229,6 +234,32 @@ export default function IntegrationMarketplace() {
       toast.error('Failed to load integration data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchProjects = async () => {
+    if (!user) return;
+    
+    try {
+      const { data: userCustomer } = await supabase
+        .from('user_customers')
+        .select('customer_id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (userCustomer?.customer_id) {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('id, name')
+          .eq('customer_id', userCustomer.customer_id)
+          .eq('is_active', true)
+          .order('name');
+
+        if (error) throw error;
+        setProjects(data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error);
     }
   };
 
@@ -304,7 +335,7 @@ export default function IntegrationMarketplace() {
     try {
       const { data, error } = await supabase
         .from('installed_integrations')
-        .select('configuration')
+        .select('id, configuration')
         .eq('customer_id', customerId)
         .eq('integration_id', id)
         .maybeSingle();
@@ -312,7 +343,20 @@ export default function IntegrationMarketplace() {
       if (error) throw error;
       
       setConfigData((data?.configuration as Record<string, any>) || {});
+      setInstalledIntegrationId(data?.id || null);
       setConfigureIntegration(id);
+
+      // Fetch assigned projects
+      if (data?.id) {
+        const { data: projectAssignments } = await supabase
+          .from('project_integrations')
+          .select('project_id')
+          .eq('installed_integration_id', data.id);
+        
+        if (projectAssignments) {
+          setSelectedProjects(new Set(projectAssignments.map(p => p.project_id)));
+        }
+      }
     } catch (error) {
       console.error('Error loading configuration:', error);
       toast.error('Failed to load configuration');
@@ -320,23 +364,59 @@ export default function IntegrationMarketplace() {
   };
 
   const saveConfiguration = async () => {
-    if (!customerId || !configureIntegration) return;
+    if (!customerId || !configureIntegration || !installedIntegrationId || !user) return;
     
     try {
-      const { error } = await supabase
+      // Save configuration
+      const { error: configError } = await supabase
         .from('installed_integrations')
         .update({ configuration: configData })
         .eq('customer_id', customerId)
         .eq('integration_id', configureIntegration);
       
-      if (error) throw error;
+      if (configError) throw configError;
+
+      // Update project assignments
+      // First, delete existing assignments
+      await supabase
+        .from('project_integrations')
+        .delete()
+        .eq('installed_integration_id', installedIntegrationId);
+
+      // Then, insert new assignments
+      if (selectedProjects.size > 0) {
+        const assignments = Array.from(selectedProjects).map(projectId => ({
+          project_id: projectId,
+          installed_integration_id: installedIntegrationId,
+          created_by: user.id
+        }));
+
+        const { error: assignError } = await supabase
+          .from('project_integrations')
+          .insert(assignments);
+
+        if (assignError) throw assignError;
+      }
       
-      toast.success('Configuration saved successfully');
+      toast.success('Configuration and project assignments saved successfully');
       setConfigureIntegration(null);
+      setSelectedProjects(new Set());
     } catch (error) {
       console.error('Error saving configuration:', error);
       toast.error('Failed to save configuration');
     }
+  };
+
+  const toggleProjectSelection = (projectId: string) => {
+    setSelectedProjects(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(projectId)) {
+        newSet.delete(projectId);
+      } else {
+        newSet.add(projectId);
+      }
+      return newSet;
+    });
   };
 
   const getConfigFields = (integrationId: string) => {
@@ -796,11 +876,51 @@ export default function IntegrationMarketplace() {
                   )}
                 </div>
               ))}
+
+              {/* Project Assignment Section */}
+              <div className="space-y-3 pt-4 border-t">
+                <div>
+                  <Label className="text-base font-semibold">Assign to Projects</Label>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Select which projects can use this integration
+                  </p>
+                </div>
+                <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-lg p-3">
+                  {projects.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No projects available</p>
+                  ) : (
+                    projects.map(project => (
+                      <div key={project.id} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`project-${project.id}`}
+                          checked={selectedProjects.has(project.id)}
+                          onCheckedChange={() => toggleProjectSelection(project.id)}
+                        />
+                        <Label 
+                          htmlFor={`project-${project.id}`} 
+                          className="font-normal cursor-pointer flex-1"
+                        >
+                          {project.name}
+                        </Label>
+                      </div>
+                    ))
+                  )}
+                </div>
+                {selectedProjects.size > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {selectedProjects.size} project{selectedProjects.size !== 1 ? 's' : ''} selected
+                  </p>
+                )}
+              </div>
+
               <div className="flex gap-2 pt-4">
                 <Button onClick={saveConfiguration} className="flex-1">
                   Save Configuration
                 </Button>
-                <Button variant="outline" onClick={() => setConfigureIntegration(null)}>
+                <Button variant="outline" onClick={() => {
+                  setConfigureIntegration(null);
+                  setSelectedProjects(new Set());
+                }}>
                   Cancel
                 </Button>
               </div>

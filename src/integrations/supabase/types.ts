@@ -1791,6 +1791,45 @@ export type Database = {
         }
         Relationships: []
       }
+      project_integrations: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          id: string
+          installed_integration_id: string
+          project_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          id?: string
+          installed_integration_id: string
+          project_id: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          id?: string
+          installed_integration_id?: string
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_integrations_installed_integration_id_fkey"
+            columns: ["installed_integration_id"]
+            isOneToOne: false
+            referencedRelation: "installed_integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_integrations_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string | null
