@@ -1957,16 +1957,25 @@ const [isExporting, setIsExporting] = useState(false);
                           variant="default" 
                           onClick={async () => {
                             try {
-                              const { error } = await supabase
+                              // Update batch status
+                              const { error: batchError } = await supabase
                                 .from('batches')
                                 .update({ status: 'complete', completed_at: new Date().toISOString() })
                                 .eq('id', selectedBatchId);
                               
-                              if (error) throw error;
+                              if (batchError) throw batchError;
+                              
+                              // Move all documents in batch to export queue
+                              const { error: docsError } = await supabase
+                                .from('documents')
+                                .update({ validation_status: 'validated' })
+                                .eq('batch_id', selectedBatchId);
+                              
+                              if (docsError) throw docsError;
                               
                               toast({
                                 title: 'Batch Completed',
-                                description: 'Batch moved to export queue',
+                                description: 'All documents moved to export queue',
                               });
                               
                               loadQueueDocuments();
@@ -2010,7 +2019,57 @@ const [isExporting, setIsExporting] = useState(false);
             
             <TabsContent value="validated" className="animate-fade-in">
               <div className="space-y-4">
-                {isReadyForExport && (
+                {validatedDocs.length > 0 && selectedBatchId && selectedBatch?.status !== 'complete' && (
+                  <Card className="p-4 border-success/40 bg-success/5">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="font-semibold text-success">Quality Control Review Complete</h4>
+                        <p className="text-sm text-muted-foreground">Ready to complete the batch and move all documents to export queue.</p>
+                      </div>
+                      <Button 
+                        variant="default" 
+                        onClick={async () => {
+                          try {
+                            // Update batch status
+                            const { error: batchError } = await supabase
+                              .from('batches')
+                              .update({ status: 'complete', completed_at: new Date().toISOString() })
+                              .eq('id', selectedBatchId);
+                            
+                            if (batchError) throw batchError;
+                            
+                            // Move all documents in batch to export queue
+                            const { error: docsError } = await supabase
+                              .from('documents')
+                              .update({ validation_status: 'validated' })
+                              .eq('batch_id', selectedBatchId);
+                            
+                            if (docsError) throw docsError;
+                            
+                            toast({
+                              title: 'Batch Completed',
+                              description: 'All documents moved to export queue',
+                            });
+                            
+                            loadQueueDocuments();
+                            handleTabChange('export');
+                          } catch (error: any) {
+                            toast({
+                              title: 'Error',
+                              description: error.message || 'Failed to complete batch',
+                              variant: 'destructive',
+                            });
+                          }
+                        }}
+                        className="bg-success hover:bg-success/90"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Complete Batch
+                      </Button>
+                    </div>
+                  </Card>
+                )}
+                {isReadyForExport && selectedBatch?.status === 'complete' && (
                   <Card className="p-4 border-success/40 bg-success/5">
                     <div className="flex items-center justify-between">
                       <div>
