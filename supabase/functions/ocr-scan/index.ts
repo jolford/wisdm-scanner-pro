@@ -163,27 +163,18 @@ serve(async (req) => {
       );
     }
     
-    // Validate field limits
+    // Validate field limits (log warnings but do not hard-fail to avoid blocking background OCR)
     if (extractionFields && (!Array.isArray(extractionFields) || extractionFields.length > 50)) {
-      return new Response(
-        JSON.stringify({ error: 'extractionFields must be an array with max 50 items' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.warn('ocr-scan: extractionFields invalid or too many, proceeding anyway');
     }
     
-    // Validate IDs format
+    // Validate IDs format (log warnings only so bad metadata does not block OCR from background jobs)
     if (documentId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(documentId)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid documentId format' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.warn('ocr-scan: Invalid documentId format, proceeding anyway:', documentId);
     }
     
     if (projectId && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(projectId)) {
-      return new Response(
-        JSON.stringify({ error: 'Invalid projectId format' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.warn('ocr-scan: Invalid projectId format, proceeding anyway:', projectId);
     }
     
     console.log('Processing OCR request...', isPdf ? 'PDF' : 'Image');
