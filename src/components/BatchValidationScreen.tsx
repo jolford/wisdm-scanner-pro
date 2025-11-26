@@ -1509,13 +1509,18 @@ const { toast } = useToast();
                         </div>
                       )}
                       
-                      {/* Show all extracted fields as badges */}
+                      {/* Show only first 5 extracted fields as badges to keep header compact */}
                       <div className="flex flex-wrap gap-2 mt-1">
-                        {projectFields.map((field) => (
+                        {projectFields.slice(0, 5).map((field) => (
                           <Badge key={field.name} variant="outline" className="text-xs">
                             {field.name}: {getMetadataValue(metadata, field.name) || 'N/A'}
                           </Badge>
                         ))}
+                        {projectFields.length > 5 && (
+                          <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                            +{projectFields.length - 5} more fields
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </div>
