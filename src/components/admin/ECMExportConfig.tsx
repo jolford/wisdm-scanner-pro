@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2, Check, X, ArrowRight } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -22,6 +23,8 @@ interface ExportConfig {
   library?: string; // For SharePoint
   folder?: string; // For SharePoint
   fieldMappings?: Record<string, string>;
+  exportSeparators?: boolean; // For FileBound - export separators between different document types
+  exportDividers?: boolean; // For FileBound - export dividers at start/end of batch
 }
 
 interface ECMProject {
@@ -493,6 +496,47 @@ export function ECMExportConfig({
                 />
               </div>
             ))}
+          </div>
+        </Card>
+      )}
+
+      {type === 'filebound' && selectedProjectId && (
+        <Card className="p-4 bg-muted/30">
+          <Label className="text-sm font-medium mb-3 block">Export Options</Label>
+          <div className="space-y-3">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id={`export-separators-${type}`}
+                checked={config.exportSeparators || false}
+                onCheckedChange={(checked) => 
+                  onConfigChange({ ...config, exportSeparators: checked === true })
+                }
+                disabled={disabled}
+              />
+              <Label htmlFor={`export-separators-${type}`} className="text-sm cursor-pointer">
+                Export separators between different document types
+              </Label>
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">
+              Inserts a separator document when the document type changes during batch export
+            </p>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id={`export-dividers-${type}`}
+                checked={config.exportDividers || false}
+                onCheckedChange={(checked) => 
+                  onConfigChange({ ...config, exportDividers: checked === true })
+                }
+                disabled={disabled}
+              />
+              <Label htmlFor={`export-dividers-${type}`} className="text-sm cursor-pointer">
+                Export dividers at start and end of batch
+              </Label>
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">
+              Inserts divider documents at the beginning and end of each batch export
+            </p>
           </div>
         </Card>
       )}
