@@ -1187,12 +1187,29 @@ Review the image and provide corrected text with any OCR errors fixed.`;
             if (jsonMatch) {
               const validated = JSON.parse(jsonMatch[0]);
               
-              // Update metadata with validated values
-              if (validated.fields) {
-                Object.keys(validated.fields).forEach(key => {
-                  const val = validated.fields[key];
-                  metadata[key] = typeof val === 'string' ? val : (val?.value || val);
-                });
+              // Update metadata with validated values, but only if the structure looks sane
+              if (validated.fields && typeof validated.fields === 'object') {
+                const entries = Object.entries(validated.fields as Record<string, any>);
+
+                // Heuristic: if almost all keys are numeric indices and values are 1–2 characters,
+                // this is likely a malformed character-by-character map. In that case, ignore it.
+                const total = entries.length;
+                const suspiciousCount = entries.filter(([key, val]) => {
+                  const isNumericKey = /^\d+$/.test(key.trim());
+                  const strVal = typeof val === 'string' ? val : (val?.value ?? '');
+                  return isNumericKey && strVal && String(strVal).length <= 2;
+                }).length;
+
+                const isSuspicious = total > 10 && suspiciousCount / total > 0.7;
+
+                if (isSuspicious) {
+                  console.warn('Validation response looks malformed (character map); keeping original metadata');
+                } else {
+                  entries.forEach(([key, val]) => {
+                    const normalized = typeof val === 'string' ? val : (val?.value || val);
+                    metadata[key] = normalized;
+                  });
+                }
               }
               
               // Update line items if provided
