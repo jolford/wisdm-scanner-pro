@@ -992,7 +992,7 @@ export default function IntegrationMarketplace() {
                     </div>
                   )}
                 </div>
-                <div className="space-y-2 max-h-[200px] overflow-y-auto border rounded-lg p-3">
+                <div className="space-y-2 max-h-[400px] overflow-y-auto border rounded-lg p-3 bg-card">
                   {projects.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No projects available</p>
                   ) : (
