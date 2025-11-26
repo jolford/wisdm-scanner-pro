@@ -201,6 +201,9 @@ export const BatchValidationScreen = ({
   // Track which documents are currently being validated (for loading states)
   const [validatingDocs, setValidatingDocs] = useState<Set<string>>(new Set());
   
+  // Track which documents are being re-processed for OCR
+  const [reprocessingDocs, setReprocessingDocs] = useState<Set<string>>(new Set());
+  
   // Track zoom levels for each document
   const [documentZoom, setDocumentZoom] = useState<Record<string, number>>({});
   
@@ -1352,6 +1355,67 @@ const { toast } = useToast();
     }
   };
 
+  /**
+   * Re-process OCR for a document that had extraction failures
+   * Triggers the OCR pipeline again to attempt field extraction
+   */
+  const handleReprocessOCR = async (doc: Document) => {
+    setReprocessingDocs(prev => new Set(prev).add(doc.id));
+    
+    try {
+      // Get signed URL for the document
+      const signedUrl = await getSignedUrl(doc.file_url);
+      if (!signedUrl) {
+        throw new Error('Failed to get signed URL for document');
+      }
+
+      // Convert URL to base64 for OCR processing
+      const response = await fetch(signedUrl);
+      const blob = await response.blob();
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+
+      // Get project fields for extraction
+      const fieldNames = projectFields.map(f => ({ name: f.name, description: f.description || '' }));
+
+      // Call OCR edge function
+      const { data, error } = await supabase.functions.invoke('ocr-scan', {
+        body: {
+          imageData: base64,
+          documentId: doc.id,
+          projectId: doc.project_id,
+          extractionFields: fieldNames,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'OCR Re-processed',
+        description: 'Document fields have been re-extracted successfully.',
+      });
+
+      // Refresh the document list
+      onValidationComplete();
+    } catch (error: any) {
+      console.error('Re-process OCR error:', error);
+      toast({
+        title: 'Re-process Failed',
+        description: error.message || 'Failed to re-process OCR. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setReprocessingDocs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(doc.id);
+        return newSet;
+      });
+    }
+  };
+
   // --- RENDER COMPONENT ---
   return (
     <TooltipProvider>
@@ -1524,8 +1588,33 @@ const { toast } = useToast();
                       </div>
                     </div>
                   </div>
-                  {/* Action buttons: Validate, Reject, Expand/Collapse */}
+                  {/* Action buttons: Validate, Reject, Re-process OCR (if needed), Expand/Collapse */}
                   <div className="flex items-center gap-2">
+                    {/* Show Re-process button if metadata is malformed but text exists */}
+                    {doc.extracted_text && metadata && Object.keys(metadata).some(key => /^\d+$/.test(key)) && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleReprocessOCR(doc);
+                        }}
+                        disabled={reprocessingDocs.has(doc.id)}
+                        className="border-orange-300 text-orange-700 hover:bg-orange-50 shadow-sm"
+                      >
+                        {reprocessingDocs.has(doc.id) ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-1.5 animate-spin" />
+                            Re-processing...
+                          </>
+                        ) : (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-1.5" />
+                            Re-process OCR
+                          </>
+                        )}
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="default"
