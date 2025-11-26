@@ -119,6 +119,7 @@ export const ValidationScreen = ({
   const [piiDetected, setPiiDetected] = useState(false);
   const [detectedPiiRegions, setDetectedPiiRegions] = useState<any[]>([]);
   const [piiDebug, setPiiDebug] = useState(false);
+  const [displayFieldsAbove, setDisplayFieldsAbove] = useState(false);
 
   // Resolve signature verification from prop or backend (project settings)
   const [sigEnabled, setSigEnabled] = useState<boolean>(enableSignatureVerification);
@@ -130,10 +131,11 @@ export const ValidationScreen = ({
       try {
         const { data } = await supabase
           .from('projects')
-          .select('enable_signature_verification')
+          .select('enable_signature_verification, display_fields_above')
           .eq('id', projectId)
           .single();
         if (data?.enable_signature_verification) setSigEnabled(true);
+        if (data?.display_fields_above) setDisplayFieldsAbove(true);
       } catch (_) {
         // ignore - non-blocking enhancement
       }
@@ -1102,7 +1104,150 @@ useEffect(() => {
 
   return (
     <TooltipProvider>
-      <div className="grid grid-cols-[2fr_1fr_2fr] gap-6 min-h-[calc(100vh-12rem)] pb-40">
+      <div className={displayFieldsAbove ? "flex flex-col gap-6 min-h-[calc(100vh-12rem)] pb-40" : "grid grid-cols-[2fr_1fr_2fr] gap-6 min-h-[calc(100vh-12rem)] pb-40"}>
+        {/* Fields Above Document (when enabled) */}
+        {displayFieldsAbove && (
+          <Card className="p-6 flex flex-col overflow-hidden">
+            {/* Copy the entire Index Fields section here */}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold">Index Fields</h3>
+              <Badge variant="outline" className="text-xs">
+                <Sparkles className="h-3 w-3 mr-1" />
+                AI Validation Available
+              </Badge>
+            </div>
+            
+            {/* Field editing UI */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-4">
+              {projectFields.map((field) => {
+                const fieldValue = editedMetadata[field.name] || '';
+                const confidence = fieldConfidence[field.name];
+                const suggestion = validationSuggestions[field.name];
+                const hasLowConfidence = confidence !== undefined && confidence < 0.7;
+                
+                return (
+                  <div key={field.name} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={field.name} className="text-sm font-medium">
+                        {field.name}
+                      </Label>
+                      {confidence !== undefined && (
+                        <Badge 
+                          variant={confidence >= 0.8 ? 'default' : confidence >= 0.6 ? 'secondary' : 'destructive'}
+                          className="text-[10px] h-4 px-1"
+                        >
+                          {Math.round(confidence * 100)}%
+                        </Badge>
+                      )}
+                      {hasLowConfidence && (
+                        <AlertTriangle className="h-3 w-3 text-destructive" />
+                      )}
+                    </div>
+                    
+                    <div className="flex gap-1">
+                      <Input
+                        id={field.name}
+                        value={fieldValue}
+                        onChange={(e) => handleFieldChange(field.name, e.target.value)}
+                        onFocus={() => setFocusedField(field.name)}
+                        onBlur={() => setFocusedField(null)}
+                        className={`text-sm ${hasLowConfidence ? 'border-destructive' : ''} ${focusedField === field.name ? 'ring-2 ring-primary' : ''}`}
+                        placeholder={field.description || `Enter ${field.name}...`}
+                      />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => validateField(field.name, fieldValue)}
+                            disabled={!fieldValue || isValidating}
+                            className="h-9 w-9 p-0"
+                          >
+                            <Sparkles className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>AI Validate</TooltipContent>
+                      </Tooltip>
+                    </div>
+                    
+                    {fieldErrors[field.name] && (
+                      <p className="text-xs text-destructive mt-1">
+                        {fieldErrors[field.name]}
+                      </p>
+                    )}
+                    
+                    {suggestions[field.name] && suggestions[field.name].length > 0 && (
+                      <div className="flex flex-wrap gap-1">
+                        <Lightbulb className="h-3 w-3 text-muted-foreground mt-1" />
+                        {suggestions[field.name].slice(0, 2).map((suggestion, idx) => (
+                          <Button
+                            key={idx}
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => applySuggestion(field.name, suggestion)}
+                            className="h-6 text-xs px-2 bg-muted/50 hover:bg-muted"
+                          >
+                            {suggestion.substring(0, 20)}...
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* Validation Actions */}
+            <div className="mt-6 space-y-3 pt-6 border-t">
+              <div className="flex gap-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => handleValidate('validated')}
+                      disabled={isSaving}
+                      className="flex-1 bg-green-600 hover:bg-green-700"
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      {isSaving && validationStatus === 'validated' ? 'Validating...' : 'Validate'}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Ctrl/Cmd + Enter</TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={() => handleValidate('rejected')}
+                      disabled={isSaving}
+                      variant="destructive"
+                      className="flex-1"
+                    >
+                      <XCircle className="h-4 w-4 mr-2" />
+                      {isSaving && validationStatus === 'rejected' ? 'Rejecting...' : 'Reject'}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Esc</TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      onClick={onSkip}
+                      variant="outline"
+                      disabled={isSaving}
+                    >
+                      Skip
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Ctrl/Cmd + S</TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
+          </Card>
+        )}
+        
+        {/* Document and Text Grid (always visible) */}
+        <div className={displayFieldsAbove ? "grid grid-cols-[3fr_2fr] gap-6" : "contents"}>
         {/* Left: Document Viewer */}
         {useInteractiveViewer ? (
           <InteractiveDocumentViewer
@@ -1364,7 +1509,10 @@ useEffect(() => {
         </p>
       </Card>
 
-      {/* Right: Index Fields & Validation */}
+      </div>
+
+      {/* Right: Index Fields & Validation - Only show when NOT displaying fields above */}
+      {!displayFieldsAbove && (
       <Card className="p-6 flex flex-col overflow-hidden">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold">Index Fields</h3>
@@ -1887,7 +2035,8 @@ useEffect(() => {
           </Tooltip>
         </div>
       </Card>
-    </div>
+      )}
+      </div>
     </TooltipProvider>
   );
 };
