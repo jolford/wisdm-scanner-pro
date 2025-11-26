@@ -4,7 +4,7 @@ import {
   BarChart2, DollarSign, TrendingUp, Edit3, GitCompare,
   Brain, TestTube2, RefreshCw, Database, Palette, Activity,
   BookOpen, Settings, LogOut, HelpCircle, GitBranch, FileType,
-  Smartphone, Package, ChevronDown, Search, History, Zap
+  Smartphone, Package, ChevronDown, Search, History, Zap, Bug
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -92,6 +92,7 @@ const menuItems = [
       { title: 'Barcode Test', url: '/admin/barcode-test', icon: TestTube2 },
       { title: 'Scheduled Batches', url: '/admin/scheduled-batches', icon: Clock },
       { title: 'QA Metrics', url: '/admin/qa-metrics', icon: Activity },
+      { title: 'Error Logs', url: '/admin/error-logs', icon: Bug },
       { title: 'White Label', url: '/admin/white-label', icon: Palette },
       { title: 'Credential Migration', url: '/admin/credential-migration', icon: Shield },
       { title: 'System Viability', url: '/admin/system-viability', icon: Settings },
