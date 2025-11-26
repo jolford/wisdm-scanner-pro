@@ -263,8 +263,8 @@ export default function IntegrationMarketplace() {
       if (userCustomer?.customer_id) {
         const { data, error } = await supabase
           .from('projects')
-          .select('id, name')
-          .eq('customer_id', userCustomer.customer_id)
+          .select('id, name, customer_id, is_active')
+          .or(`customer_id.eq.${userCustomer.customer_id},customer_id.is.null`)
           .eq('is_active', true)
           .order('name');
 
