@@ -85,11 +85,17 @@ Deno.serve(async (req) => {
       }
       currentBatchId = newBatch.id;
     } else {
-      // Update existing batch document count
+      // Update existing batch document count by fetching current count and incrementing
+      const { data: currentBatch } = await supabase
+        .from('batches')
+        .select('total_documents')
+        .eq('id', currentBatchId)
+        .single();
+      
       await supabase
         .from('batches')
         .update({ 
-          total_documents: supabase.rpc('increment', { x: files.length })
+          total_documents: (currentBatch?.total_documents || 0) + files.length
         })
         .eq('id', currentBatchId);
     }
