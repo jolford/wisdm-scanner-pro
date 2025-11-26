@@ -1578,7 +1578,7 @@ const { toast } = useToast();
                       <div className="flex flex-wrap gap-2 mt-1">
                         {projectFields.slice(0, 5).map((field) => {
                           const rawValue = getMetadataValue(metadata, field.name);
-                          const formattedValue = rawValue ? autoFormatField(field.name, rawValue) : 'N/A';
+                          const formattedValue = rawValue ? autoFormatField(field.name, rawValue, (field as any).type) : 'N/A';
                           return (
                             <Badge key={field.name} variant="outline" className="text-xs">
                               {field.name}: {formattedValue}
@@ -1959,8 +1959,8 @@ const { toast } = useToast();
                             )}
 
                             {projectFields.map((field) => {
-                              const rawFieldValue = getMetadataValue(metadata, field.name);
-                              const formattedFieldValue = rawFieldValue ? autoFormatField(field.name, rawFieldValue) : '';
+                               const rawFieldValue = getMetadataValue(metadata, field.name);
+                               const formattedFieldValue = rawFieldValue ? autoFormatField(field.name, rawFieldValue, (field as any).type) : '';
                               const fieldKey = `${doc.id}-${field.name}`;
                               const isValidating = validatingFields.has(fieldKey);
                               const confidence = fieldConfidence[doc.id]?.[field.name];
