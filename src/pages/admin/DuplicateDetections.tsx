@@ -216,11 +216,16 @@ export default function DuplicateDetections() {
                             <div className="pt-2 border-t">
                               <p className="text-sm font-medium mb-2">Matching Fields:</p>
                               <div className="flex flex-wrap gap-2">
-                                {Object.entries(dup.duplicate_fields).map(([field, value]: [string, any]) => (
-                                  <Badge key={field} variant="secondary" className="text-xs">
-                                    {field}: {value}
-                                  </Badge>
-                                ))}
+                                {Object.entries(dup.duplicate_fields).map(([field, value]: [string, any]) => {
+                                  const display = typeof value === "object" && value !== null
+                                    ? `${value.current ?? ""} ↔ ${value.candidate ?? ""} (${value.similarity !== undefined ? (value.similarity * 100).toFixed(0) + "%" : ""})`
+                                    : String(value);
+                                  return (
+                                    <Badge key={field} variant="secondary" className="text-xs">
+                                      {field}: {display}
+                                    </Badge>
+                                  );
+                                })}
                               </div>
                             </div>
                           )}
