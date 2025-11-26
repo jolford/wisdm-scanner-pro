@@ -21,7 +21,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { batchId, maxParallel = 2 } = await req.json(); // Reduced from 3 to 2 to prevent timeouts
+    const { batchId, maxParallel = 3 } = await req.json(); // Upgraded instance can handle more parallel processing
 
     console.log(`Starting parallel OCR for batch ${batchId} with max ${maxParallel} concurrent`);
 
