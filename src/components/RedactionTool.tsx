@@ -105,25 +105,49 @@ export const RedactionTool = ({
     if (!canvas || !displayUrl) return;
 
     setImageLoaded(false);
-    const img = new Image();
-    img.crossOrigin = 'anonymous';  // Required for canvas toBlob to work with external images
-    img.onload = () => {
-      imageRef.current = img;
-      // Set canvas size to match image dimensions
-      canvas.width = img.width;
-      canvas.height = img.height;
-      setImageLoaded(true);
-      redrawCanvas();  // Draw the image
+    
+    // Fetch image as blob to avoid CORS issues
+    const loadImage = async () => {
+      try {
+        const response = await fetch(displayUrl);
+        if (!response.ok) throw new Error('Failed to fetch image');
+        
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        
+        const img = new Image();
+        img.onload = () => {
+          imageRef.current = img;
+          // Set canvas size to match image dimensions
+          canvas.width = img.width;
+          canvas.height = img.height;
+          setImageLoaded(true);
+          redrawCanvas();  // Draw the image
+          
+          // Clean up object URL
+          URL.revokeObjectURL(objectUrl);
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(objectUrl);
+          toast({
+            title: 'Image Load Error',
+            description: 'Failed to load image for redaction',
+            variant: 'destructive'
+          });
+        };
+        img.src = objectUrl;
+      } catch (error) {
+        console.error('Error loading image:', error);
+        toast({
+          title: 'Image Load Error',
+          description: 'Failed to load image for redaction',
+          variant: 'destructive'
+        });
+      }
     };
-    img.onerror = () => {
-      toast({
-        title: 'Image Load Error',
-        description: 'Failed to load image for redaction',
-        variant: 'destructive'
-      });
-    };
-    img.src = displayUrl;
-  }, [displayUrl]);
+    
+    loadImage();
+  }, [displayUrl, toast]);
 
   /**
    * Redraw the entire canvas including image and all redaction boxes
