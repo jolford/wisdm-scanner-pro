@@ -73,6 +73,7 @@ const EditProject = () => {
   
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
+  const [isActive, setIsActive] = useState(true);
   const [enableCheckScanning, setEnableCheckScanning] = useState(false);
   const [enableSignatureVerification, setEnableSignatureVerification] = useState(false);
   const [detectPii, setDetectPii] = useState(false);
@@ -193,12 +194,14 @@ const EditProject = () => {
           created_at: string;
           updated_at: string;
           icon_url: string;
+          is_active: boolean;
         };
         
         setProjectName(projectData.name);
         setProjectDescription(projectData.description || '');
         setCurrentIconUrl(projectData.icon_url || '');
         setIconPreview(projectData.icon_url || '');
+        setIsActive(projectData.is_active ?? true);
         setEnableCheckScanning(projectData.enable_check_scanning || false);
         setEnableSignatureVerification(projectData.enable_signature_verification || false);
         setDetectPii(projectData.detect_pii || false);
@@ -422,6 +425,7 @@ const EditProject = () => {
           name: projectName,
           description: projectDescription,
           icon_url: iconUrl || null,
+          is_active: isActive,
           enable_check_scanning: enableCheckScanning,
           enable_signature_verification: enableSignatureVerification,
           detect_pii: detectPii,
@@ -479,6 +483,39 @@ const EditProject = () => {
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleToggleActive = async () => {
+    if (!id) return;
+    
+    const newActiveState = !isActive;
+    const previousState = isActive;
+    
+    // Optimistically update UI
+    setIsActive(newActiveState);
+    
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ is_active: newActiveState })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: `Project ${newActiveState ? 'activated' : 'deactivated'} successfully`,
+      });
+    } catch (error: any) {
+      // Revert on error
+      setIsActive(previousState);
+      console.error('Toggle active error:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update project status',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -555,6 +592,12 @@ const EditProject = () => {
             </div>
             <div className="flex gap-2">
               <Button 
+                variant={isActive ? "outline" : "default"}
+                onClick={handleToggleActive}
+              >
+                {isActive ? 'Deactivate' : 'Activate'}
+              </Button>
+              <Button 
                 variant="destructive" 
                 onClick={() => setShowDeleteDialog(true)}
                 disabled={deleting}
@@ -601,7 +644,12 @@ const EditProject = () => {
         <Card className="p-8 bg-gradient-to-br from-card to-card/80 shadow-[var(--shadow-elegant)]">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <Label htmlFor="name">Project Name *</Label>
+              <div className="flex items-center justify-between mb-2">
+                <Label htmlFor="name">Project Name *</Label>
+                <Badge variant={isActive ? "default" : "secondary"}>
+                  {isActive ? 'Active' : 'Inactive'}
+                </Badge>
+              </div>
               <Input
                 id="name"
                 value={projectName}
