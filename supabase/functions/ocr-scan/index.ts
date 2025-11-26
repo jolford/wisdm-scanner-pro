@@ -36,6 +36,11 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
 
+// Declare EdgeRuntime global for background tasks
+declare const EdgeRuntime: {
+  waitUntil(promise: Promise<any>): void;
+};
+
 // CORS headers to allow requests from web applications
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -1971,61 +1976,50 @@ Review the image and provide corrected text with any OCR errors fixed.`;
       }
     }
     
-    // --- TRIGGER WORKFLOW EXECUTION ---
-    // Execute workflows after successful OCR completion
-    try {
-      const supabaseAdmin = createClient(
-        Deno.env.get('SUPABASE_URL') ?? '',
-        Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-      );
-      
-      // Get document's batch_id and project_id for workflow context
-      let workflowBatchId = null;
-      let workflowProjectId = projectId; // Use provided projectId if available
-      
-      if (documentId) {
-        const { data: doc } = await supabaseAdmin
-          .from('documents')
-          .select('batch_id, project_id')
-          .eq('id', documentId)
-          .maybeSingle();
-        
-        if (doc) {
-          workflowBatchId = doc.batch_id;
-          // Use document's project_id if projectId wasn't provided
-          if (!workflowProjectId) {
-            workflowProjectId = doc.project_id;
-          }
-        }
-      }
-      
-      // Only trigger workflows if we have a valid project_id
-      if (workflowProjectId) {
-        const workflowResult = await supabaseAdmin.functions.invoke('execute-workflow', {
-          body: {
-            eventType: 'document_uploaded',
-            projectId: workflowProjectId,
-            documentId: documentId,
-            batchId: workflowBatchId,
-            metadata: {
-              documentType: documentType,
-              confidence: confidence,
-              ...metadata
+    // --- TRIGGER WORKFLOW EXECUTION (ASYNC - NON-BLOCKING) ---
+    // Execute workflows in background without blocking OCR response
+    if (documentId) {
+      EdgeRuntime.waitUntil(
+        (async () => {
+          try {
+            const supabaseAdmin = createClient(
+              Deno.env.get('SUPABASE_URL') ?? '',
+              Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+            );
+            
+            // Get document's batch_id and project_id for workflow context
+            const { data: doc } = await supabaseAdmin
+              .from('documents')
+              .select('batch_id, project_id')
+              .eq('id', documentId)
+              .maybeSingle();
+            
+            if (doc?.project_id) {
+              const workflowResult = await supabaseAdmin.functions.invoke('execute-workflow', {
+                body: {
+                  eventType: 'document_uploaded',
+                  projectId: doc.project_id,
+                  documentId: documentId,
+                  batchId: doc.batch_id,
+                  metadata: {
+                    documentType: documentType,
+                    confidence: confidence,
+                    ...metadata
+                  }
+                }
+              });
+              
+              if (workflowResult.error) {
+                console.error('Workflow execution error:', workflowResult.error);
+              } else {
+                console.log('Workflow execution completed');
+              }
             }
+          } catch (workflowError) {
+            console.error('Background workflow execution failed:', workflowError);
           }
-        });
-        
-        if (workflowResult.error) {
-          console.error('Workflow execution error:', workflowResult.error);
-        } else {
-          console.log('Workflow execution result:', workflowResult.data);
-        }
-      } else {
-        console.log('Skipped workflow execution - no project_id available');
-      }
-    } catch (workflowError) {
-      console.error('Failed to trigger workflow execution:', workflowError);
-      // Continue even if workflow fails - don't block OCR response
+        })()
+      );
     }
     
     // --- RETURN SUCCESS RESPONSE ---
