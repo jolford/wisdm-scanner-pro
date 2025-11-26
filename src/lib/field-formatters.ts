@@ -107,10 +107,15 @@ export function formatZipCode(value: string | null | undefined): string {
 /**
  * Auto-detect field type and apply appropriate formatting
  */
-export function autoFormatField(fieldName: string, value: string | null | undefined): string {
+export function autoFormatField(fieldName: string, value: string | null | undefined, fieldType?: string): string {
   if (!value) return '';
   
   const name = fieldName.toLowerCase();
+  
+  // If the field has an explicit currency type from configuration, respect it first
+  if (fieldType === 'currency') {
+    return formatCurrency(value);
+  }
   
   // Phone number patterns
   if (name.includes('phone') || name.includes('mobile') || name.includes('cell') || name.includes('fax')) {
@@ -127,9 +132,11 @@ export function autoFormatField(fieldName: string, value: string | null | undefi
     return formatDate(value);
   }
   
-  // Currency patterns
+  // Currency patterns (fallback based on common naming conventions)
   if (name.includes('amount') || name.includes('total') || name.includes('price') || 
-      name.includes('cost') || name.includes('fee') || name.includes('balance')) {
+      name.includes('cost') || name.includes('fee') || name.includes('balance') ||
+      name.includes('income') || name.includes('wage') || name.includes('salary') ||
+      name.includes('overtime') || name.includes('payment')) {
     return formatCurrency(value);
   }
   
