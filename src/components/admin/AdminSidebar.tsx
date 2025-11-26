@@ -72,11 +72,18 @@ const menuItems = [
     defaultOpen: false,
   },
   {
+    title: 'Sales Tools',
+    items: [
+      { title: 'Business Metrics', url: '/admin/business-metrics', icon: TrendingUp },
+      { title: 'Cost Tracking', url: '/admin/cost-tracking', icon: DollarSign },
+      { title: 'System Viability', url: '/admin/system-viability', icon: Settings },
+    ],
+    defaultOpen: false,
+  },
+  {
     title: 'Analytics & Tools',
     items: [
       { title: 'Validation Analytics', url: '/admin/analytics', icon: BarChart2 },
-      { title: 'Business Metrics', url: '/admin/business-metrics', icon: TrendingUp },
-      { title: 'Cost Tracking', url: '/admin/cost-tracking', icon: DollarSign },
       { title: 'Advanced Search', url: '/admin/advanced-search', icon: Search },
       { title: 'Bulk Edit', url: '/admin/bulk-edit', icon: Edit3 },
       { title: 'Document Comparison', url: '/admin/document-comparison', icon: GitCompare },
@@ -95,7 +102,6 @@ const menuItems = [
       { title: 'Error Logs', url: '/admin/error-logs', icon: Bug },
       { title: 'White Label', url: '/admin/white-label', icon: Palette },
       { title: 'Credential Migration', url: '/admin/credential-migration', icon: Shield },
-      { title: 'System Viability', url: '/admin/system-viability', icon: Settings },
       { title: 'Release Notes', url: '/admin/release-notes', icon: BookOpen },
     ],
     defaultOpen: false,
