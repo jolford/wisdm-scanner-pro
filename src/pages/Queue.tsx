@@ -759,248 +759,20 @@ const [isExporting, setIsExporting] = useState(false);
     }
   };
 
-  const processPdf = async (file: File) => {
-    if (!selectedProjectId || !selectedBatchId) {
-      toast({
-        title: 'Select Project and Batch',
-        description: 'Please select both a project and batch before uploading',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setProcessing(true);
-    
-    try {
-      // First, upload the original PDF file to storage
-      // Sanitize filename to avoid invalid storage keys (spaces, brackets, special chars)
-      const rawName = file.name || 'document.pdf';
-      const safeName = rawName.replace(/[^\w.\-]+/g, '_');
-      const objectPath = `${selectedBatchId}/${Date.now()}_${safeName}`;
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(objectPath, file, {
-          contentType: 'application/pdf',
-          upsert: false,
-        });
-
-      if (uploadError) {
-        throw new Error(`Failed to upload PDF: ${uploadError.message}`);
-      }
-
-      // Get public URL for the uploaded PDF
-      const { data: { publicUrl } } = supabase.storage
-        .from('documents')
-        .getPublicUrl(objectPath);
-
-      // Get separation config from project
-      const separationConfig: SeparationConfig = (selectedProject as any)?.metadata?.separation_config || { method: 'page_count', pagesPerDocument: 1 } as SeparationConfig;
-      
-      // Load PDF for analysis
-      const arrayBuffer = await file.arrayBuffer();
-      const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-      const pdfDoc = await loadingTask.promise;
-      
-      // Analyze document boundaries based on separation config
-      // Only apply separation if explicitly configured
-      const boundaries = await analyzePdfSeparation(pdfDoc, separationConfig);
-      
-      toast({
-        title: 'Processing PDF',
-        description: `Found ${boundaries.length} document(s) using ${separationConfig.method} separation`,
-      });
-      
-      // Process documents in parallel batches for speed
-      const BATCH_SIZE = 8;
-      const processingErrors: string[] = [];
-      
-      for (let batchStart = 0; batchStart < boundaries.length; batchStart += BATCH_SIZE) {
-        const batchEnd = Math.min(batchStart + BATCH_SIZE, boundaries.length);
-        const batch = boundaries.slice(batchStart, batchEnd);
-        
-        await Promise.all(
-          batch.map(async (boundary, batchIndex) => {
-            const i = batchStart + batchIndex;
-            const docName = getDocumentName(file.name, i, boundaries.length);
-            
-            try {
-              // Extract text from pages in this boundary
-              let extractedPdfText = '';
-              for (let pageNum = boundary.startPage; pageNum <= boundary.endPage; pageNum++) {
-                try {
-                  const page = await pdfDoc.getPage(pageNum);
-                  const textContent = await page.getTextContent();
-                  const pageText = (textContent.items || [])
-                    .map((item: any) => (item && item.str) ? item.str : '')
-                    .join(' ');
-                  extractedPdfText += pageText + '\n';
-                } catch (e) {
-                  console.warn(`Failed to extract text from page ${pageNum}:`, e);
-                }
-              }
-              
-              // If no text extracted, try OCR on first page of document
-              if (!extractedPdfText || extractedPdfText.trim().length < 10) {
-                try {
-                  const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
-                    ? selectedProject?.metadata?.table_extraction_config?.fields || []
-                    : [];
-                    
-                  const page = await pdfDoc.getPage(boundary.startPage);
-                  let viewport = page.getViewport({ scale: 1.5 });
-                  const maxDim = 2000;
-                  const scale = Math.min(1.5, maxDim / Math.max(viewport.width, viewport.height));
-                  viewport = page.getViewport({ scale });
-                  const canvas = document.createElement('canvas');
-                  const ctx = canvas.getContext('2d');
-                  canvas.width = Math.ceil(viewport.width);
-                  canvas.height = Math.ceil(viewport.height);
-                  if (!ctx) throw new Error('Canvas context not available');
-                  await page.render({ canvasContext: ctx as any, viewport }).promise;
-                  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-                  let payloadImageData = await downscaleDataUrl(dataUrl, 1600, 0.85);
-
-              const tempPdfDoc = await saveDocument(docName, 'application/pdf', publicUrl, '', {}, [], 0, false, []);
-                  
-                  const data = await invokeOcr({
-                    imageData: payloadImageData,
-                    isPdf: false,
-                    extractionFields,
-                    tableExtractionFields: tableFields,
-                    enableCheckScanning: enableMICR,
-                    customerId: selectedProject?.customer_id,
-                    documentId: tempPdfDoc?.id,
-                    projectId: selectedProjectId,
-                  });
-                  if (!data) {
-                    throw new Error('OCR service returned no data');
-                  }
-
-                  // Update document with OCR results
-                  if (tempPdfDoc?.id) {
-                    await supabase.from('documents').update({
-                      extracted_text: data.text,
-                      extracted_metadata: data.metadata || {},
-                      line_items: data.lineItems || [],
-                      confidence_score: data.confidence || 0,
-                      pii_detected: data.piiDetected || false,
-                      detected_pii_regions: data.detectedPiiRegions || []
-                    }).eq('id', tempPdfDoc.id);
-                  }
-                  
-                  // Show PII warning if detected
-                  if (data.piiDetected) {
-                    toast({
-                      title: 'PII Detected',
-                      description: `Found ${data.detectedPiiRegions?.length || 0} potentially sensitive items in ${docName}. Use redaction tool to protect sensitive data.`,
-                      variant: 'default',
-                    });
-                  }
-                  return;
-                } catch (fallbackErr: any) {
-                  console.error('PDF OCR fallback failed:', fallbackErr);
-                  throw fallbackErr;
-                }
-              }
-
-              // Process extracted text
-              const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
-                ? selectedProject?.metadata?.table_extraction_config?.fields || []
-                : [];
-              
-              // Also render first page image so OCR can read handwritten/typed values
-              let payloadImageData: string | undefined;
-              try {
-                const page = await pdfDoc.getPage(boundary.startPage);
-                let viewport = page.getViewport({ scale: 1.5 });
-                const maxDim = 2000;
-                const scale = Math.min(1.5, maxDim / Math.max(viewport.width, viewport.height));
-                viewport = page.getViewport({ scale });
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.width = Math.ceil(viewport.width);
-                canvas.height = Math.ceil(viewport.height);
-                if (ctx) {
-                  await page.render({ canvasContext: ctx as any, viewport }).promise;
-                  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
-                  payloadImageData = await downscaleDataUrl(dataUrl, 1600, 0.85);
-                }
-              } catch {}
-              
-               const tempDoc2 = await saveDocument(docName, 'application/pdf', publicUrl, '', {}, [], 0, false, []);
-              
-              const data = await invokeOcr({ 
-                textData: extractedPdfText,
-                imageData: payloadImageData,
-                isPdf: true,
-                extractionFields,
-                tableExtractionFields: tableFields,
-                enableCheckScanning: enableMICR,
-                customerId: selectedProject?.customer_id,
-                documentId: tempDoc2?.id,
-                projectId: selectedProjectId,
-              });
-              if (!data) {
-                throw new Error('OCR service returned no data');
-              }
-              
-                  // Update document with OCR results
-              if (tempDoc2?.id) {
-                await supabase.from('documents').update({
-                  extracted_text: data.text,
-                  extracted_metadata: data.metadata || {},
-                  line_items: data.lineItems || [],
-                  confidence_score: data.confidence || 0,
-                  pii_detected: data.piiDetected || false,
-                  detected_pii_regions: data.detectedPiiRegions || []
-                }).eq('id', tempDoc2.id);
-              }
-              
-              // Show PII warning if detected
-              if (data.piiDetected) {
-                toast({
-                  title: 'PII Detected',
-                  description: `Found ${data.detectedPiiRegions?.length || 0} potentially sensitive items in ${docName}. Use redaction tool to protect sensitive data.`,
-                  variant: 'default',
-                });
-              }
-            } catch (err: any) {
-              console.error(`Failed to process document ${docName}:`, err);
-              processingErrors.push(`${docName}: ${err.message}`);
-            }
-          })
-        );
-      }
-      
-      if (processingErrors.length > 0) {
-        toast({
-          title: 'Some Documents Failed',
-          description: `${processingErrors.length} document(s) failed to process`,
-          variant: 'destructive',
-        });
-      }
-      
-      toast({ 
-        title: 'PDF Processed', 
-        description: `Successfully separated into ${boundaries.length} document(s).` 
-      });
-
-      // Refresh validation queue and switch to validation tab
-      await loadQueueDocuments();
-      setTimeout(() => handleTabChange('validation'), 0);
-    } catch (error: any) {
-      console.error('Error processing PDF:', error);
-      toast({
-        title: 'PDF Processing Failed',
-        description: error.message || 'Failed to process the PDF. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setProcessing(false);
-    }
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const result = reader.result as string;
+        const base64 = result.includes(',') ? result.split(',')[1] : result;
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
   };
 
-  const handleMultipleFiles = async (files: File[]) => {
+  const importDocuments = async (files: File[]) => {
     if (!selectedProjectId || !selectedBatchId) {
       toast({
         title: 'Select Project and Batch',
@@ -1010,140 +782,103 @@ const [isExporting, setIsExporting] = useState(false);
       return;
     }
 
-    // Validate batch still exists before processing
-    const { data: batchCheck, error: batchError } = await supabase
-      .from('batches')
-      .select('id')
-      .eq('id', selectedBatchId)
-      .single();
-    
-    if (batchError || !batchCheck) {
+    // Basic license capacity check before sending to backend
+    if (!hasCapacity(files.length)) {
       toast({
-        title: 'Invalid Batch',
-        description: 'The selected batch no longer exists. Please select a valid batch.',
+        title: 'License Capacity Exceeded',
+        description: 'Your license has insufficient document capacity. Please contact your administrator.',
         variant: 'destructive',
       });
-      setSelectedBatchId(null);
-      setSelectedBatch(null);
-      sessionStorage.removeItem('selectedBatchId');
       return;
     }
 
-    const total = files.length;
-    toast({ title: 'Processing Multiple Files', description: `Processing ${total} files...` });
     setProcessing(true);
 
-    const MAX_CONCURRENT = 3; // Limit to reduce timeouts and improve stability
-    const queue = [...files];
-    const processingErrors: string[] = [];
-    let processed = 0;
+    try {
+      const encodedFiles = await Promise.all(
+        files.map(async (file) => ({
+          name: file.name,
+          type: file.type || 'application/octet-stream',
+          data: await fileToBase64(file),
+        }))
+      );
 
-    const processFile = async (file: File) => {
-      try {
-        if (file.type === 'application/pdf') {
-          await processPdf(file);
-        } else if (file.type.startsWith('image/')) {
-          if (isTiffFile(file)) {
-            const pngDataUrl = await convertTiffToPngDataUrl(file);
-            await handleScanComplete('', pngDataUrl, file.name.replace(/\.tiff?$/i, '.png'));
-          } else {
-            const reader = new FileReader();
-            const imageData = await new Promise<string>((resolve, reject) => {
-              reader.onload = (e) => resolve(e.target?.result as string);
-              reader.onerror = reject;
-              reader.readAsDataURL(file);
-            });
-            await handleScanComplete('', imageData, file.name);
-          }
-        }
-      } catch (err: any) {
-        console.error(`Error processing file ${file.name}:`, err);
-        processingErrors.push(`${file.name}: ${err?.message || 'Unknown error'}`);
-      } finally {
-        processed += 1;
-      }
-    };
+      const { data, error } = await safeInvokeEdgeFunction<any>('import-documents', {
+        body: {
+          projectId: selectedProjectId,
+          batchId: selectedBatchId,
+          files: encodedFiles,
+          autoProcessOCR: true,
+        },
+      });
 
-    const workers = Array.from({ length: Math.min(MAX_CONCURRENT, queue.length) }).map(async () => {
-      while (queue.length) {
-        const next = queue.shift();
-        if (!next) break;
-        await processFile(next);
-        // Small delay to reduce chance of rate limiting
-        await new Promise((r) => setTimeout(r, 150));
-      }
-    });
-
-    await Promise.all(workers);
-
-    // Trigger parallel OCR processing for any remaining documents
-    if (processed > 0 && selectedBatchId) {
-      console.log(`Triggering parallel OCR for batch ${selectedBatchId} with ${processed} documents`);
-      try {
-        const { error: parallelError } = await supabase.functions.invoke('parallel-ocr-batch', {
-          body: { 
-            batchId: selectedBatchId,
-            maxParallel: 3
-          }
+      if (error || !data || data.error) {
+        console.error('Import documents error:', error || data?.error);
+        toast({
+          title: 'Import Failed',
+          description: (error as any)?.message || data?.error || 'Failed to import documents',
+          variant: 'destructive',
         });
-        
-        if (parallelError) {
-          console.error('Failed to trigger parallel OCR:', parallelError);
-        } else {
-          console.log('✓ Parallel OCR triggered successfully');
-        }
-      } catch (e) {
-        console.error('Error triggering parallel OCR:', e);
+        return;
       }
 
-      // Trigger duplicate detection for the batch
-      console.log(`Triggering duplicate detection for batch ${selectedBatchId}`);
+      const uploadedCount = data.uploaded ?? encodedFiles.length;
+      const failedCount = data.failed ?? 0;
+
+      toast({
+        title: 'Documents Uploaded',
+        description: `Uploaded ${uploadedCount} file(s). OCR is processing in the background and will continue even if you leave this page.`,
+      });
+
+      // Trigger duplicate detection for the newly uploaded docs (preserve previous behavior)
       try {
-        // Give OCR a moment to process, then check duplicates
-        setTimeout(async () => {
-          const { data: batchDocs } = await supabase
-            .from('documents')
-            .select('id')
-            .eq('batch_id', selectedBatchId);
-          
-          if (batchDocs && batchDocs.length > 1) {
-            for (const doc of batchDocs) {
+        const docs: Array<{ id: string }> = data.documents || [];
+        if (docs.length > 1 && selectedBatchId) {
+          console.log(`Triggering duplicate detection for batch ${selectedBatchId}`);
+          setTimeout(async () => {
+            for (const doc of docs) {
               try {
                 await supabase.functions.invoke('detect-duplicates', {
                   body: {
                     documentId: doc.id,
                     batchId: selectedBatchId,
                     checkCrossBatch: false,
-                    thresholds: { name: 0.85, address: 0.90, signature: 0.85 }
-                  }
+                    thresholds: { name: 0.85, address: 0.9, signature: 0.85 },
+                  },
                 });
               } catch (dupError) {
                 console.error(`Duplicate detection failed for ${doc.id}:`, dupError);
               }
             }
             console.log('✓ Duplicate detection triggered');
-          }
-        }, 3000);
+          }, 3000);
+        }
       } catch (e) {
         console.error('Error triggering duplicate detection:', e);
       }
+
+      if (failedCount > 0) {
+        toast({
+          title: 'Some Documents Failed',
+          description: `${failedCount} document(s) failed to upload`,
+          variant: 'destructive',
+        });
+      }
+
+      await loadQueueDocuments();
+      setTimeout(() => handleTabChange('validation'), 0);
+    } finally {
+      setProcessing(false);
     }
+  };
 
-    setProcessing(false);
+  const processPdf = async (file: File) => {
+    // Route single-PDF uploads through the same background import path
+    await importDocuments([file]);
+  };
 
-    if (processingErrors.length > 0) {
-      toast({
-        title: 'Some Documents Failed',
-        description: `${processingErrors.length} of ${total} document(s) failed to process`,
-        variant: 'destructive',
-      });
-    }
-
-    toast({ title: 'Batch Complete', description: `Successfully processed ${processed} of ${total} files. Processing in parallel...` });
-
-    // After processing all files, go to Validation tab
-    await loadQueueDocuments();
-    setTimeout(() => handleTabChange('validation'), 0);
+  const handleMultipleFiles = async (files: File[]) => {
+    await importDocuments(files);
   };
 
   const handleScanComplete = async (text: string, imageUrl: string, fileName = 'scan.jpg') => {
