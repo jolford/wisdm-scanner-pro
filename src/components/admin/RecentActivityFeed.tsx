@@ -19,7 +19,45 @@ export const RecentActivityFeed = () => {
         .limit(20);
 
       if (error) throw error;
-      return data;
+      
+      // Fetch additional context for batches and documents
+      const enrichedData = await Promise.all(
+        (data || []).map(async (activity) => {
+          let contextName = null;
+          let userName = null;
+          
+          // Get batch or document name
+          if (activity.entity_type === 'batch' && activity.entity_id) {
+            const { data: batch } = await supabase
+              .from('batches')
+              .select('batch_name')
+              .eq('id', activity.entity_id)
+              .single();
+            contextName = batch?.batch_name;
+          } else if (activity.entity_type === 'document' && activity.entity_id) {
+            const { data: doc } = await supabase
+              .from('documents')
+              .select('file_name')
+              .eq('id', activity.entity_id)
+              .single();
+            contextName = doc?.file_name;
+          }
+          
+          // Get user name if available
+          if (activity.user_id) {
+            const { data: profile } = await supabase
+              .from('profiles')
+              .select('full_name, email')
+              .eq('id', activity.user_id)
+              .single();
+            userName = profile?.full_name || profile?.email;
+          }
+          
+          return { ...activity, contextName, userName };
+        })
+      );
+      
+      return enrichedData;
     },
     refetchInterval: 60000, // Refresh every minute
   });
@@ -119,17 +157,24 @@ export const RecentActivityFeed = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-4 mb-1">
-                        <p className="font-medium text-sm">
-                          {getActivityLabel(activity.action_type)}
-                        </p>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">
+                            {getActivityLabel(activity.action_type)}
+                          </p>
+                          {activity.contextName && (
+                            <p className="text-sm text-muted-foreground truncate mt-0.5">
+                              {activity.contextName}
+                            </p>
+                          )}
+                        </div>
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
                           {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
                         </span>
                       </div>
                       
-                      {activity.entity_type && (
-                        <p className="text-sm text-muted-foreground mb-2 truncate">
-                          {activity.entity_type}: {activity.entity_id?.slice(0, 8)}...
+                      {activity.userName && (
+                        <p className="text-xs text-muted-foreground mb-2">
+                          by {activity.userName}
                         </p>
                       )}
 
@@ -140,9 +185,9 @@ export const RecentActivityFeed = () => {
                         >
                           {activity.success ? "Success" : "Failed"}
                         </Badge>
-                        {activity.metadata && Object.keys(activity.metadata).length > 0 && (
-                          <span className="text-xs text-muted-foreground">
-                            • {Object.keys(activity.metadata).length} details
+                        {activity.error_message && (
+                          <span className="text-xs text-destructive truncate max-w-[200px]">
+                            {activity.error_message}
                           </span>
                         )}
                       </div>
