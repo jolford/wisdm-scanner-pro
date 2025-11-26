@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Lightbulb, Crop, Pencil, Sparkles, AlertTriangle, ExternalLink } from 'lucide-react';
+import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Lightbulb, Crop, Pencil, Sparkles, AlertTriangle, ExternalLink, Database, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { documentMetadataSchema } from '@/lib/validation-schemas';
@@ -108,6 +108,7 @@ export const ValidationScreen = ({
   const [selectedReferenceMeta, setSelectedReferenceMeta] = useState<any>(null);
   const [lineItems, setLineItems] = useState<Array<Record<string, any>>>([]);
   const [validationLookupConfig, setValidationLookupConfig] = useState<any>(null);
+  const [isLookingUp, setIsLookingUp] = useState(false);
   const { toast } = useToast();
   const { isAdmin } = useAuth();
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
@@ -332,6 +333,98 @@ export const ValidationScreen = ({
       toast({ title: 'Validation failed', description: message, variant: 'destructive' });
     } finally {
       setIsValidating(false);
+    }
+  };
+
+  // Validation lookup function
+  const lookupFieldValue = async (fieldName: string, fieldValue: any) => {
+    if (!validationLookupConfig || !validationLookupConfig.enabled) {
+      toast({ title: 'Lookup not configured', description: 'Validation lookup is not enabled for this project.' });
+      return;
+    }
+
+    if (validationLookupConfig.system !== 'excel' && validationLookupConfig.system !== 'csv') {
+      toast({ title: 'Unsupported system', description: 'Lookup is currently only supported for Excel/CSV systems.' });
+      return;
+    }
+
+    const valueStr = toFieldString(fieldValue);
+    if (!valueStr) {
+      toast({ title: 'Nothing to lookup', description: 'Please enter a value first.' });
+      return;
+    }
+
+    // Check if this field is configured for lookup
+    const lookupField = validationLookupConfig.lookupFields?.find(
+      (f: any) => f.wisdmField === fieldName && f.lookupEnabled !== false
+    );
+
+    if (!lookupField) {
+      toast({ title: 'Lookup not available', description: 'This field is not configured for validation lookup.' });
+      return;
+    }
+
+    setIsLookingUp(true);
+    try {
+      // Get signed URL if the file is in storage
+      let fileUrl = validationLookupConfig.excelFileUrl;
+      if (fileUrl && fileUrl.includes('supabase')) {
+        const { data: signedData } = await supabase.storage
+          .from('documents')
+          .createSignedUrl(fileUrl.split('/documents/')[1], 3600);
+        if (signedData?.signedUrl) {
+          fileUrl = signedData.signedUrl;
+        }
+      }
+
+      const { data, error } = await supabase.functions.invoke('validate-excel-lookup', {
+        body: {
+          fileUrl: fileUrl,
+          keyColumn: validationLookupConfig.excelKeyColumn,
+          keyValue: valueStr,
+          lookupFields: [
+            {
+              wisdmField: lookupField.wisdmField,
+              ecmField: lookupField.ecmField,
+              lookupEnabled: true,
+              wisdmValue: valueStr
+            }
+          ],
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.found) {
+        // Update field confidence to indicate validation success
+        setFieldConfidence(prev => ({
+          ...prev,
+          [fieldName]: 1.0,
+        }));
+
+        toast({
+          title: 'Lookup successful',
+          description: `${fieldName} "${valueStr}" found in validation database`,
+        });
+      } else {
+        // Lower confidence for not found
+        setFieldConfidence(prev => ({
+          ...prev,
+          [fieldName]: 0.3,
+        }));
+
+        toast({
+          title: 'Not found',
+          description: data?.message || `${fieldName} "${valueStr}" not found in validation database`,
+          variant: 'destructive'
+        });
+      }
+    } catch (error: any) {
+      console.error('Lookup validation failed:', error);
+      const message = error?.message || 'Unexpected error during lookup validation';
+      toast({ title: 'Lookup failed', description: message, variant: 'destructive' });
+    } finally {
+      setIsLookingUp(false);
     }
   };
   useEffect(() => { setResolvedBoundingBoxes(boundingBoxes); }, [boundingBoxes]);
@@ -1921,6 +2014,37 @@ useEffect(() => {
                     maxLength={500}
                     className={`flex-1 ${fieldErrors[field.name] ? 'border-destructive' : ''}`}
                   />
+                  
+                  {/* Validation Lookup Button */}
+                  {validationLookupConfig?.enabled && 
+                   (validationLookupConfig.system === 'excel' || validationLookupConfig.system === 'csv') &&
+                   validationLookupConfig.lookupFields?.some((f: any) => f.wisdmField === field.name && f.lookupEnabled !== false) && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => lookupFieldValue(field.name, editedMetadata[field.name] || '')}
+                            disabled={isLookingUp || !editedMetadata[field.name]}
+                            className="hover:bg-blue-50 hover:border-blue-300"
+                          >
+                            {isLookingUp ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Database className={`h-4 w-4 ${editedMetadata[field.name] ? 'text-blue-500' : 'text-muted-foreground'}`} />
+                            )}
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p className="text-xs">Validate against {validationLookupConfig.system.toUpperCase()} lookup</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                  
+                  {/* AI Validation Button */}
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
