@@ -337,25 +337,30 @@ export const ValidationScreen = ({
     }
   };
 
-  // Helper to get lookup configuration for a specific field (case-insensitive)
+  // Helper to get lookup configuration for a specific field (case-insensitive, ignores spaces/underscores)
   const getLookupFieldConfig = (fieldName: string) => {
     if (!validationLookupConfig || !validationLookupConfig.enabled) return null;
 
     const system = (validationLookupConfig.system || '').toLowerCase();
     if (!['excel', 'csv', 'filebound', 'docmgt'].includes(system)) return null;
 
-    const normalizedName = fieldName.trim().toLowerCase();
+    // Normalize field names by trimming, lowercasing and removing spaces/underscores
+    const normalize = (value: string) =>
+      value
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/[\s_]+/g, '');
+
+    const normalizedName = normalize(fieldName);
     const lookupField = (validationLookupConfig.lookupFields || []).find(
       (f: any) =>
-        (f.wisdmField || '')
-          .toString()
-          .trim()
-          .toLowerCase() === normalizedName && f.lookupEnabled !== false
+        f.lookupEnabled !== false &&
+        normalize(f.wisdmField || '') === normalizedName
     );
 
     return lookupField || null;
   };
-
   // Validation lookup function
   const lookupFieldValue = async (fieldName: string, fieldValue: any) => {
     const lookupField = getLookupFieldConfig(fieldName);
