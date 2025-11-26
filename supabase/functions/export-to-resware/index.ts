@@ -34,6 +34,12 @@ Deno.serve(async (req) => {
       throw new Error('Missing batchId or projectId');
     }
 
+    // Set export_started_at timestamp to track export duration
+    await supabaseAdmin
+      .from('batches')
+      .update({ export_started_at: new Date().toISOString() })
+      .eq('id', batchId);
+
     console.log('Starting Resware export for batch:', batchId);
 
     // Get project configuration
@@ -181,7 +187,10 @@ Deno.serve(async (req) => {
     // Update batch export status
     await supabaseAdmin
       .from('batches')
-      .update({ exported_at: new Date().toISOString() })
+      .update({ 
+        exported_at: new Date().toISOString(),
+        export_started_at: null
+      })
       .eq('id', batchId);
 
     const successCount = exportResults.filter(r => r.success).length;
