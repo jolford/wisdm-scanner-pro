@@ -441,6 +441,72 @@ export type Database = {
           },
         ]
       }
+      custom_scripts: {
+        Row: {
+          created_at: string | null
+          created_by: string
+          customer_id: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          metadata: Json | null
+          name: string
+          project_id: string | null
+          schedule_cron: string | null
+          script_code: string
+          script_language: string
+          trigger_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          created_by: string
+          customer_id: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name: string
+          project_id?: string | null
+          schedule_cron?: string | null
+          script_code: string
+          script_language: string
+          trigger_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string
+          customer_id?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata?: Json | null
+          name?: string
+          project_id?: string | null
+          schedule_cron?: string | null
+          script_code?: string
+          script_language?: string
+          trigger_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_scripts_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_scripts_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_testimonials: {
         Row: {
           company: string
@@ -2319,6 +2385,50 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      script_execution_logs: {
+        Row: {
+          error_message: string | null
+          executed_at: string | null
+          executed_by: string | null
+          execution_context: Json | null
+          execution_duration_ms: number | null
+          id: string
+          output: string | null
+          script_id: string
+          status: string
+        }
+        Insert: {
+          error_message?: string | null
+          executed_at?: string | null
+          executed_by?: string | null
+          execution_context?: Json | null
+          execution_duration_ms?: number | null
+          id?: string
+          output?: string | null
+          script_id: string
+          status: string
+        }
+        Update: {
+          error_message?: string | null
+          executed_at?: string | null
+          executed_by?: string | null
+          execution_context?: Json | null
+          execution_duration_ms?: number | null
+          id?: string
+          output?: string | null
+          script_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_execution_logs_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "custom_scripts"
             referencedColumns: ["id"]
           },
         ]

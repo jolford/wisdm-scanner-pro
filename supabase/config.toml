@@ -110,3 +110,7 @@ verify_jwt = false
 
 [functions.api-v1-retrieve]
 verify_jwt = false
+
+# Custom Script Execution
+[functions.execute-custom-script]
+verify_jwt = true

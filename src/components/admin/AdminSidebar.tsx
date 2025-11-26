@@ -4,7 +4,7 @@ import {
   BarChart2, DollarSign, TrendingUp, Edit3, GitCompare,
   Brain, TestTube2, RefreshCw, Database, Palette, Activity,
   BookOpen, Settings, LogOut, HelpCircle, GitBranch, FileType,
-  Smartphone, Package, ChevronDown, Search, History, Zap, Bug
+  Smartphone, Package, ChevronDown, Search, History, Zap, Bug, Code
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -95,6 +95,10 @@ const menuItems = [
     items: [
       { title: 'ML Templates', url: '/admin/ml-templates', icon: FileType },
       { title: 'Mobile Validation', url: '/admin/mobile-validation', icon: Smartphone },
+      { title: 'Workflow Builder', url: '/admin/workflow-builder', icon: GitBranch },
+      { title: 'Workflow Management', url: '/admin/workflows', icon: History },
+      { title: 'Custom Scripts', url: '/admin/custom-scripts', icon: Code },
+      { title: 'Integration Marketplace', url: '/admin/integrations', icon: Package },
       { title: 'Document Reprocessing', url: '/admin/document-reprocessing', icon: RefreshCw },
       { title: 'Scheduled Batches', url: '/admin/scheduled-batches', icon: Clock },
       { title: 'QA Metrics', url: '/admin/qa-metrics', icon: Activity },
