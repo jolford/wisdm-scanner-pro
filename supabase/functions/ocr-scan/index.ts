@@ -609,11 +609,16 @@ RESPONSE REQUIREMENTS:
       // Try to extract JSON from the response (AI may include extra text or markdown code blocks)
       let jsonToParse = responseText;
       
+      // Log raw response for debugging
+      console.log('Raw AI response length:', responseText.length);
+      console.log('Raw AI response preview:', responseText.substring(0, 300));
+      
       // Remove markdown code fences if present (```json ... ```)
       if (responseText.includes('```')) {
         const codeBlockMatch = responseText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
         if (codeBlockMatch) {
           jsonToParse = codeBlockMatch[1].trim();
+          console.log('Extracted JSON from markdown code block');
         }
       }
       
@@ -650,47 +655,100 @@ RESPONSE REQUIREMENTS:
           let cleanJson = jsonMatch[0]
             .replace(/"text_content":/g, '"text":')
             .replace(/"text_text":/g, '"text":')
-            // Remove trailing commas
+            // Remove trailing commas before closing braces/brackets
             .replace(/,(\s*[}\]])/g, '$1')
             // Remove control characters
             .replace(/[\x00-\x1F\x7F-\x9F]/g, '');
           
           parsed = JSON.parse(cleanJson);
+          console.log('JSON parse successful on first attempt');
         } catch (firstError) {
           console.error('First JSON parse attempt failed:', firstError);
-          console.log('Attempting more aggressive repairs...');
+          console.log('Raw JSON snippet:', jsonMatch[0].substring(0, 500));
+          console.log('Attempting progressive repair strategies...');
           
-          // Try more aggressive repairs
+          // Try progressive repair strategies
           let repairedJson = jsonMatch[0];
           
-          // 1. Remove any control characters and normalize whitespace
-          repairedJson = repairedJson.replace(/[\x00-\x1F\x7F-\x9F]/g, ' ');
-          
-          // 2. Fix missing quotes around property names
-          repairedJson = repairedJson.replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":');
-          
-          // 3. Remove trailing commas
-          repairedJson = repairedJson.replace(/,(\s*[}\]])/g, '$1');
-          
-          // 4. Fix Unicode escapes
-          repairedJson = repairedJson.replace(/\\u([0-9A-Fa-f]{4})/g, (_match: string, grp: string) => String.fromCharCode(parseInt(grp, 16)));
+          // Strategy 1: Basic cleanup
+          repairedJson = repairedJson
+            // Remove control characters
+            .replace(/[\x00-\x1F\x7F-\x9F]/g, ' ')
+            // Remove trailing commas
+            .replace(/,(\s*[}\]])/g, '$1')
+            // Fix missing quotes around property names
+            .replace(/([{,]\s*)([a-zA-Z_][a-zA-Z0-9_]*)\s*:/g, '$1"$2":')
+            // Fix Unicode escapes
+            .replace(/\\u([0-9A-Fa-f]{4})/g, (_match: string, grp: string) => String.fromCharCode(parseInt(grp, 16)));
           
           try {
             parsed = JSON.parse(repairedJson);
-            console.log('JSON repair successful!');
+            console.log('✓ JSON repair successful (Strategy 1: Basic cleanup)');
           } catch (secondError) {
-            console.error('JSON repair failed:', secondError);
-            console.error('Problematic JSON (first 500 chars):', repairedJson.substring(0, 500));
+            console.log('Strategy 1 failed, trying Strategy 2...');
             
-            // Last resort: extract fullText with regex
-            const fullTextMatch = repairedJson.match(/"fullText"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-            if (fullTextMatch) {
-              console.log('Extracted fullText from failed JSON');
-              extractedText = fullTextMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
-              // Use defaults for other fields and continue processing
-              parsed = null; // Signal that we only have fullText
-            } else {
-              throw new Error('Unable to parse AI response as JSON');
+            // Strategy 2: More aggressive string value fixing
+            repairedJson = repairedJson
+              // Fix unescaped quotes in string values
+              .replace(/"([^"]*?)"(\s*[^:,}\]])/g, (match: string, content: string, after: string) => {
+                // Only escape if this looks like a string value, not a property name
+                if (after.trim().startsWith(':')) return match;
+                return `"${content.replace(/"/g, '\\"')}"${after}`;
+              })
+              // Fix newlines in strings
+              .replace(/"\s*\n\s*"/g, '" "')
+              // Remove any remaining invalid characters
+              .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+            
+            try {
+              parsed = JSON.parse(repairedJson);
+              console.log('✓ JSON repair successful (Strategy 2: String fixing)');
+            } catch (thirdError) {
+              console.log('Strategy 2 failed, trying Strategy 3 (field extraction)...');
+              
+              // Strategy 3: Extract individual fields with regex
+              try {
+                const extractField = (fieldName: string): any => {
+                  // Try to extract a field value using regex
+                  const pattern = new RegExp(`"${fieldName}"\\s*:\\s*({[^}]+}|\\[[^\\]]+\\]|"[^"]*"|[^,}\\n]+)`, 'i');
+                  const match = repairedJson.match(pattern);
+                  if (match) {
+                    try {
+                      return JSON.parse(match[1]);
+                    } catch {
+                      return match[1].replace(/^"|"$/g, '').trim();
+                    }
+                  }
+                  return null;
+                };
+                
+                // Build minimal JSON from extracted fields
+                parsed = {
+                  fullText: extractField('fullText') || extractedText,
+                  documentType: extractField('documentType') || 'other',
+                  confidence: extractField('confidence') || 0,
+                  fields: extractField('fields') || {},
+                  lineItems: extractField('lineItems') || []
+                };
+                
+                console.log('✓ JSON rebuilt from field extraction (Strategy 3)');
+              } catch (fourthError) {
+                console.error('All repair strategies failed:', fourthError);
+                console.error('Problematic JSON (first 1000 chars):', repairedJson.substring(0, 1000));
+                
+                // Final fallback: extract just fullText with regex
+                const fullTextMatch = repairedJson.match(/"fullText"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+                if (fullTextMatch) {
+                  console.log('✓ Extracted fullText as final fallback');
+                  extractedText = fullTextMatch[1].replace(/\\n/g, '\n').replace(/\\"/g, '"');
+                  parsed = null; // Signal that we only have fullText
+                } else {
+                  // Absolute last resort: use the raw response text
+                  console.error('⚠ Using raw response text as fallback');
+                  extractedText = responseText;
+                  parsed = null;
+                }
+              }
             }
           }
         }
