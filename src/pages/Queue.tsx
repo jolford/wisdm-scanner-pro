@@ -634,13 +634,9 @@ const [isExporting, setIsExporting] = useState(false);
       // Use batchCheck (fresh data) instead of selectedBatch (stale state)
       const batchIsComplete = batchCheck?.status === 'complete';
 
-      // Only show documents in Validation once OCR has completed and data is available
-      const validationDocs = docsData?.filter(d => {
-        const hasConfidence = typeof d.confidence_score === 'number' && d.confidence_score > 0;
-        const hasMetadata = d.extracted_metadata && Object.keys(d.extracted_metadata || {}).length > 0;
-        const hasText = typeof d.extracted_text === 'string' && d.extracted_text.trim().length > 0;
-        return d.validation_status === 'pending' && hasConfidence && (hasMetadata || hasText);
-      }) || [];
+      // Show ALL pending documents in Validation, even if OCR/extraction failed,
+      // so operators can manually index documents with missing data
+      const validationDocs = docsData?.filter(d => d.validation_status === 'pending') || [];
       setValidationQueue(validationDocs);
 
       // Show validated docs for export even when batch is complete
