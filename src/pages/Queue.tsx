@@ -1870,7 +1870,7 @@ const [isExporting, setIsExporting] = useState(false);
               <img 
                 src={wisdmLogo} 
                 alt="WISDM Logo" 
-                className="h-8 sm:h-10 w-auto transition-transform duration-300 hover:scale-105 flex-shrink-0" 
+                className="h-8 sm:h-10 w-auto transition-transform duration-300 hover:scale-105 flex-shrink-0 dark:bg-white dark:p-2 dark:rounded-md" 
               />
               <div className="h-8 w-px bg-border hidden sm:block" />
               <div className="min-w-0 flex-1">
