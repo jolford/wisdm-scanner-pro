@@ -5,7 +5,7 @@ import { safeInvokeEdgeFunction } from '@/lib/edge-function-helper';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function CredentialMigration() {
@@ -58,6 +58,15 @@ export default function CredentialMigration() {
   return (
     <div className="container py-8 max-w-4xl">
       <div className="mb-8">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate('/admin')}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Dashboard
+        </Button>
         <h1 className="text-3xl font-bold flex items-center gap-2">
           <Shield className="h-8 w-8 text-primary" />
           Credential Encryption Migration

@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Loader2, Search, Settings, CheckCircle, XCircle, Database } from 'lucide-react';
+import { Loader2, Search, Settings, CheckCircle, XCircle, Database, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Project {
@@ -77,6 +77,15 @@ export default function ValidationLookups() {
   return (
     <div className="space-y-6">
       <div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate('/admin')}
+          className="mb-4"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Dashboard
+        </Button>
         <h1 className="text-3xl font-bold">Validation Lookups</h1>
         <p className="text-muted-foreground mt-2">
           Manage validation lookup configurations for all projects
