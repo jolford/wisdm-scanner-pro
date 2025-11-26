@@ -97,7 +97,6 @@ const menuItems = [
       { title: 'ML Templates', url: '/admin/ml-templates', icon: FileType },
       { title: 'Mobile Validation', url: '/admin/mobile-validation', icon: Smartphone },
       { title: 'Document Reprocessing', url: '/admin/document-reprocessing', icon: RefreshCw },
-      { title: 'Barcode Test', url: '/admin/barcode-test', icon: TestTube2 },
       { title: 'Scheduled Batches', url: '/admin/scheduled-batches', icon: Clock },
       { title: 'QA Metrics', url: '/admin/qa-metrics', icon: Activity },
       { title: 'Error Logs', url: '/admin/error-logs', icon: Bug },
