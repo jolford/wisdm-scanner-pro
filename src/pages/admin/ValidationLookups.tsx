@@ -75,7 +75,7 @@ export default function ValidationLookups() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto max-w-6xl py-6 space-y-6">
       <div>
         <Button
           variant="ghost"
