@@ -71,7 +71,89 @@ serve(async (req) => {
       );
     }
 
-    const { imageData, isPdf, extractionFields, textData, tableExtractionFields, enableCheckScanning, documentId, customerId, projectId } = body;
+    let { imageData, isPdf, extractionFields, textData, tableExtractionFields, enableCheckScanning, documentId, customerId, projectId } = body;
+    
+    // If documentId is provided but imageData is missing, fetch the document from database
+    if (documentId && !imageData) {
+      console.log(`Fetching document ${documentId} from database...`);
+      
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      
+      const { data: document, error: docError } = await supabase
+        .from('documents')
+        .select('file_url, file_type, project_id, batch_id')
+        .eq('id', documentId)
+        .single();
+      
+      if (docError || !document) {
+        console.error('Failed to fetch document:', docError);
+        return new Response(
+          JSON.stringify({ error: `Document not found: ${docError?.message || 'Unknown error'}` }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Set projectId from document if not provided
+      if (!projectId && document.project_id) {
+        projectId = document.project_id;
+      }
+      
+      // Fetch project configuration to get extraction fields if not provided
+      if (projectId && !extractionFields) {
+        const { data: project, error: projectError } = await supabase
+          .from('projects')
+          .select('extraction_fields, metadata')
+          .eq('id', projectId)
+          .single();
+        
+        if (project && project.extraction_fields) {
+          extractionFields = project.extraction_fields;
+          console.log(`Loaded ${extractionFields.length} extraction fields from project`);
+        }
+        
+        // Get table extraction config from project metadata if available
+        if (project && project.metadata && (project.metadata as any).table_extraction_config?.enabled) {
+          tableExtractionFields = (project.metadata as any).table_extraction_config.fields || [];
+          console.log(`Loaded ${tableExtractionFields.length} table extraction fields from project`);
+        }
+        
+        // Get customerId from project for license tracking
+        if (project && !customerId) {
+          customerId = (project.metadata as any)?.customer_id;
+        }
+      }
+      
+      // Check if this is a PDF based on file type
+      isPdf = document.file_type === 'application/pdf';
+      
+      // Download the file from storage
+      const fileName = document.file_url.split('/').pop();
+      const batchId = document.batch_id;
+      const storagePath = `${batchId}/${fileName}`;
+      
+      console.log(`Downloading file from storage: ${storagePath}`);
+      
+      const { data: fileBlob, error: downloadError } = await supabase.storage
+        .from('documents')
+        .download(storagePath);
+      
+      if (downloadError || !fileBlob) {
+        console.error('Failed to download file:', downloadError);
+        return new Response(
+          JSON.stringify({ error: `Failed to download document: ${downloadError?.message || 'Unknown error'}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      // Convert blob to base64 data URL
+      const arrayBuffer = await fileBlob.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      imageData = `data:${document.file_type};base64,${base64}`;
+      
+      console.log(`Document fetched successfully. Type: ${document.file_type}, Size: ${arrayBuffer.byteLength} bytes`);
+    }
     
     // Validate required fields
     if (!isPdf && !imageData) {
@@ -146,7 +228,8 @@ serve(async (req) => {
 
     // --- PDF TEXT REQUIREMENT ---
     // For PDFs, we require textData to be provided (extracted client-side for better performance)
-    if (isPdf && !textData) {
+    // UNLESS we're processing via documentId (server-side flow), in which case we'll use AI to extract text
+    if (isPdf && !textData && !documentId) {
       throw new Error('PDF text extraction required. Please ensure text is extracted before sending.');
     }
 
