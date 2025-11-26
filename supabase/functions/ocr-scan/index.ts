@@ -751,6 +751,8 @@ RESPONSE REQUIREMENTS:
           
           parsed = JSON.parse(cleanJson);
           console.log('JSON parse successful on first attempt');
+          console.log('Parsed object keys:', Object.keys(parsed).join(', '));
+          console.log('Fields in parsed.fields:', parsed.fields ? Object.keys(parsed.fields).join(', ') : '(no fields object)');
         } catch (firstError) {
           console.error('First JSON parse attempt failed:', firstError);
           console.log('Raw JSON snippet:', jsonMatch[0].substring(0, 500));
@@ -1917,36 +1919,79 @@ Review the image and provide corrected text with any OCR errors fixed.`;
           }
         }
 
+        // Check-specific fallback extraction if metadata is empty
+        const looksLikeCheck = documentType === 'check' && typeof extractedText === 'string';
+        if (looksLikeCheck && Object.keys(sanitizedMetadata).length === 0) {
+          console.log('Applying check fallback metadata extraction for document', documentId);
+          const text = String(extractedText);
+          const checkMeta: Record<string, string> = {};
+
+          // Check Amount - look for $ followed by numbers
+          const amountMatch = text.match(/\$\s?\d{1,3}(,\d{3})*(\.\d{2})?/);
+          if (amountMatch) {
+            checkMeta['Check Amount'] = amountMatch[0].replace(/\s/g, '');
+            console.log('Check fallback - Amount:', checkMeta['Check Amount']);
+          }
+
+          // Check Date - look for MM/DD/YY or MM/DD/YYYY pattern
+          const dateMatch = text.match(/\b(\d{1,2}\/\d{1,2}\/\d{2,4})\b/);
+          if (dateMatch) {
+            checkMeta['Check Date'] = dateMatch[1];
+            console.log('Check fallback - Date:', checkMeta['Check Date']);
+          }
+
+          // Check Number - often appears as 4-digit number, typically near "DATE" or at top
+          const checkNumMatch = text.match(/\b(\d{4})\b/);
+          if (checkNumMatch) {
+            checkMeta['Check Number'] = checkNumMatch[1];
+            console.log('Check fallback - Number:', checkMeta['Check Number']);
+          }
+
+          // Payee Name - look for "PAY TO THE ORDER OF" followed by text
+          const payeeMatch = text.match(/PAY\s+TO\s+THE\s+.*?ORDER\s+OF\s+([A-Z\s]{2,50})/i);
+          if (payeeMatch) {
+            checkMeta['Payee Name'] = payeeMatch[1].trim();
+            console.log('Check fallback - Payee:', checkMeta['Payee Name']);
+          }
+
+          if (Object.keys(checkMeta).length > 0) {
+            sanitizedMetadata = checkMeta;
+            // Set field confidence for fallback extracted fields
+            Object.keys(checkMeta).forEach(key => {
+              if (fieldConfidence) fieldConfidence[key] = 0.92;
+            });
+          }
+        }
+
         // Mortgage application fallback extraction: if metadata is empty or discarded
         // but the text clearly matches a Uniform Residential Loan Application,
         // derive key fields directly from the OCR text.
         const looksLikeMortgageApp =
           typeof extractedText === 'string' &&
-          extractedText.includes('Uniform Residential Loan Application');
+          (extractedText.includes('Uniform Residential Loan Application') ||
+           extractedText.includes('Freddie Mac Form') ||
+           extractedText.includes('Fannie Mae Form'));
 
-        if (
-          looksLikeMortgageApp &&
-          (!sanitizedMetadata || Object.keys(sanitizedMetadata as Record<string, any>).length === 0)
-        ) {
+        if (looksLikeMortgageApp && Object.keys(sanitizedMetadata).length === 0) {
+          const text = String(extractedText);
           const fallbackMeta: Record<string, string> = {};
-          const text = extractedText as string;
 
-          // Loan Identifier line
-          const loanMatch = text.match(/Lender Loan No\.\/Universal Loan Identifier\s+([^\n]+)/i);
-          if (loanMatch?.[1]) {
-            fallbackMeta['Loan Identifier'] = loanMatch[1].trim();
+          // Borrower Name - look after "Borrower Name"
+          const borrowerMatch = text.match(/Borrower\s+Name[\s\S]{0,80}?([A-Z][a-z]+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/i);
+          if (borrowerMatch?.[1]) {
+            fallbackMeta['Borrower Name'] = borrowerMatch[1].trim();
           }
 
-          // Borrower Name line (line after the Name label)
-          const nameBlock = text.match(/Name \(First, Middle, Last, Suffix\)[\r\n]+([^\n]+)/i);
-          if (nameBlock?.[1]) {
-            fallbackMeta['Borrower Name'] = nameBlock[1].trim();
+          // SSN - look for ###-##-#### pattern
+          const ssnMatch = text.match(/\b(\d{3}-\d{2}-\d{4})\b/);
+          if (ssnMatch?.[1]) {
+            fallbackMeta['SSN'] = ssnMatch[1];
           }
 
-          // Social Security Number: capture next line which usually holds the numeric pattern
-          const ssnBlock = text.match(/Social Security Number[^\n]*[\r\n]+([^\n]+)/i);
-          if (ssnBlock?.[1]) {
-            fallbackMeta['Social Security Number'] = ssnBlock[1].trim();
+          // Home Phone - (###) ###-####
+          const phoneMatch = text.match(/\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}/);
+          if (phoneMatch?.[0]) {
+            fallbackMeta['Home Phone'] = phoneMatch[0].trim();
           }
 
           // Date of Birth
