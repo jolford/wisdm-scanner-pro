@@ -2261,9 +2261,16 @@ const [isExporting, setIsExporting] = useState(false);
                             </p>
                             {doc.extracted_metadata && Object.keys(doc.extracted_metadata).length > 0 && (
                               <div className="bg-muted/30 rounded-lg p-4 backdrop-blur-sm">
-                                <p className="text-xs font-semibold text-muted-foreground mb-3">Extracted Metadata</p>
+                                <p className="text-xs font-semibold text-muted-foreground mb-3">
+                                  Extracted Metadata
+                                  {Object.keys(doc.extracted_metadata).length > 5 && (
+                                    <span className="ml-2 text-muted-foreground/60">
+                                      (showing 5 of {Object.keys(doc.extracted_metadata).length})
+                                    </span>
+                                  )}
+                                </p>
                                 <div className="grid md:grid-cols-2 gap-3">
-                                  {Object.entries(doc.extracted_metadata).map(([key, value]) => (
+                                  {Object.entries(doc.extracted_metadata).slice(0, 5).map(([key, value]) => (
                                     <div key={key} className="text-sm">
                                       <span className="font-medium text-foreground">{key}:</span>{' '}
                                       <span className="text-muted-foreground">{extractMetadataValue(value)}</span>
