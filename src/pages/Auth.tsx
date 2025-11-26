@@ -527,7 +527,13 @@ const AuthPage = () => {
             WISDM Capture Pro
           </h1>
           <p className="text-muted-foreground text-sm">
-            {isUpdatingPassword ? 'Enter your new password' : isResetPassword ? 'Reset your password' : isSignUp ? 'Create your account' : 'Sign in to access your account'}
+            {isUpdatingPassword
+              ? 'Enter your new password to finish resetting your account.'
+              : isResetPassword
+              ? 'Request a reset link. You will set your new password on our secure reset page, then return here to sign in.'
+              : isSignUp
+              ? 'Create your account'
+              : 'Sign in to access your account'}
           </p>
         </div>
 
@@ -537,10 +543,28 @@ const AuthPage = () => {
               <Input id="fullName" type="text" placeholder="John Doe" value={fullName} onChange={e => setFullName(e.target.value)} className="transition-all focus:ring-2 focus:ring-primary/20" required />
             </div>}
 
-          {!isUpdatingPassword && <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
-              <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={e => setEmail(e.target.value)} className="transition-all focus:ring-2 focus:ring-primary/20" required />
-            </div>}
+          {!isUpdatingPassword && (
+            <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
+              <Label htmlFor="email" className="text-sm font-medium">
+                Email
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="you@example.com"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="transition-all focus:ring-2 focus:ring-primary/20"
+                required
+              />
+              {isResetPassword && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  We&rsquo;ll email you a secure reset link. When you click it, you&rsquo;ll briefly see a
+                  Lovable-branded reset page to choose a new password, then you&rsquo;ll be sent back here to sign in.
+                </p>
+              )}
+            </div>
+          )}
 
           {!isResetPassword && <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
               <div className="flex items-center justify-between">
