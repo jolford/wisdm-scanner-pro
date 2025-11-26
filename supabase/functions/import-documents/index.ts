@@ -147,23 +147,24 @@ Deno.serve(async (req) => {
           fileName: file.name,
           url: publicUrl,
         });
-
-        // Optionally create OCR job
-        if (autoProcessOCR) {
-          await supabase.from('jobs').insert({
-            job_type: 'ocr_document',
-            payload: {
-              documentId: document.id,
-              projectId: projectId,
-            },
-            user_id: user.id,
-            customer_id: project.customer_id,
-            priority: 'normal',
-            status: 'pending',
-          });
-        }
       } catch (error: any) {
         errors.push({ file: file.name, error: error.message });
+      }
+    }
+
+    // Trigger parallel OCR processing for the entire batch if auto-process is enabled
+    if (autoProcessOCR && uploadedDocuments.length > 0) {
+      try {
+        // Use parallel-ocr-batch for much faster processing
+        await supabase.functions.invoke('parallel-ocr-batch', {
+          body: {
+            batchId: currentBatchId,
+            maxParallel: 8 // Process 8 documents in parallel
+          }
+        });
+      } catch (ocrError: any) {
+        console.error('OCR batch processing error:', ocrError);
+        // Don't fail the entire import if OCR fails
       }
     }
 
