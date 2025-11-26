@@ -142,6 +142,17 @@ const integrations: Integration[] = [
     featured: false,
   },
   {
+    id: 'resware',
+    name: 'Resware',
+    description: 'Export mortgage documents and data to Resware title & settlement platform',
+    icon: FileText,
+    category: 'export',
+    rating: 4.7,
+    installs: 540,
+    installed: false,
+    featured: true,
+  },
+  {
     id: 'dropbox',
     name: 'Dropbox',
     description: 'Store and retrieve documents from Dropbox',
@@ -543,6 +554,13 @@ export default function IntegrationMarketplace() {
           { key: 'access_token', label: 'Access Token', type: 'password' },
           { key: 'folder_id', label: 'Folder ID', type: 'text', placeholder: '0 for root folder' }
         ];
+      case 'resware':
+        return [
+          { key: 'apiUrl', label: 'Resware API URL', type: 'text', placeholder: 'https://yourinstance.resware.com' },
+          { key: 'username', label: 'API Username', type: 'text', placeholder: 'Enter your Resware API username' },
+          { key: 'password', label: 'API Password', type: 'password', placeholder: 'Enter your Resware API password' },
+          { key: 'orderId', label: 'Default Order ID (Optional)', type: 'text', placeholder: 'Leave blank to use batch-specific IDs' }
+        ];
       default:
         return [
           { key: 'api_key', label: 'API Key', type: 'password', placeholder: 'Enter API key' },
@@ -897,7 +915,17 @@ export default function IntegrationMarketplace() {
                       <li>Get Folder ID from Box (0 = root folder)</li>
                     </ol>
                   )}
-                  {!['quickbooks', 'salesforce', 'sharepoint', 'teams', 'slack', 'zapier', 'gmail', 'documentum', 'filebound', 'google-calendar', 'dropbox', 'box'].includes(configureIntegration) && (
+                  {configureIntegration === 'resware' && (
+                    <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                      <li>Log into your Resware admin portal</li>
+                      <li>Navigate to Settings → API Access</li>
+                      <li>Create a new API user with document upload permissions</li>
+                      <li>Save the username and password for API access</li>
+                      <li>Copy your Resware instance URL (e.g., https://yourcompany.resware.com)</li>
+                      <li>Enter credentials below and test the connection</li>
+                    </ol>
+                  )}
+                  {!['quickbooks', 'salesforce', 'sharepoint', 'teams', 'slack', 'zapier', 'gmail', 'documentum', 'filebound', 'google-calendar', 'dropbox', 'box', 'resware'].includes(configureIntegration) && (
                     <p className="text-muted-foreground">
                       Please refer to the integration's documentation for setup instructions.
                       Enter your API credentials below to connect.
