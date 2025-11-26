@@ -97,12 +97,14 @@ export default function NewUser() {
 
       if (profileError) throw profileError;
 
-      // Assign role
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({ user_id: userId, role: formData.role });
+      // Assign role (only if not 'user', which is auto-created by trigger)
+      if (formData.role !== "user") {
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .insert({ user_id: userId, role: formData.role });
 
-      if (roleError) throw roleError;
+        if (roleError) throw roleError;
+      }
 
       // Assign customer (if not system admin)
       if (formData.role !== "system_admin" && formData.customer_id) {
