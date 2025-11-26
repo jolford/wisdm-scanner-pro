@@ -802,14 +802,12 @@ const [isExporting, setIsExporting] = useState(false);
       const pdfDoc = await loadingTask.promise;
       
       // Analyze document boundaries based on separation config
-      const effectiveConfig: SeparationConfig = (separationConfig.method === 'none' && pdfDoc.numPages > 1)
-        ? ({ method: 'page_count', pagesPerDocument: 1 } as SeparationConfig)
-        : separationConfig;
-      const boundaries = await analyzePdfSeparation(pdfDoc, effectiveConfig);
+      // Only apply separation if explicitly configured
+      const boundaries = await analyzePdfSeparation(pdfDoc, separationConfig);
       
       toast({
         title: 'Processing PDF',
-        description: `Found ${boundaries.length} document(s) using ${effectiveConfig.method} separation`,
+        description: `Found ${boundaries.length} document(s) using ${separationConfig.method} separation`,
       });
       
       // Process documents in parallel batches for speed
