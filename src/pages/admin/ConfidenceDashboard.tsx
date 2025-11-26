@@ -8,6 +8,9 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { AlertTriangle, FileText, TrendingDown, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { useSignedUrl } from '@/hooks/use-signed-url';
+import { useState } from 'react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const ConfidenceDashboard = () => {
   const { loading } = useRequireAuth(true);
@@ -132,6 +135,39 @@ const ConfidenceDashboard = () => {
     if (confidence >= 0.9) return <Badge variant="default" className="bg-success">High</Badge>;
     if (confidence >= 0.7) return <Badge variant="secondary">Medium</Badge>;
     return <Badge variant="destructive">Low</Badge>;
+  };
+
+  const DocumentPreview = ({ fileUrl }: { fileUrl: string | null }) => {
+    const { signedUrl, loading } = useSignedUrl(fileUrl, 300);
+    const [showFullImage, setShowFullImage] = useState(false);
+
+    if (!fileUrl || loading) {
+      return (
+        <div className="w-16 h-16 bg-muted rounded flex items-center justify-center flex-shrink-0">
+          <FileText className="h-6 w-6 text-muted-foreground" />
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <img
+          src={signedUrl || ''}
+          alt="Document preview"
+          className="w-16 h-16 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0"
+          onClick={() => setShowFullImage(true)}
+        />
+        <Dialog open={showFullImage} onOpenChange={setShowFullImage}>
+          <DialogContent className="max-w-4xl">
+            <img
+              src={signedUrl || ''}
+              alt="Document full preview"
+              className="w-full h-auto"
+            />
+          </DialogContent>
+        </Dialog>
+      </>
+    );
   };
 
   return (
@@ -264,17 +300,17 @@ const ConfidenceDashboard = () => {
           <CardContent>
             <div className="space-y-3">
               {confidenceStats?.lowConfidence.slice(0, 10).map((item: any) => (
-                <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">{item.document.file_name}</p>
-                      <p className="text-sm text-muted-foreground">
+                <div key={item.id} className="flex items-center justify-between p-3 border rounded-lg gap-3">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <DocumentPreview fileUrl={item.document.file_url} />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{item.document.file_name}</p>
+                      <p className="text-sm text-muted-foreground truncate">
                         Field: {item.field_name} • {item.document.batch?.project?.name}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-shrink-0">
                     {getConfidenceBadge(Number(item.confidence_score))}
                     <span className="text-sm font-medium">
                       {(Number(item.confidence_score) * 100).toFixed(1)}%
