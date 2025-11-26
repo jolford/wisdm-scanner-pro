@@ -337,31 +337,42 @@ export const ValidationScreen = ({
     }
   };
 
+  // Helper to get lookup configuration for a specific field (case-insensitive)
+  const getLookupFieldConfig = (fieldName: string) => {
+    if (!validationLookupConfig || !validationLookupConfig.enabled) return null;
+
+    const system = (validationLookupConfig.system || '').toLowerCase();
+    if (!['excel', 'csv', 'filebound', 'docmgt'].includes(system)) return null;
+
+    const normalizedName = fieldName.trim().toLowerCase();
+    const lookupField = (validationLookupConfig.lookupFields || []).find(
+      (f: any) =>
+        (f.wisdmField || '')
+          .toString()
+          .trim()
+          .toLowerCase() === normalizedName && f.lookupEnabled !== false
+    );
+
+    return lookupField || null;
+  };
+
   // Validation lookup function
   const lookupFieldValue = async (fieldName: string, fieldValue: any) => {
-    if (!validationLookupConfig || !validationLookupConfig.enabled) {
-      toast({ title: 'Lookup not configured', description: 'Validation lookup is not enabled for this project.' });
+    const lookupField = getLookupFieldConfig(fieldName);
+
+    if (!lookupField) {
+      toast({
+        title: 'Lookup not available',
+        description: 'This field is not configured for validation lookup.',
+      });
       return;
     }
 
-    if (!['excel', 'csv', 'filebound', 'docmgt'].includes(validationLookupConfig.system)) {
-      toast({ title: 'Unsupported system', description: `Lookup is not supported for ${validationLookupConfig.system} system.` });
-      return;
-    }
+    const system = (validationLookupConfig.system || '').toLowerCase();
 
     const valueStr = toFieldString(fieldValue);
     if (!valueStr) {
       toast({ title: 'Nothing to lookup', description: 'Please enter a value first.' });
-      return;
-    }
-
-    // Check if this field is configured for lookup
-    const lookupField = validationLookupConfig.lookupFields?.find(
-      (f: any) => f.wisdmField === fieldName && f.lookupEnabled !== false
-    );
-
-    if (!lookupField) {
-      toast({ title: 'Lookup not available', description: 'This field is not configured for validation lookup.' });
       return;
     }
 
@@ -370,9 +381,9 @@ export const ValidationScreen = ({
       let data, error;
       
       // Handle different lookup systems
-      if (validationLookupConfig.system === 'filebound' || validationLookupConfig.system === 'docmgt') {
+      if (system === 'filebound' || system === 'docmgt') {
         // FileBound/DocMgt lookup
-        const endpoint = validationLookupConfig.system === 'filebound' 
+        const endpoint = system === 'filebound' 
           ? 'test-filebound-connection' 
           : 'test-docmgt-connection';
           
@@ -433,7 +444,7 @@ export const ValidationScreen = ({
 
         toast({
           title: 'Lookup successful',
-          description: `${fieldName} "${valueStr}" found in ${validationLookupConfig.system.toUpperCase()}`,
+          description: `${fieldName} "${valueStr}" found in ${system.toUpperCase()}`,
         });
       } else {
         // Lower confidence for not found
@@ -444,7 +455,7 @@ export const ValidationScreen = ({
 
         toast({
           title: 'Not found',
-          description: data?.message || `${fieldName} "${valueStr}" not found in ${validationLookupConfig.system.toUpperCase()}`,
+          description: data?.message || `${fieldName} "${valueStr}" not found in ${system.toUpperCase()}`,
           variant: 'destructive'
         });
       }
@@ -456,7 +467,6 @@ export const ValidationScreen = ({
       setIsLookingUp(false);
     }
   };
-
   // Re-process OCR for documents with failed extraction
   const handleReprocessOCR = async () => {
     if (!documentId || !projectId) {
@@ -2163,9 +2173,7 @@ useEffect(() => {
                   />
                   
                   {/* Validation Lookup Button */}
-                  {validationLookupConfig?.enabled && 
-                   ['excel', 'csv', 'filebound', 'docmgt'].includes(validationLookupConfig.system) &&
-                   validationLookupConfig.lookupFields?.some((f: any) => f.wisdmField === field.name && f.lookupEnabled !== false) && (
+                  {getLookupFieldConfig(field.name) && (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -2185,7 +2193,7 @@ useEffect(() => {
                           </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p className="text-xs">Validate against {validationLookupConfig.system.toUpperCase()} lookup</p>
+                          <p className="text-xs">Validate against {(validationLookupConfig.system || '').toString().toUpperCase()} lookup</p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
