@@ -2178,7 +2178,7 @@ useEffect(() => {
                   />
                   
                   {/* Validation Lookup Button */}
-                  {getLookupFieldConfig(field.name) && (
+                  {validationLookupConfig && (validationLookupConfig.system || '').toLowerCase() && (
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>
