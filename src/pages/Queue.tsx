@@ -78,7 +78,7 @@ const Queue = ({ launchedFiles }: { launchedFiles?: File[] }) => {
   };
 
   // Document preview component for Quality Control tab
-  const DocumentPreview = ({ fileUrl }: { fileUrl: string | null }) => {
+  const DocumentPreview = ({ fileUrl, fileType }: { fileUrl: string | null; fileType?: string | null }) => {
     const { signedUrl, loading, error } = useSignedUrl(fileUrl, 300);
     const [showFullImage, setShowFullImage] = useState(false);
     const [imageError, setImageError] = useState(false);
@@ -88,6 +88,33 @@ const Queue = ({ launchedFiles }: { launchedFiles?: File[] }) => {
         <div className="w-20 h-20 bg-muted rounded flex items-center justify-center flex-shrink-0">
           <FileText className="h-8 w-8 text-muted-foreground" />
         </div>
+      );
+    }
+
+    // If this is not an image (e.g. PDF), show an "Open" button instead of broken image
+    const isImage = fileType?.startsWith('image/');
+
+    if (!isImage) {
+      if (loading || error || !signedUrl) {
+        return (
+          <div className="w-20 h-20 bg-muted rounded flex items-center justify-center flex-shrink-0">
+            <FileText className="h-8 w-8 text-muted-foreground" />
+          </div>
+        );
+      }
+
+      return (
+        <Button
+          variant="outline"
+          size="sm"
+          asChild
+          className="flex-shrink-0 h-20 flex flex-col items-center justify-center gap-1 px-3"
+        >
+          <a href={signedUrl} target="_blank" rel="noreferrer">
+            <FileText className="h-5 w-5 mb-1" />
+            <span className="text-xs">Open Original</span>
+          </a>
+        </Button>
       );
     }
 
@@ -118,18 +145,12 @@ const Queue = ({ launchedFiles }: { launchedFiles?: File[] }) => {
         />
         <Dialog open={showFullImage} onOpenChange={setShowFullImage}>
           <DialogContent className="max-w-4xl">
-            {loading ? (
-              <div className="flex items-center justify-center p-12">
-                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
-              </div>
-            ) : (
-              <img
-                src={signedUrl}
-                alt="Document full preview"
-                className="w-full h-auto"
-                onError={() => setImageError(true)}
-              />
-            )}
+            <img
+              src={signedUrl}
+              alt="Document full preview"
+              className="w-full h-auto"
+              onError={() => setImageError(true)}
+            />
           </DialogContent>
         </Dialog>
       </>
@@ -2228,7 +2249,7 @@ const [isExporting, setIsExporting] = useState(false);
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-4 flex-1 min-w-0">
-                          <DocumentPreview fileUrl={doc.file_url} />
+                          <DocumentPreview fileUrl={doc.file_url} fileType={doc.file_type} />
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-2 flex-wrap">
                               <FileText className="h-5 w-5 text-success flex-shrink-0" />
