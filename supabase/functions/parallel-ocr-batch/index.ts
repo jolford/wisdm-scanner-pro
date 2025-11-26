@@ -30,7 +30,6 @@ serve(async (req) => {
       .from('documents')
       .select('*')
       .eq('batch_id', batchId)
-      .is('extracted_text', null)
       .order('processing_priority', { ascending: false });
 
     if (fetchError) throw fetchError;
