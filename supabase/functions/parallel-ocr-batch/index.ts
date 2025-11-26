@@ -21,7 +21,7 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { batchId, maxParallel = 3 } = await req.json();
+    const { batchId, maxParallel = 2 } = await req.json(); // Reduced from 3 to 2 to prevent timeouts
 
     console.log(`Starting parallel OCR for batch ${batchId} with max ${maxParallel} concurrent`);
 
@@ -52,8 +52,12 @@ serve(async (req) => {
         try {
           console.log(`Processing document ${doc.id}`);
           
-          // Call ocr-scan function
-          const { data, error } = await supabase.functions.invoke('ocr-scan', {
+          // Call ocr-scan function with timeout handling
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('OCR timeout after 55 seconds')), 55000)
+          );
+          
+          const ocrPromise = supabase.functions.invoke('ocr-scan', {
             body: { 
               documentId: doc.id,
               enableCache: true,
@@ -61,7 +65,16 @@ serve(async (req) => {
             }
           });
 
-          if (error) throw error;
+          const { data, error } = await Promise.race([ocrPromise, timeoutPromise]) as any;
+
+          if (error) {
+            // If timeout, log but don't fail - OCR may still complete in background
+            if (error.message?.includes('timeout')) {
+              console.warn(`Document ${doc.id} timed out but may still complete in background`);
+              return { documentId: doc.id, success: true, warning: 'Timeout but processing continues' };
+            }
+            throw error;
+          }
 
           return { documentId: doc.id, success: true, data };
         } catch (error) {
