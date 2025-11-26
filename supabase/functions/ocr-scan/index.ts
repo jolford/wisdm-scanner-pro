@@ -2036,6 +2036,7 @@ Review the image and provide corrected text with any OCR errors fixed.`;
     
     // --- RETURN SUCCESS RESPONSE ---
     // Return all extracted data to the client including field-level confidence and PII detection
+    // Note: wordBoundingBoxes excluded from response (already saved to DB) to prevent stack overflow on large PDFs
     return new Response(
       JSON.stringify({ 
         text: extractedText,              // Full document text
@@ -2046,7 +2047,6 @@ Review the image and provide corrected text with any OCR errors fixed.`;
         fieldConfidence: fieldConfidence || {}, // Per-field confidence scores
         validationApplied: validationApplied, // Whether two-pass validation was used
         boundingBoxes: fieldBoundingBoxes, // Field locations on document
-        wordBoundingBoxes: wordBoundingBoxes, // Word-level coordinates for highlighting
         piiDetected: piiDetected,         // Whether PII was detected in the document
         detectedPiiRegions: detectedPiiRegions, // Array of detected PII with locations
         routingApplied: routingApplied,   // Whether smart routing was applied
