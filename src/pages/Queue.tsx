@@ -25,7 +25,7 @@ import { useLicense } from '@/hooks/use-license';
 import { usePermissions } from '@/hooks/use-permissions';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
-import { getSignedUrl } from '@/hooks/use-signed-url';
+import { getSignedUrl, useSignedUrl } from '@/hooks/use-signed-url';
 import { analyzePdfSeparation, getDocumentName, SeparationConfig } from '@/lib/pdf-separator';
 import { applyDocumentNamingPattern } from '@/lib/document-naming';
 import { safeErrorMessage, logError } from '@/lib/error-handler';
@@ -40,6 +40,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import jsPDF from 'jspdf';
 import { isTiffFile, convertTiffToPngDataUrl } from '@/lib/image-utils';
@@ -74,6 +75,40 @@ const Queue = ({ launchedFiles }: { launchedFiles?: File[] }) => {
     if (typeof value === 'string') return value;
     if (value && typeof value === 'object' && 'value' in value) return value.value;
     return String(value || '');
+  };
+
+  // Document preview component for Quality Control tab
+  const DocumentPreview = ({ fileUrl }: { fileUrl: string | null }) => {
+    const { signedUrl, loading } = useSignedUrl(fileUrl, 300);
+    const [showFullImage, setShowFullImage] = useState(false);
+
+    if (!fileUrl || loading) {
+      return (
+        <div className="w-20 h-20 bg-muted rounded flex items-center justify-center flex-shrink-0">
+          <FileText className="h-8 w-8 text-muted-foreground" />
+        </div>
+      );
+    }
+
+    return (
+      <>
+        <img
+          src={signedUrl || ''}
+          alt="Document preview"
+          className="w-20 h-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0 border border-border"
+          onClick={() => setShowFullImage(true)}
+        />
+        <Dialog open={showFullImage} onOpenChange={setShowFullImage}>
+          <DialogContent className="max-w-4xl">
+            <img
+              src={signedUrl || ''}
+              alt="Document full preview"
+              className="w-full h-auto"
+            />
+          </DialogContent>
+        </Dialog>
+      </>
+    );
   };
   
   // Advanced image pre-processing with validation and optimization
@@ -2166,37 +2201,40 @@ const [isExporting, setIsExporting] = useState(false);
                       key={doc.id} 
                       className="p-6 hover:shadow-lg transition-all duration-300 hover:scale-[1.01] border-l-4 border-l-success bg-gradient-to-r from-success/5 to-transparent"
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <FileText className="h-5 w-5 text-success" />
-                            <h3 className="text-lg font-semibold">{doc.file_name}</h3>
-                            <Badge variant="outline" className="bg-success/10 text-success border-success/30">
-                              Quality Control
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-4">
-                            {new Date(doc.created_at).toLocaleString()}
-                          </p>
-                          {doc.extracted_metadata && Object.keys(doc.extracted_metadata).length > 0 && (
-                            <div className="bg-muted/30 rounded-lg p-4 backdrop-blur-sm">
-                              <p className="text-xs font-semibold text-muted-foreground mb-3">Extracted Metadata</p>
-                              <div className="grid md:grid-cols-2 gap-3">
-                                {Object.entries(doc.extracted_metadata).map(([key, value]) => (
-                                  <div key={key} className="text-sm">
-                                    <span className="font-medium text-foreground">{key}:</span>{' '}
-                                    <span className="text-muted-foreground">{extractMetadataValue(value)}</span>
-                                  </div>
-                                ))}
-                              </div>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-start gap-4 flex-1 min-w-0">
+                          <DocumentPreview fileUrl={doc.file_url} />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2 flex-wrap">
+                              <FileText className="h-5 w-5 text-success flex-shrink-0" />
+                              <h3 className="text-lg font-semibold truncate">{doc.file_name}</h3>
+                              <Badge variant="outline" className="bg-success/10 text-success border-success/30 flex-shrink-0">
+                                Quality Control
+                              </Badge>
                             </div>
-                          )}
+                            <p className="text-sm text-muted-foreground mb-4">
+                              {new Date(doc.created_at).toLocaleString()}
+                            </p>
+                            {doc.extracted_metadata && Object.keys(doc.extracted_metadata).length > 0 && (
+                              <div className="bg-muted/30 rounded-lg p-4 backdrop-blur-sm">
+                                <p className="text-xs font-semibold text-muted-foreground mb-3">Extracted Metadata</p>
+                                <div className="grid md:grid-cols-2 gap-3">
+                                  {Object.entries(doc.extracted_metadata).map(([key, value]) => (
+                                    <div key={key} className="text-sm">
+                                      <span className="font-medium text-foreground">{key}:</span>{' '}
+                                      <span className="text-muted-foreground">{extractMetadataValue(value)}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                         <Button 
                           variant="outline" 
                           size="icon" 
                           onClick={() => handleDeleteDoc(doc.id)}
-                          className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                          className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 flex-shrink-0"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
