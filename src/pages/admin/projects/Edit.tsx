@@ -77,6 +77,7 @@ const EditProject = () => {
   const [enableCheckScanning, setEnableCheckScanning] = useState(false);
   const [enableSignatureVerification, setEnableSignatureVerification] = useState(false);
   const [detectPii, setDetectPii] = useState(false);
+  const [displayFieldsAbove, setDisplayFieldsAbove] = useState(false);
   const [ocrModel, setOcrModel] = useState('google/gemini-2.5-flash');
   const [documentNamingPattern, setDocumentNamingPattern] = useState('');
   const [customerId, setCustomerId] = useState<string | undefined>();
@@ -189,6 +190,7 @@ const EditProject = () => {
           enable_check_scanning: boolean;
           enable_signature_verification: boolean;
           detect_pii: boolean;
+          display_fields_above: boolean;
           ocr_model: string;
           export_types: string[];
           created_at: string;
@@ -205,6 +207,7 @@ const EditProject = () => {
         setEnableCheckScanning(projectData.enable_check_scanning || false);
         setEnableSignatureVerification(projectData.enable_signature_verification || false);
         setDetectPii(projectData.detect_pii || false);
+        setDisplayFieldsAbove(projectData.display_fields_above || false);
         setOcrModel(projectData.ocr_model || 'google/gemini-2.5-flash');
         setCustomerId(projectData.customer_id || undefined);
         
@@ -429,6 +432,7 @@ const EditProject = () => {
           enable_check_scanning: enableCheckScanning,
           enable_signature_verification: enableSignatureVerification,
           detect_pii: detectPii,
+          display_fields_above: displayFieldsAbove,
           ocr_model: ocrModel,
           extraction_fields: validFields as any,
           export_types: selectedExportTypes,
@@ -729,6 +733,22 @@ const EditProject = () => {
                 </Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Automatically detect and redact PII (SSN, credit cards, phone numbers, etc.) for privacy compliance
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 p-4 border border-border rounded-lg bg-muted/30 mb-6">
+              <Checkbox
+                id="display-fields-above"
+                checked={displayFieldsAbove}
+                onCheckedChange={(checked) => setDisplayFieldsAbove(checked as boolean)}
+              />
+              <div className="flex-1">
+                <Label htmlFor="display-fields-above" className="cursor-pointer font-medium">
+                  Display Index Fields Above Document
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Show all index fields in a horizontal layout above the document viewer instead of the side panel
                 </p>
               </div>
             </div>

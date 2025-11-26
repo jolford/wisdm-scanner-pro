@@ -1917,6 +1917,7 @@ export type Database = {
           customer_id: string | null
           description: string | null
           detect_pii: boolean | null
+          display_fields_above: boolean
           enable_check_scanning: boolean | null
           enable_signature_verification: boolean | null
           export_types: string[] | null
@@ -1936,6 +1937,7 @@ export type Database = {
           customer_id?: string | null
           description?: string | null
           detect_pii?: boolean | null
+          display_fields_above?: boolean
           enable_check_scanning?: boolean | null
           enable_signature_verification?: boolean | null
           export_types?: string[] | null
@@ -1955,6 +1957,7 @@ export type Database = {
           customer_id?: string | null
           description?: string | null
           detect_pii?: boolean | null
+          display_fields_above?: boolean
           enable_check_scanning?: boolean | null
           enable_signature_verification?: boolean | null
           export_types?: string[] | null

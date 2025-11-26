@@ -58,6 +58,7 @@ const NewProject = () => {
   const [projectDescription, setProjectDescription] = useState('');
   const [enableCheckScanning, setEnableCheckScanning] = useState(false);
   const [enableSignatureVerification, setEnableSignatureVerification] = useState(false);
+  const [displayFieldsAbove, setDisplayFieldsAbove] = useState(false);
   const [documentNamingPattern, setDocumentNamingPattern] = useState('');
   const [fields, setFields] = useState<ExtractionField[]>([
     { name: '', description: '' }
@@ -227,6 +228,7 @@ const NewProject = () => {
         icon_url: iconUrl || null,
         enable_check_scanning: enableCheckScanning,
         enable_signature_verification: enableSignatureVerification,
+        display_fields_above: displayFieldsAbove,
         extraction_fields: validFields as any,
         export_types: selectedExportTypes,
         queues: queues as any,
@@ -363,6 +365,22 @@ const NewProject = () => {
                 </Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Allows users to upload and validate signatures on documents during the validation process
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 p-4 border border-border rounded-lg bg-muted/30 mb-6">
+              <Checkbox
+                id="display-fields-above"
+                checked={displayFieldsAbove}
+                onCheckedChange={(checked) => setDisplayFieldsAbove(checked as boolean)}
+              />
+              <div className="flex-1">
+                <Label htmlFor="display-fields-above" className="cursor-pointer font-medium">
+                  Display Index Fields Above Document
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Show all index fields in a horizontal layout above the document viewer instead of the side panel
                 </p>
               </div>
             </div>

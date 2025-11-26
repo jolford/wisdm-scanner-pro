@@ -106,11 +106,19 @@ export const RedactionTool = ({
 
     setImageLoaded(false);
     
-    // Fetch image as blob to avoid CORS issues
+    // Fetch image as blob with credentials to avoid CORS issues
     const loadImage = async () => {
       try {
-        const response = await fetch(displayUrl);
-        if (!response.ok) throw new Error('Failed to fetch image');
+        const response = await fetch(displayUrl, {
+          credentials: 'include',
+          headers: {
+            'Accept': 'image/*',
+          }
+        });
+        if (!response.ok) {
+          console.error('Fetch failed:', response.status, response.statusText);
+          throw new Error(`Failed to fetch image: ${response.status}`);
+        }
         
         const blob = await response.blob();
         const objectUrl = URL.createObjectURL(blob);
@@ -127,7 +135,8 @@ export const RedactionTool = ({
           // Clean up object URL
           URL.revokeObjectURL(objectUrl);
         };
-        img.onerror = () => {
+        img.onerror = (e) => {
+          console.error('Image onload error:', e);
           URL.revokeObjectURL(objectUrl);
           toast({
             title: 'Image Load Error',
