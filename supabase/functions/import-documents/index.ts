@@ -17,10 +17,6 @@ interface ImportRequest {
   autoProcessOCR?: boolean;
 }
 
-// Declare EdgeRuntime global for background tasks
-declare const EdgeRuntime: {
-  waitUntil(promise: Promise<any>): void;
-};
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -163,24 +159,19 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Trigger parallel OCR processing for the entire batch if auto-process is enabled
-    if (autoProcessOCR && uploadedDocuments.length > 0 && currentBatchId) {
-      // Fire-and-forget: run OCR in the background so the import response returns quickly
-      EdgeRuntime.waitUntil(
-        (async () => {
-          try {
-            await supabase.functions.invoke('parallel-ocr-batch', {
-              body: {
-                batchId: currentBatchId,
-                maxParallel: 8, // Process 8 documents in parallel
-              },
-            });
-          } catch (ocrError: any) {
-            console.error('OCR batch processing error:', ocrError);
-            // Intentionally do not throw – import should still be considered successful
-          }
-        })()
-      );
+    if (autoProcessOCR && uploadedDocuments.length > 0) {
+      try {
+        // Use parallel-ocr-batch for much faster processing
+        await supabase.functions.invoke('parallel-ocr-batch', {
+          body: {
+            batchId: currentBatchId,
+            maxParallel: 8 // Process 8 documents in parallel
+          },
+        });
+      } catch (ocrError: any) {
+        console.error('OCR batch processing error:', ocrError);
+        // Don't fail the entire import if OCR fails
+      }
     }
 
     return new Response(
