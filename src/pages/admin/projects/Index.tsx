@@ -50,6 +50,7 @@ interface Project {
   created_at: string;
   customer_id: string | null;
   icon_url: string | null;
+  is_active: boolean;
 }
 
 // Extend the RPC return type to include icon_url
@@ -121,6 +122,7 @@ const Projects = () => {
               created_at: data.created_at,
               customer_id: data.customer_id,
               icon_url: data.icon_url || null,
+              is_active: data.is_active ?? true,
             } as Project;
           });
         setProjects(projects);
@@ -186,6 +188,7 @@ const Projects = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead>Customer</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead className="text-center">Fields</TableHead>
@@ -212,6 +215,11 @@ const Projects = () => {
                         </TooltipProvider>
                       )}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={project.is_active ? "default" : "secondary"}>
+                      {project.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">{getCustomerName(project.customer_id)}</Badge>
@@ -261,6 +269,9 @@ const Projects = () => {
                         </Tooltip>
                       </TooltipProvider>
                     )}
+                    <Badge variant={project.is_active ? "default" : "secondary"} className="shrink-0">
+                      {project.is_active ? 'Active' : 'Inactive'}
+                    </Badge>
                     <Badge variant="outline" className="shrink-0">{getCustomerName(project.customer_id)}</Badge>
                     <Badge className="shrink-0">{(project.extraction_fields as any[])?.length || 0} fields</Badge>
                   </div>
@@ -308,6 +319,9 @@ const Projects = () => {
                       </Tooltip>
                     </TooltipProvider>
                   )}
+                  <Badge variant={project.is_active ? "default" : "secondary"} className="shrink-0 text-xs">
+                    {project.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
                 </div>
                 <Button
                   size="sm"
