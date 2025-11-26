@@ -51,6 +51,7 @@ interface User {
   email: string;
   full_name: string;
   created_at: string;
+  last_sign_in_at?: string;
   customers: Array<{ id: string; company_name: string }>;
   permissions?: {
     can_scan: boolean;
@@ -100,42 +101,38 @@ const UsersIndex = () => {
 
   const loadUsers = async () => {
     try {
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          email,
-          full_name,
-          created_at
-        `)
-        .order('created_at', { ascending: false });
+      // Call the admin edge function to get enriched user data with auth metadata
+      const { data: result, error: funcError } = await supabase.functions.invoke('admin-list-users-v2');
+      
+      if (funcError) throw funcError;
+      
+      if (!result || !result.users) {
+        throw new Error('No user data returned from API');
+      }
 
-      if (error) throw error;
-
-      // Load customer assignments, permissions, and roles for each user
+      // Load customer assignments and permissions for each user
       const usersWithCustomers = await Promise.all(
-        (profiles || []).map(async (profile) => {
+        result.users.map(async (authUser: any) => {
           const { data: userCustomers } = await supabase
             .from('user_customers')
             .select(`
               customer_id,
               customers!inner(id, company_name)
             `)
-            .eq('user_id', profile.id);
+            .eq('user_id', authUser.id);
 
           const { data: permissions } = await supabase
             .from('user_permissions')
             .select('*')
-            .eq('user_id', profile.id)
+            .eq('user_id', authUser.id)
             .maybeSingle();
 
-          const { data: userRoles } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', profile.id);
-
           return {
-            ...profile,
+            id: authUser.id,
+            email: authUser.email,
+            full_name: authUser.full_name,
+            created_at: authUser.created_at,
+            last_sign_in_at: authUser.last_sign_in_at,
             customers: (userCustomers || []).map((uc: any) => ({
               id: uc.customers.id,
               company_name: uc.customers.company_name,
@@ -145,7 +142,7 @@ const UsersIndex = () => {
               can_validate: true,
               can_export: true,
             },
-            roles: (userRoles || []).map((r: any) => r.role),
+            roles: authUser.database_roles || [],
           };
         })
       );
@@ -471,6 +468,7 @@ const UsersIndex = () => {
                 <TableHead>Assigned Customers</TableHead>
                 <TableHead>Projects</TableHead>
                 <TableHead>Joined</TableHead>
+                <TableHead>Last Login</TableHead>
                 <TableHead>Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -556,6 +554,14 @@ const UsersIndex = () => {
                   </TableCell>
                   <TableCell>
                     {new Date(user.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-sm">
+                      {user.last_sign_in_at 
+                        ? new Date(user.last_sign_in_at).toLocaleString()
+                        : <span className="text-muted-foreground">Never</span>
+                      }
+                    </span>
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
