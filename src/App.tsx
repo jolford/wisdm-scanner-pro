@@ -79,6 +79,7 @@ import SmartRouting from "./pages/admin/SmartRouting";
 import MobileValidation from "./pages/admin/MobileValidation";
 import WorkflowBuilder from "./pages/admin/WorkflowBuilder";
 import Workflows from "./pages/admin/Workflows";
+import CustomScripts from "./pages/admin/CustomScripts";
 import IntegrationMarketplace from "./pages/admin/IntegrationMarketplace";
 import AdvancedSearch from "./pages/admin/AdvancedSearch";
 import { Footer } from "./components/Footer";
@@ -226,6 +227,7 @@ const App = () => {
           <Route path="/admin/mobile-validation" element={<MobileValidation />} />
           <Route path="/admin/workflows" element={<Workflows />} />
           <Route path="/admin/workflow-builder" element={<WorkflowBuilder />} />
+          <Route path="/admin/custom-scripts" element={<CustomScripts />} />
           <Route path="/admin/integrations" element={<IntegrationMarketplace />} />
           <Route path="/admin/advanced-search" element={<AdvancedSearch />} />
           
