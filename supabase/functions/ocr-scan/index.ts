@@ -1826,6 +1826,55 @@ Review the image and provide corrected text with any OCR errors fixed.`;
           }
         }
 
+        // Mortgage application fallback extraction: if metadata is empty or discarded
+        // but the text clearly matches a Uniform Residential Loan Application,
+        // derive key fields directly from the OCR text.
+        const looksLikeMortgageApp =
+          typeof extractedText === 'string' &&
+          extractedText.includes('Uniform Residential Loan Application');
+
+        if (
+          looksLikeMortgageApp &&
+          (!sanitizedMetadata || Object.keys(sanitizedMetadata as Record<string, any>).length === 0)
+        ) {
+          const fallbackMeta: Record<string, string> = {};
+          const text = extractedText as string;
+
+          // Loan Identifier line
+          const loanMatch = text.match(/Lender Loan No\.\/Universal Loan Identifier\s+([^\n]+)/i);
+          if (loanMatch?.[1]) {
+            fallbackMeta['Loan Identifier'] = loanMatch[1].trim();
+          }
+
+          // Borrower Name line (line after the Name label)
+          const nameBlock = text.match(/Name \(First, Middle, Last, Suffix\)[\r\n]+([^\n]+)/i);
+          if (nameBlock?.[1]) {
+            fallbackMeta['Borrower Name'] = nameBlock[1].trim();
+          }
+
+          // Social Security Number: capture next line which usually holds the numeric pattern
+          const ssnBlock = text.match(/Social Security Number[^\n]*[\r\n]+([^\n]+)/i);
+          if (ssnBlock?.[1]) {
+            fallbackMeta['Social Security Number'] = ssnBlock[1].trim();
+          }
+
+          // Date of Birth
+          const dobMatch = text.match(/Date of Birth[\s\S]{0,80}?(\d{1,2}\/\d{1,2}\/\d{2,4})/i);
+          if (dobMatch?.[1]) {
+            fallbackMeta['Date of Birth'] = dobMatch[1].trim();
+          }
+
+          // Citizenship - look for U.S. Citizen marker
+          if (/U\.S\.\s*Citizen/i.test(text)) {
+            fallbackMeta['Citizenship'] = 'U.S. Citizen';
+          }
+
+          if (Object.keys(fallbackMeta).length > 0) {
+            console.log('Applying mortgage fallback metadata extraction for document', documentId);
+            sanitizedMetadata = fallbackMeta;
+          }
+        }
+
         await supabaseAdmin
           .from('documents')
           .update({
