@@ -8,7 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Lightbulb, Crop, Pencil, Sparkles, AlertTriangle, ExternalLink, Database, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, Save, FileText, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Lightbulb, Crop, Pencil, Sparkles, AlertTriangle, ExternalLink, Database, Loader2, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { documentMetadataSchema } from '@/lib/validation-schemas';
@@ -109,6 +109,7 @@ export const ValidationScreen = ({
   const [lineItems, setLineItems] = useState<Array<Record<string, any>>>([]);
   const [validationLookupConfig, setValidationLookupConfig] = useState<any>(null);
   const [isLookingUp, setIsLookingUp] = useState(false);
+  const [isReprocessing, setIsReprocessing] = useState(false);
   const { toast } = useToast();
   const { isAdmin } = useAuth();
   const autoSaveTimeoutRef = useRef<NodeJS.Timeout>();
@@ -343,8 +344,8 @@ export const ValidationScreen = ({
       return;
     }
 
-    if (validationLookupConfig.system !== 'excel' && validationLookupConfig.system !== 'csv') {
-      toast({ title: 'Unsupported system', description: 'Lookup is currently only supported for Excel/CSV systems.' });
+    if (!['excel', 'csv', 'filebound', 'docmgt'].includes(validationLookupConfig.system)) {
+      toast({ title: 'Unsupported system', description: `Lookup is not supported for ${validationLookupConfig.system} system.` });
       return;
     }
 
@@ -366,36 +367,64 @@ export const ValidationScreen = ({
 
     setIsLookingUp(true);
     try {
-      // Get signed URL if the file is in storage
-      let fileUrl = validationLookupConfig.excelFileUrl;
-      if (fileUrl && fileUrl.includes('supabase')) {
-        const { data: signedData } = await supabase.storage
-          .from('documents')
-          .createSignedUrl(fileUrl.split('/documents/')[1], 3600);
-        if (signedData?.signedUrl) {
-          fileUrl = signedData.signedUrl;
+      let data, error;
+      
+      // Handle different lookup systems
+      if (validationLookupConfig.system === 'filebound' || validationLookupConfig.system === 'docmgt') {
+        // FileBound/DocMgt lookup
+        const endpoint = validationLookupConfig.system === 'filebound' 
+          ? 'test-filebound-connection' 
+          : 'test-docmgt-connection';
+          
+        const response = await supabase.functions.invoke(endpoint, {
+          body: {
+            url: validationLookupConfig.url,
+            username: validationLookupConfig.username,
+            password: validationLookupConfig.password,
+            project: validationLookupConfig.project,
+            searchField: lookupField.ecmField,
+            searchValue: valueStr,
+            mode: 'search'
+          }
+        });
+        
+        data = response.data;
+        error = response.error;
+      } else {
+        // Excel/CSV lookup
+        let fileUrl = validationLookupConfig.excelFileUrl;
+        if (fileUrl && fileUrl.includes('supabase')) {
+          const { data: signedData } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(fileUrl.split('/documents/')[1], 3600);
+          if (signedData?.signedUrl) {
+            fileUrl = signedData.signedUrl;
+          }
         }
-      }
 
-      const { data, error } = await supabase.functions.invoke('validate-excel-lookup', {
-        body: {
-          fileUrl: fileUrl,
-          keyColumn: validationLookupConfig.excelKeyColumn,
-          keyValue: valueStr,
-          lookupFields: [
-            {
-              wisdmField: lookupField.wisdmField,
-              ecmField: lookupField.ecmField,
-              lookupEnabled: true,
-              wisdmValue: valueStr
-            }
-          ],
-        },
-      });
+        const response = await supabase.functions.invoke('validate-excel-lookup', {
+          body: {
+            fileUrl: fileUrl,
+            keyColumn: validationLookupConfig.excelKeyColumn,
+            keyValue: valueStr,
+            lookupFields: [
+              {
+                wisdmField: lookupField.wisdmField,
+                ecmField: lookupField.ecmField,
+                lookupEnabled: true,
+                wisdmValue: valueStr
+              }
+            ],
+          },
+        });
+        
+        data = response.data;
+        error = response.error;
+      }
 
       if (error) throw error;
 
-      if (data?.found) {
+      if (data?.found || data?.success) {
         // Update field confidence to indicate validation success
         setFieldConfidence(prev => ({
           ...prev,
@@ -404,7 +433,7 @@ export const ValidationScreen = ({
 
         toast({
           title: 'Lookup successful',
-          description: `${fieldName} "${valueStr}" found in validation database`,
+          description: `${fieldName} "${valueStr}" found in ${validationLookupConfig.system.toUpperCase()}`,
         });
       } else {
         // Lower confidence for not found
@@ -415,7 +444,7 @@ export const ValidationScreen = ({
 
         toast({
           title: 'Not found',
-          description: data?.message || `${fieldName} "${valueStr}" not found in validation database`,
+          description: data?.message || `${fieldName} "${valueStr}" not found in ${validationLookupConfig.system.toUpperCase()}`,
           variant: 'destructive'
         });
       }
@@ -425,6 +454,92 @@ export const ValidationScreen = ({
       toast({ title: 'Lookup failed', description: message, variant: 'destructive' });
     } finally {
       setIsLookingUp(false);
+    }
+  };
+
+  // Re-process OCR for documents with failed extraction
+  const handleReprocessOCR = async () => {
+    if (!documentId || !projectId) {
+      toast({ title: 'Cannot reprocess', description: 'Missing document or project information.' });
+      return;
+    }
+
+    setIsReprocessing(true);
+    try {
+      // Get the document file URL
+      const { data: doc, error: docError } = await supabase
+        .from('documents')
+        .select('file_url, file_name')
+        .eq('id', documentId)
+        .single();
+
+      if (docError || !doc) throw new Error('Failed to fetch document details');
+
+      // Get project extraction fields
+      const { data: project, error: projError } = await supabase
+        .from('projects')
+        .select('extraction_fields, metadata')
+        .eq('id', projectId)
+        .single();
+
+      if (projError || !project) throw new Error('Failed to fetch project configuration');
+
+      // Get signed URL for the document
+      const { data: signedData } = await supabase.storage
+        .from('documents')
+        .createSignedUrl(doc.file_url.split('/documents/')[1], 3600);
+
+      if (!signedData?.signedUrl) throw new Error('Failed to generate signed URL');
+
+      // Call OCR function
+      toast({ title: 'Re-processing OCR', description: 'Extracting fields from document...' });
+
+      const { data: ocrData, error: ocrError } = await supabase.functions.invoke('ocr-scan', {
+        body: {
+          imageData: signedData.signedUrl,
+          isPdf: doc.file_name.toLowerCase().endsWith('.pdf'),
+          extractionFields: project.extraction_fields || [],
+          documentId: documentId,
+          projectId: projectId,
+        },
+      });
+
+      if (ocrError) throw ocrError;
+
+      // Update the document with new extraction data
+      const { error: updateError } = await supabase
+        .from('documents')
+        .update({
+          extracted_text: ocrData.text || '',
+          extracted_metadata: ocrData.metadata || {},
+          confidence_score: ocrData.confidence || 0,
+          field_confidence: ocrData.fieldConfidence || {},
+          word_bounding_boxes: ocrData.wordBoundingBoxes || [],
+        })
+        .eq('id', documentId);
+
+      if (updateError) throw updateError;
+
+      // Update local state
+      setEditedMetadata(ocrData.metadata || {});
+      setFieldConfidence(ocrData.fieldConfidence || {});
+
+      toast({
+        title: 'OCR Re-processed',
+        description: 'Document fields have been re-extracted successfully.',
+      });
+
+      // Reload the page to show new data
+      window.location.reload();
+    } catch (error: any) {
+      console.error('Re-process OCR error:', error);
+      toast({
+        title: 'Re-process Failed',
+        description: error.message || 'Failed to re-process OCR. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsReprocessing(false);
     }
   };
   useEffect(() => { setResolvedBoundingBoxes(boundingBoxes); }, [boundingBoxes]);
@@ -1292,6 +1407,38 @@ useEffect(() => {
             
             {/* Validation Actions */}
             <div className="mt-6 space-y-3 pt-6 border-t">
+              {/* Re-process OCR Button (show if extraction failed) */}
+              {(!editedMetadata || Object.keys(editedMetadata).filter(k => !k.startsWith('_')).length === 0 || 
+                extractedText === 'OCR processing failed') && (
+                <Alert variant="destructive" className="mb-4">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription className="flex items-center justify-between">
+                    <span>
+                      <strong>Extraction Failed:</strong> OCR did not extract field data from this document.
+                    </span>
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      onClick={handleReprocessOCR}
+                      disabled={isReprocessing}
+                      className="ml-4"
+                    >
+                      {isReprocessing ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Re-processing...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Re-process OCR
+                        </>
+                      )}
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+              
               <div className="flex gap-2">
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -2017,7 +2164,7 @@ useEffect(() => {
                   
                   {/* Validation Lookup Button */}
                   {validationLookupConfig?.enabled && 
-                   (validationLookupConfig.system === 'excel' || validationLookupConfig.system === 'csv') &&
+                   ['excel', 'csv', 'filebound', 'docmgt'].includes(validationLookupConfig.system) &&
                    validationLookupConfig.lookupFields?.some((f: any) => f.wisdmField === field.name && f.lookupEnabled !== false) && (
                     <TooltipProvider>
                       <Tooltip>
