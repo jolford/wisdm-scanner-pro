@@ -143,7 +143,7 @@ serve(async (req) => {
       .select('*')
       .eq('batch_id', batchId)
       .eq('validation_status', 'validated')
-      .order('created_at', { ascending: false });
+      .order('page_number', { ascending: true });
 
     if (docsError) throw docsError;
 
@@ -156,6 +156,13 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Get batch notes from metadata
+    const batchNotes = (batch.metadata as any)?.notes || batch.notes || '';
+    
+    // Check if separators/dividers are configured
+    const exportSeparators = fileboundConfig.includeSeparators !== false; // default true
+    const exportDividers = fileboundConfig.includeDividers !== false; // default true
 
     console.log(`Exporting ${documents.length} documents to Filebound at ${fileboundUrl}`);
 
@@ -289,6 +296,49 @@ serve(async (req) => {
       return btoa(binary);
     }
 
+    // Helper: Create divider in FileBound
+    async function createDivider(position: 'start' | 'end', projectId: string): Promise<void> {
+      if (!exportDividers) return;
+      
+      try {
+        const dividerPayload = {
+          ProjectId: projectId,
+          DocumentType: 'DIVIDER',
+          Notes: `========== Batch ${position === 'start' ? 'START' : 'END'}: ${batch.batch_name} ==========`,
+          IsDivider: true,
+          BatchName: batch.batch_name,
+          BatchId: batchId
+        };
+        
+        const dividerEndpoints = [
+          `${baseUrl}/api/projects/${projectId}/files`,
+          `${baseUrl}/api/files`,
+        ];
+        
+        for (const url of dividerEndpoints) {
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Basic ${authString}`,
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(dividerPayload)
+          });
+          
+          if (res.ok || res.status === 201) {
+            console.log(`Batch ${position} divider created successfully`);
+            break;
+          }
+        }
+      } catch (error) {
+        console.warn(`Failed to create ${position} divider:`, error);
+      }
+    }
+
+    // Insert batch start divider
+    await createDivider('start', projectId);
+
     // Try uploading each document individually to maximize success
     const successes: any[] = [];
     const failures: any[] = [];
@@ -364,16 +414,23 @@ serve(async (req) => {
           const indexArrayByFieldNumber = Object.entries(fieldsObj).map(([k, v]) => ({ FieldNumber: parseInt(k.slice(1), 10), Value: v }));
           const indexArrayByName = Object.entries(fieldsObj).map(([k, v]) => ({ Name: k, Value: v }));
 
+          // Build comprehensive notes including batch notes and document validation notes
+          const noteParts: string[] = [];
+          if (batchNotes) noteParts.push(`Batch: ${batchNotes}`);
+          if (doc.validation_notes) noteParts.push(`Document: ${doc.validation_notes}`);
+          if (!noteParts.length) noteParts.push(doc.file_name || '');
+          const combinedNotes = noteParts.join(' | ');
+
           const fileBodies = [
-            { field: fieldsArray, notes: doc.file_name || '', projectId },
-            { Field: fieldsArray, Notes: doc.file_name || '', ProjectId: projectId },
-            { ProjectId: projectId, Fields: fieldsSlice, Notes: doc.file_name || '' },
-            { ProjectId: projectId, IndexFields: fieldsObj, Notes: doc.file_name || '' },
-            { ProjectId: projectId, IndexFields: indexArrayByNumber, Notes: doc.file_name || '' },
-            { ProjectId: projectId, IndexFields: indexArrayByFieldNumber, Notes: doc.file_name || '' },
-            { ProjectId: projectId, IndexFields: indexArrayByName, Notes: doc.file_name || '' },
-            { projectId, indexFields: fieldsObj, notes: doc.file_name || '' },
-            { projectId, field: fieldsSlice, notes: doc.file_name || '' },
+            { field: fieldsArray, notes: combinedNotes, projectId },
+            { Field: fieldsArray, Notes: combinedNotes, ProjectId: projectId },
+            { ProjectId: projectId, Fields: fieldsSlice, Notes: combinedNotes },
+            { ProjectId: projectId, IndexFields: fieldsObj, Notes: combinedNotes },
+            { ProjectId: projectId, IndexFields: indexArrayByNumber, Notes: combinedNotes },
+            { ProjectId: projectId, IndexFields: indexArrayByFieldNumber, Notes: combinedNotes },
+            { ProjectId: projectId, IndexFields: indexArrayByName, Notes: combinedNotes },
+            { projectId, indexFields: fieldsObj, notes: combinedNotes },
+            { projectId, field: fieldsSlice, notes: combinedNotes },
           ];
 
           // Helper: find a file by index fields using FileBound filter syntax
@@ -911,6 +968,38 @@ serve(async (req) => {
                   const okJson = await res.json().catch(() => ({ success: true }));
                   successes.push({ id: doc.id, result: okJson, fileId });
                   uploaded = true;
+                  
+                  // Insert separator/divider if configured and document type changes
+                  const currentIndex = documents.indexOf(doc);
+                  const nextDoc = documents[currentIndex + 1];
+                  
+                  if (exportSeparators && nextDoc && doc.document_type !== nextDoc.document_type) {
+                    try {
+                      // Create a separator document in FileBound
+                      const separatorPayload = {
+                        ProjectId: projectId,
+                        FileId: fileId,
+                        DocumentType: 'SEPARATOR',
+                        Notes: `--- Document Type Change: ${doc.document_type || 'Unknown'} to ${nextDoc.document_type || 'Unknown'} ---`,
+                        IsSeparator: true
+                      };
+                      
+                      await fetch(`${baseUrl}/api/files/${fileId}/documents`, {
+                        method: 'POST',
+                        headers: {
+                          'Authorization': `Basic ${authString}`,
+                          'Accept': 'application/json',
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(separatorPayload)
+                      });
+                      
+                      console.log('Separator inserted between document types');
+                    } catch (sepError) {
+                      console.warn('Failed to insert separator:', sepError);
+                    }
+                  }
+                  
                   break;
                 } else {
                   const t = await res.text();
@@ -934,6 +1023,9 @@ serve(async (req) => {
         failures.push({ id: doc.id, error: e?.message || String(e) });
       }
     }
+
+    // Insert batch end divider
+    await createDivider('end', projectId);
 
     if (successes.length === 0) {
       return new Response(
