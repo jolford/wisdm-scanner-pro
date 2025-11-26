@@ -562,7 +562,7 @@ export const InteractiveDocumentViewer = ({
         {/* Document with overlay - enhanced styling */}
         <div 
           ref={containerRef}
-          className="flex-1 overflow-hidden bg-gradient-to-br from-primary/5 via-background to-muted/10 p-6 relative group"
+          className="flex-1 overflow-auto bg-gradient-to-br from-primary/5 via-background to-muted/10 p-6 relative group"
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
@@ -570,7 +570,7 @@ export const InteractiveDocumentViewer = ({
           style={{ cursor: isPanning ? 'grabbing' : (imageZoom > 1 ? 'grab' : 'default') }}
         >
           <div 
-            className="relative inline-block transition-transform duration-200 ease-out w-full h-full"
+            className="relative inline-block transition-transform duration-200 ease-out"
             style={{
               transform: `translate(${panOffset.x}px, ${panOffset.y}px)`
             }}
@@ -587,10 +587,10 @@ export const InteractiveDocumentViewer = ({
                   ref={imageRef}
                   src={imageUrl}
                   alt="Document"
-                  className="w-full h-auto object-contain transition-all duration-300 ease-out select-none shadow-2xl rounded-lg border-2 border-primary/10 hover:border-primary/30 hover:shadow-primary/20"
+                  className="max-w-none object-contain transition-all duration-300 ease-out select-none shadow-2xl rounded-lg border-2 border-primary/10 hover:border-primary/30 hover:shadow-primary/20"
                   style={{
                     transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
-                    transformOrigin: 'center center',
+                    transformOrigin: 'top left',
                     filter: 'contrast(1.03) brightness(1.02) saturate(1.05)'
                   }}
                   onLoad={() => {
@@ -612,7 +612,7 @@ export const InteractiveDocumentViewer = ({
                   className="absolute top-0 left-0 pointer-events-auto select-none rounded-lg"
                   style={{
                     transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
-                    transformOrigin: 'center center',
+                    transformOrigin: 'top left',
                     cursor: isPanning ? 'grabbing' : (clickMode === 'extract' ? 'crosshair' : 'pointer')
                   }}
                 />
