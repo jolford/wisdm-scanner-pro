@@ -79,10 +79,27 @@ const Queue = ({ launchedFiles }: { launchedFiles?: File[] }) => {
 
   // Document preview component for Quality Control tab
   const DocumentPreview = ({ fileUrl }: { fileUrl: string | null }) => {
-    const { signedUrl, loading } = useSignedUrl(fileUrl, 300);
+    const { signedUrl, loading, error } = useSignedUrl(fileUrl, 300);
     const [showFullImage, setShowFullImage] = useState(false);
+    const [imageError, setImageError] = useState(false);
 
-    if (!fileUrl || loading) {
+    if (!fileUrl) {
+      return (
+        <div className="w-20 h-20 bg-muted rounded flex items-center justify-center flex-shrink-0">
+          <FileText className="h-8 w-8 text-muted-foreground" />
+        </div>
+      );
+    }
+
+    if (loading) {
+      return (
+        <div className="w-20 h-20 bg-muted rounded flex items-center justify-center flex-shrink-0">
+          <div className="animate-spin h-6 w-6 border-2 border-primary border-t-transparent rounded-full" />
+        </div>
+      );
+    }
+
+    if (error || imageError || !signedUrl) {
       return (
         <div className="w-20 h-20 bg-muted rounded flex items-center justify-center flex-shrink-0">
           <FileText className="h-8 w-8 text-muted-foreground" />
@@ -93,18 +110,26 @@ const Queue = ({ launchedFiles }: { launchedFiles?: File[] }) => {
     return (
       <>
         <img
-          src={signedUrl || ''}
+          src={signedUrl}
           alt="Document preview"
           className="w-20 h-20 object-cover rounded cursor-pointer hover:opacity-80 transition-opacity flex-shrink-0 border border-border"
           onClick={() => setShowFullImage(true)}
+          onError={() => setImageError(true)}
         />
         <Dialog open={showFullImage} onOpenChange={setShowFullImage}>
           <DialogContent className="max-w-4xl">
-            <img
-              src={signedUrl || ''}
-              alt="Document full preview"
-              className="w-full h-auto"
-            />
+            {loading ? (
+              <div className="flex items-center justify-center p-12">
+                <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+              </div>
+            ) : (
+              <img
+                src={signedUrl}
+                alt="Document full preview"
+                className="w-full h-auto"
+                onError={() => setImageError(true)}
+              />
+            )}
           </DialogContent>
         </Dialog>
       </>
