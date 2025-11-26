@@ -24,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ImageRegionSelector } from './ImageRegionSelector';
 import { useSignedUrl, getSignedUrl } from '@/hooks/use-signed-url';
 import { detectKeywords } from '@/lib/keyword-redaction';
+import { autoFormatField } from '@/lib/field-formatters';
 import { ViewOriginalButton } from './ViewOriginalButton';
 import { RedactionTool } from './RedactionTool';
 // Enhanced feature components
@@ -1575,11 +1576,15 @@ const { toast } = useToast();
                       
                       {/* Show only first 5 extracted fields as badges to keep header compact */}
                       <div className="flex flex-wrap gap-2 mt-1">
-                        {projectFields.slice(0, 5).map((field) => (
-                          <Badge key={field.name} variant="outline" className="text-xs">
-                            {field.name}: {getMetadataValue(metadata, field.name) || 'N/A'}
-                          </Badge>
-                        ))}
+                        {projectFields.slice(0, 5).map((field) => {
+                          const rawValue = getMetadataValue(metadata, field.name);
+                          const formattedValue = rawValue ? autoFormatField(field.name, rawValue) : 'N/A';
+                          return (
+                            <Badge key={field.name} variant="outline" className="text-xs">
+                              {field.name}: {formattedValue}
+                            </Badge>
+                          );
+                        })}
                         {projectFields.length > 5 && (
                           <Badge variant="outline" className="text-[10px] text-muted-foreground">
                             +{projectFields.length - 5} more fields
@@ -1954,11 +1959,12 @@ const { toast } = useToast();
                             )}
 
                             {projectFields.map((field) => {
-                              const fieldValue = getMetadataValue(metadata, field.name);
+                              const rawFieldValue = getMetadataValue(metadata, field.name);
+                              const formattedFieldValue = rawFieldValue ? autoFormatField(field.name, rawFieldValue) : '';
                               const fieldKey = `${doc.id}-${field.name}`;
                               const isValidating = validatingFields.has(fieldKey);
                               const confidence = fieldConfidence[doc.id]?.[field.name];
-                              const hasValue = fieldValue && fieldValue !== '';
+                              const hasValue = rawFieldValue && rawFieldValue !== '';
                               
                               // Check if field requires manual validation due to low confidence
                               const confidenceThreshold = (field as any).confidenceThreshold;
@@ -1993,7 +1999,7 @@ const { toast } = useToast();
                                         <Button
                                           size="sm"
                                           variant="ghost"
-                                          onClick={() => validateFieldWithAI(doc.id, field.name, fieldValue)}
+                                          onClick={() => validateFieldWithAI(doc.id, field.name, rawFieldValue)}
                                           disabled={isValidating || !hasValue}
                                           className="h-8 w-8 p-0"
                                         >
@@ -2011,7 +2017,7 @@ const { toast } = useToast();
                                   </div>
                                   <Input
                                     id={`${doc.id}-${field.name}`}
-                                    value={fieldValue}
+                                    value={formattedFieldValue}
                                     onChange={(e) =>
                                       handleFieldChange(doc.id, field.name, e.target.value)
                                     }

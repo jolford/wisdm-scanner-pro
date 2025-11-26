@@ -109,22 +109,34 @@ export const RedactionTool = ({
     // Fetch image as blob with credentials to avoid CORS issues
     const loadImage = async () => {
       try {
+        console.log('RedactionTool: Loading image from URL:', displayUrl);
         const response = await fetch(displayUrl, {
           credentials: 'include',
+          mode: 'cors',
           headers: {
             'Accept': 'image/*',
           }
         });
+        
         if (!response.ok) {
-          console.error('Fetch failed:', response.status, response.statusText);
-          throw new Error(`Failed to fetch image: ${response.status}`);
+          const errorText = await response.text();
+          console.error('RedactionTool: Fetch failed:', response.status, response.statusText, errorText);
+          throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
         }
         
         const blob = await response.blob();
+        console.log('RedactionTool: Got blob, size:', blob.size, 'type:', blob.type);
+        
+        if (blob.size === 0) {
+          throw new Error('Image blob is empty');
+        }
+        
         const objectUrl = URL.createObjectURL(blob);
+        console.log('RedactionTool: Created object URL:', objectUrl);
         
         const img = new Image();
         img.onload = () => {
+          console.log('RedactionTool: Image loaded successfully, dimensions:', img.width, 'x', img.height);
           imageRef.current = img;
           // Set canvas size to match image dimensions
           canvas.width = img.width;
@@ -136,20 +148,20 @@ export const RedactionTool = ({
           URL.revokeObjectURL(objectUrl);
         };
         img.onerror = (e) => {
-          console.error('Image onload error:', e);
+          console.error('RedactionTool: Image onload error:', e);
           URL.revokeObjectURL(objectUrl);
           toast({
             title: 'Image Load Error',
-            description: 'Failed to load image for redaction',
+            description: 'Failed to render image on canvas. Try refreshing the page.',
             variant: 'destructive'
           });
         };
         img.src = objectUrl;
-      } catch (error) {
-        console.error('Error loading image:', error);
+      } catch (error: any) {
+        console.error('RedactionTool: Error loading image:', error);
         toast({
           title: 'Image Load Error',
-          description: 'Failed to load image for redaction',
+          description: error.message || 'Failed to load image for redaction. Please try again.',
           variant: 'destructive'
         });
       }
