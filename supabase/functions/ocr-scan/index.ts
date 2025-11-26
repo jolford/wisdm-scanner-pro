@@ -53,6 +53,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let documentId: string | undefined;
+  let supabaseClient: any = null;
+
   try {
     // --- AUTHENTICATION CHECK ---
     // Verify that the request includes an Authorization header
@@ -76,7 +79,8 @@ serve(async (req) => {
       );
     }
 
-    let { imageData, isPdf, extractionFields, textData, tableExtractionFields, enableCheckScanning, documentId, customerId, projectId } = body;
+    let { imageData, isPdf, extractionFields, textData, tableExtractionFields, enableCheckScanning, documentId: docId, customerId, projectId } = body;
+    documentId = docId;
     
     // If documentId is provided but imageData is missing, fetch the document from database
     if (documentId && !imageData) {
@@ -85,6 +89,7 @@ serve(async (req) => {
       const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
       const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      supabaseClient = supabase;
       
       const { data: document, error: docError } = await supabase
         .from('documents')
@@ -134,11 +139,16 @@ serve(async (req) => {
       isPdf = document.file_type === 'application/pdf';
       
       // Download the file from storage
-      const fileName = document.file_url.split('/').pop();
-      const batchId = document.batch_id;
+      const fileName = document.file_url?.split('/').pop() || 'unknown';
+      const batchId = document.batch_id || 'unknown-batch';
       const storagePath = `${batchId}/${fileName}`;
       
-      console.log(`Downloading file from storage: ${storagePath}`);
+      try {
+        console.log('Downloading file from storage:', storagePath);
+      } catch (logError) {
+        // Prevent circular reference errors in logging
+        console.log('Downloading file from storage (path unavailable)');
+      }
       
       const { data: fileBlob, error: downloadError } = await supabase.storage
         .from('documents')
@@ -1440,12 +1450,14 @@ Review the image and provide corrected text with any OCR errors fixed.`;
               }
             }
           } catch (e) {
-            console.log('Failed to parse word bounding boxes:', e);
+            // Silently fail - word boxes are nice-to-have but not critical
+            wordBoundingBoxes = [];
           }
         }
       }
     } catch (e) {
-      console.log('Word bounding box extraction failed (non-critical):', e);
+      // Word boxes are optional - don't let this crash the main extraction
+      wordBoundingBoxes = [];
     }
  
     let zoneExtractedCount = 0;
@@ -2047,6 +2059,26 @@ Review the image and provide corrected text with any OCR errors fixed.`;
     // --- ERROR HANDLING ---
     // Log detailed error server-side only (for debugging)
     console.error('Error in OCR function:', error);
+    
+    // If we have a documentId, save minimal error state to DB so document isn't lost
+    if (documentId && supabaseClient) {
+      try {
+        await supabaseClient
+          .from('documents')
+          .update({
+            extracted_text: 'OCR processing failed',
+            extracted_metadata: {},
+            confidence_score: 0,
+            validation_status: 'pending',
+            needs_review: true
+          })
+          .eq('id', documentId);
+        
+        console.log('Saved error state to database for document:', documentId);
+      } catch (dbError) {
+        console.error('Failed to save error state to database:', dbError);
+      }
+    }
     
     // Return safe generic message to client (don't expose internal details)
     return new Response(
