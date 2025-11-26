@@ -87,7 +87,6 @@ const menuItems = [
       { title: 'Validation Analytics', url: '/admin/analytics', icon: BarChart2 },
       { title: 'Advanced Search', url: '/admin/advanced-search', icon: Search },
       { title: 'Bulk Edit', url: '/admin/bulk-edit', icon: Edit3 },
-      { title: 'Document Comparison', url: '/admin/document-comparison', icon: GitCompare },
     ],
     defaultOpen: false,
   },
