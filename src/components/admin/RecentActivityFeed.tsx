@@ -112,36 +112,37 @@ export const RecentActivityFeed = () => {
                 return (
                   <div
                     key={activity.id}
-                    className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors animate-fade-in"
+                    className="flex items-start gap-4 pb-4 border-b border-border last:border-0 last:pb-0"
                   >
-                    <div className={`p-2 rounded-full bg-muted ${color}`}>
+                    <div className={`p-2.5 rounded-lg bg-muted/50 ${color}`}>
                       <Icon className="h-4 w-4" />
                     </div>
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium text-sm">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-4 mb-1">
+                        <p className="font-medium text-sm">
                           {getActivityLabel(activity.action_type)}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
+                        </p>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
                           {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
                         </span>
                       </div>
                       
                       {activity.entity_type && (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground mb-2 truncate">
                           {activity.entity_type}: {activity.entity_id?.slice(0, 8)}...
                         </p>
                       )}
 
-                      <div className="flex items-center gap-2">
-                        {activity.success ? (
-                          <Badge variant="outline" className="text-xs">Success</Badge>
-                        ) : (
-                          <Badge variant="destructive" className="text-xs">Failed</Badge>
-                        )}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <Badge 
+                          variant={activity.success ? "outline" : "destructive"} 
+                          className="text-xs"
+                        >
+                          {activity.success ? "Success" : "Failed"}
+                        </Badge>
                         {activity.metadata && Object.keys(activity.metadata).length > 0 && (
                           <span className="text-xs text-muted-foreground">
-                            {Object.keys(activity.metadata).length} details
+                            • {Object.keys(activity.metadata).length} details
                           </span>
                         )}
                       </div>
