@@ -68,53 +68,52 @@ Deno.serve(async (req) => {
     }
 
     // Check if user has permission (is creator or admin)
-    const { data: profile, error: profileError } = await admin
-      .from('profiles')
-      .select('role, customer_id')
+    const { data: roles, error: rolesError } = await admin
+      .from('user_roles')
+      .select('role')
       .eq('user_id', user.id)
-      .maybeSingle();
+      .in('role', ['admin', 'system_admin']);
 
     console.log('Permission check:', {
       userId: user.id,
       batchId,
       batchCreatedBy: batch.created_by,
-      batchCustomerId: batch.customer_id,
-      profileExists: !!profile,
-      profileRole: profile?.role,
-      profileCustomerId: profile?.customer_id,
-      profileError: profileError?.message
+      roles,
+      rolesError: rolesError?.message
     });
 
-    const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
     const isOwner = batch.created_by === user.id;
-    const sameCustomer = profile?.customer_id && profile.customer_id === batch.customer_id;
+    const isSystemAdmin = Array.isArray(roles) && roles.some((r: any) => r.role === 'system_admin');
+    const isTenantAdmin = Array.isArray(roles) && roles.some((r: any) => r.role === 'admin');
+    const isAdmin = !!(isSystemAdmin || isTenantAdmin);
 
-    // Allow if user is owner, admin, or same customer
-    // Also allow if no profile exists but user is the creator
-    const hasPermission = isOwner || isAdmin || sameCustomer;
+    const hasPermission = isOwner || isAdmin;
 
     if (!hasPermission) {
       console.error('Access denied:', {
         isOwner,
         isAdmin,
-        sameCustomer,
-        hasProfile: !!profile
+        isSystemAdmin,
+        isTenantAdmin,
       });
-      return new Response(JSON.stringify({ 
-        error: 'Access denied',
-        debug: {
-          isOwner,
-          isAdmin,
-          sameCustomer,
-          hasProfile: !!profile
+      return new Response(
+        JSON.stringify({
+          error: 'Access denied',
+          debug: {
+            isOwner,
+            isAdmin,
+            isSystemAdmin,
+            isTenantAdmin,
+          },
+        }),
+        {
+          status: 403,
+          headers: { 'Content-Type': 'application/json', ...corsHeaders },
         }
-      }), {
-        status: 403,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      });
+      );
     }
 
-    console.log('Permission granted:', { isOwner, isAdmin, sameCustomer });
+    console.log('Permission granted:', { isOwner, isAdmin, isSystemAdmin, isTenantAdmin });
 
     // Perform deletions in safe order using service role
     // Related scanner/email import logs and documents
