@@ -162,7 +162,7 @@ const App = () => {
   return <ErrorBoundary>
       <I18nextProvider i18n={i18n}>
         <QueryClientProvider client={queryClient}>
-          <ThemeProvider attribute="class" defaultTheme="light" forcedTheme="light">{/* Force light mode only */}
+          <ThemeProvider attribute="class" defaultTheme="light">{/* Theme toggle enabled */}
             <div className="flex flex-col min-h-screen">
             <SkipToContent />
             <Toaster />
