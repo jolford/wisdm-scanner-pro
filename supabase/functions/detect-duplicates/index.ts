@@ -328,9 +328,22 @@ serve(async (req) => {
         if (isAddressMatch) matchingFields.address = { current: currentAddress, candidate: candAddress, similarity: addressSim };
         if (isIdentifierMatch) matchingFields.identifier = { current: currentIdentifier, candidate: candIdentifier, similarity: identifierSim };
 
+        // Map to allowed duplicate_type values per database constraint
+        let duplicateType: 'name' | 'address' | 'signature' | 'combined' = 'combined';
+        if (isIdentifierMatch) {
+          // Identifier match is the strongest signal; treat as combined for now
+          duplicateType = 'combined';
+        } else if (isNameMatch && !isAddressMatch) {
+          duplicateType = 'name';
+        } else if (isAddressMatch && !isNameMatch) {
+          duplicateType = 'address';
+        } else {
+          duplicateType = 'combined';
+        }
+
         duplicates.push({
           duplicate_document_id: candidate.id,
-          duplicate_type: isIdentifierMatch ? 'identifier' : 'combined',
+          duplicate_type: duplicateType,
           similarity_score: overallScore,
           duplicate_fields: matchingFields
         });
@@ -342,7 +355,7 @@ serve(async (req) => {
             document_id: documentId,
             batch_id: batchId,
             duplicate_document_id: candidate.id,
-            duplicate_type: isIdentifierMatch ? 'identifier' : 'combined',
+            duplicate_type: duplicateType,
             similarity_score: overallScore,
             duplicate_fields: matchingFields,
             status: 'pending'
