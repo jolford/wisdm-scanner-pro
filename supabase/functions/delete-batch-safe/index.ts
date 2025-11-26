@@ -68,22 +68,53 @@ Deno.serve(async (req) => {
     }
 
     // Check if user has permission (is creator or admin)
-    const { data: profile } = await admin
+    const { data: profile, error: profileError } = await admin
       .from('profiles')
       .select('role, customer_id')
       .eq('user_id', user.id)
       .maybeSingle();
 
+    console.log('Permission check:', {
+      userId: user.id,
+      batchId,
+      batchCreatedBy: batch.created_by,
+      batchCustomerId: batch.customer_id,
+      profileExists: !!profile,
+      profileRole: profile?.role,
+      profileCustomerId: profile?.customer_id,
+      profileError: profileError?.message
+    });
+
     const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
     const isOwner = batch.created_by === user.id;
-    const sameCustomer = profile?.customer_id === batch.customer_id;
+    const sameCustomer = profile?.customer_id && profile.customer_id === batch.customer_id;
 
-    if (!isAdmin && !isOwner && !sameCustomer) {
-      return new Response(JSON.stringify({ error: 'Access denied' }), {
+    // Allow if user is owner, admin, or same customer
+    // Also allow if no profile exists but user is the creator
+    const hasPermission = isOwner || isAdmin || sameCustomer;
+
+    if (!hasPermission) {
+      console.error('Access denied:', {
+        isOwner,
+        isAdmin,
+        sameCustomer,
+        hasProfile: !!profile
+      });
+      return new Response(JSON.stringify({ 
+        error: 'Access denied',
+        debug: {
+          isOwner,
+          isAdmin,
+          sameCustomer,
+          hasProfile: !!profile
+        }
+      }), {
         status: 403,
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
+
+    console.log('Permission granted:', { isOwner, isAdmin, sameCustomer });
 
     // Perform deletions in safe order using service role
     // Related scanner/email import logs and documents
