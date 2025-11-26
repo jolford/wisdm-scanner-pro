@@ -1805,12 +1805,33 @@ Review the image and provide corrected text with any OCR errors fixed.`;
           Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
         );
         
+        // Sanitize metadata to avoid malformed character-map structures
+        let sanitizedMetadata = metadata;
+        if (metadata && typeof metadata === 'object' && !Array.isArray(metadata)) {
+          const entries = Object.entries(metadata as Record<string, any>);
+          const total = entries.length;
+
+          if (total > 10) {
+            const suspiciousCount = entries.filter(([key, val]) => {
+              const isNumericKey = /^\d+$/.test(key.trim());
+              const strVal = typeof val === 'string' ? val : (val as any)?.value ?? '';
+              return isNumericKey && strVal && String(strVal).length <= 2;
+            }).length;
+
+            const isSuspicious = suspiciousCount / total > 0.7;
+            if (isSuspicious) {
+              console.warn('OCR metadata looks like character map; discarding structured metadata for document', documentId);
+              sanitizedMetadata = {};
+            }
+          }
+        }
+
         await supabaseAdmin
           .from('documents')
           .update({
             document_type: documentType,
             confidence_score: confidence,
-            extracted_metadata: metadata,
+            extracted_metadata: sanitizedMetadata,
             extracted_text: extractedText,
             line_items: lineItems && lineItems.length > 0 ? lineItems : null,
             field_confidence: fieldConfidence || {},
