@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { AdvancedSearchBar, SearchOptions } from '@/components/AdvancedSearchBar';
 import { useAdvancedSearch } from '@/hooks/use-advanced-search';
@@ -7,9 +6,10 @@ import { Card, CardContent } from '@/components/ui/card';
 import { FileText, Calendar, TrendingUp } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
+import { ProjectSelector } from '@/components/ProjectSelector';
 
 export default function AdvancedSearch() {
-  const { projectId } = useParams();
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchOptions, setSearchOptions] = useState<SearchOptions>({
     useFullTextSearch: true,
@@ -23,7 +23,7 @@ export default function AdvancedSearch() {
   const [filters, setFilters] = useState({});
 
   const { data: results, isLoading } = useAdvancedSearch(
-    projectId || '',
+    selectedProjectId || null,
     searchQuery,
     searchOptions
   );
@@ -34,6 +34,13 @@ export default function AdvancedSearch() {
       description="Search across all documents with powerful full-text search"
     >
       <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <ProjectSelector 
+            onProjectSelect={(projectId) => setSelectedProjectId(projectId)}
+            selectedProjectId={selectedProjectId}
+          />
+        </div>
+
         <AdvancedSearchBar
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}

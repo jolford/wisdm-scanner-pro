@@ -13,7 +13,7 @@ interface SearchOptions {
 }
 
 export const useAdvancedSearch = (
-  projectId: string,
+  projectId: string | null | undefined,
   searchQuery: string,
   searchOptions: SearchOptions
 ) => {
@@ -24,49 +24,62 @@ export const useAdvancedSearch = (
         return [];
       }
 
+      // Fetch documents - optionally filtered by project
       let query = supabase
         .from('documents')
         .select(`
           *,
-          batches!inner (
+          batches (
             id,
             batch_name,
             project_id
           )
         `)
-        .eq('batches.project_id', projectId);
+        .order('created_at', { ascending: false })
+        .limit(500);
 
-      if (searchOptions.useFullTextSearch) {
-        // Use PostgreSQL full-text search
-        query = query.textSearch('search_vector', searchQuery, {
-          type: 'websearch',
-          config: 'english',
-        });
-      } else {
-        // Fallback to basic ILIKE search
-        const conditions = [];
-        
-        if (searchOptions.searchFields.fileNames) {
-          conditions.push(`file_name.ilike.%${searchQuery}%`);
-        }
-        if (searchOptions.searchFields.extractedText) {
-          conditions.push(`extracted_text.ilike.%${searchQuery}%`);
-        }
-        if (searchOptions.searchFields.validationNotes) {
-          conditions.push(`validation_notes.ilike.%${searchQuery}%`);
-        }
-
-        if (conditions.length > 0) {
-          query = query.or(conditions.join(','));
-        }
+      // Only filter by project if projectId is provided
+      if (projectId) {
+        query = query.eq('batches.project_id', projectId);
       }
 
-      const { data, error } = await query
-        .order('created_at', { ascending: false })
-        .limit(100);
+      const { data, error } = await query;
 
       if (error) throw error;
-      return data || [];
+      if (!data) return [];
+
+      // Client-side filtering for comprehensive search across all fields
+      const searchTerm = searchQuery.toLowerCase();
+      
+      return data.filter(doc => {
+        // Search file names
+        if (searchOptions.searchFields.fileNames && 
+            doc.file_name?.toLowerCase().includes(searchTerm)) {
+          return true;
+        }
+
+        // Search extracted text
+        if (searchOptions.searchFields.extractedText && 
+            doc.extracted_text?.toLowerCase().includes(searchTerm)) {
+          return true;
+        }
+
+        // Search validation notes
+        if (searchOptions.searchFields.validationNotes && 
+            doc.validation_notes?.toLowerCase().includes(searchTerm)) {
+          return true;
+        }
+
+        // Search through extracted metadata (JSON field values)
+        if (searchOptions.searchFields.fieldValues && doc.extracted_metadata) {
+          const metadataStr = JSON.stringify(doc.extracted_metadata).toLowerCase();
+          if (metadataStr.includes(searchTerm)) {
+            return true;
+          }
+        }
+
+        return false;
+      }).slice(0, 100); // Limit to 100 results
     },
     enabled: !!searchQuery && searchQuery.length >= 2,
   });
