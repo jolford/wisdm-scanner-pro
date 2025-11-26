@@ -29,6 +29,12 @@ serve(async (req) => {
 
     const { batchId } = await req.json();
 
+    // Set export_started_at timestamp to track export duration
+    await supabase
+      .from('batches')
+      .update({ export_started_at: new Date().toISOString() })
+      .eq('id', batchId);
+
     // Get batch with project info
     const { data: batch, error: batchError } = await supabase
       .from('batches')
@@ -181,11 +187,12 @@ ${xmlDocs}
       }
     }
 
-    // Update batch with export timestamp
+    // Update batch with export timestamp and clear export_started_at
     await supabase
       .from('batches')
       .update({ 
         exported_at: new Date().toISOString(),
+        export_started_at: null,
         metadata: {
           ...(batch.metadata || {}),
           exports: exports.map(e => ({

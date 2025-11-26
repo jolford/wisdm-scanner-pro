@@ -84,6 +84,12 @@ serve(async (req) => {
       );
     }
 
+    // Set export_started_at timestamp to track export duration
+    await supabase
+      .from('batches')
+      .update({ export_started_at: new Date().toISOString() })
+      .eq('id', batchId);
+
     // Get batch with project (including credentials)
     const { data: batch, error: batchError } = await supabase
       .from('batches')
@@ -196,6 +202,7 @@ serve(async (req) => {
       .from('batches')
       .update({ 
         exported_at: new Date().toISOString(),
+        export_started_at: null,
         metadata: {
           ...(batch.metadata || {}),
           sharepointExport: {

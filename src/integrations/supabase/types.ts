@@ -303,6 +303,7 @@ export type Database = {
           created_by: string
           customer_id: string | null
           error_count: number | null
+          export_started_at: string | null
           exported_at: string | null
           id: string
           metadata: Json | null
@@ -324,6 +325,7 @@ export type Database = {
           created_by: string
           customer_id?: string | null
           error_count?: number | null
+          export_started_at?: string | null
           exported_at?: string | null
           id?: string
           metadata?: Json | null
@@ -345,6 +347,7 @@ export type Database = {
           created_by?: string
           customer_id?: string | null
           error_count?: number | null
+          export_started_at?: string | null
           exported_at?: string | null
           id?: string
           metadata?: Json | null
