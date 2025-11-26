@@ -773,7 +773,12 @@ const [isExporting, setIsExporting] = useState(false);
   };
 
   const importDocuments = async (files: File[]) => {
+    console.log('[importDocuments] Called with', files.length, 'files');
+    console.log('[importDocuments] selectedProjectId:', selectedProjectId);
+    console.log('[importDocuments] selectedBatchId:', selectedBatchId);
+
     if (!selectedProjectId || !selectedBatchId) {
+      console.error('[importDocuments] Missing project or batch selection');
       toast({
         title: 'Select Project and Batch',
         description: 'Please select both a project and batch before uploading',
@@ -784,6 +789,7 @@ const [isExporting, setIsExporting] = useState(false);
 
     // Basic license capacity check before sending to backend
     if (!hasCapacity(files.length)) {
+      console.error('[importDocuments] License capacity exceeded');
       toast({
         title: 'License Capacity Exceeded',
         description: 'Your license has insufficient document capacity. Please contact your administrator.',
@@ -793,6 +799,7 @@ const [isExporting, setIsExporting] = useState(false);
     }
 
     setProcessing(true);
+    console.log('[importDocuments] Starting file encoding...');
 
     try {
       const encodedFiles = await Promise.all(
@@ -803,6 +810,7 @@ const [isExporting, setIsExporting] = useState(false);
         }))
       );
 
+      console.log('[importDocuments] Files encoded, calling edge function...');
       const { data, error } = await safeInvokeEdgeFunction<any>('import-documents', {
         body: {
           projectId: selectedProjectId,
@@ -812,18 +820,23 @@ const [isExporting, setIsExporting] = useState(false);
         },
       });
 
+      console.log('[importDocuments] Edge function response:', { data, error });
+
       if (error || !data || data.error) {
-        console.error('Import documents error:', error || data?.error);
+        console.error('[importDocuments] Import failed:', error || data?.error);
         toast({
           title: 'Import Failed',
           description: (error as any)?.message || data?.error || 'Failed to import documents',
           variant: 'destructive',
         });
+        setProcessing(false);
         return;
       }
 
       const uploadedCount = data.uploaded ?? encodedFiles.length;
       const failedCount = data.failed ?? 0;
+
+      console.log('[importDocuments] Upload complete:', { uploadedCount, failedCount, documents: data.documents });
 
       toast({
         title: 'Documents Uploaded',
@@ -834,7 +847,7 @@ const [isExporting, setIsExporting] = useState(false);
       try {
         const docs: Array<{ id: string }> = data.documents || [];
         if (docs.length > 1 && selectedBatchId) {
-          console.log(`Triggering duplicate detection for batch ${selectedBatchId}`);
+          console.log(`[importDocuments] Triggering duplicate detection for batch ${selectedBatchId}`);
           setTimeout(async () => {
             for (const doc of docs) {
               try {
@@ -847,7 +860,7 @@ const [isExporting, setIsExporting] = useState(false);
                   },
                 });
               } catch (dupError) {
-                console.error(`Duplicate detection failed for ${doc.id}:`, dupError);
+                console.error(`[importDocuments] Duplicate detection failed for ${doc.id}:`, dupError);
               }
             }
             console.log('✓ Duplicate detection triggered');
@@ -867,7 +880,15 @@ const [isExporting, setIsExporting] = useState(false);
 
       await loadQueueDocuments();
       setTimeout(() => handleTabChange('validation'), 0);
+    } catch (err: any) {
+      console.error('[importDocuments] Error:', err);
+      toast({
+        title: 'Upload Failed',
+        description: err.message || 'An unexpected error occurred',
+        variant: 'destructive',
+      });
     } finally {
+      console.log('[importDocuments] Complete, setting processing=false');
       setProcessing(false);
     }
   };
