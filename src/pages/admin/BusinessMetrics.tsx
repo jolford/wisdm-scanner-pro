@@ -310,6 +310,90 @@ export default function BusinessMetrics() {
           </CardContent>
         </Card>
 
+        {/* Business Valuation */}
+        <Card className="border-green-500/20 bg-green-500/5">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-green-700 dark:text-green-400">
+              <TrendingUp className="h-5 w-5" />
+              Estimated Business Valuation
+            </CardTitle>
+            <CardDescription>Based on ARR and growth rate using standard SaaS multiples</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {(() => {
+                const arr = metrics?.arr || 0;
+                const growthRate = metrics?.growthRate || 0;
+                
+                // Determine valuation multiple based on growth rate
+                let lowMultiple = 1;
+                let highMultiple = 3;
+                let category = "Low Growth";
+                
+                if (growthRate >= 100) {
+                  lowMultiple = 10;
+                  highMultiple = 20;
+                  category = "Very High Growth";
+                } else if (growthRate >= 50) {
+                  lowMultiple = 6;
+                  highMultiple = 10;
+                  category = "High Growth";
+                } else if (growthRate >= 20) {
+                  lowMultiple = 3;
+                  highMultiple = 6;
+                  category = "Medium Growth";
+                }
+                
+                const lowValuation = arr * lowMultiple;
+                const highValuation = arr * highMultiple;
+                const midValuation = (lowValuation + highValuation) / 2;
+                
+                return (
+                  <>
+                    <div className="text-center space-y-2">
+                      <div className="text-4xl font-bold text-green-600 dark:text-green-400">
+                        {formatCurrency(midValuation)}
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Estimated Value (Midpoint)
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Range: {formatCurrency(lowValuation)} - {formatCurrency(highValuation)}
+                      </p>
+                    </div>
+                    
+                    <div className="border-t pt-4 space-y-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">ARR:</span>
+                        <span className="font-medium">{formatCurrency(arr)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Growth Category:</span>
+                        <span className="font-medium">{category} ({growthRate.toFixed(1)}%)</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Valuation Multiple:</span>
+                        <span className="font-medium">{lowMultiple}x - {highMultiple}x ARR</span>
+                      </div>
+                    </div>
+                    
+                    <div className="border-t pt-4 text-xs text-muted-foreground space-y-2">
+                      <p><strong>How this works:</strong> SaaS companies are typically valued at multiples of Annual Recurring Revenue (ARR).</p>
+                      <ul className="list-disc list-inside space-y-1 ml-2">
+                        <li>Low growth (0-20%): 1-3x ARR</li>
+                        <li>Medium growth (20-50%): 3-6x ARR</li>
+                        <li>High growth (50-100%): 6-10x ARR</li>
+                        <li>Very high growth (100%+): 10-20x ARR</li>
+                      </ul>
+                      <p className="pt-2"><strong>Note:</strong> Actual valuation depends on many factors including profitability, market conditions, competitive position, and customer retention. This is an estimate only.</p>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Key Takeaways */}
         <Card className="border-primary/20 bg-primary/5">
           <CardHeader>
