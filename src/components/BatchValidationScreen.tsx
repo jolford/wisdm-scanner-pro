@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { SignatureValidator } from './SignatureValidator';
 
 // Icon imports from lucide-react
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles, FileText, ShieldAlert, Pencil, Plus, ExternalLink } from 'lucide-react';
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles, FileText, ShieldAlert, Pencil, Plus, ExternalLink, Database } from 'lucide-react';
 
 // Backend and utility imports
 import { supabase } from '@/integrations/supabase/client';
@@ -262,6 +262,9 @@ export const BatchValidationScreen = ({
   // Track AI validation state for each document and field
   const [validatingFields, setValidatingFields] = useState<Set<string>>(new Set());
   const [fieldConfidence, setFieldConfidence] = useState<Record<string, Record<string, number>>>({});
+  // Validation lookup configuration for this project
+  const [validationLookupConfig, setValidationLookupConfig] = useState<any>(null);
+  const [isLookingUp, setIsLookingUp] = useState(false);
   // Translated text cache per document
   const [translatedTexts, setTranslatedTexts] = useState<Record<string, string>>({});
   
@@ -277,7 +280,178 @@ export const BatchValidationScreen = ({
   const [currentDocIndex, setCurrentDocIndex] = useState(0);
   
   // Toast notifications for user feedback
-const { toast } = useToast();
+  const { toast } = useToast();
+
+  // Load validation lookup configuration from project metadata for this batch
+  useEffect(() => {
+    const loadValidationLookupConfig = async () => {
+      if (!batchId) return;
+      try {
+        const { data: batchData, error: batchError } = await supabase
+          .from('batches')
+          .select('project_id')
+          .eq('id', batchId)
+          .single();
+
+        if (batchError || !batchData?.project_id) return;
+
+        const { data: projectData, error: projectError } = await supabase
+          .from('projects')
+          .select('metadata')
+          .eq('id', batchData.project_id)
+          .single();
+
+        if (!projectError && projectData?.metadata) {
+          const meta = projectData.metadata as any;
+          if (meta.validation_lookup_config) {
+            setValidationLookupConfig(meta.validation_lookup_config);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to load validation lookup config:', e);
+      }
+    };
+
+    loadValidationLookupConfig();
+  }, [batchId]);
+
+  // Helper to get lookup configuration for a specific field (case-insensitive, ignores spaces/underscores)
+  const getLookupFieldConfig = (fieldName: string) => {
+    if (!validationLookupConfig || !validationLookupConfig.enabled) return null;
+
+    const system = (validationLookupConfig.system || '').toLowerCase();
+    if (!['excel', 'csv', 'filebound', 'docmgt'].includes(system)) return null;
+
+    const normalize = (value: string) =>
+      value
+        .toString()
+        .trim()
+        .toLowerCase()
+        .replace(/[\s_]+/g, '');
+
+    const normalizedName = normalize(fieldName);
+    const lookupField = (validationLookupConfig.lookupFields || []).find(
+      (f: any) =>
+        f.lookupEnabled !== false &&
+        normalize(f.wisdmField || '') === normalizedName
+    );
+
+    return lookupField || null;
+  };
+
+  // Validation lookup function for batch validation screen
+  const lookupFieldValue = async (docId: string, fieldName: string, fieldValue: any) => {
+    const lookupField = getLookupFieldConfig(fieldName);
+
+    if (!lookupField) {
+      toast({
+        title: 'Lookup not available',
+        description: 'This field is not configured for validation lookup.',
+      });
+      return;
+    }
+
+    const system = (validationLookupConfig.system || '').toLowerCase();
+    const valueStr = (fieldValue ?? '').toString().trim();
+    if (!valueStr) {
+      toast({ title: 'Nothing to lookup', description: 'Please enter a value first.' });
+      return;
+    }
+
+    setIsLookingUp(true);
+    try {
+      let data: any, error: any;
+
+      if (system === 'filebound' || system === 'docmgt') {
+        const endpoint = system === 'filebound'
+          ? 'test-filebound-connection'
+          : 'test-docmgt-connection';
+
+        const response = await supabase.functions.invoke(endpoint, {
+          body: {
+            url: validationLookupConfig.url,
+            username: validationLookupConfig.username,
+            password: validationLookupConfig.password,
+            project: validationLookupConfig.project,
+            searchField: lookupField.ecmField,
+            searchValue: valueStr,
+            mode: 'search',
+          },
+        });
+
+        data = response.data;
+        error = response.error;
+      } else {
+        // Excel/CSV lookup
+        let fileUrl = validationLookupConfig.excelFileUrl;
+        if (fileUrl && fileUrl.includes('supabase')) {
+          const { data: signedData } = await supabase.storage
+            .from('documents')
+            .createSignedUrl(fileUrl.split('/documents/')[1], 3600);
+          if (signedData?.signedUrl) {
+            fileUrl = signedData.signedUrl;
+          }
+        }
+
+        const response = await supabase.functions.invoke('validate-excel-lookup', {
+          body: {
+            fileUrl: fileUrl,
+            keyColumn: validationLookupConfig.excelKeyColumn,
+            keyValue: valueStr,
+            lookupFields: [
+              {
+                wisdmField: lookupField.wisdmField,
+                ecmField: lookupField.ecmField,
+                lookupEnabled: true,
+                wisdmValue: valueStr,
+              },
+            ],
+          },
+        });
+
+        data = response.data;
+        error = response.error;
+      }
+
+      if (error) throw error;
+
+      if (data?.found || data?.success) {
+        // Mark this field as confidently validated
+        setFieldConfidence((prev) => ({
+          ...prev,
+          [docId]: {
+            ...(prev[docId] || {}),
+            [fieldName]: 1.0,
+          },
+        }));
+
+        toast({
+          title: 'Lookup successful',
+          description: `${fieldName} "${valueStr}" found in ${system.toUpperCase()}`,
+        });
+      } else {
+        setFieldConfidence((prev) => ({
+          ...prev,
+          [docId]: {
+            ...(prev[docId] || {}),
+            [fieldName]: 0.3,
+          },
+        }));
+
+        toast({
+          title: 'Not found',
+          description: data?.message || `${fieldName} "${valueStr}" not found in ${system.toUpperCase()}`,
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      console.error('Lookup validation failed:', error);
+      const message = error?.message || 'Unexpected error during lookup validation';
+      toast({ title: 'Lookup failed', description: message, variant: 'destructive' });
+    } finally {
+      setIsLookingUp(false);
+    }
+  };
   const [signatureDialogDocId, setSignatureDialogDocId] = useState<string | null>(null);
   const [redactionDialogDocId, setRedactionDialogDocId] = useState<string | null>(null);
   const [viewerPopouts, setViewerPopouts] = useState<Record<string, Window | null>>({});
@@ -1972,8 +2146,8 @@ const { toast } = useToast();
                               
                               return (
                                 <div key={field.name}>
-                                  <div className="flex items-center justify-between mb-1">
-                                    <Label htmlFor={`${doc.id}-${field.name}`} className="text-sm">
+                                  <div className="flex items-center justify-between mb-1 gap-2">
+                                    <Label htmlFor={`${doc.id}-${field.name}`} className="text-sm flex-1">
                                       {field.name}
                                       {field.description && (
                                         <span className="text-xs text-muted-foreground ml-2">
@@ -1994,26 +2168,50 @@ const { toast } = useToast();
                                         </Badge>
                                       )}
                                     </Label>
-                                    <Tooltip>
-                                      <TooltipTrigger asChild>
-                                        <Button
-                                          size="sm"
-                                          variant="ghost"
-                                          onClick={() => validateFieldWithAI(doc.id, field.name, rawFieldValue)}
-                                          disabled={isValidating || !hasValue}
-                                          className="h-8 w-8 p-0"
-                                        >
-                                          {isValidating ? (
-                                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                                          ) : (
-                                            <Lightbulb className={`h-4 w-4 ${hasValue ? 'text-amber-500' : 'text-muted-foreground'}`} />
-                                          )}
-                                        </Button>
-                                      </TooltipTrigger>
-                                      <TooltipContent>
-                                        <p>Click to validate this field with AI</p>
-                                      </TooltipContent>
-                                    </Tooltip>
+                                    <div className="flex items-center gap-1">
+                                      {validationLookupConfig && (validationLookupConfig.system || '').toLowerCase() && (
+                                        <Tooltip>
+                                          <TooltipTrigger asChild>
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={() => lookupFieldValue(doc.id, field.name, rawFieldValue)}
+                                              disabled={isLookingUp || !hasValue}
+                                              className="h-8 w-8 p-0"
+                                            >
+                                              {isLookingUp ? (
+                                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                              ) : (
+                                                <Database className={`h-4 w-4 ${hasValue ? 'text-blue-500' : 'text-muted-foreground'}`} />
+                                              )}
+                                            </Button>
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                            <p>Validate against {(validationLookupConfig.system || '').toString().toUpperCase()} lookup</p>
+                                          </TooltipContent>
+                                        </Tooltip>
+                                      )}
+                                      <Tooltip>
+                                        <TooltipTrigger asChild>
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => validateFieldWithAI(doc.id, field.name, rawFieldValue)}
+                                            disabled={isValidating || !hasValue}
+                                            className="h-8 w-8 p-0"
+                                          >
+                                            {isValidating ? (
+                                              <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                            ) : (
+                                              <Lightbulb className={`h-4 w-4 ${hasValue ? 'text-amber-500' : 'text-muted-foreground'}`} />
+                                            )}
+                                          </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                          <p>Click to validate this field with AI</p>
+                                        </TooltipContent>
+                                      </Tooltip>
+                                    </div>
                                   </div>
                                   <Input
                                     id={`${doc.id}-${field.name}`}
