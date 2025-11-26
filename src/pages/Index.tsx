@@ -9,10 +9,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { useContextualToast } from '@/lib/toast-helper';
 import { useAuth } from '@/hooks/use-auth';
 import { useFileLaunch } from '@/hooks/use-file-launch';
-import { Sparkles, Upload, ScanLine, LogOut, FileText, Settings, FolderOpen } from 'lucide-react';
+import { Sparkles, Upload, ScanLine, LogOut, FileText, Settings, FolderOpen, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LicenseWarning } from '@/components/LicenseWarning';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { useLicense } from '@/hooks/use-license';
 import wisdmLogo from '@/assets/wisdm-logo.png';
@@ -936,6 +937,16 @@ const Index = () => {
                 <LogOut className="h-4 w-4 mr-2" />
                 Sign Out
               </Button>
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={() => navigate('/api-docs')}
+                className="h-9 w-9"
+                title="API Documentation"
+              >
+                <BookOpen className="h-4 w-4" />
+              </Button>
+              <ThemeToggle />
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Sparkles className="h-4 w-4 text-accent" />
                 <span>Powered by AI</span>
