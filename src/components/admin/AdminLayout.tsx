@@ -1,5 +1,7 @@
 import { ReactNode } from 'react';
-import { Menu } from 'lucide-react';
+import { Menu, BookOpen } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import {
   SidebarProvider,
@@ -17,6 +19,7 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children, title, description }: AdminLayoutProps) {
+  const navigate = useNavigate();
 
   return (
     <SidebarProvider>
@@ -42,6 +45,15 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
                 <nav aria-label="Utility navigation">
                   <div className="flex items-center gap-2">
                     <LanguageSelector variant="dropdown" />
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => navigate('/api-docs')}
+                      className="h-9 w-9"
+                      title="API Documentation"
+                    >
+                      <BookOpen className="h-4 w-4" />
+                    </Button>
                     <ThemeToggle />
                   </div>
                 </nav>
