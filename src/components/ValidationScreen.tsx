@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { auditLog } from '@/lib/audit-logger';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -2266,6 +2267,58 @@ useEffect(() => {
 
         {/* Validation Actions */}
         <div className="mt-6 space-y-3 pt-6 border-t">
+          {/* Re-process OCR button for 0% confidence documents */}
+          {classification?.confidence === 0 && documentId && (
+            <Alert className="mb-4 bg-amber-50 border-amber-200">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertDescription className="flex items-center justify-between">
+                <span className="text-sm text-amber-800">
+                  OCR extraction failed for this document (0% confidence). You can try reprocessing it.
+                </span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    const queryClient = useQueryClient();
+                    toast({
+                      title: 'Reprocessing OCR...',
+                      description: 'Please wait while we reprocess the document',
+                    });
+                    
+                    try {
+                      const result = await supabase.functions.invoke('reprocess-document', {
+                        body: { documentId }
+                      });
+                      
+                      if (result.error) throw result.error;
+                      
+                      // Reload document data
+                      await queryClient.invalidateQueries({ queryKey: ['document', documentId] });
+                      
+                      toast({
+                        title: 'Success',
+                        description: 'OCR reprocessed successfully! Reloading...',
+                      });
+                      
+                      // Refresh the page to show updated data
+                      setTimeout(() => window.location.reload(), 500);
+                    } catch (err: any) {
+                      toast({
+                        title: 'Reprocessing Failed',
+                        description: err.message || 'Unknown error',
+                        variant: 'destructive'
+                      });
+                    }
+                  }}
+                  className="ml-4"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Re-process OCR
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <div className="text-xs text-muted-foreground mb-2 space-y-1">
             <p>⌨️ Keyboard shortcuts:</p>
             <p>• Ctrl/Cmd + Enter = Validate</p>
