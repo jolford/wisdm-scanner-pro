@@ -14,250 +14,66 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Plus, Play, Edit, Trash2, Clock, Code, CheckCircle, XCircle, FileCode } from 'lucide-react';
+import { ProjectSelector } from '@/components/ProjectSelector';
 
-const SCRIPT_TEMPLATES = {
+const SCRIPT_TEMPLATES: Record<string, ScriptTemplate[]> = {
   javascript: [
     {
-      name: 'Document Export to API',
-      description: 'Export validated documents to an external API endpoint',
-      code: `// Export document data to external API
-const documentId = context.documentId;
-const apiEndpoint = 'https://api.example.com/documents';
-
-// Fetch document data
-const { data: doc } = await supabase
-  .from('documents')
-  .select('*, batches(*), projects(*)')
-  .eq('id', documentId)
-  .single();
-
-// Send to external API
-const response = await fetch(apiEndpoint, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer YOUR_API_KEY'
-  },
-  body: JSON.stringify({
-    document_id: doc.id,
-    file_name: doc.file_name,
-    extracted_data: doc.extracted_metadata,
-    batch_name: doc.batches?.batch_name,
-    project_name: doc.projects?.name
-  })
-});
-
-return { success: response.ok, status: response.status };`
+      name: 'Hello World',
+      code: `// This is a simple JavaScript template
+console.log("Hello, world!");`,
     },
     {
-      name: 'Batch Validation Rules',
-      description: 'Apply custom validation rules to batch documents',
-      code: `// Apply custom validation rules
-const batchId = context.batchId;
-
-// Get all documents in batch
-const { data: documents } = await supabase
-  .from('documents')
-  .select('*')
-  .eq('batch_id', batchId);
-
-let validationErrors = [];
-
-for (const doc of documents) {
-  const metadata = doc.extracted_metadata || {};
-  
-  // Example: Check if invoice amount is present
-  if (!metadata.invoice_amount) {
-    validationErrors.push({
-      document_id: doc.id,
-      field: 'invoice_amount',
-      error: 'Missing invoice amount'
-    });
-  }
-  
-  // Example: Validate date format
-  if (metadata.invoice_date && !/^\d{2}\/\d{2}\/\d{4}$/.test(metadata.invoice_date)) {
-    validationErrors.push({
-      document_id: doc.id,
-      field: 'invoice_date',
-      error: 'Invalid date format'
-    });
-  }
-}
-
-return { 
-  success: validationErrors.length === 0,
-  errors: validationErrors,
-  message: \`Validated \${documents.length} documents, found \${validationErrors.length} errors\`
-};`
+      name: 'Fetch Data from API',
+      code: `// Fetch data from a public API
+fetch('https://jsonplaceholder.typicode.com/todos/1')
+  .then(response => response.json())
+  .then(data => console.log(data))
+  .catch(error => console.error('Error:', error));`,
     },
-    {
-      name: 'Send Email Notification',
-      description: 'Send email notifications when batch completes',
-      code: `// Send email notification on batch completion
-const batchId = context.batchId;
-
-// Get batch details
-const { data: batch } = await supabase
-  .from('batches')
-  .select('*, projects(name)')
-  .eq('id', batchId)
-  .single();
-
-// Count documents
-const { count } = await supabase
-  .from('documents')
-  .select('*', { count: 'exact', head: true })
-  .eq('batch_id', batchId);
-
-// Send email via your email service
-const emailData = {
-  to: 'team@example.com',
-  subject: \`Batch "\${batch.batch_name}" Completed\`,
-  body: \`
-    Batch: \${batch.batch_name}
-    Project: \${batch.projects?.name}
-    Documents Processed: \${count}
-    Status: \${batch.status}
-    Completed: \${new Date(batch.completed_at).toLocaleString()}
-  \`
-};
-
-// Call your email service here
-console.log('Email notification:', emailData);
-
-return { success: true, recipient: emailData.to };`
-    }
   ],
   python: [
     {
-      name: 'Document Classification',
-      description: 'Classify documents using custom logic',
-      code: `# Document classification script
-import json
-
-document_id = context.get('documentId')
-
-# Fetch document text
-response = supabase.from_('documents').select('extracted_text, file_name').eq('id', document_id).single().execute()
-doc = response.data
-
-# Simple classification logic
-doc_type = 'unknown'
-text = doc['extracted_text'].lower()
-
-if 'invoice' in text or 'bill' in text:
-    doc_type = 'invoice'
-elif 'contract' in text or 'agreement' in text:
-    doc_type = 'contract'
-elif 'receipt' in text:
-    doc_type = 'receipt'
-
-# Update document type
-supabase.from_('documents').update({
-    'document_type': doc_type
-}).eq('id', document_id).execute()
-
-return {'success': True, 'document_type': doc_type}`
+      name: 'Hello World',
+      code: `# This is a simple Python template
+print("Hello, world!")`,
     },
     {
-      name: 'Data Transform & Export',
-      description: 'Transform extracted data and export to CSV',
-      code: `# Transform and export batch data
-import csv
-import io
+      name: 'Fetch Data from API',
+      code: `# Import the 'requests' library
+import requests
 
-batch_id = context.get('batchId')
+# Make an HTTP request to a remote service
+response = requests.get('https://jsonplaceholder.typicode.com/todos/1')
 
-# Get documents
-response = supabase.from_('documents').select('*').eq('batch_id', batch_id).execute()
-documents = response.data
-
-# Transform data
-rows = []
-for doc in documents:
-    metadata = doc.get('extracted_metadata', {})
-    rows.append({
-        'Document ID': doc['id'],
-        'File Name': doc['file_name'],
-        'Invoice Number': metadata.get('invoice_number', ''),
-        'Amount': metadata.get('invoice_amount', ''),
-        'Date': metadata.get('invoice_date', ''),
-        'Vendor': metadata.get('vendor_name', '')
-    })
-
-# Create CSV in memory
-output = io.StringIO()
-writer = csv.DictWriter(output, fieldnames=rows[0].keys())
-writer.writeheader()
-writer.writerows(rows)
-
-csv_content = output.getvalue()
-print(f"Generated CSV with {len(rows)} rows")
-
-return {'success': True, 'rows': len(rows), 'csv': csv_content[:500]}`
-    }
+# Check the HTTP response status code
+if response.status_code == 200:
+    # Parse the JSON response body
+    data = response.json()
+    print(data)
+else:
+    print('Request failed with status code: {}'.format(response.status_code))`,
+    },
   ],
   powershell: [
     {
-      name: 'File System Operations',
-      description: 'Copy validated documents to network share',
-      code: `# Copy documents to network share
-param($context)
-
-$batchId = $context.batchId
-$destinationPath = "\\\\server\\share\\validated"
-
-# Get batch documents (would need API integration)
-Write-Host "Processing batch: $batchId"
-
-# Example file operations
-if (!(Test-Path $destinationPath)) {
-    New-Item -ItemType Directory -Path $destinationPath -Force
-}
-
-# Copy files to destination
-# Note: Actual file paths would come from document URLs
-$exportedCount = 0
-
-Write-Host "Exported $exportedCount documents to $destinationPath"
-
-return @{
-    success = $true
-    exported = $exportedCount
-    destination = $destinationPath
-}`
+      name: 'Hello World',
+      code: `# This is a simple PowerShell template
+Write-Host "Hello, world!"`,
     },
     {
-      name: 'Active Directory Integration',
-      description: 'Assign batches based on AD groups',
-      code: `# Assign batch to user based on AD group
-param($context)
-
-$batchId = $context.batchId
-$documentType = $context.documentType
-
-# Query Active Directory
-Import-Module ActiveDirectory
-
-# Determine assignment based on document type
-$assignTo = switch ($documentType) {
-    "invoice" { Get-ADGroupMember -Identity "AP-Team" | Select-Object -First 1 }
-    "contract" { Get-ADGroupMember -Identity "Legal-Team" | Select-Object -First 1 }
-    default { Get-ADGroupMember -Identity "Admin-Team" | Select-Object -First 1 }
-}
-
-Write-Host "Assigning batch $batchId to $($assignTo.Name)"
-
-return @{
-    success = $true
-    assigned_to = $assignTo.SamAccountName
-    assigned_name = $assignTo.Name
-}`
-    }
-  ]
+      name: 'Get System Info',
+      code: `# Get system information
+Get-ComputerInfo`,
+    },
+  ],
 };
 
+// Define the template type
+type ScriptTemplate = {
+  name: string;
+  code: string;
+};
 
 export default function CustomScripts() {
   const navigate = useNavigate();
@@ -265,8 +81,7 @@ export default function CustomScripts() {
   const [executionLogs, setExecutionLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [customerId, setCustomerId] = useState<string | null>(null);
-  const [projects, setProjects] = useState<any[]>([]);
-  
+
   // Form state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingScript, setEditingScript] = useState<any>(null);
@@ -283,20 +98,17 @@ export default function CustomScripts() {
   });
 
   const loadTemplate = (templateIndex: string) => {
-    if (!templateIndex) return;
-    
-    const [lang, idx] = templateIndex.split('-');
-    const template = SCRIPT_TEMPLATES[lang as keyof typeof SCRIPT_TEMPLATES]?.[parseInt(idx)];
-    
-    if (template) {
-      setFormData({
-        ...formData,
-        name: template.name,
-        description: template.description,
-        script_code: template.code,
-        script_language: lang,
-      });
-      toast.success('Template loaded');
+    if (!formData.script_language) {
+      console.warn('Script language not selected.');
+      return;
+    }
+
+    const templates = SCRIPT_TEMPLATES[formData.script_language as keyof typeof SCRIPT_TEMPLATES];
+    if (templates && templates[parseInt(templateIndex)]) {
+      const template = templates[parseInt(templateIndex)];
+      setFormData({ ...formData, script_code: template.code });
+    } else {
+      console.warn('Template not found.');
     }
   };
 
@@ -308,123 +120,107 @@ export default function CustomScripts() {
     if (customerId) {
       fetchScripts();
       fetchExecutionLogs();
-      fetchProjects();
     }
   }, [customerId]);
 
   const fetchCustomerId = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    try {
+      const { data: user, error } = await supabase.auth.getUser();
+      if (error) throw error;
 
-    const { data: userCustomer } = await supabase
-      .from('user_customers')
-      .select('customer_id')
-      .eq('user_id', user.id)
-      .single();
+      const { data: user_customers, error: custError } = await supabase
+        .from('user_customers')
+        .select('customer_id')
+        .eq('user_id', user.user?.id);
 
-    if (userCustomer) {
-      setCustomerId(userCustomer.customer_id);
+      if (custError) throw custError;
+
+      if (user_customers && user_customers.length > 0) {
+        setCustomerId(user_customers[0].customer_id);
+      } else {
+        console.warn('No customer ID found for user.');
+      }
+    } catch (error: any) {
+      console.error('Error fetching customer ID:', error.message);
+      toast.error(`Error fetching customer ID: ${error.message}`);
     }
   };
 
   const fetchScripts = async () => {
-    if (!customerId) return;
-    
     setLoading(true);
-    const { data, error } = await supabase
-      .from('custom_scripts')
-      .select('*, projects(name)')
-      .eq('customer_id', customerId)
-      .order('created_at', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('custom_scripts')
+        .select('*')
+        .eq('customer_id', customerId);
 
-    if (error) {
-      console.error('Error fetching scripts:', error);
-      toast.error('Failed to load scripts');
-    } else {
+      if (error) throw error;
       setScripts(data || []);
+    } catch (error: any) {
+      console.error('Error fetching scripts:', error.message);
+      toast.error(`Error fetching scripts: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   const fetchExecutionLogs = async () => {
-    if (!customerId) return;
-    
-    const { data, error } = await supabase
-      .from('script_execution_logs')
-      .select('*, custom_scripts(name)')
-      .order('executed_at', { ascending: false })
-      .limit(50);
+    try {
+      const { data, error } = await supabase
+        .from('script_execution_logs')
+        .select('*')
+        .eq('customer_id', customerId)
+        .order('created_at', { ascending: false })
+        .limit(5);
 
-    if (error) {
-      console.error('Error fetching logs:', error);
-    } else {
+      if (error) throw error;
       setExecutionLogs(data || []);
+    } catch (error: any) {
+      console.error('Error fetching execution logs:', error.message);
+      toast.error(`Error fetching execution logs: ${error.message}`);
     }
   };
-
-  const fetchProjects = async () => {
-    if (!customerId) return;
-    
-    const { data, error } = await supabase
-      .from('projects')
-      .select('id, name')
-      .eq('customer_id', customerId)
-      .eq('is_active', true)
-      .order('name');
-
-    if (error) {
-      console.error('Error fetching projects:', error);
-    } else {
-      setProjects(data || []);
-    }
-  };
-
 
   const handleSave = async () => {
-    if (!customerId) return;
-    if (!formData.name || !formData.script_code) {
-      toast.error('Please fill in all required fields');
+    if (!formData.name || !formData.script_language || !formData.script_code) {
+      toast.error('Please fill in all required fields.');
       return;
     }
 
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    setLoading(true);
+    try {
+      const { data: authData, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      const currentUserId = authData.user?.id;
+      if (!currentUserId) throw new Error('User not authenticated');
 
-    const scriptData = {
-      ...formData,
-      customer_id: customerId,
-      created_by: user.id,
-    };
+      if (editingScript) {
+        // Update existing script
+        const { error } = await supabase
+          .from('custom_scripts')
+          .update({ ...formData })
+          .eq('id', editingScript.id);
 
-    if (editingScript) {
-      const { error } = await supabase
-        .from('custom_scripts')
-        .update(scriptData)
-        .eq('id', editingScript.id);
-
-      if (error) {
-        console.error('Error updating script:', error);
-        toast.error('Failed to update script');
+        if (error) throw error;
+        toast.success('Script updated successfully!');
       } else {
-        toast.success('Script updated successfully');
-        setIsDialogOpen(false);
-        resetForm();
-        fetchScripts();
-      }
-    } else {
-      const { error } = await supabase
-        .from('custom_scripts')
-        .insert(scriptData);
+        // Create new script
+        const { error } = await supabase
+          .from('custom_scripts')
+          .insert([{ ...formData, customer_id: customerId, created_by: currentUserId }]);
 
-      if (error) {
-        console.error('Error creating script:', error);
-        toast.error('Failed to create script');
-      } else {
-        toast.success('Script created successfully');
-        setIsDialogOpen(false);
-        resetForm();
-        fetchScripts();
+        if (error) throw error;
+        toast.success('Script created successfully!');
       }
+
+      fetchScripts(); // Refresh script list
+      setIsDialogOpen(false); // Close dialog
+      resetForm(); // Reset form
+    } catch (error: any) {
+      console.error('Error saving script:', error.message);
+      toast.error(`Error saving script: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -437,49 +233,58 @@ export default function CustomScripts() {
       script_code: script.script_code,
       trigger_type: script.trigger_type,
       schedule_cron: script.schedule_cron || '',
-      project_id: script.project_id,
+      project_id: script.project_id || null,
       is_active: script.is_active,
     });
     setIsDialogOpen(true);
   };
 
   const handleDelete = async (scriptId: string) => {
-    if (!confirm('Are you sure you want to delete this script?')) return;
+    if (window.confirm('Are you sure you want to delete this script?')) {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('custom_scripts')
+          .delete()
+          .eq('id', scriptId);
 
-    const { error } = await supabase
-      .from('custom_scripts')
-      .delete()
-      .eq('id', scriptId);
-
-    if (error) {
-      console.error('Error deleting script:', error);
-      toast.error('Failed to delete script');
-    } else {
-      toast.success('Script deleted successfully');
-      fetchScripts();
+        if (error) throw error;
+        toast.success('Script deleted successfully!');
+        fetchScripts(); // Refresh script list
+      } catch (error: any) {
+        console.error('Error deleting script:', error.message);
+        toast.error(`Error deleting script: ${error.message}`);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
   const handleExecute = async (scriptId: string) => {
-    toast.info('Executing script...');
-    
-    const { data, error } = await supabase.functions.invoke('execute-custom-script', {
-      body: { scriptId },
-    });
+    setLoading(true);
+    try {
+      // Call the Supabase function to execute the script
+      const { data, error } = await supabase.functions.invoke('execute-custom-script', {
+        body: { scriptId },
+      });
 
-    if (error) {
-      console.error('Script execution error:', error);
-      toast.error('Script execution failed');
-    } else if (data?.success) {
-      toast.success('Script executed successfully');
-      fetchExecutionLogs();
-    } else {
-      toast.error(data?.error || 'Script execution failed');
+      if (error) {
+        throw error;
+      }
+
+      toast.success('Script execution started!');
+      fetchExecutionLogs(); // Refresh execution logs
+    } catch (error: any) {
+      console.error('Error executing script:', error.message);
+      toast.error(`Error executing script: ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
   const resetForm = () => {
     setEditingScript(null);
+    setSelectedTemplate('');
     setFormData({
       name: '',
       description: '',
@@ -516,40 +321,40 @@ export default function CustomScripts() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="name">Script Name</Label>
+                  <Label htmlFor="name">Name *</Label>
                   <Input
                     id="name"
+                    placeholder="Script Name"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    placeholder="My Custom Script"
                   />
                 </div>
                 <div>
                   <Label htmlFor="description">Description</Label>
                   <Input
                     id="description"
+                    placeholder="Script Description"
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="What does this script do?"
                   />
                 </div>
-                
-                <div className="border rounded-lg p-4 bg-muted/50">
-                  <div className="flex items-center gap-2 mb-3">
-                    <FileCode className="h-4 w-4" />
-                    <Label>Load Template</Label>
-                  </div>
-                  <Select value={selectedTemplate} onValueChange={(value) => { setSelectedTemplate(value); loadTemplate(value); }}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Choose a template to get started..." />
+                <div>
+                  <Label htmlFor="template">Template</Label>
+                  <Select value={selectedTemplate} onValueChange={(value) => {
+                    setSelectedTemplate(value);
+                    loadTemplate(value);
+                  }}>
+                    <SelectTrigger id="template">
+                      <SelectValue placeholder="Select a Template" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none" disabled>-- Select a template --</SelectItem>
-                      {Object.entries(SCRIPT_TEMPLATES).map(([lang, templates]) => (
-                        <div key={lang}>
-                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">{lang}</div>
-                          {templates.map((template, idx) => (
-                            <SelectItem key={`${lang}-${idx}`} value={`${lang}-${idx}`}>
+                      {Object.entries(SCRIPT_TEMPLATES).map(([language, templates]) => (
+                        <div key={language}>
+                          <SelectItem disabled value={language} className="font-bold text-gray-500">
+                            {language.toUpperCase()}
+                          </SelectItem>
+                          {templates.map((template, index) => (
+                            <SelectItem key={index} value={index.toString()}>
                               {template.name}
                             </SelectItem>
                           ))}
@@ -557,165 +362,143 @@ export default function CustomScripts() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Select a pre-built template to quickly get started with common automation scenarios
-                  </p>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label htmlFor="language">Language</Label>
-                    <Select value={formData.script_language} onValueChange={(value) => setFormData({ ...formData, script_language: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="javascript">JavaScript</SelectItem>
-                        <SelectItem value="typescript">TypeScript</SelectItem>
-                        <SelectItem value="python">Python</SelectItem>
-                        <SelectItem value="powershell">PowerShell</SelectItem>
-                        <SelectItem value="vbscript">VBScript</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="trigger">Trigger Type</Label>
-                    <Select value={formData.trigger_type} onValueChange={(value) => setFormData({ ...formData, trigger_type: value })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="manual">Manual</SelectItem>
-                        <SelectItem value="workflow">Workflow</SelectItem>
-                        <SelectItem value="scheduled">Scheduled</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                {formData.trigger_type === 'scheduled' && (
-                  <div>
-                    <Label htmlFor="cron">Cron Schedule</Label>
-                    <Input
-                      id="cron"
-                      value={formData.schedule_cron}
-                      onChange={(e) => setFormData({ ...formData, schedule_cron: e.target.value })}
-                      placeholder="0 0 * * * (every day at midnight)"
-                    />
-                  </div>
-                )}
                 <div>
-                  <Label htmlFor="project">Project (Optional)</Label>
+                  <Label htmlFor="script_language">Language *</Label>
                   <Select
-                    value={formData.project_id || 'none'}
-                    onValueChange={(value) => setFormData({ ...formData, project_id: value === 'none' ? null : value })}
+                    value={formData.script_language}
+                    onValueChange={(value) => setFormData({ ...formData, script_language: value })}
                   >
-                    <SelectTrigger id="project">
-                      <SelectValue placeholder="Select a project..." />
+                    <SelectTrigger id="script_language">
+                      <SelectValue placeholder="Select a Language" />
                     </SelectTrigger>
-                    <SelectContent className="z-[100] bg-popover">
-                      <SelectItem value="none">No Project</SelectItem>
-                      {projects.map((project) => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                        </SelectItem>
-                      ))}
+                    <SelectContent>
+                      <SelectItem value="javascript">JavaScript</SelectItem>
+                      <SelectItem value="python">Python</SelectItem>
+                      <SelectItem value="powershell">PowerShell</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="code">Script Code</Label>
+                  <Label htmlFor="trigger_type">Trigger Type *</Label>
+                  <Select
+                    value={formData.trigger_type}
+                    onValueChange={(value) => setFormData({ ...formData, trigger_type: value })}
+                  >
+                    <SelectTrigger id="trigger_type">
+                      <SelectValue placeholder="Select a Trigger Type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="manual">Manual</SelectItem>
+                      <SelectItem value="scheduled">Scheduled</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {formData.trigger_type === 'scheduled' && (
+                  <div>
+                    <Label htmlFor="schedule_cron">Schedule (Cron Expression)</Label>
+                    <Input
+                      id="schedule_cron"
+                      placeholder="e.g., 0 9 * * *"
+                      value={formData.schedule_cron}
+                      onChange={(e) => setFormData({ ...formData, schedule_cron: e.target.value })}
+                    />
+                  </div>
+                )}
+                <div>
+                  <Label htmlFor="script_code">Script Code *</Label>
                   <Textarea
-                    id="code"
+                    id="script_code"
+                    placeholder="Write your script code here"
                     value={formData.script_code}
                     onChange={(e) => setFormData({ ...formData, script_code: e.target.value })}
-                    placeholder="// Write your script here"
-                    className="min-h-[300px] font-mono text-sm"
+                    className="min-h-[200px]"
                   />
                 </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      checked={formData.is_active}
-                      onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                    />
-                    <Label>Active</Label>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => { setIsDialogOpen(false); resetForm(); }}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleSave}>
-                      {editingScript ? 'Update' : 'Create'} Script
-                    </Button>
-                  </div>
+                <div>
+                  <Label htmlFor="is_active">Active</Label>
+                  <Switch
+                    id="is_active"
+                    checked={formData.is_active}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="project">Project (Optional)</Label>
+                  <ProjectSelector
+                    selectedProjectId={formData.project_id}
+                    onProjectSelect={(projectId) =>
+                      setFormData({ ...formData, project_id: projectId })
+                    }
+                  />
+                </div>
+                <div className="flex justify-end">
+                  <Button type="button" variant="secondary" onClick={() => setIsDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSave} disabled={loading}>
+                    {loading ? 'Saving...' : 'Save Script'}
+                  </Button>
                 </div>
               </div>
             </DialogContent>
           </Dialog>
         </div>
-
-        <Tabs defaultValue="scripts">
+        <Tabs defaultValue="scripts" className="space-y-4">
           <TabsList>
             <TabsTrigger value="scripts">Scripts</TabsTrigger>
-            <TabsTrigger value="templates">Templates</TabsTrigger>
-            <TabsTrigger value="logs">Execution Logs</TabsTrigger>
+            <TabsTrigger value="executionLogs">Execution Logs</TabsTrigger>
           </TabsList>
-
           <TabsContent value="scripts" className="space-y-4">
             {loading ? (
-              <Card>
-                <CardContent className="p-6">Loading...</CardContent>
-              </Card>
-            ) : scripts.length === 0 ? (
-              <Card>
-                <CardContent className="p-6 text-center text-muted-foreground">
-                  No custom scripts yet. Create your first script to get started.
-                </CardContent>
-              </Card>
+              <p>Loading scripts...</p>
             ) : (
-              <div className="grid gap-4">
+              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
                 {scripts.map((script) => (
-                  <Card key={script.id}>
+                  <Card key={script.id} className="bg-card text-card-foreground shadow-sm">
                     <CardHeader>
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <CardTitle className="flex items-center gap-2">
-                            <Code className="h-5 w-5" />
-                            {script.name}
-                            {!script.is_active && <Badge variant="secondary">Inactive</Badge>}
-                          </CardTitle>
-                          <CardDescription>{script.description}</CardDescription>
-                        </div>
-                        <div className="flex gap-2">
-                          {script.trigger_type === 'manual' && (
-                            <Button size="sm" variant="outline" onClick={() => handleExecute(script.id)}>
-                              <Play className="h-4 w-4 mr-1" />
-                              Run
-                            </Button>
-                          )}
-                          <Button size="sm" variant="outline" onClick={() => handleEdit(script)}>
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => handleDelete(script.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
+                      <CardTitle>{script.name}</CardTitle>
+                      <CardDescription>{script.description}</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        <Badge variant="outline">{script.script_language}</Badge>
-                        <Badge variant="outline">
-                          {script.trigger_type === 'manual' && 'Manual'}
-                          {script.trigger_type === 'workflow' && 'Workflow'}
-                          {script.trigger_type === 'scheduled' && (
-                            <>
-                              <Clock className="h-3 w-3 mr-1" />
-                              {script.schedule_cron}
-                            </>
-                          )}
-                        </Badge>
-                        {script.projects && <Badge variant="secondary">{script.projects.name}</Badge>}
+                    <CardContent className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <FileCode className="h-4 w-4" />
+                        <span>{script.script_language}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Clock className="h-4 w-4" />
+                        <span>{script.trigger_type}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Code className="h-4 w-4" />
+                        <span className="truncate">{script.project_id}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        {script.is_active ? (
+                          <Badge variant="outline">
+                            <CheckCircle className="h-4 w-4 mr-1" />
+                            Active
+                          </Badge>
+                        ) : (
+                          <Badge variant="destructive">
+                            <XCircle className="h-4 w-4 mr-1" />
+                            Inactive
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex justify-end space-x-2">
+                        <Button variant="secondary" size="sm" onClick={() => handleEdit(script)}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => handleDelete(script.id)}>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </Button>
+                        <Button size="sm" onClick={() => handleExecute(script.id)} disabled={loading}>
+                          <Play className="h-4 w-4 mr-2" />
+                          Execute
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -723,88 +506,29 @@ export default function CustomScripts() {
               </div>
             )}
           </TabsContent>
-
-          <TabsContent value="templates" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Script Templates</CardTitle>
-                <CardDescription>
-                  Pre-built templates to get started quickly with common automation scenarios
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {Object.entries(SCRIPT_TEMPLATES).map(([lang, templates]) => (
-                  <div key={lang}>
-                    <h3 className="text-lg font-semibold mb-3 capitalize">{lang}</h3>
-                    <div className="grid gap-4">
-                      {templates.map((template, idx) => (
-                        <Card key={`${lang}-${idx}`} className="border-muted">
-                          <CardHeader>
-                            <CardTitle className="text-base">{template.name}</CardTitle>
-                            <CardDescription>{template.description}</CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <div className="bg-muted/50 p-4 rounded-md">
-                              <pre className="text-xs overflow-x-auto">
-                                <code>{template.code.substring(0, 200)}...</code>
-                              </pre>
-                            </div>
-                            <div className="flex gap-2 mt-4">
-                              <Button 
-                                size="sm" 
-                                onClick={() => {
-                                  setSelectedTemplate(`${lang}-${idx}`);
-                                  loadTemplate(`${lang}-${idx}`);
-                                  setIsDialogOpen(true);
-                                }}
-                              >
-                                Use Template
-                              </Button>
-                              <Badge variant="outline">{lang}</Badge>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="logs" className="space-y-4">
-            {executionLogs.length === 0 ? (
-              <Card>
-                <CardContent className="p-6 text-center text-muted-foreground">
-                  No execution logs yet
-                </CardContent>
-              </Card>
+          <TabsContent value="executionLogs" className="space-y-4">
+            {loading ? (
+              <p>Loading execution logs...</p>
             ) : (
-              <div className="space-y-2">
+              <div className="grid gap-4 grid-cols-1">
                 {executionLogs.map((log) => (
-                  <Card key={log.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            {log.status === 'success' ? (
-                              <CheckCircle className="h-4 w-4 text-green-600" />
-                            ) : (
-                              <XCircle className="h-4 w-4 text-red-600" />
-                            )}
-                            <span className="font-medium">{log.custom_scripts?.name}</span>
-                            <Badge variant={log.status === 'success' ? 'default' : 'destructive'}>
-                              {log.status}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {new Date(log.executed_at).toLocaleString()} • {log.execution_duration_ms}ms
-                          </p>
-                          {log.error_message && (
-                            <p className="text-sm text-destructive mt-2">{log.error_message}</p>
-                          )}
+                  <Card key={log.id} className="bg-card text-card-foreground shadow-sm">
+                    <CardHeader>
+                      <CardTitle>Script Execution</CardTitle>
+                      <CardDescription>
+                        Script ID: {log.script_id} - {new Date(log.created_at).toLocaleString()}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      <p>Status: {log.status}</p>
+                      {log.log_output && (
+                        <div>
+                          <p>Output:</p>
+                          <pre className="bg-muted rounded-md p-2 overflow-x-auto">
+                            {log.log_output}
+                          </pre>
                         </div>
-                      </div>
+                      )}
                     </CardContent>
                   </Card>
                 ))}
