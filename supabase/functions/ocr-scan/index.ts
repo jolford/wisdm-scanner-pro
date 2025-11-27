@@ -2027,6 +2027,40 @@ Review the image and provide corrected text with any OCR errors fixed.`;
           .eq('id', documentId);
           
         console.log(`Saved OCR results to database for document ${documentId}`);
+        
+        // Update batch counters after successful OCR
+        try {
+          const { data: doc } = await supabaseAdmin
+            .from('documents')
+            .select('batch_id')
+            .eq('id', documentId)
+            .single();
+            
+          if (doc?.batch_id) {
+            // Get current batch stats
+            const { data: batchDocs } = await supabaseAdmin
+              .from('documents')
+              .select('validation_status, confidence_score')
+              .eq('batch_id', doc.batch_id);
+              
+            if (batchDocs) {
+              const processedCount = batchDocs.filter(d => d.confidence_score != null && d.confidence_score > 0).length;
+              const validatedCount = batchDocs.filter(d => d.validation_status === 'validated').length;
+              
+              await supabaseAdmin
+                .from('batches')
+                .update({
+                  processed_documents: processedCount,
+                  validated_documents: validatedCount
+                })
+                .eq('id', doc.batch_id);
+                
+              console.log(`Updated batch ${doc.batch_id} counters: processed=${processedCount}, validated=${validatedCount}`);
+            }
+          }
+        } catch (counterError) {
+          console.error('Failed to update batch counters:', counterError);
+        }
       } catch (dbError) {
         console.error('Failed to save OCR results to database:', dbError);
         // Continue even if save fails - we'll still return the data
