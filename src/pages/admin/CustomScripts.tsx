@@ -14,7 +14,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Plus, Play, Edit, Trash2, Clock, Code, CheckCircle, XCircle, FileCode } from 'lucide-react';
-import { ProjectSelector } from '@/components/ProjectSelector';
 
 const SCRIPT_TEMPLATES = {
   javascript: [
@@ -266,6 +265,7 @@ export default function CustomScripts() {
   const [executionLogs, setExecutionLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [customerId, setCustomerId] = useState<string | null>(null);
+  const [projects, setProjects] = useState<any[]>([]);
   
   // Form state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -308,6 +308,7 @@ export default function CustomScripts() {
     if (customerId) {
       fetchScripts();
       fetchExecutionLogs();
+      fetchProjects();
     }
   }, [customerId]);
 
@@ -360,6 +361,24 @@ export default function CustomScripts() {
       setExecutionLogs(data || []);
     }
   };
+
+  const fetchProjects = async () => {
+    if (!customerId) return;
+    
+    const { data, error } = await supabase
+      .from('projects')
+      .select('id, name')
+      .eq('customer_id', customerId)
+      .eq('is_active', true)
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching projects:', error);
+    } else {
+      setProjects(data || []);
+    }
+  };
+
 
   const handleSave = async () => {
     if (!customerId) return;
@@ -586,10 +605,22 @@ export default function CustomScripts() {
                 )}
                 <div>
                   <Label htmlFor="project">Project (Optional)</Label>
-                  <ProjectSelector
-                    selectedProjectId={formData.project_id}
-                    onProjectSelect={(projectId) => setFormData({ ...formData, project_id: projectId })}
-                  />
+                  <Select
+                    value={formData.project_id || 'none'}
+                    onValueChange={(value) => setFormData({ ...formData, project_id: value === 'none' ? null : value })}
+                  >
+                    <SelectTrigger id="project">
+                      <SelectValue placeholder="Select a project..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-popover z-50">
+                      <SelectItem value="none">No Project</SelectItem>
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label htmlFor="code">Script Code</Label>
