@@ -612,7 +612,7 @@ export default function CustomScripts() {
                     <SelectTrigger id="project">
                       <SelectValue placeholder="Select a project..." />
                     </SelectTrigger>
-                    <SelectContent className="bg-popover z-50">
+                    <SelectContent className="z-[100] bg-popover">
                       <SelectItem value="none">No Project</SelectItem>
                       {projects.map((project) => (
                         <SelectItem key={project.id} value={project.id}>
