@@ -626,6 +626,7 @@ export default function CustomScripts() {
         <Tabs defaultValue="scripts">
           <TabsList>
             <TabsTrigger value="scripts">Scripts</TabsTrigger>
+            <TabsTrigger value="templates">Templates</TabsTrigger>
             <TabsTrigger value="logs">Execution Logs</TabsTrigger>
           </TabsList>
 
@@ -690,6 +691,54 @@ export default function CustomScripts() {
                 ))}
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="templates" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Script Templates</CardTitle>
+                <CardDescription>
+                  Pre-built templates to get started quickly with common automation scenarios
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {Object.entries(SCRIPT_TEMPLATES).map(([lang, templates]) => (
+                  <div key={lang}>
+                    <h3 className="text-lg font-semibold mb-3 capitalize">{lang}</h3>
+                    <div className="grid gap-4">
+                      {templates.map((template, idx) => (
+                        <Card key={`${lang}-${idx}`} className="border-muted">
+                          <CardHeader>
+                            <CardTitle className="text-base">{template.name}</CardTitle>
+                            <CardDescription>{template.description}</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="bg-muted/50 p-4 rounded-md">
+                              <pre className="text-xs overflow-x-auto">
+                                <code>{template.code.substring(0, 200)}...</code>
+                              </pre>
+                            </div>
+                            <div className="flex gap-2 mt-4">
+                              <Button 
+                                size="sm" 
+                                onClick={() => {
+                                  setSelectedTemplate(`${lang}-${idx}`);
+                                  loadTemplate(`${lang}-${idx}`);
+                                  setIsDialogOpen(true);
+                                }}
+                              >
+                                Use Template
+                              </Button>
+                              <Badge variant="outline">{lang}</Badge>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="logs" className="space-y-4">
