@@ -162,9 +162,16 @@ serve(async (req) => {
         );
       }
       
-      // Convert blob to base64 data URL
+      // Convert blob to base64 data URL (handle large files without stack overflow)
       const arrayBuffer = await fileBlob.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const uint8Array = new Uint8Array(arrayBuffer);
+      let binaryString = '';
+      const chunkSize = 8192; // Process in chunks to avoid stack overflow
+      for (let i = 0; i < uint8Array.length; i += chunkSize) {
+        const chunk = uint8Array.subarray(i, i + chunkSize);
+        binaryString += String.fromCharCode.apply(null, Array.from(chunk));
+      }
+      const base64 = btoa(binaryString);
       imageData = `data:${document.file_type};base64,${base64}`;
       
       console.log(`Document fetched successfully. Type: ${document.file_type}, Size: ${arrayBuffer.byteLength} bytes`);
