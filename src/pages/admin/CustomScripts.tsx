@@ -13,8 +13,252 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { Plus, Play, Edit, Trash2, Clock, Code, CheckCircle, XCircle } from 'lucide-react';
+import { Plus, Play, Edit, Trash2, Clock, Code, CheckCircle, XCircle, FileCode } from 'lucide-react';
 import { ProjectSelector } from '@/components/ProjectSelector';
+
+const SCRIPT_TEMPLATES = {
+  javascript: [
+    {
+      name: 'Document Export to API',
+      description: 'Export validated documents to an external API endpoint',
+      code: `// Export document data to external API
+const documentId = context.documentId;
+const apiEndpoint = 'https://api.example.com/documents';
+
+// Fetch document data
+const { data: doc } = await supabase
+  .from('documents')
+  .select('*, batches(*), projects(*)')
+  .eq('id', documentId)
+  .single();
+
+// Send to external API
+const response = await fetch(apiEndpoint, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer YOUR_API_KEY'
+  },
+  body: JSON.stringify({
+    document_id: doc.id,
+    file_name: doc.file_name,
+    extracted_data: doc.extracted_metadata,
+    batch_name: doc.batches?.batch_name,
+    project_name: doc.projects?.name
+  })
+});
+
+return { success: response.ok, status: response.status };`
+    },
+    {
+      name: 'Batch Validation Rules',
+      description: 'Apply custom validation rules to batch documents',
+      code: `// Apply custom validation rules
+const batchId = context.batchId;
+
+// Get all documents in batch
+const { data: documents } = await supabase
+  .from('documents')
+  .select('*')
+  .eq('batch_id', batchId);
+
+let validationErrors = [];
+
+for (const doc of documents) {
+  const metadata = doc.extracted_metadata || {};
+  
+  // Example: Check if invoice amount is present
+  if (!metadata.invoice_amount) {
+    validationErrors.push({
+      document_id: doc.id,
+      field: 'invoice_amount',
+      error: 'Missing invoice amount'
+    });
+  }
+  
+  // Example: Validate date format
+  if (metadata.invoice_date && !/^\d{2}\/\d{2}\/\d{4}$/.test(metadata.invoice_date)) {
+    validationErrors.push({
+      document_id: doc.id,
+      field: 'invoice_date',
+      error: 'Invalid date format'
+    });
+  }
+}
+
+return { 
+  success: validationErrors.length === 0,
+  errors: validationErrors,
+  message: \`Validated \${documents.length} documents, found \${validationErrors.length} errors\`
+};`
+    },
+    {
+      name: 'Send Email Notification',
+      description: 'Send email notifications when batch completes',
+      code: `// Send email notification on batch completion
+const batchId = context.batchId;
+
+// Get batch details
+const { data: batch } = await supabase
+  .from('batches')
+  .select('*, projects(name)')
+  .eq('id', batchId)
+  .single();
+
+// Count documents
+const { count } = await supabase
+  .from('documents')
+  .select('*', { count: 'exact', head: true })
+  .eq('batch_id', batchId);
+
+// Send email via your email service
+const emailData = {
+  to: 'team@example.com',
+  subject: \`Batch "\${batch.batch_name}" Completed\`,
+  body: \`
+    Batch: \${batch.batch_name}
+    Project: \${batch.projects?.name}
+    Documents Processed: \${count}
+    Status: \${batch.status}
+    Completed: \${new Date(batch.completed_at).toLocaleString()}
+  \`
+};
+
+// Call your email service here
+console.log('Email notification:', emailData);
+
+return { success: true, recipient: emailData.to };`
+    }
+  ],
+  python: [
+    {
+      name: 'Document Classification',
+      description: 'Classify documents using custom logic',
+      code: `# Document classification script
+import json
+
+document_id = context.get('documentId')
+
+# Fetch document text
+response = supabase.from_('documents').select('extracted_text, file_name').eq('id', document_id).single().execute()
+doc = response.data
+
+# Simple classification logic
+doc_type = 'unknown'
+text = doc['extracted_text'].lower()
+
+if 'invoice' in text or 'bill' in text:
+    doc_type = 'invoice'
+elif 'contract' in text or 'agreement' in text:
+    doc_type = 'contract'
+elif 'receipt' in text:
+    doc_type = 'receipt'
+
+# Update document type
+supabase.from_('documents').update({
+    'document_type': doc_type
+}).eq('id', document_id).execute()
+
+return {'success': True, 'document_type': doc_type}`
+    },
+    {
+      name: 'Data Transform & Export',
+      description: 'Transform extracted data and export to CSV',
+      code: `# Transform and export batch data
+import csv
+import io
+
+batch_id = context.get('batchId')
+
+# Get documents
+response = supabase.from_('documents').select('*').eq('batch_id', batch_id).execute()
+documents = response.data
+
+# Transform data
+rows = []
+for doc in documents:
+    metadata = doc.get('extracted_metadata', {})
+    rows.append({
+        'Document ID': doc['id'],
+        'File Name': doc['file_name'],
+        'Invoice Number': metadata.get('invoice_number', ''),
+        'Amount': metadata.get('invoice_amount', ''),
+        'Date': metadata.get('invoice_date', ''),
+        'Vendor': metadata.get('vendor_name', '')
+    })
+
+# Create CSV in memory
+output = io.StringIO()
+writer = csv.DictWriter(output, fieldnames=rows[0].keys())
+writer.writeheader()
+writer.writerows(rows)
+
+csv_content = output.getvalue()
+print(f"Generated CSV with {len(rows)} rows")
+
+return {'success': True, 'rows': len(rows), 'csv': csv_content[:500]}`
+    }
+  ],
+  powershell: [
+    {
+      name: 'File System Operations',
+      description: 'Copy validated documents to network share',
+      code: `# Copy documents to network share
+param($context)
+
+$batchId = $context.batchId
+$destinationPath = "\\\\server\\share\\validated"
+
+# Get batch documents (would need API integration)
+Write-Host "Processing batch: $batchId"
+
+# Example file operations
+if (!(Test-Path $destinationPath)) {
+    New-Item -ItemType Directory -Path $destinationPath -Force
+}
+
+# Copy files to destination
+# Note: Actual file paths would come from document URLs
+$exportedCount = 0
+
+Write-Host "Exported $exportedCount documents to $destinationPath"
+
+return @{
+    success = $true
+    exported = $exportedCount
+    destination = $destinationPath
+}`
+    },
+    {
+      name: 'Active Directory Integration',
+      description: 'Assign batches based on AD groups',
+      code: `# Assign batch to user based on AD group
+param($context)
+
+$batchId = $context.batchId
+$documentType = $context.documentType
+
+# Query Active Directory
+Import-Module ActiveDirectory
+
+# Determine assignment based on document type
+$assignTo = switch ($documentType) {
+    "invoice" { Get-ADGroupMember -Identity "AP-Team" | Select-Object -First 1 }
+    "contract" { Get-ADGroupMember -Identity "Legal-Team" | Select-Object -First 1 }
+    default { Get-ADGroupMember -Identity "Admin-Team" | Select-Object -First 1 }
+}
+
+Write-Host "Assigning batch $batchId to $($assignTo.Name)"
+
+return @{
+    success = $true
+    assigned_to = $assignTo.SamAccountName
+    assigned_name = $assignTo.Name
+}`
+    }
+  ]
+};
+
 
 export default function CustomScripts() {
   const navigate = useNavigate();
@@ -26,6 +270,7 @@ export default function CustomScripts() {
   // Form state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingScript, setEditingScript] = useState<any>(null);
+  const [selectedTemplate, setSelectedTemplate] = useState<string>('');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -36,6 +281,24 @@ export default function CustomScripts() {
     project_id: null as string | null,
     is_active: true,
   });
+
+  const loadTemplate = (templateIndex: string) => {
+    if (!templateIndex) return;
+    
+    const [lang, idx] = templateIndex.split('-');
+    const template = SCRIPT_TEMPLATES[lang as keyof typeof SCRIPT_TEMPLATES]?.[parseInt(idx)];
+    
+    if (template) {
+      setFormData({
+        ...formData,
+        name: template.name,
+        description: template.description,
+        script_code: template.code,
+        script_language: lang,
+      });
+      toast.success('Template loaded');
+    }
+  };
 
   useEffect(() => {
     fetchCustomerId();
@@ -251,6 +514,35 @@ export default function CustomScripts() {
                     placeholder="What does this script do?"
                   />
                 </div>
+                
+                <div className="border rounded-lg p-4 bg-muted/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileCode className="h-4 w-4" />
+                    <Label>Load Template</Label>
+                  </div>
+                  <Select value={selectedTemplate} onValueChange={(value) => { setSelectedTemplate(value); loadTemplate(value); }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose a template to get started..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none" disabled>-- Select a template --</SelectItem>
+                      {Object.entries(SCRIPT_TEMPLATES).map(([lang, templates]) => (
+                        <div key={lang}>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">{lang}</div>
+                          {templates.map((template, idx) => (
+                            <SelectItem key={`${lang}-${idx}`} value={`${lang}-${idx}`}>
+                              {template.name}
+                            </SelectItem>
+                          ))}
+                        </div>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Select a pre-built template to quickly get started with common automation scenarios
+                  </p>
+                </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="language">Language</Label>
