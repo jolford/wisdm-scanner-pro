@@ -87,14 +87,14 @@ export const QuickActionsMenu = () => {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pb-3">
         <CardTitle className="flex items-center gap-2">
           <Zap className="h-5 w-5" />
           Quick Actions
         </CardTitle>
         <CardDescription>Common tasks at your fingertips</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pb-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {quickActions.map((action) => (
             <Button
