@@ -120,24 +120,50 @@ export const DashboardMetrics = () => {
   ];
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 animate-fade-in">
+    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 animate-fade-in">
       {metricCards.map((metric) => (
-        <Card key={metric.title} className="hover:shadow-md transition-shadow">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">{metric.title}</CardTitle>
-            <metric.icon className={`h-4 w-4 ${metric.color}`} />
+        <Card 
+          key={metric.title} 
+          className="group relative overflow-hidden border-border/40 bg-gradient-to-br from-card to-card/50 shadow-[var(--shadow-md)] hover:shadow-[var(--shadow-lg)] transition-all duration-300 hover:-translate-y-0.5"
+        >
+          {/* Background icon decoration */}
+          <div className="absolute -right-4 -top-4 opacity-[0.03] group-hover:opacity-[0.06] transition-opacity">
+            <metric.icon className="h-32 w-32" />
+          </div>
+          
+          <CardHeader className="pb-3 relative">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                {metric.title}
+              </CardTitle>
+              <div className={`h-10 w-10 rounded-xl ${
+                metric.title === "Today's Documents" ? 'bg-info/10' :
+                metric.title === "Validated Today" ? 'bg-success/10' :
+                metric.title === "Pending Validation" ? 'bg-warning/10' :
+                'bg-destructive/10'
+              } flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}>
+                <metric.icon className={`h-5 w-5 ${metric.color}`} />
+              </div>
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-baseline gap-2">
-              <div className="text-2xl font-bold">{metric.value.toLocaleString()}</div>
+          
+          <CardContent className="relative">
+            <div className="flex items-baseline gap-3 mb-2">
+              <div className="text-4xl font-bold tracking-tight">
+                {metric.value.toLocaleString()}
+              </div>
               {metric.trend === 'up' && (
-                <TrendingUp className="h-4 w-4 text-green-600" />
+                <div className="flex items-center gap-1 text-success">
+                  <TrendingUp className="h-4 w-4" />
+                </div>
               )}
               {metric.trend === 'down' && (
-                <TrendingDown className="h-4 w-4 text-red-600" />
+                <div className="flex items-center gap-1 text-destructive">
+                  <TrendingDown className="h-4 w-4" />
+                </div>
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground">
               {metric.description}
             </p>
           </CardContent>
