@@ -79,7 +79,7 @@ export const AIAssistant = ({
   };
 
   return (
-    <Card className="flex flex-col h-[600px] bg-gradient-to-br from-card to-card/80">
+    <Card className="flex flex-col h-full bg-gradient-to-br from-card to-card/80 border-0 rounded-none">
       <div className="flex items-center gap-2 p-4 border-b border-border">
         <Bot className="h-5 w-5 text-primary" />
         <h3 className="font-semibold">AI Assistant (GPT-5)</h3>

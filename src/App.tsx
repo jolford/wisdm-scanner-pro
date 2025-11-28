@@ -86,6 +86,10 @@ import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SkipToContent } from "./components/SkipToContent";
+import { AIAssistant } from "./components/AIAssistant";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Bot } from "lucide-react";
+import { Button } from "./components/ui/button";
 const queryClient = new QueryClient();
 
 // Redirect users to the Auth page when arriving via a password recovery link
@@ -145,6 +149,7 @@ function GlobalKeyboardShortcuts({
 }
 const App = () => {
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showCopilot, setShowCopilot] = useState(false);
   const [launchedFiles, setLaunchedFiles] = useState<File[]>([]);
   const handleFilesLaunched = useCallback((files: File[]) => {
     setLaunchedFiles(files);
@@ -257,6 +262,27 @@ const App = () => {
           </div>
           <Footer />
           </BrowserRouter>
+          
+          {/* AI Copilot Floating Button */}
+          <Sheet open={showCopilot} onOpenChange={setShowCopilot}>
+            <SheetTrigger asChild>
+              <Button
+                size="icon"
+                className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50 bg-primary hover:bg-primary/90"
+                aria-label="Open AI Copilot"
+              >
+                <Bot className="h-6 w-6" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right" className="w-full sm:w-[600px] p-0">
+              <SheetHeader className="p-4 border-b">
+                <SheetTitle>AI Copilot</SheetTitle>
+              </SheetHeader>
+              <div className="h-[calc(100vh-5rem)]">
+                <AIAssistant useCase="general" />
+              </div>
+            </SheetContent>
+          </Sheet>
           </div>
         </ThemeProvider>
       </QueryClientProvider>
