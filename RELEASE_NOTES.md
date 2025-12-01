@@ -2,6 +2,38 @@
 
 ## 🎯 Latest Updates (v2.2.1)
 
+### Batch Template Project Configuration Sync
+Batch templates can now update project extraction fields when applied, enabling templates to serve as project configuration presets.
+
+**Key Features:**
+- **Project Field Updates**
+  - Apply template extraction fields directly to project configuration
+  - Checkbox option: "Update Project Configuration"
+  - Seamlessly sync template fields to project index fields
+  - Templates now modify project settings, not just create batches
+
+- **Flexible Application Options**
+  - Choose to update project configuration only
+  - Choose to create a new batch only
+  - Or do both simultaneously
+  - User-friendly checkboxes in apply template dialog
+
+**Technical Implementation:**
+- Updated `apply-batch-template` edge function with `applyToProject` and `createBatch` flags
+- Project `extraction_fields` updated from template `extraction_config`
+- UI checkboxes in `BatchTemplates.tsx` for apply options
+
+### Export Configuration Defaults
+Export options now default to unchecked when creating new projects, requiring explicit opt-in for each export type.
+
+**Improvements:**
+- All export options (FileBound, SharePoint, Documentum, Resware) default to disabled
+- Users must explicitly enable desired export types
+- Prevents accidental exports to unconfigured systems
+- Cleaner project creation experience
+
+---
+
 ### Enhanced Medical Form OCR Processing
 Significantly improved OCR accuracy for medical forms, healthcare documents, and patient release forms.
 
