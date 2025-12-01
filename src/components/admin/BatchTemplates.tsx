@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
@@ -49,17 +50,18 @@ export const BatchTemplates = () => {
 
   // Apply template mutation
   const applyTemplate = useMutation({
-    mutationFn: async ({ templateId, projectId, batchName }: any) => {
+    mutationFn: async ({ templateId, projectId, applyToProject, createBatch, batchName }: any) => {
       const { data, error } = await supabase.functions.invoke('apply-batch-template', {
-        body: { templateId, projectId, batchName }
+        body: { templateId, projectId, applyToProject, createBatch, batchName }
       });
       
       if (error) throw error;
       return data;
     },
     onSuccess: (data) => {
-      toast.success(`Batch created: ${data.batch.batch_name}`);
+      toast.success(data.message || 'Template applied successfully');
       queryClient.invalidateQueries({ queryKey: ['batches'] });
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
     onError: (error: Error) => {
       toast.error(`Failed to apply template: ${error.message}`);
@@ -364,14 +366,16 @@ export const BatchTemplates = () => {
             applyTemplate.mutate({
               templateId: selectedTemplate.id,
               projectId: formData.get('project') as string,
+              applyToProject: formData.get('applyToProject') === 'on',
+              createBatch: formData.get('createBatch') === 'on',
               batchName: formData.get('batchName') as string
             });
             setOpen(false);
           }}>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="project">Project</Label>
-                <Select name="project" defaultValue={selectedTemplate?.project_id || undefined}>
+                <Label htmlFor="project">Project *</Label>
+                <Select name="project" defaultValue={selectedTemplate?.project_id || undefined} required>
                   <SelectTrigger>
                     <SelectValue placeholder="Select project" />
                   </SelectTrigger>
@@ -384,9 +388,33 @@ export const BatchTemplates = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/30">
+                <Checkbox id="applyToProject" name="applyToProject" defaultChecked />
+                <div className="flex-1">
+                  <Label htmlFor="applyToProject" className="cursor-pointer font-medium text-sm">
+                    Update Project Configuration
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Apply template's extraction fields to the selected project
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2 p-3 border rounded-lg bg-muted/30">
+                <Checkbox id="createBatch" name="createBatch" />
+                <div className="flex-1">
+                  <Label htmlFor="createBatch" className="cursor-pointer font-medium text-sm">
+                    Create New Batch
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Also create a new batch in the project
+                  </p>
+                </div>
+              </div>
               
               <div>
-                <Label htmlFor="batchName">Batch Name</Label>
+                <Label htmlFor="batchName">Batch Name (if creating batch)</Label>
                 <Input
                   id="batchName"
                   name="batchName"
@@ -395,7 +423,7 @@ export const BatchTemplates = () => {
               </div>
 
               <Button type="submit" className="w-full">
-                Create Batch
+                Apply Template
               </Button>
             </div>
           </form>
