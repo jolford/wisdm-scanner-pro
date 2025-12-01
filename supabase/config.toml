@@ -114,3 +114,13 @@ verify_jwt = false
 # Custom Script Execution
 [functions.execute-custom-script]
 verify_jwt = true
+
+# Batch Management
+[functions.resume-batch]
+verify_jwt = true
+
+[functions.reprocess-document]
+verify_jwt = true
+
+[functions.seed-batch-templates]
+verify_jwt = true
