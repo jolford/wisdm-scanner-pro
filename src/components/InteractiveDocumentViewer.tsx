@@ -2,10 +2,13 @@ import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ZoomIn, ZoomOut, RotateCw, MousePointer, Highlighter, Maximize2, Minimize2, ExternalLink } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCw, MousePointer, Highlighter, Maximize2, Minimize2, ExternalLink, Loader2 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/use-toast';
 import { ViewOriginalButton } from './ViewOriginalButton';
+import { DocumentThumbnailNav } from './DocumentThumbnailNav';
+import { useDocumentCache } from '@/hooks/use-document-cache';
+import { usePDFViewer } from '@/hooks/use-pdf-viewer';
 
 interface BoundingBox {
   x: number;
@@ -61,20 +64,44 @@ export const InteractiveDocumentViewer = ({
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+  const [thumbnailsCollapsed, setThumbnailsCollapsed] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
+  const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const isPdf = typeof imageUrl === 'string' && imageUrl.toLowerCase().includes('.pdf');
-  // Load image and get dimensions (only for non-PDF images)
+  
+  // Enhanced hooks
+  const { preloadImage, getCachedImage } = useDocumentCache();
+  const {
+    pdfDoc,
+    pages,
+    currentPage,
+    setCurrentPage,
+    totalPages,
+    isLoading: pdfLoading,
+    error: pdfError,
+    renderPage,
+    generateThumbnail,
+    getPageText
+  } = usePDFViewer(isPdf ? imageUrl : null);
+  // Load image with caching (only for non-PDF images)
   useEffect(() => {
     if (!imageUrl || isPdf) return;
-    const img = new Image();
-    img.onload = () => {
-      setImageDimensions({ width: img.width, height: img.height });
-    };
-    img.src = imageUrl;
-  }, [imageUrl, isPdf]);
+    
+    setImageLoading(true);
+    preloadImage(imageUrl)
+      .then((img) => {
+        setImageDimensions({ width: img.width, height: img.height });
+        setImageLoading(false);
+      })
+      .catch((err) => {
+        console.error('Error preloading image:', err);
+        setImageLoading(false);
+      });
+  }, [imageUrl, isPdf, preloadImage]);
 
   // Keep canvas in sync with image size (handles page/container resize) - images only
   useEffect(() => {
@@ -263,9 +290,36 @@ export const InteractiveDocumentViewer = ({
     }
   };
 
-  // Zoom controls
-  const handleZoom = (delta: number) => {
-    setImageZoom(prev => Math.max(0.25, Math.min(prev + delta, 5)));
+  // Enhanced zoom controls with smooth transitions
+  const handleZoom = (delta: number, centerX?: number, centerY?: number) => {
+    setImageZoom(prev => {
+      const newZoom = Math.max(0.25, Math.min(prev + delta, 5));
+      
+      // Adjust pan offset to zoom towards mouse position
+      if (centerX !== undefined && centerY !== undefined && containerRef.current) {
+        const container = containerRef.current;
+        const rect = container.getBoundingClientRect();
+        const relX = (centerX - rect.left) / rect.width;
+        const relY = (centerY - rect.top) / rect.height;
+        
+        const zoomRatio = newZoom / prev;
+        setPanOffset(prevOffset => ({
+          x: prevOffset.x * zoomRatio + (centerX - rect.left) * (1 - zoomRatio),
+          y: prevOffset.y * zoomRatio + (centerY - rect.top) * (1 - zoomRatio)
+        }));
+      }
+      
+      return newZoom;
+    });
+  };
+
+  // Mouse wheel zoom
+  const handleWheel = (e: React.WheelEvent) => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.1 : 0.1;
+      handleZoom(delta, e.clientX, e.clientY);
+    }
   };
 
   const handleFitToWidth = () => {
@@ -366,9 +420,55 @@ export const InteractiveDocumentViewer = ({
     };
   }, [imageZoom, imageRotation, panOffset]);
 
+  // Render PDF page when current page changes
+  useEffect(() => {
+    if (!isPdf || !pdfDoc || !pdfCanvasRef.current) return;
+
+    const canvas = pdfCanvasRef.current;
+    renderPage(currentPage, canvas, 2.0 * imageZoom);
+  }, [currentPage, imageZoom, isPdf, pdfDoc, renderPage]);
+
+  // Generate thumbnails for PDF navigation
+  const [thumbnails, setThumbnails] = useState<(string | null)[]>([]);
+  
+  useEffect(() => {
+    if (isPdf && totalPages > 0) {
+      setThumbnails(Array(totalPages).fill(null));
+    }
+  }, [isPdf, totalPages]);
+
+  const handleGenerateThumbnail = async (pageNum: number): Promise<string | null> => {
+    if (thumbnails[pageNum - 1]) return thumbnails[pageNum - 1];
+    
+    const thumbnail = await generateThumbnail(pageNum);
+    if (thumbnail) {
+      setThumbnails(prev => {
+        const next = [...prev];
+        next[pageNum - 1] = thumbnail;
+        return next;
+      });
+    }
+    return thumbnail;
+  };
+
   return (
     <TooltipProvider>
-      <Card ref={cardRef} className="p-0 flex flex-col min-h-[280px] overflow-hidden border-2 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-background via-background to-primary/5">
+      <Card ref={cardRef} className="p-0 flex flex-row min-h-[280px] overflow-hidden border-2 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-background via-background to-primary/5">
+        {/* Thumbnail Navigation for PDFs */}
+        {isPdf && totalPages > 1 && (
+          <DocumentThumbnailNav
+            totalPages={totalPages}
+            currentPage={currentPage}
+            onPageSelect={setCurrentPage}
+            thumbnails={thumbnails}
+            onGenerateThumbnail={handleGenerateThumbnail}
+            isCollapsed={thumbnailsCollapsed}
+            onToggleCollapse={() => setThumbnailsCollapsed(!thumbnailsCollapsed)}
+          />
+        )}
+        
+        {/* Main viewer area */}
+        <div className="flex-1 flex flex-col min-w-0">
         {/* Header with enhanced gradient */}
         <div className="bg-gradient-to-r from-primary/15 via-primary/8 to-primary/5 px-6 py-4 border-b backdrop-blur-sm">
           <div className="flex items-center justify-between">
@@ -567,21 +667,52 @@ export const InteractiveDocumentViewer = ({
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
+          onWheel={handleWheel}
           style={{ cursor: isPanning ? 'grabbing' : (imageZoom > 1 ? 'grab' : 'default') }}
         >
+          {/* Loading indicator */}
+          {(imageLoading || pdfLoading) && (
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50">
+              <div className="text-center space-y-3">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+                <p className="text-sm text-muted-foreground">
+                  {isPdf ? 'Loading PDF...' : 'Loading image...'}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Error indicator */}
+          {pdfError && (
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-center space-y-2">
+                <p className="text-destructive font-medium">{pdfError}</p>
+                <Button onClick={() => window.location.reload()} size="sm" variant="outline">
+                  Retry
+                </Button>
+              </div>
+            </div>
+          )}
+
           <div 
             className="relative inline-block transition-transform duration-200 ease-out"
             style={{
               transform: `translate(${panOffset.x}px, ${panOffset.y}px)`
             }}
           >
-            {isPdf ? (
-              <iframe
-                src={imageUrl}
-                title={fileName}
-                className="w-full h-full rounded-lg border-2 border-primary/10 bg-background"
-              />
-            ) : (
+            {isPdf && pdfDoc ? (
+              <div className="flex items-center justify-center">
+                <canvas
+                  ref={pdfCanvasRef}
+                  className="max-w-none shadow-2xl rounded-lg border-2 border-primary/10 hover:border-primary/30"
+                  style={{
+                    transform: `rotate(${imageRotation}deg)`,
+                    transformOrigin: 'center',
+                    transition: 'transform 0.15s ease-out'
+                  }}
+                />
+              </div>
+            ) : !isPdf ? (
               <>
                 <img
                   ref={imageRef}
@@ -617,7 +748,7 @@ export const InteractiveDocumentViewer = ({
                   }}
                 />
               </>
-            )}
+            ) : null}
           </div>
 
           {/* Enhanced info section with gradient and animations */}
@@ -633,6 +764,7 @@ export const InteractiveDocumentViewer = ({
               ⌨️ +/- zoom · Shift+drag pan · R reset · F fullscreen · Shift+arrows rotate
             </p>
           </div>
+        </div>
         </div>
       </Card>
     </TooltipProvider>
