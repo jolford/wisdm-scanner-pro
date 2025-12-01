@@ -15,6 +15,7 @@ import { Plus, Play, Settings, Trash2 } from "lucide-react";
 export const BatchTemplates = () => {
   const [open, setOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<any>(null);
   const queryClient = useQueryClient();
 
@@ -91,6 +92,26 @@ export const BatchTemplates = () => {
     }
   });
 
+  // Update template mutation
+  const updateTemplate = useMutation({
+    mutationFn: async ({ id, data }: any) => {
+      const { error } = await supabase
+        .from('batch_templates')
+        .update(data)
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Template updated');
+      setEditOpen(false);
+      queryClient.invalidateQueries({ queryKey: ['batch-templates'] });
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to update template: ${error.message}`);
+    }
+  });
+
   // Delete template mutation
   const deleteTemplate = useMutation({
     mutationFn: async (templateId: string) => {
@@ -113,6 +134,11 @@ export const BatchTemplates = () => {
   const handleApplyTemplate = (template: any) => {
     setSelectedTemplate(template);
     setOpen(true);
+  };
+
+  const handleEditTemplate = (template: any) => {
+    setSelectedTemplate(template);
+    setEditOpen(true);
   };
 
   return (
@@ -182,7 +208,11 @@ export const BatchTemplates = () => {
                   <Play className="w-4 h-4 mr-1" />
                   Apply
                 </Button>
-                <Button size="sm" variant="outline">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => handleEditTemplate(template)}
+                >
                   <Settings className="w-4 h-4" />
                 </Button>
                 <Button 
@@ -242,6 +272,81 @@ export const BatchTemplates = () => {
 
               <Button type="submit" className="w-full">
                 Create Template
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Template</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const formData = new FormData(e.currentTarget);
+            updateTemplate.mutate({
+              id: selectedTemplate?.id,
+              data: {
+                name: formData.get('name') as string,
+                description: formData.get('description') as string,
+                project_id: formData.get('project') as string || null,
+                is_active: formData.get('is_active') === 'true'
+              }
+            });
+          }}>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-name">Template Name *</Label>
+                <Input 
+                  id="edit-name" 
+                  name="name" 
+                  required 
+                  defaultValue={selectedTemplate?.name}
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea 
+                  id="edit-description" 
+                  name="description" 
+                  defaultValue={selectedTemplate?.description || ''}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="edit-project">Default Project</Label>
+                <Select name="project" defaultValue={selectedTemplate?.project_id || undefined}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects?.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label htmlFor="edit-status">Status</Label>
+                <Select name="is_active" defaultValue={selectedTemplate?.is_active ? 'true' : 'false'}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="true">Active</SelectItem>
+                    <SelectItem value="false">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button type="submit" className="w-full">
+                Update Template
               </Button>
             </div>
           </form>
