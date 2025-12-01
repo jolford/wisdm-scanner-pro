@@ -27,9 +27,13 @@ serve(async (req) => {
     const { data: { user } } = await supabase.auth.getUser(token);
     if (!user) throw new Error('Unauthorized');
 
-    const { templateId, projectId, batchName } = await req.json();
+    const { templateId, projectId, batchName, applyToProject = true, createBatch = false } = await req.json();
 
-    console.log(`Applying template ${templateId} to create batch in project ${projectId}`);
+    if (!projectId) {
+      throw new Error('Project ID is required');
+    }
+
+    console.log(`Applying template ${templateId} to project ${projectId}`);
 
     // Get template
     const { data: template, error: templateError } = await supabase
@@ -43,35 +47,77 @@ serve(async (req) => {
 
     console.log(`Found template: ${template.name}`);
 
-    // Create batch with template config
-    const { data: batch, error: batchError } = await supabase
-      .from('batches')
-      .insert({
-        project_id: projectId || template.project_id,
-        batch_name: batchName || `${template.name} - ${new Date().toLocaleDateString()}`,
-        customer_id: template.customer_id,
-        created_by: user.id,
-        status: 'new',
-        metadata: {
-          template_id: template.id,
-          template_name: template.name,
-          extraction_config: template.extraction_config,
-          validation_rules: template.validation_rules,
-          export_settings: template.export_settings
-        }
-      })
-      .select()
-      .single();
+    let batch = null;
+    let project = null;
 
-    if (batchError) throw batchError;
+    // Apply template to project if requested
+    if (applyToProject) {
+      console.log(`Updating project ${projectId} with template extraction fields`);
+      
+      // Convert extraction_config to extraction_fields format
+      const extractionFields = template.extraction_config 
+        ? Object.entries(template.extraction_config).map(([name, config]: [string, any]) => ({
+            name,
+            description: config.description || '',
+            required: config.required || false,
+            type: config.type || 'text'
+          }))
+        : [];
 
-    console.log(`Created batch ${batch.id} from template`);
+      const { data: updatedProject, error: projectError } = await supabase
+        .from('projects')
+        .update({
+          extraction_fields: extractionFields,
+          metadata: {
+            last_template_applied: template.id,
+            last_template_name: template.name,
+            applied_at: new Date().toISOString()
+          }
+        })
+        .eq('id', projectId)
+        .select()
+        .single();
+
+      if (projectError) throw projectError;
+      project = updatedProject;
+      console.log(`Updated project ${projectId} with ${extractionFields.length} extraction fields`);
+    }
+
+    // Create batch if requested
+    if (createBatch) {
+      console.log(`Creating batch from template`);
+      const { data: newBatch, error: batchError } = await supabase
+        .from('batches')
+        .insert({
+          project_id: projectId,
+          batch_name: batchName || `${template.name} - ${new Date().toLocaleDateString()}`,
+          customer_id: template.customer_id,
+          created_by: user.id,
+          status: 'new',
+          metadata: {
+            template_id: template.id,
+            template_name: template.name,
+            validation_rules: template.validation_rules,
+            export_settings: template.export_settings
+          }
+        })
+        .select()
+        .single();
+
+      if (batchError) throw batchError;
+      batch = newBatch;
+      console.log(`Created batch ${batch.id} from template`);
+    }
 
     return new Response(
       JSON.stringify({
         success: true,
+        project,
         batch,
-        template
+        template,
+        message: applyToProject 
+          ? `Applied template to project${createBatch ? ' and created batch' : ''}`
+          : 'Created batch from template'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
