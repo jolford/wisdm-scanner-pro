@@ -9,8 +9,9 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { ArrowLeft, FolderOpen, Search, Calendar, User, FileText, Trash2, ArrowRight, Download, HelpCircle, LayoutGrid, List, CheckCircle2, Clock, AlertCircle, Package } from 'lucide-react';
+import { ArrowLeft, FolderOpen, Search, Calendar, User, FileText, Trash2, ArrowRight, Download, HelpCircle, LayoutGrid, List, CheckCircle2, Clock, AlertCircle, Package, RotateCcw } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { BatchProcessingStatus } from '@/components/BatchProcessingStatus';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserPreferences } from '@/hooks/use-user-preferences';
@@ -37,6 +38,7 @@ interface Batch {
   created_at: string;
   completed_at: string | null;
   total_documents: number;
+  processed_documents: number;
   validated_documents: number;
   created_by: string;
   project_id: string;
@@ -158,6 +160,38 @@ const Batches = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const resumeBatch = async (e: React.MouseEvent, batchId: string) => {
+    e.stopPropagation();
+    try {
+      toast({
+        title: 'Resuming batch',
+        description: 'Re-processing failed documents...',
+      });
+
+      const { data, error } = await safeInvokeEdgeFunction('resume-batch', {
+        body: { batchId },
+      });
+      
+      if (error || (data && (data as any).error)) {
+        throw new Error(error?.message || (data as any)?.error || 'Resume failed');
+      }
+
+      toast({
+        title: 'Batch resumed',
+        description: (data as any).message || 'Batch is being reprocessed',
+      });
+      
+      loadBatches();
+    } catch (error) {
+      console.error('Error resuming batch:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to resume batch',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -509,15 +543,26 @@ const Batches = () => {
                           <FolderOpen className="h-5 w-5 text-primary" />
                           <span className="line-clamp-2">{batch.batch_name}</span>
                         </h3>
-                        <div className="flex items-center gap-2">
-                          <Badge className={`${getStatusColor(batch.status)} text-white`}>
-                            <StatusIcon className="h-3 w-3 mr-1" />
-                            {batch.status}
-                          </Badge>
-                          {getPriorityBadge(batch.priority)}
-                        </div>
+                        <BatchProcessingStatus 
+                          batchId={batch.id}
+                          status={batch.status}
+                          totalDocuments={batch.total_documents}
+                          processedDocuments={batch.processed_documents || 0}
+                        />
+                        {getPriorityBadge(batch.priority)}
                       </div>
                       <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                        {batch.status === 'error' && (
+                          <Button
+                            size="icon"
+                            variant="outline"
+                            className="hover:bg-primary hover:text-primary-foreground"
+                            onClick={(e) => resumeBatch(e, batch.id)}
+                            title="Resume failed batch"
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                          </Button>
+                        )}
                         <Button
                           size="icon"
                           variant="outline"

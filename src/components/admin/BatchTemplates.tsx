@@ -122,10 +122,27 @@ export const BatchTemplates = () => {
           <h2 className="text-2xl font-bold">Batch Templates</h2>
           <p className="text-muted-foreground">Create reusable batch configurations</p>
         </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          New Template
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={async () => {
+              try {
+                const { data, error } = await supabase.functions.invoke('seed-batch-templates');
+                if (error) throw error;
+                toast.success((data as any).message || 'Templates seeded');
+                queryClient.invalidateQueries({ queryKey: ['batch-templates'] });
+              } catch (err) {
+                toast.error('Failed to seed templates');
+              }
+            }}
+          >
+            Load Presets
+          </Button>
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Template
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
