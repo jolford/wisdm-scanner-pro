@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ArrowLeft, FolderOpen, Clock, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
+import { Plus, FolderOpen, Clock, CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
@@ -97,29 +98,16 @@ const BatchesIndex = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5">
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate('/admin')}>
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              {t('batchesAdmin.back')}
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">{t('batchesAdmin.title')}</h1>
-              <p className="text-muted-foreground">{t('batchesAdmin.subtitle')}</p>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={() => navigate('/admin/batches/new')}>
-              <Plus className="h-4 w-4 mr-2" />
-              {t('batchesAdmin.create')}
-            </Button>
-            <Button variant="outline" onClick={() => setCompact((v) => !v)} aria-pressed={compact}>
-              {compact ? t('batchesAdmin.expand') : t('batchesAdmin.compact')}
-            </Button>
-          </div>
-        </div>
+    <AdminLayout title={t('batchesAdmin.title')} description={t('batchesAdmin.subtitle')}>
+      <div className="flex justify-end gap-2 mb-6">
+        <Button onClick={() => navigate('/admin/batches/new')}>
+          <Plus className="h-4 w-4 mr-2" />
+          {t('batchesAdmin.create')}
+        </Button>
+        <Button variant="outline" onClick={() => setCompact((v) => !v)} aria-pressed={compact}>
+          {compact ? t('batchesAdmin.expand') : t('batchesAdmin.compact')}
+        </Button>
+      </div>
 
         <div className="grid gap-4">
           {batches?.map((batch) => (
@@ -208,21 +196,20 @@ const BatchesIndex = () => {
           ))}
         </div>
 
-        {(!batches || batches.length === 0) && (
-          <Card className="p-12 text-center">
-            <FolderOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-xl font-semibold mb-2">{t('batchesAdmin.emptyTitle')}</h3>
-            <p className="text-muted-foreground mb-4">
-              {t('batchesAdmin.emptyDescription')}
-            </p>
-            <Button onClick={() => navigate('/admin/batches/new')}>
-              <Plus className="h-4 w-4 mr-2" />
-              {t('batchesAdmin.create')}
-            </Button>
-          </Card>
-        )}
-      </div>
-    </div>
+      {(!batches || batches.length === 0) && (
+        <Card className="p-12 text-center">
+          <FolderOpen className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+          <h3 className="text-xl font-semibold mb-2">{t('batchesAdmin.emptyTitle')}</h3>
+          <p className="text-muted-foreground mb-4">
+            {t('batchesAdmin.emptyDescription')}
+          </p>
+          <Button onClick={() => navigate('/admin/batches/new')}>
+            <Plus className="h-4 w-4 mr-2" />
+            {t('batchesAdmin.create')}
+          </Button>
+        </Card>
+      )}
+    </AdminLayout>
   );
 };
 
