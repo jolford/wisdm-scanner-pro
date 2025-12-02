@@ -87,6 +87,7 @@ import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { SkipToContent } from "./components/SkipToContent";
 import { AIAssistant } from "./components/AIAssistant";
+import { GlobalNavRail } from "./components/GlobalNavRail";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Bot } from "lucide-react";
 import { Button } from "./components/ui/button";
@@ -178,7 +179,8 @@ const App = () => {
             <CommandPalette />
             <GlobalKeyboardShortcuts onShowShortcuts={() => setShowShortcuts(true)} onFilesLaunched={handleFilesLaunched} />
           <RecoveryRedirect />
-          <div id="main-content" className="flex-1" role="main">
+          <GlobalNavRail />
+          <div id="main-content" className="flex-1 pl-14" role="main">
           <Routes>
             <Route path="/" element={<Queue launchedFiles={launchedFiles} />} />
             <Route path="/old" element={<Index />} />
