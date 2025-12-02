@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '@/hooks/use-require-auth';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, ArrowLeft, FolderOpen, Edit, Search, SortAsc, FileText, LayoutGrid, Table as TableIcon, List, Package, Folder, Star, Bookmark, Briefcase, Layers, Box, Grid3x3, LucideIcon, AlertCircle } from 'lucide-react';
+import { Plus, FolderOpen, Edit, Search, SortAsc, FileText, LayoutGrid, Table as TableIcon, List, Package, Folder, Star, Bookmark, Briefcase, Layers, Box, Grid3x3, LucideIcon, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import wisdmLogo from '@/assets/wisdm-logo.png';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -400,33 +400,15 @@ const Projects = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5">
-      {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-10 bg-background/80">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src={wisdmLogo} alt="WISDM Logo" className="h-10 w-auto" />
-              <div className="border-l border-border/50 pl-3">
-                <h1 className="text-xl font-bold">Projects</h1>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <Button onClick={() => navigate('/admin/projects/new')} className="bg-gradient-to-r from-primary to-accent">
-                <Plus className="h-4 w-4 mr-2" />
-                New Project
-              </Button>
-              <Button variant="outline" onClick={() => navigate('/admin')}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <AdminLayout title="Projects" description="Manage document extraction projects">
+      <div className="flex justify-end mb-6">
+        <Button onClick={() => navigate('/admin/projects/new')} className="bg-gradient-to-r from-primary to-accent">
+          <Plus className="h-4 w-4 mr-2" />
+          New Project
+        </Button>
+      </div>
 
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
+      <div>
         {/* Stats and Controls */}
         <div className="mb-6 space-y-4">
           {/* Stats Row */}
@@ -591,7 +573,7 @@ const Projects = () => {
         ) : (
           renderProjectsView(filteredProjects)
         )}
-      </main>
+      </div>
 
       {selectedProjectForZones && (
         <ZoneTemplateManager
@@ -600,7 +582,7 @@ const Projects = () => {
           onClose={() => setSelectedProjectForZones(null)}
         />
       )}
-    </div>
+    </AdminLayout>
   );
 };
 
