@@ -1,12 +1,12 @@
 import { useNavigate } from 'react-router-dom';
 import { useRequireAuth } from '@/hooks/use-require-auth';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, UserPlus, Settings, Pencil, Trash2, Shield, FolderOpen } from 'lucide-react';
+import { UserPlus, Settings, Pencil, Trash2, Shield, FolderOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import wisdmLogo from '@/assets/wisdm-logo.png';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RoleManager } from '@/components/admin/RoleManager';
@@ -413,28 +413,8 @@ const UsersIndex = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5">
-      {/* Header */}
-      <header className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-10 bg-background/80">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src={wisdmLogo} alt="WISDM Logo" className="h-10 w-auto" />
-              <div className="border-l border-border/50 pl-3">
-                <h1 className="text-xl font-bold">User Management</h1>
-              </div>
-            </div>
-            <Button onClick={() => navigate('/admin')} variant="outline">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Dashboard
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <Tabs defaultValue="users" className="space-y-6">
+    <AdminLayout title="User Management" description="Manage user access and roles">
+      <Tabs defaultValue="users" className="space-y-6">
           <TabsList className="grid w-full max-w-md grid-cols-2">
             <TabsTrigger value="users">User Management</TabsTrigger>
             <TabsTrigger value="roles" className="gap-2">
@@ -839,8 +819,7 @@ const UsersIndex = () => {
             <RoleManager />
           </TabsContent>
         </Tabs>
-      </main>
-    </div>
+    </AdminLayout>
   );
 };
 

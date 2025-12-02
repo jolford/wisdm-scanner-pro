@@ -1,16 +1,16 @@
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ArrowLeft, Key, AlertCircle, CheckCircle2, XCircle, Clock, FileText } from 'lucide-react';
+import { Plus, Key, AlertCircle, CheckCircle2, XCircle, Clock, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { MaintenanceInvoiceGenerator } from '@/components/admin/MaintenanceInvoiceGenerator';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Progress } from '@/components/ui/progress';
-import wisdmLogo from '@/assets/wisdm-logo.png';
 
 const LicensesIndex = () => {
   const navigate = useNavigate();
@@ -95,32 +95,15 @@ const LicensesIndex = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/5">
-      <header className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-10 bg-background/80">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src={wisdmLogo} alt="WISDM Logo" className="h-10 w-auto" />
-              <div className="border-l border-border/50 pl-3">
-                <h1>License Management</h1>
-                <p className="text-xs text-muted-foreground">Manage customer licenses and volume tracking</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => navigate('/admin')}>
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Admin
-              </Button>
-              <Button onClick={() => navigate('/admin/licenses/new')}>
-                <Plus className="h-4 w-4 mr-2" />
-                New License
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <AdminLayout title="License Management" description="Manage customer licenses and volume tracking">
+      <div className="flex justify-end mb-6">
+        <Button onClick={() => navigate('/admin/licenses/new')}>
+          <Plus className="h-4 w-4 mr-2" />
+          New License
+        </Button>
+      </div>
 
-      <main className="container mx-auto px-4 py-12">
+      <div>
         {licenses && licenses.length > 0 ? (
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {licenses.map((license) => {
@@ -234,8 +217,8 @@ const LicensesIndex = () => {
             }}
           />
         )}
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 };
 
