@@ -5,11 +5,12 @@ import { PhysicalScanner } from '@/components/PhysicalScanner';
 import { ValidationScreen } from '@/components/ValidationScreen';
 import { ProjectSelector } from '@/components/ProjectSelector';
 import { BatchSelector } from '@/components/BatchSelector';
+import { ProgressTrackingDashboard } from '@/components/ProgressTrackingDashboard';
 import { supabase } from '@/integrations/supabase/client';
 import { useContextualToast } from '@/lib/toast-helper';
 import { useAuth } from '@/hooks/use-auth';
 import { useFileLaunch } from '@/hooks/use-file-launch';
-import { Sparkles, Upload, ScanLine, LogOut, FileText, Settings, FolderOpen, BookOpen } from 'lucide-react';
+import { Sparkles, Upload, ScanLine, LogOut, FileText, Settings, FolderOpen, BookOpen, LayoutDashboard, Pin, PinOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LicenseWarning } from '@/components/LicenseWarning';
@@ -17,6 +18,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { useLicense } from '@/hooks/use-license';
 import wisdmLogo from '@/assets/wisdm-logo.png';
+import { useQuery } from '@tanstack/react-query';
 import { applyDocumentNamingPattern } from '@/lib/document-naming';
 import imageCompression from 'browser-image-compression';
 
@@ -47,6 +49,74 @@ const Index = () => {
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
   const { toast } = useContextualToast();
   const showValidation = !!currentDocumentId;
+  
+  // Dashboard pinned state - persisted in localStorage
+  const [isDashboardPinned, setIsDashboardPinned] = useState(() => {
+    return localStorage.getItem('dashboardPinned') === 'true';
+  });
+
+  // Toggle dashboard pin
+  const toggleDashboardPin = () => {
+    const newValue = !isDashboardPinned;
+    setIsDashboardPinned(newValue);
+    localStorage.setItem('dashboardPinned', String(newValue));
+  };
+
+  // Fetch dashboard metrics
+  const { data: dashboardMetrics } = useQuery({
+    queryKey: ['dashboard-metrics', selectedBatchId],
+    queryFn: async () => {
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Get documents for metrics
+      let query = supabase
+        .from('documents')
+        .select('id, validation_status, created_at, confidence_score, extracted_metadata');
+      
+      if (selectedBatchId) {
+        query = query.eq('batch_id', selectedBatchId);
+      } else {
+        query = query.gte('created_at', today);
+      }
+      
+      const { data: docs } = await query;
+      
+      if (!docs) return null;
+      
+      const validated = docs.filter(d => d.validation_status === 'validated').length;
+      const pending = docs.filter(d => d.validation_status === 'pending' || !d.validation_status).length;
+      const rejected = docs.filter(d => d.validation_status === 'rejected').length;
+      
+      // Calculate average confidence
+      const confidenceScores = docs.filter(d => d.confidence_score).map(d => d.confidence_score as number);
+      const avgConfidence = confidenceScores.length > 0 
+        ? Math.round(confidenceScores.reduce((a, b) => a + b, 0) / confidenceScores.length)
+        : 0;
+      
+      // Find top vendor
+      const vendors = docs
+        .map(d => (d.extracted_metadata as any)?.vendor_name)
+        .filter(Boolean);
+      const vendorCounts: Record<string, number> = vendors.reduce((acc: Record<string, number>, v: string) => {
+        acc[v] = (acc[v] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      const sortedVendors = Object.entries(vendorCounts).sort(([, a], [, b]) => b - a);
+      const topVendor = sortedVendors[0]?.[0];
+      
+      return {
+        totalDocuments: docs.length,
+        validated,
+        pending,
+        rejected,
+        avgTimePerDoc: 12, // Placeholder average
+        topVendor,
+        accuracy: avgConfidence || 95
+      };
+    },
+    enabled: isDashboardPinned,
+    refetchInterval: isDashboardPinned ? 10000 : false
+  });
 
   useEffect(() => {
     console.log('Auth state:', { authLoading, user: user?.id, hasUser: !!user });
@@ -946,6 +1016,15 @@ const Index = () => {
               >
                 <BookOpen className="h-4 w-4" />
               </Button>
+              <Button 
+                variant={isDashboardPinned ? "default" : "ghost"}
+                size="icon"
+                onClick={toggleDashboardPin}
+                className="h-9 w-9"
+                title={isDashboardPinned ? "Unpin Dashboard" : "Pin Dashboard"}
+              >
+                {isDashboardPinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+              </Button>
               <ThemeToggle />
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Sparkles className="h-4 w-4 text-accent" />
@@ -959,6 +1038,16 @@ const Index = () => {
       <main className="container mx-auto px-4 py-12">
         <LicenseWarning />
         <InstallPrompt />
+        
+        {/* Pinned Dashboard */}
+        {isDashboardPinned && dashboardMetrics && (
+          <div className="mb-8 max-w-md ml-auto">
+            <ProgressTrackingDashboard 
+              metrics={dashboardMetrics}
+              batchName={selectedBatch?.batch_name || 'Today\'s Activity'}
+            />
+          </div>
+        )}
         
         {!showValidation ? (
           <div className="max-w-4xl mx-auto">
