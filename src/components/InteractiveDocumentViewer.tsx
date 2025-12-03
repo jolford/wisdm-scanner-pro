@@ -306,8 +306,10 @@ export const InteractiveDocumentViewer = ({
 
   // Enhanced zoom controls with smooth transitions
   const handleZoom = (delta: number, centerX?: number, centerY?: number) => {
+    console.log('[Zoom] handleZoom called with delta:', delta, 'current zoom:', imageZoom);
     setImageZoom(prev => {
       const newZoom = Math.max(0.25, Math.min(prev + delta, 5));
+      console.log('[Zoom] Setting new zoom from', prev, 'to', newZoom);
       
       // Adjust pan offset to zoom towards mouse position
       if (centerX !== undefined && centerY !== undefined && containerRef.current) {
@@ -722,7 +724,9 @@ export const InteractiveDocumentViewer = ({
                   style={{
                     transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
                     transformOrigin: 'top left',
-                    transition: 'transform 0.15s ease-out'
+                    transition: 'transform 0.15s ease-out',
+                    width: 'auto',
+                    height: 'auto'
                   }}
                 />
               </div>
@@ -732,13 +736,18 @@ export const InteractiveDocumentViewer = ({
                   ref={imageRef}
                   src={displayImageUrl}
                   alt="Document"
-                  className="max-w-none object-contain transition-all duration-300 ease-out select-none shadow-2xl rounded-lg border-2 border-primary/10 hover:border-primary/30 hover:shadow-primary/20"
+                  className="max-w-none select-none shadow-2xl rounded-lg border-2 border-primary/10 hover:border-primary/30 hover:shadow-primary/20"
                   style={{
                     transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
                     transformOrigin: 'top left',
-                    filter: 'contrast(1.03) brightness(1.02) saturate(1.05)'
+                    filter: 'contrast(1.03) brightness(1.02) saturate(1.05)',
+                    transition: 'transform 0.15s ease-out',
+                    width: 'auto',
+                    height: 'auto',
+                    maxWidth: 'none'
                   }}
                   onLoad={() => {
+                    console.log('[Zoom] Image loaded, current zoom:', imageZoom);
                     setImageLoading(false);
                     // Trigger canvas redraw when image loads
                     if (canvasRef.current && imageRef.current) {
