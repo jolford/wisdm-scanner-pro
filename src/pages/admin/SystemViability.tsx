@@ -34,8 +34,10 @@ interface ServiceStatus {
   name: string;
   status: 'healthy' | 'degraded' | 'error';
   latency?: number;
+  avgLatency?: number;
   lastChecked: Date;
   message?: string;
+  poolStatus?: string;
 }
 
 interface ProcessingMetrics {
@@ -54,6 +56,17 @@ interface ApplicationStats {
   errorRate: number;
   recentErrors: number;
 }
+
+// Latency thresholds (ms) - increased to reduce false positives
+const LATENCY_THRESHOLDS = {
+  database: { warning: 1000, critical: 2500 },
+  storage: { warning: 2000, critical: 4000 },
+  auth: { warning: 1000, critical: 2500 },
+  edge: { warning: 1500, critical: 3000 }
+};
+
+// Number of pings for latency averaging
+const LATENCY_PING_COUNT = 3;
 
 interface ViabilityMetrics {
   // Time Metrics
@@ -282,40 +295,75 @@ const SystemViability = () => {
     }
   };
 
-  // Health monitoring functions
+  // Health monitoring functions - with latency averaging
+  const measureLatency = async (
+    queryFn: () => Promise<{ error: any }>,
+    pingCount: number = LATENCY_PING_COUNT
+  ): Promise<{ avgLatency: number; lastLatency: number; error: any }> => {
+    const latencies: number[] = [];
+    let lastError: any = null;
+    
+    for (let i = 0; i < pingCount; i++) {
+      const start = performance.now();
+      try {
+        const { error } = await queryFn();
+        const latency = performance.now() - start;
+        latencies.push(latency);
+        if (error) lastError = error;
+      } catch (e) {
+        lastError = e;
+      }
+      // Small delay between pings to avoid burst
+      if (i < pingCount - 1) await new Promise(r => setTimeout(r, 100));
+    }
+    
+    const avgLatency = latencies.length > 0 
+      ? latencies.reduce((a, b) => a + b, 0) / latencies.length 
+      : 0;
+    const lastLatency = latencies.length > 0 ? latencies[latencies.length - 1] : 0;
+    
+    return { avgLatency, lastLatency, error: lastError };
+  };
+
   const checkServices = async () => {
     const serviceChecks: ServiceStatus[] = [];
 
-    // Check Database
-    const dbStart = performance.now();
+    // Check Database with averaged latency
     try {
-      const { error } = await supabase.from('profiles').select('id').limit(1);
-      const dbLatency = performance.now() - dbStart;
+      const { avgLatency, lastLatency, error } = await measureLatency(
+        async () => await supabase.from('profiles').select('id').limit(1)
+      );
+      const { warning, critical } = LATENCY_THRESHOLDS.database;
       serviceChecks.push({
         name: 'Database',
-        status: error ? 'error' : dbLatency > 1000 ? 'degraded' : 'healthy',
-        latency: Math.round(dbLatency),
+        status: error ? 'error' : avgLatency > critical ? 'error' : avgLatency > warning ? 'degraded' : 'healthy',
+        latency: Math.round(lastLatency),
+        avgLatency: Math.round(avgLatency),
         lastChecked: new Date(),
-        message: error?.message
+        message: error?.message,
+        poolStatus: 'Managed by Cloud'
       });
     } catch (e) {
       serviceChecks.push({
         name: 'Database',
         status: 'error',
         lastChecked: new Date(),
-        message: 'Connection failed'
+        message: 'Connection failed',
+        poolStatus: 'Unknown'
       });
     }
 
-    // Check Storage
-    const storageStart = performance.now();
+    // Check Storage with averaged latency
     try {
-      const { error } = await supabase.storage.from('documents').list('', { limit: 1 });
-      const storageLatency = performance.now() - storageStart;
+      const { avgLatency, lastLatency, error } = await measureLatency(
+        async () => await supabase.storage.from('documents').list('', { limit: 1 })
+      );
+      const { warning, critical } = LATENCY_THRESHOLDS.storage;
       serviceChecks.push({
         name: 'Storage',
-        status: error ? 'error' : storageLatency > 2000 ? 'degraded' : 'healthy',
-        latency: Math.round(storageLatency),
+        status: error ? 'error' : avgLatency > critical ? 'error' : avgLatency > warning ? 'degraded' : 'healthy',
+        latency: Math.round(lastLatency),
+        avgLatency: Math.round(avgLatency),
         lastChecked: new Date(),
         message: error?.message
       });
@@ -328,15 +376,17 @@ const SystemViability = () => {
       });
     }
 
-    // Check Auth Service
-    const authStart = performance.now();
+    // Check Auth Service with averaged latency
     try {
-      const { error } = await supabase.auth.getSession();
-      const authLatency = performance.now() - authStart;
+      const { avgLatency, lastLatency, error } = await measureLatency(
+        async () => await supabase.auth.getSession()
+      );
+      const { warning, critical } = LATENCY_THRESHOLDS.auth;
       serviceChecks.push({
         name: 'Authentication',
-        status: error ? 'error' : authLatency > 1000 ? 'degraded' : 'healthy',
-        latency: Math.round(authLatency),
+        status: error ? 'error' : avgLatency > critical ? 'error' : avgLatency > warning ? 'degraded' : 'healthy',
+        latency: Math.round(lastLatency),
+        avgLatency: Math.round(avgLatency),
         lastChecked: new Date(),
         message: error?.message
       });
@@ -349,15 +399,17 @@ const SystemViability = () => {
       });
     }
 
-    // Check Edge Functions (via job processor)
-    const edgeStart = performance.now();
+    // Check Edge Functions with averaged latency
     try {
-      const { data, error } = await supabase.from('jobs').select('id').limit(1);
-      const edgeLatency = performance.now() - edgeStart;
+      const { avgLatency, lastLatency, error } = await measureLatency(
+        async () => await supabase.from('jobs').select('id').limit(1)
+      );
+      const { warning, critical } = LATENCY_THRESHOLDS.edge;
       serviceChecks.push({
         name: 'Edge Functions',
-        status: error ? 'degraded' : edgeLatency > 1500 ? 'degraded' : 'healthy',
-        latency: Math.round(edgeLatency),
+        status: error ? 'degraded' : avgLatency > critical ? 'error' : avgLatency > warning ? 'degraded' : 'healthy',
+        latency: Math.round(lastLatency),
+        avgLatency: Math.round(avgLatency),
         lastChecked: new Date(),
         message: error?.message || 'Inferred from database connectivity'
       });
@@ -594,9 +646,15 @@ const SystemViability = () => {
                 <CardContent>
                   <div className="space-y-2">
                     {getStatusBadge(service.status)}
-                    {service.latency && (
+                    {service.avgLatency !== undefined && (
                       <p className="text-sm text-muted-foreground">
-                        Latency: {service.latency}ms
+                        Avg Latency: {service.avgLatency}ms
+                        {service.latency && <span className="text-xs ml-1">(last: {service.latency}ms)</span>}
+                      </p>
+                    )}
+                    {service.poolStatus && (
+                      <p className="text-xs text-muted-foreground">
+                        Pool: {service.poolStatus}
                       </p>
                     )}
                     {service.message && service.status !== 'healthy' && (
