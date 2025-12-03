@@ -182,11 +182,17 @@ export default function Workflows() {
     return changed > weekAgo;
   }).length || 0;
 
+  const lastPublished = workflows?.length 
+    ? workflows.reduce((latest, w) => 
+        new Date(w.updated_at) > new Date(latest.updated_at) ? w : latest
+      )
+    : null;
+
   return (
     <AdminLayout title="Workflow Version History">
       <div className="space-y-6">
         {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
@@ -229,6 +235,22 @@ export default function Workflows() {
                     {workflows?.filter(w => w.is_active).length || 0}
                   </p>
                   <p className="text-sm text-muted-foreground">Active Workflows</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <Clock className="h-8 w-8 text-purple-500" />
+                <div>
+                  <p className="text-lg font-semibold">
+                    {lastPublished 
+                      ? format(new Date(lastPublished.updated_at), "MMM d, yyyy")
+                      : "—"
+                    }
+                  </p>
+                  <p className="text-sm text-muted-foreground">Last Published</p>
                 </div>
               </div>
             </CardContent>
