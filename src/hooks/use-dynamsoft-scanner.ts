@@ -249,92 +249,39 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
         return [];
       }
 
-      // Try HTTPUpload first (bypasses browser fetch issues entirely)
-      const uploadUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/receive-scanned-image`;
-      const sessionId = Date.now().toString();
-      
       for (let i = 0; i < imageCount; i++) {
         try {
           let blob: Blob | null = null;
           
-          // Method 1: HTTPUpload to our server (bypasses browser security)
+          // Method 1: Try ConvertToBlob (most reliable)
           try {
-            const uploadResult = await new Promise<{ success: boolean; base64?: string; error?: string }>((resolve, reject) => {
-              const timeout = setTimeout(() => reject(new Error('Upload timeout')), 30000);
-              
-              // @ts-ignore - HTTPUpload signature varies by version
-              globalDwt!.HTTPUpload(
-                uploadUrl,
+            blob = await new Promise<Blob>((resolve, reject) => {
+              const timeout = setTimeout(() => reject(new Error('Timeout')), 15000);
+              globalDwt!.ConvertToBlob(
                 [i],
                 Dynamsoft.DWT.EnumDWT_ImageType.IT_PNG,
-                Dynamsoft.DWT.EnumDWT_UploadDataFormat.Binary,
-                `scan_${sessionId}_${i}.png`,
-                () => {
+                (result: Blob) => {
                   clearTimeout(timeout);
-                  // Success callback - need to get response differently
-                  resolve({ success: true });
+                  resolve(result);
                 },
                 (errorCode: number, errorString: string) => {
                   clearTimeout(timeout);
-                  console.log('HTTPUpload error:', errorCode, errorString);
                   reject(new Error(`${errorCode}: ${errorString}`));
                 }
               );
             });
-            
-            if (uploadResult.success) {
-              // HTTPUpload doesn't return data, we need different approach
-              console.log(`HTTPUpload completed for image ${i + 1}`);
+            if (blob && blob.size > 0) {
+              console.log(`ConvertToBlob succeeded for image ${i + 1}, size: ${blob.size}`);
             }
           } catch (e1) {
-            console.log('HTTPUpload failed:', e1);
+            console.log('ConvertToBlob failed:', e1);
           }
 
-          // Method 2: GetImageBitmap + Canvas fallback
-          if (!blob) {
-            try {
-              const imageBitmap = await new Promise<ImageBitmap>((resolve, reject) => {
-                const timeout = setTimeout(() => reject(new Error('Timeout')), 15000);
-                // @ts-ignore - GetImageBitmap exists in newer DWT versions
-                globalDwt!.GetImageBitmap(
-                  [i],
-                  Dynamsoft.DWT.EnumDWT_ImageType.IT_PNG,
-                  (result: ImageBitmap) => {
-                    clearTimeout(timeout);
-                    resolve(result);
-                  },
-                  (errorCode: number, errorString: string) => {
-                    clearTimeout(timeout);
-                    reject(new Error(`${errorCode}: ${errorString}`));
-                  }
-                );
-              });
-              
-              const canvas = document.createElement('canvas');
-              canvas.width = imageBitmap.width;
-              canvas.height = imageBitmap.height;
-              const ctx = canvas.getContext('2d');
-              if (ctx) {
-                ctx.drawImage(imageBitmap, 0, 0);
-                blob = await new Promise<Blob>((resolve, reject) => {
-                  canvas.toBlob((b) => {
-                    if (b) resolve(b);
-                    else reject(new Error('Canvas toBlob failed'));
-                  }, 'image/png');
-                });
-                console.log(`Method 2 (GetImageBitmap) succeeded for image ${i + 1}, size: ${blob.size}`);
-              }
-              imageBitmap.close();
-            } catch (e2) {
-              console.log('GetImageBitmap failed:', e2);
-            }
-          }
-
-          // Method 3: ConvertToBlob fallback
+          // Method 2: Try ConvertToBlob
           if (!blob) {
             try {
               blob = await new Promise<Blob>((resolve, reject) => {
-                const timeout = setTimeout(() => reject(new Error('Timeout')), 10000);
+                const timeout = setTimeout(() => reject(new Error('Timeout')), 15000);
                 globalDwt!.ConvertToBlob(
                   [i],
                   Dynamsoft.DWT.EnumDWT_ImageType.IT_PNG,
@@ -349,10 +296,46 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
                 );
               });
               if (blob && blob.size > 0) {
-                console.log(`Method 3 (ConvertToBlob) succeeded for image ${i + 1}, size: ${blob.size}`);
+                console.log(`ConvertToBlob succeeded for image ${i + 1}, size: ${blob.size}`);
+              }
+            } catch (e2) {
+              console.log('ConvertToBlob failed:', e2);
+            }
+          }
+
+          // Method 3: Try ConvertToBase64 and create blob from it
+          if (!blob) {
+            try {
+              const base64 = await new Promise<string>((resolve, reject) => {
+                const timeout = setTimeout(() => reject(new Error('Timeout')), 15000);
+                globalDwt!.ConvertToBase64(
+                  [i],
+                  Dynamsoft.DWT.EnumDWT_ImageType.IT_PNG,
+                  (result: { getData: (index: number, length: number) => string; getLength: () => number }) => {
+                    clearTimeout(timeout);
+                    const length = result.getLength();
+                    resolve(result.getData(0, length));
+                  },
+                  (errorCode: number, errorString: string) => {
+                    clearTimeout(timeout);
+                    reject(new Error(`${errorCode}: ${errorString}`));
+                  }
+                );
+              });
+              
+              if (base64 && base64.length > 0) {
+                // Convert base64 to blob
+                const byteCharacters = atob(base64);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let j = 0; j < byteCharacters.length; j++) {
+                  byteNumbers[j] = byteCharacters.charCodeAt(j);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                blob = new Blob([byteArray], { type: 'image/png' });
+                console.log(`ConvertToBase64 succeeded for image ${i + 1}, size: ${blob.size}`);
               }
             } catch (e3) {
-              console.log('ConvertToBlob failed:', e3);
+              console.log('ConvertToBase64 failed:', e3);
             }
           }
           
@@ -360,19 +343,16 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
             blobs.push(blob);
           } else {
             console.error(`Failed to convert image ${i + 1} - all methods failed`);
-            if (i === 0) {
-              setNeedsCertificateTrust(true);
-            }
           }
         } catch (e) {
           console.error('Error converting image:', e);
         }
       }
       
-      // If we have images in buffer but couldn't extract any, certificate issue
+      // If we have images in buffer but couldn't extract any, it's a service communication issue
       if (imageCount > 0 && blobs.length === 0) {
         setNeedsCertificateTrust(true);
-        throw new Error('CERTIFICATE_TRUST_REQUIRED');
+        throw new Error('Cannot retrieve scanned images. The Dynamsoft Service may need to be restarted, or you need to trust its certificate. Try: 1) Restart "Dynamsoft Service" from Windows Services, then refresh this page.');
       }
 
       globalDwt.RemoveAllImages();
