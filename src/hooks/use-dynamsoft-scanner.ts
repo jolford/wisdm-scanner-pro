@@ -186,42 +186,20 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
 
     const dwt = dwtRef.current;
 
-    // Use async select for more reliable scanner selection
-    try {
-      await new Promise<void>((resolve, reject) => {
-        dwt.SelectSourceByIndexAsync(scanner.index)
-          .then(() => {
-            console.log('Scanner selected successfully');
-            resolve();
-          })
-          .catch((err: { message: string }) => {
-            console.error('SelectSourceByIndexAsync error:', err);
-            reject(new Error(`Failed to select scanner: ${err.message}`));
-          });
-      });
-    } catch (e) {
-      // Fallback to sync method
-      console.log('Falling back to sync SelectSourceByIndex');
-      dwt.SelectSourceByIndex(scanner.index);
-    }
+    console.log('Starting scan with scanner:', scanner.name, 'index:', scanner.index);
 
+    // Select and open source using callback-based approach for better reliability
     return new Promise((resolve, reject) => {
-      // Open source and configure
-      const openResult = dwt.OpenSource();
-      if (!openResult) {
-        const errCode = dwt.ErrorCode;
-        const errStr = dwt.ErrorString;
-        console.error('OpenSource failed:', errCode, errStr);
-        reject(new Error(`Failed to open scanner (${errCode}): ${errStr}`));
-        return;
-      }
-
+      // Set the source index
+      dwt.SelectSourceByIndex(scanner.index);
+      
+      // Configure scan settings BEFORE opening
       dwt.IfDisableSourceAfterAcquire = true;
-      // Show scanner UI for better compatibility - user can configure settings
-      dwt.IfShowUI = true;
+      dwt.IfShowUI = true; // Show scanner UI for user to confirm settings
 
-      console.log('Starting scan acquisition...');
-
+      console.log('Acquiring image...');
+      
+      // Use AcquireImage which handles open/close internally
       dwt.AcquireImage(
         {
           IfCloseSourceAfterAcquire: true,
@@ -229,12 +207,18 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
           Resolution: 300,
           IfFeederEnabled: false,
           IfDuplexEnabled: false,
+          IfShowUI: true,
         },
         async () => {
-          console.log('Scan completed successfully');
+          console.log('Scan acquisition completed');
           const blobs: Blob[] = [];
           const imageCount = dwt.HowManyImagesInBuffer;
           console.log('Images in buffer:', imageCount);
+
+          if (imageCount === 0) {
+            resolve([]);
+            return;
+          }
 
           for (let i = 0; i < imageCount; i++) {
             try {
@@ -257,8 +241,18 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
         },
         (_deviceConfig: unknown, errorCode: number, errorString: string) => {
           console.error('AcquireImage failed:', errorCode, errorString);
-          dwt.CloseSource();
-          reject(new Error(`Scan failed (${errorCode}): ${errorString}`));
+          
+          // Provide helpful error messages
+          let userMessage = `Scan failed (${errorCode}): ${errorString}`;
+          if (errorCode === -2301) {
+            userMessage = 'Scanner connection lost. Please ensure the scanner is connected and try again.';
+          } else if (errorCode === -1001) {
+            userMessage = 'Scanner busy or unavailable. Close any other scanning software and try again.';
+          } else if (errorCode === -1003) {
+            userMessage = 'No paper in scanner. Please load documents and try again.';
+          }
+          
+          reject(new Error(userMessage));
         }
       );
     });
