@@ -516,7 +516,7 @@ const AuthPage = () => {
   }
   return <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-500">
       <Card className="w-full max-w-md p-4 sm:p-8 bg-card/95 backdrop-blur-xl shadow-2xl animate-in slide-in-from-bottom-4 duration-700 hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-shadow border-2">
-        <div className="text-center mb-6 sm:mb-8 animate-in zoom-in duration-500">
+        <div className="text-center mb-6 sm:mb-8 animate-in zoom-in duration-500 demo-logo">
           <div className="relative inline-block mb-3 sm:mb-4">
             <img src={wisdmLogo} alt="WISDM Logo" className="h-12 sm:h-14 w-auto mx-auto transition-transform hover:scale-110 duration-300" />
             <div className="absolute -top-1 -right-1 animate-pulse">
