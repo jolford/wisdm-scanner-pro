@@ -188,8 +188,10 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
 
     console.log('Starting scan with scanner:', scanner.name, 'index:', scanner.index);
 
-    // Select and open source using callback-based approach for better reliability
-    return new Promise((resolve, reject) => {
+    // Wrap in timeout to prevent infinite hanging
+    const SCAN_TIMEOUT = 120000; // 2 minutes
+    
+    const scanPromise = new Promise<Blob[]>((resolve, reject) => {
       // Set the source index
       dwt.SelectSourceByIndex(scanner.index);
       
@@ -242,6 +244,12 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
         (_deviceConfig: unknown, errorCode: number, errorString: string) => {
           console.error('AcquireImage failed:', errorCode, errorString);
           
+          // User cancelled or closed the dialog
+          if (errorCode === -1032 || errorString.toLowerCase().includes('cancel')) {
+            resolve([]); // Return empty array for cancelled scans
+            return;
+          }
+          
           // Provide helpful error messages
           let userMessage = `Scan failed (${errorCode}): ${errorString}`;
           if (errorCode === -2301) {
@@ -256,6 +264,15 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
         }
       );
     });
+
+    // Add timeout
+    const timeoutPromise = new Promise<Blob[]>((_, reject) => {
+      setTimeout(() => {
+        reject(new Error('Scan timed out. Please try again.'));
+      }, SCAN_TIMEOUT);
+    });
+
+    return Promise.race([scanPromise, timeoutPromise]);
   }, [isReady, scanners, selectedScanner]);
 
   return {
