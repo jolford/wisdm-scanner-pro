@@ -143,9 +143,10 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
     Dynamsoft.DWT.ProductKey = licenseKey;
     Dynamsoft.DWT.ResourcesPath = 'https://unpkg.com/dwt@latest/dist';
     Dynamsoft.DWT.AutoLoad = false;
-    // CRITICAL: Enable SSL for HTTPS sites to communicate with local service
+    // Use HTTP for localhost - Chrome allows mixed content for 127.0.0.1
+    // This bypasses the SSL certificate trust issues
     // @ts-ignore - IfSSL exists but not in types
-    Dynamsoft.DWT.IfSSL = true;
+    Dynamsoft.DWT.IfSSL = false;
     // @ts-ignore
     Dynamsoft.DWT.ServiceInstallerLocation = 'https://unpkg.com/dwt@latest/dist';
 
