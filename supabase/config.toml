@@ -124,3 +124,7 @@ verify_jwt = true
 
 [functions.seed-batch-templates]
 verify_jwt = true
+
+# SCIM Provisioning (uses own bearer token auth)
+[functions.scim-provisioning]
+verify_jwt = false
