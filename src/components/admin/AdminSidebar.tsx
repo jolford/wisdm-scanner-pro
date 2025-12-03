@@ -75,9 +75,9 @@ const menuItems = [
   {
     title: 'Enterprise',
     items: [
-      { title: 'SSO/SAML Config', url: '/admin/sso-config', icon: KeyRound },
-      { title: 'SCIM Provisioning', url: '/admin/scim-config', icon: UserCog },
-      { title: 'Retention Policies', url: '/admin/retention-policies', icon: Archive },
+      { title: 'SSO/SAML Config', url: '/admin/sso', icon: KeyRound },
+      { title: 'SCIM Provisioning', url: '/admin/scim', icon: UserCog },
+      { title: 'Retention Policies', url: '/admin/retention', icon: Archive },
       { title: 'SLA Monitoring', url: '/admin/sla-monitoring', icon: Gauge },
     ],
     defaultOpen: false,
