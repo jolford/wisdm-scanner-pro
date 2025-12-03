@@ -19,164 +19,172 @@ interface UseDynamsoftScannerReturn {
   refreshScanners: () => void;
 }
 
+// Global singleton to persist across component remounts
+let globalDwt: WebTwain | null = null;
+let globalInitPromise: Promise<WebTwain> | null = null;
+
 export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScannerReturn => {
   const [isReady, setIsReady] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scanners, setScanners] = useState<ScannerInfo[]>([]);
   const [selectedScanner, setSelectedScanner] = useState<string>('');
-  const dwtRef = useRef<WebTwain | null>(null);
-  const initAttempted = useRef(false);
+  const mountedRef = useRef(true);
 
-  const refreshScannerList = useCallback(() => {
-    if (!dwtRef.current) {
+  const refreshScannerList = useCallback(async () => {
+    if (!globalDwt) {
       console.log('DWT not initialized');
       return;
     }
 
     try {
-      // Use async method to get sources - more reliable than SourceCount
-      dwtRef.current.GetSourceNamesAsync(false).then((sources: string[]) => {
-        console.log('GetSourceNamesAsync result:', sources);
-        const detected: ScannerInfo[] = sources.map((name, index) => ({
-          id: `twain-${index}`,
-          name: name || `Scanner ${index + 1}`,
-          index
-        }));
-        
+      const sources = await globalDwt.GetSourceNamesAsync(false);
+      console.log('GetSourceNamesAsync result:', sources);
+      
+      const detected: ScannerInfo[] = sources.map((name: string, index: number) => ({
+        id: `twain-${index}`,
+        name: name || `Scanner ${index + 1}`,
+        index
+      }));
+      
+      if (mountedRef.current) {
         setScanners(detected);
         
         if (detected.length > 0 && !selectedScanner) {
           setSelectedScanner(detected[0].id);
         }
-        
-        if (detected.length === 0) {
-          console.log('No TWAIN scanners found via async method');
+      }
+    } catch (err) {
+      console.error('GetSourceNamesAsync error:', err);
+      // Fallback to sync method
+      try {
+        const count = globalDwt?.SourceCount || 0;
+        const detected: ScannerInfo[] = [];
+        for (let i = 0; i < count; i++) {
+          const name = globalDwt?.GetSourceNameItems(i);
+          detected.push({
+            id: `twain-${i}`,
+            name: name || `Scanner ${i + 1}`,
+            index: i
+          });
         }
-      }).catch((err: Error) => {
-        console.error('GetSourceNamesAsync error:', err);
-        // Fallback to sync method with error handling
-        try {
-          const count = dwtRef.current?.SourceCount || 0;
-          console.log('Fallback SourceCount:', count);
-          const detected: ScannerInfo[] = [];
-          for (let i = 0; i < count; i++) {
-            const name = dwtRef.current?.GetSourceNameItems(i);
-            detected.push({
-              id: `twain-${i}`,
-              name: name || `Scanner ${i + 1}`,
-              index: i
-            });
-          }
+        if (mountedRef.current) {
           setScanners(detected);
           if (detected.length > 0 && !selectedScanner) {
             setSelectedScanner(detected[0].id);
           }
-        } catch (syncErr) {
-          console.error('Sync scanner enumeration also failed:', syncErr);
-          setError('Cannot communicate with scanner service. Try: 1) Restart Dynamsoft Service, 2) Check if antivirus is blocking localhost connections, 3) Refresh page');
         }
-      });
-    } catch (err) {
-      console.error('Error in refreshScannerList:', err);
+      } catch (syncErr) {
+        console.error('Sync scanner enumeration failed:', syncErr);
+        if (mountedRef.current) {
+          setError('Cannot communicate with scanner service');
+        }
+      }
     }
   }, [selectedScanner]);
 
   // Initialize Dynamsoft Web TWAIN
   useEffect(() => {
-    if (!licenseKey || initAttempted.current) {
-      if (!licenseKey) {
-        setIsLoading(false);
-        setError('License key not configured');
-      }
+    mountedRef.current = true;
+    
+    if (!licenseKey) {
+      setIsLoading(false);
+      setError('License key not configured');
       return;
     }
-    
-    initAttempted.current = true;
 
-    const initDWT = async () => {
-      setIsLoading(true);
-      setError(null);
+    // If already initialized, use existing instance
+    if (globalDwt) {
+      console.log('Using existing DWT instance');
+      setIsReady(true);
+      setIsLoading(false);
+      refreshScannerList();
+      return;
+    }
 
-      try {
-        // Configure Dynamsoft before loading
-        Dynamsoft.DWT.ProductKey = licenseKey;
-        Dynamsoft.DWT.ResourcesPath = 'https://unpkg.com/dwt@latest/dist';
-        Dynamsoft.DWT.AutoLoad = false;
-        
-        // Register error event for better debugging
-        Dynamsoft.DWT.RegisterEvent('OnWebTwainError', (error: { message: string }) => {
-          console.error('OnWebTwainError:', error);
-        });
-
-        // Create hidden container
-        let container = document.getElementById('dwtcontrolContainer');
-        if (!container) {
-          container = document.createElement('div');
-          container.id = 'dwtcontrolContainer';
-          container.style.display = 'none';
-          document.body.appendChild(container);
+    // If initialization is in progress, wait for it
+    if (globalInitPromise) {
+      console.log('Waiting for existing DWT initialization...');
+      globalInitPromise.then(() => {
+        if (mountedRef.current && globalDwt) {
+          setIsReady(true);
+          setIsLoading(false);
+          refreshScannerList();
         }
+      }).catch((err) => {
+        if (mountedRef.current) {
+          setError(err.message);
+          setIsLoading(false);
+        }
+      });
+      return;
+    }
 
-        console.log('Initializing Dynamsoft Web TWAIN...');
-        console.log('Protocol:', window.location.protocol);
-        console.log('License (first 20 chars):', licenseKey.substring(0, 20));
+    // Start new initialization
+    globalInitPromise = new Promise<WebTwain>((resolve, reject) => {
+      console.log('Starting new DWT initialization...');
+      
+      // Configure Dynamsoft
+      Dynamsoft.DWT.ProductKey = licenseKey;
+      Dynamsoft.DWT.ResourcesPath = 'https://unpkg.com/dwt@latest/dist';
+      Dynamsoft.DWT.AutoLoad = false;
 
-        // Use CreateDWTObjectEx with proper config
-        Dynamsoft.DWT.CreateDWTObjectEx(
-          {
-            WebTwainId: 'dwtObject',
-            // UseLocalService defaults to true for desktop scanning
-          },
-          (dwt: WebTwain) => {
-            console.log('DWT object created successfully');
-            dwtRef.current = dwt;
-            setIsReady(true);
-            setIsLoading(false);
-            
-            // Give the service a moment to enumerate sources
-            setTimeout(() => {
-              refreshScannerList();
-            }, 500);
-          },
-          (error: { code: number; message: string }) => {
-            console.error('DWT creation failed:', error.code, error.message);
-            
-            let errorMsg = `Scanner SDK Error (${error.code}): ${error.message}`;
-            
-            if (error.code === -2300 || error.message.toLowerCase().includes('service')) {
-              errorMsg = 'Dynamsoft Service not responding. Please:\n1. Restart Dynamsoft Service from System Tray\n2. If issue persists, reinstall from dynamsoft.com/web-twain/downloads';
-            } else if (error.code === -2319) {
-              errorMsg = 'License expired or invalid';
-            }
-            
-            setError(errorMsg);
-            setIsLoading(false);
+      // Create hidden container
+      let container = document.getElementById('dwtcontrolContainer');
+      if (!container) {
+        container = document.createElement('div');
+        container.id = 'dwtcontrolContainer';
+        container.style.display = 'none';
+        document.body.appendChild(container);
+      }
+
+      console.log('Creating DWT object...');
+
+      Dynamsoft.DWT.CreateDWTObjectEx(
+        { WebTwainId: 'dwtObject' },
+        (dwt: WebTwain) => {
+          console.log('DWT object created successfully');
+          globalDwt = dwt;
+          resolve(dwt);
+        },
+        (err: { code: number; message: string }) => {
+          console.error('DWT creation failed:', err);
+          let errorMsg = `Scanner SDK Error (${err.code}): ${err.message}`;
+          
+          if (err.code === -2300 || err.message.toLowerCase().includes('service')) {
+            errorMsg = 'Dynamsoft Service not responding. Please restart Dynamsoft Service from System Tray.';
+          } else if (err.code === -2319) {
+            errorMsg = 'License expired or invalid';
           }
-        );
-      } catch (err) {
-        console.error('DWT init exception:', err);
-        setError(err instanceof Error ? err.message : 'Failed to initialize scanner SDK');
+          
+          globalInitPromise = null;
+          reject(new Error(errorMsg));
+        }
+      );
+    });
+
+    globalInitPromise.then(() => {
+      if (mountedRef.current) {
+        setIsReady(true);
+        setIsLoading(false);
+        setTimeout(refreshScannerList, 500);
+      }
+    }).catch((err) => {
+      if (mountedRef.current) {
+        setError(err.message);
         setIsLoading(false);
       }
-    };
-
-    initDWT();
+    });
 
     return () => {
-      if (dwtRef.current) {
-        try {
-          Dynamsoft.DWT.DeleteDWTObject('dwtObject');
-        } catch (e) {
-          console.log('Cleanup error:', e);
-        }
-      }
+      mountedRef.current = false;
+      // Don't destroy the global instance on unmount
     };
   }, [licenseKey, refreshScannerList]);
 
   const scan = useCallback(async (): Promise<Blob[]> => {
-    if (!dwtRef.current || !isReady) {
-      throw new Error('Scanner not ready');
+    if (!globalDwt) {
+      throw new Error('Scanner not ready. Please refresh the page.');
     }
 
     const scanner = scanners.find(s => s.id === selectedScanner);
@@ -184,22 +192,18 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
       throw new Error('No scanner selected');
     }
 
-    const dwt = dwtRef.current;
-
     console.log('Starting scan with scanner:', scanner.name, 'index:', scanner.index);
 
     try {
-      // Use the proper async flow from Dynamsoft docs
-      // First select the source by index
-      dwt.SelectSourceByIndex(scanner.index);
+      // Select source by index first
+      globalDwt.SelectSourceByIndex(scanner.index);
       
-      // Then use SelectSourceAsync to open it properly
-      await dwt.SelectSourceAsync();
+      // Open and acquire using async methods
+      await globalDwt.SelectSourceAsync();
       
       console.log('Source selected, acquiring image...');
       
-      // Use AcquireImageAsync for reliable scanning
-      await dwt.AcquireImageAsync({
+      await globalDwt.AcquireImageAsync({
         IfCloseSourceAfterAcquire: true,
         PixelType: Dynamsoft.DWT.EnumDWT_PixelType.TWPT_RGB,
         Resolution: 300,
@@ -208,10 +212,10 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
         IfShowUI: true,
       });
       
-      console.log('Scan completed, images in buffer:', dwt.HowManyImagesInBuffer);
+      console.log('Scan completed, images in buffer:', globalDwt.HowManyImagesInBuffer);
       
       const blobs: Blob[] = [];
-      const imageCount = dwt.HowManyImagesInBuffer;
+      const imageCount = globalDwt.HowManyImagesInBuffer;
 
       if (imageCount === 0) {
         return [];
@@ -220,7 +224,7 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
       for (let i = 0; i < imageCount; i++) {
         try {
           const blob = await new Promise<Blob>((res, rej) => {
-            dwt.ConvertToBlob(
+            globalDwt!.ConvertToBlob(
               [i],
               Dynamsoft.DWT.EnumDWT_ImageType.IT_PNG,
               (result: Blob) => res(result),
@@ -233,33 +237,28 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
         }
       }
 
-      dwt.RemoveAllImages();
+      globalDwt.RemoveAllImages();
       return blobs;
       
     } catch (error) {
       console.error('Scan error:', error);
       const err = error as { message?: string; code?: number };
-      
-      // Handle specific error codes
-      const errorCode = err.code || 0;
       const errorMessage = err.message || 'Unknown error';
       
-      if (errorMessage.toLowerCase().includes('cancel') || errorCode === -1032) {
+      if (errorMessage.toLowerCase().includes('cancel') || errorMessage.includes('-1032')) {
         return []; // User cancelled
       }
       
-      let userMessage = errorMessage;
-      if (errorCode === -2301) {
-        userMessage = 'Scanner connection lost. Please ensure the scanner is connected and try again.';
-      } else if (errorCode === -1001) {
-        userMessage = 'Scanner busy or unavailable. Close any other scanning software and try again.';
-      } else if (errorCode === -1003) {
-        userMessage = 'No paper in scanner. Please load documents and try again.';
+      if (errorMessage.toLowerCase().includes('destroyed')) {
+        // Reset global state and prompt refresh
+        globalDwt = null;
+        globalInitPromise = null;
+        throw new Error('Scanner connection lost. Please refresh the page and try again.');
       }
       
-      throw new Error(userMessage);
+      throw new Error(errorMessage);
     }
-  }, [isReady, scanners, selectedScanner]);
+  }, [scanners, selectedScanner]);
 
   return {
     isReady,
