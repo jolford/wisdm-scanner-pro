@@ -134,6 +134,11 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
     Dynamsoft.DWT.ProductKey = licenseKey;
     Dynamsoft.DWT.ResourcesPath = 'https://unpkg.com/dwt@latest/dist';
     Dynamsoft.DWT.AutoLoad = false;
+    // CRITICAL: Enable SSL for HTTPS sites to communicate with local service
+    // @ts-ignore - IfSSL exists but not in types
+    Dynamsoft.DWT.IfSSL = true;
+    // @ts-ignore
+    Dynamsoft.DWT.ServiceInstallerLocation = 'https://unpkg.com/dwt@latest/dist';
 
     // Create hidden container
     let container = document.getElementById('dwtcontrolContainer');
