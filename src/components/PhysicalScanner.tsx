@@ -442,44 +442,40 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
             </div>
           )}
 
-          {/* Certificate Trust / Browser Security Issue */}
+          {/* Browser Security Limitation Notice */}
           {needsCertificateTrust && (
-            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 space-y-3">
+            <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 space-y-3">
               <div className="flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
+                <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5" />
                 <div className="text-sm">
-                  <p className="font-medium mb-1 text-amber-800 dark:text-amber-200">Certificate Trust Required</p>
-                  <p className="text-amber-700 dark:text-amber-300 text-xs">
-                    Your browser needs to trust the Dynamsoft Service certificate. Follow these steps:
+                  <p className="font-medium mb-1 text-blue-800 dark:text-blue-200">Browser Scanner Limitation</p>
+                  <p className="text-blue-700 dark:text-blue-300 text-xs">
+                    Direct TWAIN scanning from browsers has security limitations. Please use one of these reliable methods:
                   </p>
                 </div>
               </div>
-              <div className="space-y-2 text-xs text-amber-700 dark:text-amber-300">
-                <p><strong>Step 1:</strong> Click "Trust Certificate" below - a new tab will open</p>
-                <p><strong>Step 2:</strong> In the new tab, click "Advanced" then "Proceed to 127.0.0.1"</p>
-                <p><strong>Step 3:</strong> Close that tab and click "Refresh Page" here</p>
-              </div>
-              <div className="flex gap-2">
+              <div className="space-y-2">
                 <Button
-                  onClick={trustCertificate}
+                  onClick={() => setSelectedScanner('browser-capture')}
                   size="sm"
                   variant="default"
-                  className="flex-1 bg-amber-600 hover:bg-amber-700"
+                  className="w-full"
                 >
-                  Trust Certificate
+                  <Scan className="h-4 w-4 mr-2" />
+                  Use Browser Camera/File Capture (Recommended)
                 </Button>
                 <Button
-                  onClick={() => window.location.reload()}
+                  onClick={handleDownload}
                   size="sm"
                   variant="outline"
-                  className="flex-1 border-amber-300 dark:border-amber-700"
+                  className="w-full"
                 >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Refresh Page
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Desktop Scanner App
                 </Button>
               </div>
-              <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
-                <strong>Alternative:</strong> Use "Browser Camera/File Capture" or the Desktop Scanner App instead.
+              <p className="text-xs text-blue-600 dark:text-blue-400">
+                The Desktop Scanner App provides full TWAIN scanner support for Ricoh/Fujitsu scanners.
               </p>
             </div>
           )}
