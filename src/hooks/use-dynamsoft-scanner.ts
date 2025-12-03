@@ -239,71 +239,64 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
         try {
           let blob: Blob | null = null;
           
-          // Method 1: Use canvas to extract image data directly (no network)
+          // Method 1: Use ConvertToBlob (modern API, returns Blob directly)
           try {
-            const width = globalDwt!.GetImageWidth(i);
-            const height = globalDwt!.GetImageHeight(i);
-            
-            if (width > 0 && height > 0) {
-              // Create a temporary canvas and draw the image
-              const canvas = document.createElement('canvas');
-              canvas.width = width;
-              canvas.height = height;
-              const ctx = canvas.getContext('2d');
-              
-              if (ctx) {
-                // Get image data using GetImageData (synchronous, no network)
-                // @ts-ignore - DWT method exists but not in types
-                const imageData = globalDwt!['GetImageData'](i, 0, 0, width, height);
-                if (imageData && imageData.length > 0) {
-                  const imgData = ctx.createImageData(width, height);
-                  // DWT returns RGBA data
-                  for (let p = 0; p < imageData.length; p++) {
-                    imgData.data[p] = imageData[p];
-                  }
-                  ctx.putImageData(imgData, 0, 0);
-                  
-                  // Convert canvas to blob
-                  const dataUrl = canvas.toDataURL('image/png');
-                  const base64 = dataUrl.split(',')[1];
-                  const byteChars = atob(base64);
-                  const byteNums = new Array(byteChars.length);
-                  for (let j = 0; j < byteChars.length; j++) {
-                    byteNums[j] = byteChars.charCodeAt(j);
-                  }
-                  blob = new Blob([new Uint8Array(byteNums)], { type: 'image/png' });
-                  console.log(`Method 1 (GetImageData+Canvas) succeeded for image ${i + 1}, size: ${blob.size}`);
+            blob = await new Promise<Blob>((resolve, reject) => {
+              const timeout = setTimeout(() => reject(new Error('Timeout')), 10000);
+              globalDwt!.ConvertToBlob(
+                [i],
+                Dynamsoft.DWT.EnumDWT_ImageType.IT_PNG,
+                (result: Blob) => {
+                  clearTimeout(timeout);
+                  resolve(result);
+                },
+                (errorCode: number, errorString: string) => {
+                  clearTimeout(timeout);
+                  reject(new Error(`${errorCode}: ${errorString}`));
                 }
-              }
+              );
+            });
+            if (blob && blob.size > 0) {
+              console.log(`Method 1 (ConvertToBlob) succeeded for image ${i + 1}, size: ${blob.size}`);
             }
           } catch (e1) {
-            console.log('GetImageData method failed:', e1);
+            console.log('ConvertToBlob failed:', e1);
           }
-          
-          // Method 2: Try SaveToBase64 (synchronous string return)
+
+          // Method 2: Try OutputImage to get data URL
           if (!blob) {
             try {
-              // @ts-ignore - SaveToBase64 exists but may not be in types
-              const base64Str = globalDwt!.SaveToBase64(i, Dynamsoft.DWT.EnumDWT_ImageType.IT_PNG);
-              if (base64Str && typeof base64Str === 'string' && base64Str.length > 100) {
-                const byteChars = atob(base64Str);
+              const dataUrl = await new Promise<string>((resolve, reject) => {
+                const timeout = setTimeout(() => reject(new Error('Timeout')), 10000);
+                // @ts-ignore - OutputImage exists in DWT
+                globalDwt!.OutputImage(i, 'png', (result: string) => {
+                  clearTimeout(timeout);
+                  resolve(result);
+                }, (errorCode: number, errorString: string) => {
+                  clearTimeout(timeout);
+                  reject(new Error(`${errorCode}: ${errorString}`));
+                });
+              });
+              if (dataUrl && dataUrl.length > 100) {
+                const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+                const byteChars = atob(base64);
                 const byteNums = new Array(byteChars.length);
                 for (let j = 0; j < byteChars.length; j++) {
                   byteNums[j] = byteChars.charCodeAt(j);
                 }
                 blob = new Blob([new Uint8Array(byteNums)], { type: 'image/png' });
-                console.log(`Method 2 (SaveToBase64) succeeded for image ${i + 1}`);
+                console.log(`Method 2 (OutputImage) succeeded for image ${i + 1}`);
               }
             } catch (e2) {
-              console.log('SaveToBase64 failed:', e2);
+              console.log('OutputImage failed:', e2);
             }
           }
 
-          // Method 3: ConvertToBase64 async (last resort)
+          // Method 3: ConvertToBase64 async (fallback)
           if (!blob) {
             try {
               const base64Result = await new Promise<string>((res, rej) => {
-                const timeout = setTimeout(() => rej(new Error('Timeout')), 5000);
+                const timeout = setTimeout(() => rej(new Error('Timeout')), 10000);
                 globalDwt!.ConvertToBase64(
                   [i],
                   Dynamsoft.DWT.EnumDWT_ImageType.IT_PNG,
