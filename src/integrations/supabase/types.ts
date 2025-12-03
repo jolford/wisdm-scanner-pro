@@ -990,6 +990,59 @@ export type Database = {
           },
         ]
       }
+      document_purge_logs: {
+        Row: {
+          archived_location: string | null
+          batch_id: string | null
+          customer_id: string
+          document_id: string
+          document_name: string | null
+          id: string
+          metadata: Json | null
+          policy_id: string | null
+          project_id: string | null
+          purge_reason: string
+          purged_at: string | null
+          purged_by: string | null
+        }
+        Insert: {
+          archived_location?: string | null
+          batch_id?: string | null
+          customer_id: string
+          document_id: string
+          document_name?: string | null
+          id?: string
+          metadata?: Json | null
+          policy_id?: string | null
+          project_id?: string | null
+          purge_reason: string
+          purged_at?: string | null
+          purged_by?: string | null
+        }
+        Update: {
+          archived_location?: string | null
+          batch_id?: string | null
+          customer_id?: string
+          document_id?: string
+          document_name?: string | null
+          id?: string
+          metadata?: Json | null
+          policy_id?: string | null
+          project_id?: string | null
+          purge_reason?: string
+          purged_at?: string | null
+          purged_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_purge_logs_policy_id_fkey"
+            columns: ["policy_id"]
+            isOneToOne: false
+            referencedRelation: "retention_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       document_versions: {
         Row: {
           change_summary: string | null
@@ -2314,6 +2367,65 @@ export type Database = {
           },
         ]
       }
+      retention_policies: {
+        Row: {
+          applies_to_document_types: string[] | null
+          applies_to_projects: string[] | null
+          archive_before_purge: boolean | null
+          archive_location: string | null
+          auto_purge: boolean | null
+          created_at: string | null
+          created_by: string | null
+          customer_id: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          retention_days: number
+          updated_at: string | null
+        }
+        Insert: {
+          applies_to_document_types?: string[] | null
+          applies_to_projects?: string[] | null
+          archive_before_purge?: boolean | null
+          archive_location?: string | null
+          auto_purge?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_id: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          retention_days?: number
+          updated_at?: string | null
+        }
+        Update: {
+          applies_to_document_types?: string[] | null
+          applies_to_projects?: string[] | null
+          archive_before_purge?: boolean | null
+          archive_location?: string | null
+          auto_purge?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_id?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          retention_days?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retention_policies_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       routing_config: {
         Row: {
           auto_validate_enabled: boolean | null
@@ -2529,6 +2641,103 @@ export type Database = {
           },
         ]
       }
+      scim_configs: {
+        Row: {
+          auto_deactivate_users: boolean | null
+          auto_provision_users: boolean | null
+          created_at: string | null
+          created_by: string | null
+          customer_id: string
+          default_role: Database["public"]["Enums"]["app_role"] | null
+          group_mappings: Json | null
+          id: string
+          is_active: boolean | null
+          last_sync_at: string | null
+          scim_token_hash: string
+          scim_token_prefix: string
+          updated_at: string | null
+        }
+        Insert: {
+          auto_deactivate_users?: boolean | null
+          auto_provision_users?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_id: string
+          default_role?: Database["public"]["Enums"]["app_role"] | null
+          group_mappings?: Json | null
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          scim_token_hash: string
+          scim_token_prefix: string
+          updated_at?: string | null
+        }
+        Update: {
+          auto_deactivate_users?: boolean | null
+          auto_provision_users?: boolean | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_id?: string
+          default_role?: Database["public"]["Enums"]["app_role"] | null
+          group_mappings?: Json | null
+          id?: string
+          is_active?: boolean | null
+          last_sync_at?: string | null
+          scim_token_hash?: string
+          scim_token_prefix?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scim_configs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: true
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      scim_sync_logs: {
+        Row: {
+          created_at: string | null
+          details: Json | null
+          id: string
+          operation: string
+          resource_id: string | null
+          resource_type: string
+          scim_config_id: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          operation: string
+          resource_id?: string | null
+          resource_type: string
+          scim_config_id?: string | null
+          status: string
+        }
+        Update: {
+          created_at?: string | null
+          details?: Json | null
+          id?: string
+          operation?: string
+          resource_id?: string | null
+          resource_type?: string
+          scim_config_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scim_sync_logs_scim_config_id_fkey"
+            columns: ["scim_config_id"]
+            isOneToOne: false
+            referencedRelation: "scim_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       script_execution_logs: {
         Row: {
           error_message: string | null
@@ -2664,6 +2873,196 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sla_breaches: {
+        Row: {
+          acknowledged: boolean | null
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          actual_value: number | null
+          breach_details: Json | null
+          breach_type: string
+          created_at: string | null
+          customer_id: string
+          entity_id: string | null
+          entity_type: string
+          id: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          sla_config_id: string | null
+          target_value: number | null
+        }
+        Insert: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          actual_value?: number | null
+          breach_details?: Json | null
+          breach_type: string
+          created_at?: string | null
+          customer_id: string
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          sla_config_id?: string | null
+          target_value?: number | null
+        }
+        Update: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          actual_value?: number | null
+          breach_details?: Json | null
+          breach_type?: string
+          created_at?: string | null
+          customer_id?: string
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          sla_config_id?: string | null
+          target_value?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sla_breaches_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sla_breaches_sla_config_id_fkey"
+            columns: ["sla_config_id"]
+            isOneToOne: false
+            referencedRelation: "sla_configs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sla_configs: {
+        Row: {
+          alert_on_breach: boolean | null
+          alert_recipients: string[] | null
+          created_at: string | null
+          customer_id: string
+          description: string | null
+          escalation_after_minutes: number | null
+          escalation_recipients: string[] | null
+          export_time_target_minutes: number | null
+          id: string
+          is_active: boolean | null
+          name: string
+          processing_time_target_minutes: number | null
+          updated_at: string | null
+          uptime_target_percentage: number | null
+          validation_time_target_minutes: number | null
+        }
+        Insert: {
+          alert_on_breach?: boolean | null
+          alert_recipients?: string[] | null
+          created_at?: string | null
+          customer_id: string
+          description?: string | null
+          escalation_after_minutes?: number | null
+          escalation_recipients?: string[] | null
+          export_time_target_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          processing_time_target_minutes?: number | null
+          updated_at?: string | null
+          uptime_target_percentage?: number | null
+          validation_time_target_minutes?: number | null
+        }
+        Update: {
+          alert_on_breach?: boolean | null
+          alert_recipients?: string[] | null
+          created_at?: string | null
+          customer_id?: string
+          description?: string | null
+          escalation_after_minutes?: number | null
+          escalation_recipients?: string[] | null
+          export_time_target_minutes?: number | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          processing_time_target_minutes?: number | null
+          updated_at?: string | null
+          uptime_target_percentage?: number | null
+          validation_time_target_minutes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sla_configs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sso_configs: {
+        Row: {
+          attribute_mapping: Json | null
+          certificate: string | null
+          created_at: string | null
+          created_by: string | null
+          customer_id: string
+          enforce_sso: boolean | null
+          entity_id: string | null
+          id: string
+          is_active: boolean | null
+          metadata_url: string | null
+          provider_name: string
+          provider_type: string
+          sso_url: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          attribute_mapping?: Json | null
+          certificate?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_id: string
+          enforce_sso?: boolean | null
+          entity_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata_url?: string | null
+          provider_name: string
+          provider_type: string
+          sso_url?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          attribute_mapping?: Json | null
+          certificate?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          customer_id?: string
+          enforce_sso?: boolean | null
+          entity_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          metadata_url?: string | null
+          provider_name?: string
+          provider_type?: string
+          sso_url?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sso_configs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
         ]
