@@ -1836,102 +1836,10 @@ export const BatchValidationScreen = ({
                 <CollapsibleContent>
                   <div className="p-2 sm:p-4 space-y-4 border-t">
                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                      {/* Left column: Image with controls */}
+                      {/* Left column: Document Viewer */}
                       <div className="space-y-3">
-                        {/* Document Controls */}
-                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                          <h4 className="font-semibold text-sm">Document Preview</h4>
-                          <div className="flex items-center gap-1 sm:gap-2 flex-wrap">
-                            {/* Zoom Controls */}
-                            <div className="flex items-center gap-0.5 sm:gap-1 border rounded-md">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleZoomOut(doc.id)}
-                                disabled={(documentZoom[doc.id] || 1) <= 0.5}
-                                className="h-7 sm:h-8 px-1 sm:px-2"
-                                title="Zoom Out"
-                              >
-                                <ZoomOut className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Button>
-                              <span className="text-[10px] sm:text-xs font-medium px-1 sm:px-2 min-w-[2.5rem] sm:min-w-[3rem] text-center">
-                                {Math.round((documentZoom[doc.id] || 1) * 100)}%
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleZoomIn(doc.id)}
-                                disabled={(documentZoom[doc.id] || 1) >= 3}
-                                className="h-7 sm:h-8 px-1 sm:px-2"
-                                title="Zoom In"
-                              >
-                                <ZoomIn className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Button>
-                            </div>
-                            
-                            {/* Additional Controls */}
-                            <div className="flex items-center gap-0.5 sm:gap-1 border rounded-md">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleRotate(doc.id)}
-                                className="h-7 sm:h-8 px-1 sm:px-2"
-                                title="Rotate 90°"
-                              >
-                                <RotateCw className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleReset(doc.id)}
-                                className="h-7 sm:h-8 px-1 sm:px-2"
-                                title="Reset View"
-                              >
-                                <RefreshCw className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Button>
-                              {/* Redaction (Draw Zones) */}
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => setRedactionDialogDocId(doc.id)}
-                                className="h-7 sm:h-8 px-1 sm:px-2"
-                                title="Redact (Draw Zones)"
-                              >
-                                <Pencil className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handlePrint(doc.id, doc.file_url)}
-                                className="h-7 sm:h-8 px-1 sm:px-2"
-                                title="Print"
-                              >
-                                <Printer className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleDownload(doc.file_url, doc.file_name)}
-                                className="h-7 sm:h-8 px-1 sm:px-2"
-                                title="Download"
-                              >
-                                <Download className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handlePopout(doc.id, doc.file_url, doc.file_name)}
-                                className="h-7 sm:h-8 px-1 sm:px-2"
-                                title="Pop-out to separate window"
-                              >
-                                <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Interactive Document Viewer with Field Highlighting */}
-                        <div className="overflow-auto max-h-[300px] sm:max-h-[400px] bg-muted/30 rounded-lg p-2 sm:p-4">
+                        {/* Interactive Document Viewer with built-in controls */}
+                        <div className="overflow-auto max-h-[400px] sm:max-h-[500px] rounded-lg">
                           {(
                             String((doc as any).file_type || '').toLowerCase().includes('pdf') ||
                             /\.pdf($|\?)/i.test(doc.file_name || '')
