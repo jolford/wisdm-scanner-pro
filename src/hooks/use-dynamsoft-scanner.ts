@@ -144,13 +144,14 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
     Dynamsoft.DWT.ResourcesPath = 'https://unpkg.com/dwt@latest/dist';
     Dynamsoft.DWT.AutoLoad = false;
     
-    // Explicitly configure service connection
+    // Use HTTPS to avoid mixed-content blocking from browser
+    // User must trust certificate at https://127.0.0.1:18623 first
     // @ts-ignore - these settings exist but may not be in types
-    Dynamsoft.DWT.IfSSL = false; // Use HTTP to avoid certificate issues
+    Dynamsoft.DWT.IfSSL = true;
     // @ts-ignore
     Dynamsoft.DWT.Host = '127.0.0.1';
     // @ts-ignore
-    Dynamsoft.DWT.Port = '18622'; // HTTP port (18623 is HTTPS)
+    Dynamsoft.DWT.Port = '18623'; // HTTPS port
     // @ts-ignore
     Dynamsoft.DWT.ServiceInstallerLocation = 'https://unpkg.com/dwt@latest/dist';
 

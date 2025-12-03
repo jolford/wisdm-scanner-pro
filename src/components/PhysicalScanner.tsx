@@ -444,41 +444,43 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
 
           {/* Certificate Trust / Browser Security Issue */}
           {needsCertificateTrust && (
-            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 space-y-3">
+            <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 space-y-3">
               <div className="flex items-start gap-2">
-                <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
+                <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
                 <div className="text-sm">
-                  <p className="font-medium mb-1 text-red-800 dark:text-red-200">Browser Security Blocking Scanner</p>
-                  <p className="text-red-700 dark:text-red-300 text-xs">
-                    Chrome/Edge block scanner communication from HTTPS sites. Try these steps:
+                  <p className="font-medium mb-1 text-amber-800 dark:text-amber-200">Certificate Trust Required</p>
+                  <p className="text-amber-700 dark:text-amber-300 text-xs">
+                    Your browser needs to trust the Dynamsoft Service certificate. Follow these steps:
                   </p>
                 </div>
               </div>
-              <div className="space-y-2 text-xs text-red-600 dark:text-red-400">
-                <p><strong>Option 1:</strong> Restart "Dynamsoft Service" from Windows Services, then refresh this page</p>
-                <p><strong>Option 2:</strong> Use "Browser Camera/File Capture" option above instead</p>
-                <p><strong>Option 3:</strong> Install and use the Desktop Scanner App for Ricoh/Fujitsu scanners</p>
+              <div className="space-y-2 text-xs text-amber-700 dark:text-amber-300">
+                <p><strong>Step 1:</strong> Click "Trust Certificate" below - a new tab will open</p>
+                <p><strong>Step 2:</strong> In the new tab, click "Advanced" then "Proceed to 127.0.0.1"</p>
+                <p><strong>Step 3:</strong> Close that tab and click "Refresh Page" here</p>
               </div>
               <div className="flex gap-2">
+                <Button
+                  onClick={trustCertificate}
+                  size="sm"
+                  variant="default"
+                  className="flex-1 bg-amber-600 hover:bg-amber-700"
+                >
+                  Trust Certificate
+                </Button>
                 <Button
                   onClick={() => window.location.reload()}
                   size="sm"
                   variant="outline"
-                  className="flex-1 border-red-300 dark:border-red-700"
+                  className="flex-1 border-amber-300 dark:border-amber-700"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Refresh Page
                 </Button>
-                <Button
-                  onClick={handleDownload}
-                  size="sm"
-                  variant="destructive"
-                  className="flex-1"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Get Desktop App
-                </Button>
               </div>
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+                <strong>Alternative:</strong> Use "Browser Camera/File Capture" or the Desktop Scanner App instead.
+              </p>
             </div>
           )}
 
