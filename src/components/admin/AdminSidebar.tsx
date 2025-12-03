@@ -4,7 +4,8 @@ import {
   BarChart2, DollarSign, TrendingUp, Edit3, GitCompare,
   Brain, TestTube2, RefreshCw, Database, Palette, Activity,
   BookOpen, Settings, LogOut, HelpCircle, GitBranch, FileType,
-  Smartphone, Package, ChevronDown, Search, History, Zap, Bug, Code
+  Smartphone, Package, ChevronDown, Search, History, Zap, Bug, Code,
+  KeyRound, UserCog, Archive, Gauge
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -68,6 +69,16 @@ const menuItems = [
       { title: 'Validation Rules', url: '/admin/validation-rules', icon: Shield },
       { title: 'Validation Lookups', url: '/admin/validation-lookups', icon: Database },
       { title: 'Duplicate Detection', url: '/admin/duplicates', icon: Copy },
+    ],
+    defaultOpen: false,
+  },
+  {
+    title: 'Enterprise',
+    items: [
+      { title: 'SSO/SAML Config', url: '/admin/sso-config', icon: KeyRound },
+      { title: 'SCIM Provisioning', url: '/admin/scim-config', icon: UserCog },
+      { title: 'Retention Policies', url: '/admin/retention-policies', icon: Archive },
+      { title: 'SLA Monitoring', url: '/admin/sla-monitoring', icon: Gauge },
     ],
     defaultOpen: false,
   },
