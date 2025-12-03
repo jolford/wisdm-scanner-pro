@@ -188,91 +188,77 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
 
     console.log('Starting scan with scanner:', scanner.name, 'index:', scanner.index);
 
-    // Wrap in timeout to prevent infinite hanging
-    const SCAN_TIMEOUT = 120000; // 2 minutes
-    
-    const scanPromise = new Promise<Blob[]>((resolve, reject) => {
-      // Set the source index
+    try {
+      // Use the proper async flow from Dynamsoft docs
+      // First select the source by index
       dwt.SelectSourceByIndex(scanner.index);
       
-      // Configure scan settings BEFORE opening
-      dwt.IfDisableSourceAfterAcquire = true;
-      dwt.IfShowUI = true; // Show scanner UI for user to confirm settings
-
-      console.log('Acquiring image...');
+      // Then use SelectSourceAsync to open it properly
+      await dwt.SelectSourceAsync();
       
-      // Use AcquireImage which handles open/close internally
-      dwt.AcquireImage(
-        {
-          IfCloseSourceAfterAcquire: true,
-          PixelType: Dynamsoft.DWT.EnumDWT_PixelType.TWPT_RGB,
-          Resolution: 300,
-          IfFeederEnabled: false,
-          IfDuplexEnabled: false,
-          IfShowUI: true,
-        },
-        async () => {
-          console.log('Scan acquisition completed');
-          const blobs: Blob[] = [];
-          const imageCount = dwt.HowManyImagesInBuffer;
-          console.log('Images in buffer:', imageCount);
+      console.log('Source selected, acquiring image...');
+      
+      // Use AcquireImageAsync for reliable scanning
+      await dwt.AcquireImageAsync({
+        IfCloseSourceAfterAcquire: true,
+        PixelType: Dynamsoft.DWT.EnumDWT_PixelType.TWPT_RGB,
+        Resolution: 300,
+        IfFeederEnabled: false,
+        IfDuplexEnabled: false,
+        IfShowUI: true,
+      });
+      
+      console.log('Scan completed, images in buffer:', dwt.HowManyImagesInBuffer);
+      
+      const blobs: Blob[] = [];
+      const imageCount = dwt.HowManyImagesInBuffer;
 
-          if (imageCount === 0) {
-            resolve([]);
-            return;
-          }
+      if (imageCount === 0) {
+        return [];
+      }
 
-          for (let i = 0; i < imageCount; i++) {
-            try {
-              const blob = await new Promise<Blob>((res, rej) => {
-                dwt.ConvertToBlob(
-                  [i],
-                  Dynamsoft.DWT.EnumDWT_ImageType.IT_PNG,
-                  (result: Blob) => res(result),
-                  (errorCode: number, errorString: string) => rej(new Error(errorString))
-                );
-              });
-              blobs.push(blob);
-            } catch (e) {
-              console.error('Error converting image:', e);
-            }
-          }
-
-          dwt.RemoveAllImages();
-          resolve(blobs);
-        },
-        (_deviceConfig: unknown, errorCode: number, errorString: string) => {
-          console.error('AcquireImage failed:', errorCode, errorString);
-          
-          // User cancelled or closed the dialog
-          if (errorCode === -1032 || errorString.toLowerCase().includes('cancel')) {
-            resolve([]); // Return empty array for cancelled scans
-            return;
-          }
-          
-          // Provide helpful error messages
-          let userMessage = `Scan failed (${errorCode}): ${errorString}`;
-          if (errorCode === -2301) {
-            userMessage = 'Scanner connection lost. Please ensure the scanner is connected and try again.';
-          } else if (errorCode === -1001) {
-            userMessage = 'Scanner busy or unavailable. Close any other scanning software and try again.';
-          } else if (errorCode === -1003) {
-            userMessage = 'No paper in scanner. Please load documents and try again.';
-          }
-          
-          reject(new Error(userMessage));
+      for (let i = 0; i < imageCount; i++) {
+        try {
+          const blob = await new Promise<Blob>((res, rej) => {
+            dwt.ConvertToBlob(
+              [i],
+              Dynamsoft.DWT.EnumDWT_ImageType.IT_PNG,
+              (result: Blob) => res(result),
+              (errorCode: number, errorString: string) => rej(new Error(errorString))
+            );
+          });
+          blobs.push(blob);
+        } catch (e) {
+          console.error('Error converting image:', e);
         }
-      );
-    });
+      }
 
-    // Add timeout
-    const timeoutPromise = new Promise<Blob[]>((_, reject) => {
-      setTimeout(() => {
-        reject(new Error('Scan timed out. Please try again.'));
-      }, SCAN_TIMEOUT);
-    });
-
-    return Promise.race([scanPromise, timeoutPromise]);
+      dwt.RemoveAllImages();
+      return blobs;
+      
+    } catch (error) {
+      console.error('Scan error:', error);
+      const err = error as { message?: string; code?: number };
+      
+      // Handle specific error codes
+      const errorCode = err.code || 0;
+      const errorMessage = err.message || 'Unknown error';
+      
+      if (errorMessage.toLowerCase().includes('cancel') || errorCode === -1032) {
+        return []; // User cancelled
+      }
+      
+      let userMessage = errorMessage;
+      if (errorCode === -2301) {
+        userMessage = 'Scanner connection lost. Please ensure the scanner is connected and try again.';
+      } else if (errorCode === -1001) {
+        userMessage = 'Scanner busy or unavailable. Close any other scanning software and try again.';
+      } else if (errorCode === -1003) {
+        userMessage = 'No paper in scanner. Please load documents and try again.';
+      }
+      
+      throw new Error(userMessage);
+    }
   }, [isReady, scanners, selectedScanner]);
 
   return {
