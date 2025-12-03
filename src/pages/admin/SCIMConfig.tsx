@@ -149,7 +149,7 @@ export default function SCIMConfig() {
     toast.success("Copied to clipboard");
   };
 
-  const scimBaseUrl = `${window.location.origin}/api/scim/v2`;
+  const scimBaseUrl = `https://pbyerakkryuflamlmpvm.supabase.co/functions/v1/scim-provisioning`;
 
   return (
     <AdminLayout title="SCIM Provisioning">
