@@ -5,17 +5,58 @@ import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "sonner";
-import { Edit, Trash2, Plus, Workflow as WorkflowIcon } from "lucide-react";
+import { 
+  History, 
+  GitBranch, 
+  Clock, 
+  User, 
+  Play, 
+  Pause, 
+  FileEdit, 
+  Plus,
+  ChevronDown,
+  ChevronRight,
+  RotateCcw
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { toast } from "sonner";
+
+interface WorkflowVersion {
+  id: string;
+  workflow_id: string;
+  version_number: number;
+  name: string;
+  description: string | null;
+  workflow_nodes: any;
+  workflow_edges: any;
+  trigger_events: string[] | null;
+  is_active: boolean;
+  change_type: string;
+  change_summary: string | null;
+  changed_by: string | null;
+  changed_at: string;
+}
+
+interface Workflow {
+  id: string;
+  name: string;
+  description: string | null;
+  project_id: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  projects: { id: string; name: string } | null;
+}
 
 export default function Workflows() {
   const navigate = useNavigate();
   const [filterProject, setFilterProject] = useState<string>("all");
+  const [expandedWorkflows, setExpandedWorkflows] = useState<Set<string>>(new Set());
 
-  const { data: workflows, isLoading: workflowsLoading, refetch } = useQuery({
+  const { data: workflows, isLoading: workflowsLoading } = useQuery({
     queryKey: ["workflows"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -24,10 +65,23 @@ export default function Workflows() {
           *,
           projects!inner(id, name)
         `)
-        .order("created_at", { ascending: false });
+        .order("updated_at", { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data as Workflow[];
+    },
+  });
+
+  const { data: versions, isLoading: versionsLoading } = useQuery({
+    queryKey: ["workflow-versions"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("workflow_versions")
+        .select("*")
+        .order("changed_at", { ascending: false });
+
+      if (error) throw error;
+      return data as WorkflowVersion[];
     },
   });
 
@@ -45,65 +99,153 @@ export default function Workflows() {
     },
   });
 
-  const handleToggleActive = async (workflowId: string, currentStatus: boolean) => {
-    try {
-      const { error } = await supabase
-        .from("workflows")
-        .update({ is_active: !currentStatus })
-        .eq("id", workflowId);
+  const toggleWorkflowExpanded = (workflowId: string) => {
+    setExpandedWorkflows(prev => {
+      const next = new Set(prev);
+      if (next.has(workflowId)) {
+        next.delete(workflowId);
+      } else {
+        next.add(workflowId);
+      }
+      return next;
+    });
+  };
 
-      if (error) throw error;
+  const getVersionsForWorkflow = (workflowId: string) => {
+    return versions?.filter(v => v.workflow_id === workflowId) || [];
+  };
 
-      toast.success(`Workflow ${!currentStatus ? "activated" : "deactivated"}`);
-      refetch();
-    } catch (error) {
-      console.error("Error toggling workflow:", error);
-      toast.error("Failed to update workflow status");
+  const getChangeTypeIcon = (changeType: string) => {
+    switch (changeType) {
+      case 'created':
+        return <Plus className="h-4 w-4 text-green-500" />;
+      case 'activated':
+        return <Play className="h-4 w-4 text-green-500" />;
+      case 'deactivated':
+        return <Pause className="h-4 w-4 text-amber-500" />;
+      case 'updated':
+        return <FileEdit className="h-4 w-4 text-blue-500" />;
+      default:
+        return <History className="h-4 w-4 text-muted-foreground" />;
     }
   };
 
-  const handleDelete = async (workflowId: string, workflowName: string) => {
-    if (!window.confirm(`Are you sure you want to delete the workflow "${workflowName}"?`)) {
+  const getChangeTypeBadge = (changeType: string) => {
+    const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+      created: "default",
+      activated: "default",
+      deactivated: "secondary",
+      updated: "outline",
+    };
+    return (
+      <Badge variant={variants[changeType] || "outline"} className="capitalize">
+        {changeType}
+      </Badge>
+    );
+  };
+
+  const handleRestoreVersion = async (version: WorkflowVersion) => {
+    if (!window.confirm(`Restore workflow to version ${version.version_number}?`)) {
       return;
     }
 
     try {
       const { error } = await supabase
         .from("workflows")
-        .delete()
-        .eq("id", workflowId);
+        .update({
+          name: version.name,
+          description: version.description,
+          workflow_nodes: version.workflow_nodes,
+          workflow_edges: version.workflow_edges,
+          trigger_events: version.trigger_events,
+          is_active: version.is_active,
+        })
+        .eq("id", version.workflow_id);
 
       if (error) throw error;
-
-      toast.success("Workflow deleted successfully");
-      refetch();
+      toast.success(`Restored to version ${version.version_number}`);
     } catch (error) {
-      console.error("Error deleting workflow:", error);
-      toast.error("Failed to delete workflow");
+      console.error("Error restoring version:", error);
+      toast.error("Failed to restore version");
     }
-  };
-
-  const handleEdit = (projectId: string, workflowId: string) => {
-    navigate(`/admin/workflow-builder?projectId=${projectId}&workflowId=${workflowId}`);
   };
 
   const filteredWorkflows = workflows?.filter(w => 
     filterProject === "all" || w.project_id === filterProject
   );
 
+  const totalVersions = versions?.length || 0;
+  const recentChanges = versions?.filter(v => {
+    const changed = new Date(v.changed_at);
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    return changed > weekAgo;
+  }).length || 0;
+
   return (
-    <AdminLayout title="Workflow Management">
+    <AdminLayout title="Workflow Version History">
       <div className="space-y-6">
+        {/* Summary Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <GitBranch className="h-8 w-8 text-primary" />
+                <div>
+                  <p className="text-2xl font-bold">{workflows?.length || 0}</p>
+                  <p className="text-sm text-muted-foreground">Total Workflows</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <History className="h-8 w-8 text-blue-500" />
+                <div>
+                  <p className="text-2xl font-bold">{totalVersions}</p>
+                  <p className="text-sm text-muted-foreground">Total Versions</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <Clock className="h-8 w-8 text-amber-500" />
+                <div>
+                  <p className="text-2xl font-bold">{recentChanges}</p>
+                  <p className="text-sm text-muted-foreground">Changes This Week</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <Play className="h-8 w-8 text-green-500" />
+                <div>
+                  <p className="text-2xl font-bold">
+                    {workflows?.filter(w => w.is_active).length || 0}
+                  </p>
+                  <p className="text-sm text-muted-foreground">Active Workflows</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Version History */}
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="flex items-center gap-2">
-                  <WorkflowIcon className="h-5 w-5" />
-                  All Workflows
+                  <History className="h-5 w-5" />
+                  Version History
                 </CardTitle>
                 <CardDescription>
-                  View and manage automated workflows across all projects
+                  Track changes and restore previous workflow configurations
                 </CardDescription>
               </div>
               <Button onClick={() => navigate("/admin/workflow-builder")}>
@@ -129,91 +271,133 @@ export default function Workflows() {
               </Select>
             </div>
 
-            {workflowsLoading ? (
+            {workflowsLoading || versionsLoading ? (
               <div className="text-center py-8 text-muted-foreground">
-                Loading workflows...
+                Loading version history...
               </div>
             ) : filteredWorkflows && filteredWorkflows.length > 0 ? (
               <div className="space-y-4">
-                {filteredWorkflows.map((workflow) => (
-                  <Card key={workflow.id}>
-                    <CardContent className="pt-6">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <h3 className="font-semibold text-lg">
-                              {workflow.name}
-                            </h3>
-                            <Badge variant={workflow.is_active ? "default" : "secondary"}>
-                              {workflow.is_active ? "Active" : "Inactive"}
-                            </Badge>
-                          </div>
-                          
-                          {workflow.description && (
-                            <p className="text-sm text-muted-foreground mb-3">
-                              {workflow.description}
-                            </p>
-                          )}
-
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <div>
-                              <span className="font-medium">Project:</span>{" "}
-                              {workflow.projects?.name}
+                {filteredWorkflows.map((workflow) => {
+                  const workflowVersions = getVersionsForWorkflow(workflow.id);
+                  const isExpanded = expandedWorkflows.has(workflow.id);
+                  
+                  return (
+                    <Collapsible
+                      key={workflow.id}
+                      open={isExpanded}
+                      onOpenChange={() => toggleWorkflowExpanded(workflow.id)}
+                    >
+                      <Card>
+                        <CollapsibleTrigger asChild>
+                          <CardContent className="pt-6 cursor-pointer hover:bg-muted/50 transition-colors">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-3">
+                                {isExpanded ? (
+                                  <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                                ) : (
+                                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                )}
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="font-semibold">{workflow.name}</h3>
+                                    <Badge variant={workflow.is_active ? "default" : "secondary"}>
+                                      {workflow.is_active ? "Active" : "Inactive"}
+                                    </Badge>
+                                    <Badge variant="outline">
+                                      {workflowVersions.length} versions
+                                    </Badge>
+                                  </div>
+                                  <p className="text-sm text-muted-foreground">
+                                    {workflow.projects?.name} • Last updated{" "}
+                                    {format(new Date(workflow.updated_at), "MMM d, yyyy 'at' h:mm a")}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  navigate(`/admin/workflow-builder?projectId=${workflow.project_id}&workflowId=${workflow.id}`);
+                                }}
+                              >
+                                <FileEdit className="h-4 w-4 mr-1" />
+                                Edit
+                              </Button>
                             </div>
-                            {workflow.trigger_events && (
-                              <div>
-                                <span className="font-medium">Triggers:</span>{" "}
-                                {Array.isArray(workflow.trigger_events) 
-                                  ? workflow.trigger_events.join(", ")
-                                  : workflow.trigger_events}
+                          </CardContent>
+                        </CollapsibleTrigger>
+
+                        <CollapsibleContent>
+                          <div className="border-t">
+                            {workflowVersions.length > 0 ? (
+                              <div className="divide-y">
+                                {workflowVersions.map((version, index) => (
+                                  <div
+                                    key={version.id}
+                                    className="px-6 py-4 flex items-center justify-between hover:bg-muted/30"
+                                  >
+                                    <div className="flex items-center gap-4">
+                                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-muted">
+                                        {getChangeTypeIcon(version.change_type)}
+                                      </div>
+                                      <div>
+                                        <div className="flex items-center gap-2">
+                                          <span className="font-medium">
+                                            Version {version.version_number}
+                                          </span>
+                                          {getChangeTypeBadge(version.change_type)}
+                                          {index === 0 && (
+                                            <Badge variant="secondary" className="text-xs">
+                                              Current
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <p className="text-sm text-muted-foreground">
+                                          {version.change_summary || "No summary"}
+                                        </p>
+                                        <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                          <Clock className="h-3 w-3" />
+                                          {format(new Date(version.changed_at), "MMM d, yyyy 'at' h:mm a")}
+                                          {version.changed_by && (
+                                            <>
+                                              <User className="h-3 w-3 ml-2" />
+                                              <span>User</span>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    {index > 0 && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleRestoreVersion(version)}
+                                      >
+                                        <RotateCcw className="h-4 w-4 mr-1" />
+                                        Restore
+                                      </Button>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="px-6 py-8 text-center text-muted-foreground">
+                                <History className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                <p>No version history yet</p>
+                                <p className="text-sm">Changes will be tracked automatically</p>
                               </div>
                             )}
-                            <div>
-                              <span className="font-medium">Nodes:</span>{" "}
-                              {workflow.workflow_nodes && typeof workflow.workflow_nodes === 'object'
-                                ? Array.isArray(workflow.workflow_nodes) 
-                                  ? workflow.workflow_nodes.length 
-                                  : 0
-                                : 0}
-                            </div>
                           </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">Active</span>
-                            <Switch
-                              checked={workflow.is_active}
-                              onCheckedChange={() => handleToggleActive(workflow.id, workflow.is_active)}
-                            />
-                          </div>
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(workflow.project_id, workflow.id)}
-                          >
-                            <Edit className="h-4 w-4 mr-1" />
-                            Edit
-                          </Button>
-                          
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDelete(workflow.id, workflow.name)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-1" />
-                            Delete
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        </CollapsibleContent>
+                      </Card>
+                    </Collapsible>
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                <WorkflowIcon className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <GitBranch className="h-12 w-12 mx-auto mb-3 opacity-50" />
                 <p>No workflows found</p>
                 <Button
                   variant="outline"
