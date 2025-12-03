@@ -49,6 +49,7 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.1.1",
     "date-fns": "^3.6.0",
+    "dwt": "^19.2.0",
     "embla-carousel-react": "^8.6.0",
     "fabric": "^6.9.0",
     "i18next": "^25.6.2",
