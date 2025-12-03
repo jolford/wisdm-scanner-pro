@@ -23,6 +23,7 @@ interface UseDynamsoftScannerReturn {
 let globalDwt: WebTwain | null = null;
 let globalInitPromise: Promise<WebTwain> | null = null;
 let isInitializing = false;
+let dwtCounter = 0; // Unique ID counter to prevent duplicate WebTwainId errors
 
 export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScannerReturn => {
   const [isReady, setIsReady] = useState(!!globalDwt);
@@ -143,9 +144,12 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
       document.body.appendChild(container);
     }
 
+    // Use unique ID to prevent "Duplicate WebTwainId" errors
+    const uniqueId = `dwtObject_${++dwtCounter}`;
+    
     globalInitPromise = new Promise<WebTwain>((resolve, reject) => {
       Dynamsoft.DWT.CreateDWTObjectEx(
-        { WebTwainId: 'dwtObject' },
+        { WebTwainId: uniqueId },
         (dwt: WebTwain) => {
           console.log('DWT object created successfully');
           globalDwt = dwt;
