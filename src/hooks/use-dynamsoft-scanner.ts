@@ -41,17 +41,9 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
       setError(null);
 
       try {
-        // First check if Dynamsoft Service is running
-        const serviceRunning = await checkDynamsoftService();
-        if (!serviceRunning) {
-          setError('Dynamsoft Service not detected. Please ensure it is installed and running.');
-          setIsLoading(false);
-          return;
-        }
-
         // Configure Dynamsoft
         Dynamsoft.DWT.ProductKey = licenseKey;
-        // Use CDN for resources (no local copy needed)
+        // Use CDN for resources
         Dynamsoft.DWT.ResourcesPath = 'https://unpkg.com/dwt@latest/dist';
         Dynamsoft.DWT.AutoLoad = false;
 
@@ -64,32 +56,36 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
           document.body.appendChild(container);
         }
 
-        // Load DWT
-        console.log('Creating DWT object with license:', licenseKey?.substring(0, 20) + '...');
+        console.log('Initializing Dynamsoft Web TWAIN...');
+        
+        // Load DWT - the SDK handles service connection internally
         Dynamsoft.DWT.CreateDWTObjectEx(
           { WebTwainId: 'dwtObject' },
           (dwt: WebTwain) => {
             dwtRef.current = dwt;
             setIsReady(true);
             setIsLoading(false);
-            console.log('Dynamsoft Web TWAIN initialized successfully');
-            console.log('SourceCount:', dwt.SourceCount);
+            console.log('Dynamsoft initialized. SourceCount:', dwt.SourceCount);
             
             // List all detected scanners
             for (let i = 0; i < dwt.SourceCount; i++) {
               console.log(`Scanner ${i}:`, dwt.GetSourceNameItems(i));
             }
             
+            if (dwt.SourceCount === 0) {
+              console.log('No TWAIN scanners found. Ensure scanner has TWAIN driver installed.');
+            }
+            
             refreshScannerList();
           },
           (error: { code: number; message: string }) => {
-            console.error('DWT init error code:', error.code, 'message:', error.message);
+            console.error('DWT error:', error.code, error.message);
             if (error.message.includes('service') || error.code === -2300) {
-              setError('Dynamsoft Service not responding. Try restarting the service.');
+              setError('Dynamsoft Service not responding. Restart the service and refresh.');
             } else if (error.code === -2319) {
-              setError('License expired or invalid. Please contact support.');
+              setError('License expired or invalid.');
             } else {
-              setError(`Init failed (${error.code}): ${error.message}`);
+              setError(`Error (${error.code}): ${error.message}`);
             }
             setIsLoading(false);
           }
@@ -98,25 +94,6 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
         console.error('DWT setup error:', err);
         setError(err instanceof Error ? err.message : 'Failed to initialize scanner SDK');
         setIsLoading(false);
-      }
-    };
-
-    // Check if Dynamsoft Service is running by pinging its local port
-    const checkDynamsoftService = async (): Promise<boolean> => {
-      try {
-        // Dynamsoft Service runs on port 18622 (HTTP) or 18623 (HTTPS)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        
-        const response = await fetch('http://127.0.0.1:18622/', {
-          method: 'GET',
-          signal: controller.signal,
-        }).catch(() => null);
-        
-        clearTimeout(timeoutId);
-        return response !== null;
-      } catch {
-        return false;
       }
     };
 
