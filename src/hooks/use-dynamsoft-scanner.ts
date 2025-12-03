@@ -184,14 +184,43 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
       throw new Error('No scanner selected');
     }
 
-    return new Promise((resolve, reject) => {
-      const dwt = dwtRef.current!;
+    const dwt = dwtRef.current;
 
-      // Use async select method for better reliability
+    // Use async select for more reliable scanner selection
+    try {
+      await new Promise<void>((resolve, reject) => {
+        dwt.SelectSourceByIndexAsync(scanner.index)
+          .then(() => {
+            console.log('Scanner selected successfully');
+            resolve();
+          })
+          .catch((err: { message: string }) => {
+            console.error('SelectSourceByIndexAsync error:', err);
+            reject(new Error(`Failed to select scanner: ${err.message}`));
+          });
+      });
+    } catch (e) {
+      // Fallback to sync method
+      console.log('Falling back to sync SelectSourceByIndex');
       dwt.SelectSourceByIndex(scanner.index);
-      dwt.OpenSource();
+    }
+
+    return new Promise((resolve, reject) => {
+      // Open source and configure
+      const openResult = dwt.OpenSource();
+      if (!openResult) {
+        const errCode = dwt.ErrorCode;
+        const errStr = dwt.ErrorString;
+        console.error('OpenSource failed:', errCode, errStr);
+        reject(new Error(`Failed to open scanner (${errCode}): ${errStr}`));
+        return;
+      }
+
       dwt.IfDisableSourceAfterAcquire = true;
-      dwt.IfShowUI = false;
+      // Show scanner UI for better compatibility - user can configure settings
+      dwt.IfShowUI = true;
+
+      console.log('Starting scan acquisition...');
 
       dwt.AcquireImage(
         {
@@ -202,8 +231,10 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
           IfDuplexEnabled: false,
         },
         async () => {
+          console.log('Scan completed successfully');
           const blobs: Blob[] = [];
           const imageCount = dwt.HowManyImagesInBuffer;
+          console.log('Images in buffer:', imageCount);
 
           for (let i = 0; i < imageCount; i++) {
             try {
@@ -225,6 +256,7 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
           resolve(blobs);
         },
         (_deviceConfig: unknown, errorCode: number, errorString: string) => {
+          console.error('AcquireImage failed:', errorCode, errorString);
           dwt.CloseSource();
           reject(new Error(`Scan failed (${errorCode}): ${errorString}`));
         }
