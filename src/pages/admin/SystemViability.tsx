@@ -1249,6 +1249,8 @@ const SystemViability = () => {
             </div>
           </CardContent>
         </Card>
+        </>
+        )}
         </TabsContent>
       </Tabs>
     </AdminLayout>
