@@ -86,6 +86,10 @@ import Workflows from "./pages/admin/Workflows";
 import CustomScripts from "./pages/admin/CustomScripts";
 import IntegrationMarketplace from "./pages/admin/IntegrationMarketplace";
 import AdvancedSearch from "./pages/admin/AdvancedSearch";
+import SSOConfig from "./pages/admin/SSOConfig";
+import SCIMConfig from "./pages/admin/SCIMConfig";
+import RetentionPolicies from "./pages/admin/RetentionPolicies";
+import EnhancedSLAMonitoring from "./pages/admin/EnhancedSLAMonitoring";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -240,6 +244,12 @@ const App = () => {
           <Route path="/admin/custom-scripts" element={<CustomScripts />} />
           <Route path="/admin/integrations" element={<IntegrationMarketplace />} />
           <Route path="/admin/advanced-search" element={<AdvancedSearch />} />
+          
+          {/* Enterprise Features */}
+          <Route path="/admin/sso" element={<SSOConfig />} />
+          <Route path="/admin/scim" element={<SCIMConfig />} />
+          <Route path="/admin/retention" element={<RetentionPolicies />} />
+          <Route path="/admin/sla-monitoring" element={<EnhancedSLAMonitoring />} />
           
           {/* Phase 3: Bulk Operations & QA */}
           <Route path="/admin/bulk-edit" element={<BulkEdit />} />
