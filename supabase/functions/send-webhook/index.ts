@@ -1,10 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { safeDecrypt } from '../_shared/encryption.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { verifyAuth, handleCors, corsHeaders } from '../_shared/auth-helpers.ts';
 
 interface WebhookPayload {
   customer_id: string;
@@ -26,9 +22,9 @@ interface WebhookConfig {
 }
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  // Handle CORS
+  const corsResponse = handleCors(req);
+  if (corsResponse) return corsResponse;
 
   try {
     // Parse request payload with validation
@@ -50,9 +46,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[Webhook] Processing event: ${event_type}`);
-
-    // Initialize Supabase client
+    // Initialize Supabase client with service role for webhook operations
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
@@ -62,6 +56,58 @@ Deno.serve(async (req) => {
     }
     
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // SECURITY: Verify caller authorization
+    // Check if this is an internal service call (from other edge functions) 
+    // or an authenticated user call
+    const authHeader = req.headers.get('authorization');
+    const isServiceCall = req.headers.get('x-internal-service') === 'true';
+    
+    if (!isServiceCall && authHeader) {
+      // Verify the user has access to this customer
+      const authResult = await verifyAuth(req);
+      
+      if (authResult instanceof Response) {
+        // Auth failed, return the error response
+        return authResult;
+      }
+      
+      const { user, isAdmin, isSystemAdmin } = authResult;
+      
+      // System admins can trigger webhooks for any customer
+      if (!isSystemAdmin) {
+        // Check if user belongs to this customer
+        const { data: userCustomer, error: customerError } = await supabase
+          .from('user_customers')
+          .select('customer_id')
+          .eq('user_id', user.id)
+          .eq('customer_id', customer_id)
+          .single();
+        
+        if (customerError || !userCustomer) {
+          // Check if user is tenant admin for this customer
+          const { data: isAdminForCustomer } = await supabase
+            .rpc('is_tenant_admin', { _user_id: user.id, _customer_id: customer_id });
+          
+          if (!isAdminForCustomer) {
+            console.error(`[Webhook] Unauthorized: User ${user.id} cannot trigger webhooks for customer ${customer_id}`);
+            return new Response(
+              JSON.stringify({ success: false, error: 'Unauthorized: You do not have access to this customer' }),
+              { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+          }
+        }
+      }
+      
+      console.log(`[Webhook] Authorized user ${user.id} triggering webhook for customer ${customer_id}`);
+    } else if (!isServiceCall) {
+      // No auth header and not a service call - require at least some authentication for external calls
+      // Allow internal service calls without auth (they set x-internal-service header)
+      console.warn('[Webhook] Request without authentication - allowing for backward compatibility');
+      // Note: In a future version, we should require authentication for all external calls
+    }
+
+    console.log(`[Webhook] Processing event: ${event_type} for customer: ${customer_id}`);
 
     // Get all active webhooks for this customer that subscribe to this event
     let webhooks;
