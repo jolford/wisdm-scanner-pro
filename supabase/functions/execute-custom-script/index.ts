@@ -1,30 +1,37 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { verifyAuth, handleCors, corsHeaders } from "../_shared/auth-helpers.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  // Handle CORS preflight
+  const corsResponse = handleCors(req);
+  if (corsResponse) return corsResponse;
 
   try {
+    // SECURITY: Require system_admin role for script execution
+    // This is a critical security control - arbitrary code execution
+    // must only be available to the highest privilege level
+    const authResult = await verifyAuth(req, { requireSystemAdmin: true });
+    if (authResult instanceof Response) {
+      return authResult;
+    }
+
+    const { user, isSystemAdmin } = authResult;
+
+    // Double-check system admin (defense in depth)
+    if (!isSystemAdmin) {
+      console.error(`Script execution denied for user ${user.id} - not system admin`);
+      return new Response(
+        JSON.stringify({ error: 'System administrator access required for script execution' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Create service client for database operations only
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
-
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
 
     const { scriptId, executionContext = {} } = await req.json();
 
@@ -57,85 +64,55 @@ serve(async (req) => {
       });
     }
 
+    // SECURITY: Only allow JavaScript/TypeScript execution
+    // Python and PowerShell subprocess execution is disabled for security
+    if (script.script_language !== 'javascript' && script.script_language !== 'typescript') {
+      console.error(`Blocked execution of ${script.script_language} script - only JS/TS allowed`);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Only JavaScript and TypeScript scripts are supported for security reasons',
+          details: 'Python and PowerShell execution has been disabled'
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
     const startTime = Date.now();
     let output: any = null;
     let status = 'success';
     let errorMessage = null;
 
     try {
-      // Create execution context with access to Supabase and utilities
-      const context = {
-        supabase: supabaseClient,
-        user,
+      // Create limited execution context
+      // SECURITY: Do NOT pass service role client or sensitive env vars to user code
+      const limitedContext = {
+        user: { id: user.id, email: user.email },
         executionContext,
         console: {
           log: (...args: any[]) => console.log('[SCRIPT]', ...args),
           error: (...args: any[]) => console.error('[SCRIPT]', ...args),
         },
+        // Read-only supabase client with user context (respects RLS)
+        supabase: createClient(
+          Deno.env.get('SUPABASE_URL') ?? '',
+          Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+          { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+        ),
       };
 
-      // Execute script based on language
-      if (script.script_language === 'javascript' || script.script_language === 'typescript') {
-        // Execute JavaScript/TypeScript directly in Deno
-        const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-        const scriptFunction = new AsyncFunction('context', `
-          const { supabase, user, executionContext, console } = context;
-          ${script.script_code}
-        `);
-        
-        output = await Promise.race([
-          scriptFunction(context),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Script timeout')), 30000))
-        ]);
-      } else if (script.script_language === 'python') {
-        // For Python, PowerShell, VBScript - we need to execute via subprocess
-        // This requires the respective runtime to be installed
-        const tempFile = await Deno.makeTempFile({ suffix: '.py' });
-        await Deno.writeTextFile(tempFile, script.script_code);
-        
-        const command = new Deno.Command('python3', {
-          args: [tempFile],
-          env: {
-            SUPABASE_URL: Deno.env.get('SUPABASE_URL') ?? '',
-            SUPABASE_ANON_KEY: Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-            EXECUTION_CONTEXT: JSON.stringify(executionContext),
-          },
-        });
-        
-        const { code, stdout, stderr } = await command.output();
-        
-        await Deno.remove(tempFile);
-        
-        if (code !== 0) {
-          throw new Error(new TextDecoder().decode(stderr));
-        }
-        
-        output = new TextDecoder().decode(stdout);
-      } else if (script.script_language === 'powershell') {
-        const tempFile = await Deno.makeTempFile({ suffix: '.ps1' });
-        await Deno.writeTextFile(tempFile, script.script_code);
-        
-        const command = new Deno.Command('powershell', {
-          args: ['-File', tempFile],
-          env: {
-            SUPABASE_URL: Deno.env.get('SUPABASE_URL') ?? '',
-            SUPABASE_ANON_KEY: Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-            EXECUTION_CONTEXT: JSON.stringify(executionContext),
-          },
-        });
-        
-        const { code, stdout, stderr } = await command.output();
-        
-        await Deno.remove(tempFile);
-        
-        if (code !== 0) {
-          throw new Error(new TextDecoder().decode(stderr));
-        }
-        
-        output = new TextDecoder().decode(stdout);
-      } else {
-        throw new Error(`Unsupported script language: ${script.script_language}`);
-      }
+      // Execute JavaScript/TypeScript in Deno sandbox
+      const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+      const scriptFunction = new AsyncFunction('context', `
+        const { supabase, user, executionContext, console } = context;
+        ${script.script_code}
+      `);
+      
+      output = await Promise.race([
+        scriptFunction(limitedContext),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Script timeout (30s)')), 30000))
+      ]);
 
     } catch (error: any) {
       console.error('Script execution error:', error);
@@ -146,7 +123,7 @@ serve(async (req) => {
 
     const executionDuration = Date.now() - startTime;
 
-    // Log execution
+    // Log execution for audit trail
     await supabaseClient.from('script_execution_logs').insert({
       script_id: scriptId,
       executed_by: user.id,
@@ -156,6 +133,8 @@ serve(async (req) => {
       error_message: errorMessage,
       execution_duration_ms: executionDuration,
     });
+
+    console.log(`Script ${scriptId} executed by system admin ${user.id}: ${status} (${executionDuration}ms)`);
 
     return new Response(
       JSON.stringify({
