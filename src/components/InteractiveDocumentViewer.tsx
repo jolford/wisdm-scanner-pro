@@ -437,13 +437,13 @@ export const InteractiveDocumentViewer = ({
     };
   }, [imageZoom, imageRotation, panOffset]);
 
-  // Render PDF page when current page changes
+  // Render PDF page when current page changes (use fixed scale for quality, CSS handles zoom)
   useEffect(() => {
     if (!isPdf || !pdfDoc || !pdfCanvasRef.current) return;
 
     const canvas = pdfCanvasRef.current;
-    renderPage(currentPage, canvas, 2.0 * imageZoom);
-  }, [currentPage, imageZoom, isPdf, pdfDoc, renderPage]);
+    renderPage(currentPage, canvas, 2.0); // Fixed scale for quality
+  }, [currentPage, isPdf, pdfDoc, renderPage]);
 
   // Generate thumbnails for PDF navigation
   const [thumbnails, setThumbnails] = useState<(string | null)[]>([]);
@@ -723,8 +723,8 @@ export const InteractiveDocumentViewer = ({
                   ref={pdfCanvasRef}
                   className="max-w-none shadow-2xl rounded-lg border-2 border-primary/10 hover:border-primary/30"
                   style={{
-                    transform: `rotate(${imageRotation}deg)`,
-                    transformOrigin: 'center',
+                    transform: `scale(${imageZoom}) rotate(${imageRotation}deg)`,
+                    transformOrigin: 'top left',
                     transition: 'transform 0.15s ease-out'
                   }}
                 />
