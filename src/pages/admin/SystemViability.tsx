@@ -5,16 +5,55 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
 import { 
   TrendingUp, 
+  TrendingDown,
   Clock, 
   DollarSign, 
   CheckCircle, 
   Target,
   Zap,
   ShieldCheck,
-  Activity
+  Activity,
+  Database,
+  Server,
+  HardDrive,
+  AlertTriangle,
+  XCircle,
+  RefreshCw,
+  AlertCircle,
+  FileText,
+  Users,
+  Loader2
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { format } from "date-fns";
+
+interface ServiceStatus {
+  name: string;
+  status: 'healthy' | 'degraded' | 'error';
+  latency?: number;
+  lastChecked: Date;
+  message?: string;
+}
+
+interface ProcessingMetrics {
+  pendingJobs: number;
+  processingJobs: number;
+  completedJobs24h: number;
+  failedJobs24h: number;
+  avgProcessingTime: number;
+  throughputPerHour: number;
+}
+
+interface ApplicationStats {
+  totalDocuments: number;
+  documentsToday: number;
+  activeUsers: number;
+  errorRate: number;
+  recentErrors: number;
+}
 
 interface ViabilityMetrics {
   // Time Metrics
@@ -65,6 +104,15 @@ const SystemViability = () => {
   const { loading, isAdmin } = useRequireAuth(true);
   const [metrics, setMetrics] = useState<ViabilityMetrics | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Health monitoring state
+  const [services, setServices] = useState<ServiceStatus[]>([]);
+  const [processing, setProcessing] = useState<ProcessingMetrics | null>(null);
+  const [appStats, setAppStats] = useState<ApplicationStats | null>(null);
+  const [healthLoading, setHealthLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [activeTab, setActiveTab] = useState("health");
 
   // Constants for calculations (now visible to users)
   const MANUAL_TIME_PER_DOC = 300; // 5 minutes in seconds
@@ -234,7 +282,229 @@ const SystemViability = () => {
     }
   };
 
-  if (loading || isLoading || !metrics) {
+  // Health monitoring functions
+  const checkServices = async () => {
+    const serviceChecks: ServiceStatus[] = [];
+
+    // Check Database
+    const dbStart = performance.now();
+    try {
+      const { error } = await supabase.from('profiles').select('id').limit(1);
+      const dbLatency = performance.now() - dbStart;
+      serviceChecks.push({
+        name: 'Database',
+        status: error ? 'error' : dbLatency > 1000 ? 'degraded' : 'healthy',
+        latency: Math.round(dbLatency),
+        lastChecked: new Date(),
+        message: error?.message
+      });
+    } catch (e) {
+      serviceChecks.push({
+        name: 'Database',
+        status: 'error',
+        lastChecked: new Date(),
+        message: 'Connection failed'
+      });
+    }
+
+    // Check Storage
+    const storageStart = performance.now();
+    try {
+      const { error } = await supabase.storage.from('documents').list('', { limit: 1 });
+      const storageLatency = performance.now() - storageStart;
+      serviceChecks.push({
+        name: 'Storage',
+        status: error ? 'error' : storageLatency > 2000 ? 'degraded' : 'healthy',
+        latency: Math.round(storageLatency),
+        lastChecked: new Date(),
+        message: error?.message
+      });
+    } catch (e) {
+      serviceChecks.push({
+        name: 'Storage',
+        status: 'error',
+        lastChecked: new Date(),
+        message: 'Connection failed'
+      });
+    }
+
+    // Check Auth Service
+    const authStart = performance.now();
+    try {
+      const { error } = await supabase.auth.getSession();
+      const authLatency = performance.now() - authStart;
+      serviceChecks.push({
+        name: 'Authentication',
+        status: error ? 'error' : authLatency > 1000 ? 'degraded' : 'healthy',
+        latency: Math.round(authLatency),
+        lastChecked: new Date(),
+        message: error?.message
+      });
+    } catch (e) {
+      serviceChecks.push({
+        name: 'Authentication',
+        status: 'error',
+        lastChecked: new Date(),
+        message: 'Service unavailable'
+      });
+    }
+
+    // Check Edge Functions (via job processor)
+    const edgeStart = performance.now();
+    try {
+      const { data, error } = await supabase.from('jobs').select('id').limit(1);
+      const edgeLatency = performance.now() - edgeStart;
+      serviceChecks.push({
+        name: 'Edge Functions',
+        status: error ? 'degraded' : edgeLatency > 1500 ? 'degraded' : 'healthy',
+        latency: Math.round(edgeLatency),
+        lastChecked: new Date(),
+        message: error?.message || 'Inferred from database connectivity'
+      });
+    } catch (e) {
+      serviceChecks.push({
+        name: 'Edge Functions',
+        status: 'degraded',
+        lastChecked: new Date(),
+        message: 'Unable to verify'
+      });
+    }
+
+    setServices(serviceChecks);
+  };
+
+  const loadProcessingMetrics = async () => {
+    const now = new Date();
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+    const [pendingResult, processingResult, completed24hResult, failed24hResult] = await Promise.all([
+      supabase.from('jobs').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('jobs').select('id', { count: 'exact', head: true }).eq('status', 'processing'),
+      supabase.from('jobs').select('id', { count: 'exact', head: true })
+        .eq('status', 'completed')
+        .gte('completed_at', yesterday.toISOString()),
+      supabase.from('jobs').select('id', { count: 'exact', head: true })
+        .eq('status', 'failed')
+        .gte('updated_at', yesterday.toISOString())
+    ]);
+
+    // Calculate average processing time from recent completed jobs
+    const { data: recentJobs } = await supabase
+      .from('jobs')
+      .select('started_at, completed_at')
+      .eq('status', 'completed')
+      .not('started_at', 'is', null)
+      .not('completed_at', 'is', null)
+      .order('completed_at', { ascending: false })
+      .limit(100);
+
+    let avgTime = 0;
+    if (recentJobs && recentJobs.length > 0) {
+      const totalTime = recentJobs.reduce((sum, job) => {
+        const start = new Date(job.started_at!).getTime();
+        const end = new Date(job.completed_at!).getTime();
+        return sum + (end - start);
+      }, 0);
+      avgTime = totalTime / recentJobs.length / 1000;
+    }
+
+    const completed24h = completed24hResult.count || 0;
+    const throughput = Math.round(completed24h / 24);
+
+    setProcessing({
+      pendingJobs: pendingResult.count || 0,
+      processingJobs: processingResult.count || 0,
+      completedJobs24h: completed24h,
+      failedJobs24h: failed24hResult.count || 0,
+      avgProcessingTime: Math.round(avgTime * 10) / 10,
+      throughputPerHour: throughput
+    });
+  };
+
+  const loadApplicationStats = async () => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+
+    const [totalDocsResult, todayDocsResult, activeUsersResult, recentErrorsResult] = await Promise.all([
+      supabase.from('documents').select('id', { count: 'exact', head: true }),
+      supabase.from('documents').select('id', { count: 'exact', head: true })
+        .gte('created_at', today.toISOString()),
+      supabase.from('profiles').select('id', { count: 'exact', head: true })
+        .gte('updated_at', oneHourAgo.toISOString()),
+      supabase.from('error_logs').select('id', { count: 'exact', head: true })
+        .gte('created_at', today.toISOString())
+    ]);
+
+    const todayDocs = todayDocsResult.count || 1;
+    const todayErrors = recentErrorsResult.count || 0;
+    const errorRate = Math.round((todayErrors / todayDocs) * 100 * 10) / 10;
+
+    setAppStats({
+      totalDocuments: totalDocsResult.count || 0,
+      documentsToday: todayDocsResult.count || 0,
+      activeUsers: activeUsersResult.count || 0,
+      errorRate: errorRate,
+      recentErrors: todayErrors
+    });
+  };
+
+  const refreshHealth = async () => {
+    setRefreshing(true);
+    await Promise.all([
+      checkServices(),
+      loadProcessingMetrics(),
+      loadApplicationStats()
+    ]);
+    setLastRefresh(new Date());
+    setRefreshing(false);
+  };
+
+  useEffect(() => {
+    if (!loading && isAdmin) {
+      refreshHealth().then(() => setHealthLoading(false));
+    }
+  }, [loading, isAdmin]);
+
+  // Auto-refresh health every 30 seconds
+  useEffect(() => {
+    if (!loading && isAdmin) {
+      const interval = setInterval(refreshHealth, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [loading, isAdmin]);
+
+  const getStatusIcon = (status: 'healthy' | 'degraded' | 'error') => {
+    switch (status) {
+      case 'healthy':
+        return <CheckCircle className="h-5 w-5 text-green-500" />;
+      case 'degraded':
+        return <AlertTriangle className="h-5 w-5 text-yellow-500" />;
+      case 'error':
+        return <XCircle className="h-5 w-5 text-red-500" />;
+    }
+  };
+
+  const getStatusBadge = (status: 'healthy' | 'degraded' | 'error') => {
+    switch (status) {
+      case 'healthy':
+        return <Badge variant="default" className="bg-green-500">Healthy</Badge>;
+      case 'degraded':
+        return <Badge variant="default" className="bg-yellow-500">Degraded</Badge>;
+      case 'error':
+        return <Badge variant="destructive">Error</Badge>;
+    }
+  };
+
+  const overallHealth = services.length > 0
+    ? services.every(s => s.status === 'healthy')
+      ? 'healthy'
+      : services.some(s => s.status === 'error')
+        ? 'error'
+        : 'degraded'
+    : 'healthy';
+
+  if (loading || (isLoading && healthLoading)) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -251,20 +521,276 @@ const SystemViability = () => {
   return (
     <AdminLayout
       title="System Viability Dashboard"
-      description="Concrete proof of system performance and ROI"
+      description="Monitor system health, performance, and ROI"
     >
-      <div className="space-y-6">
-        {/* Data Source Indicator */}
-        {metrics.isProjectedData && (
-          <Card className="bg-amber-500/10 border-amber-500/30">
-            <CardContent className="py-3">
-              <p className="text-sm text-center">
-                <Badge variant="outline" className="mr-2">Projected Data</Badge>
-                No documents processed yet. Showing projected ROI based on {metrics.projectedVolume.toLocaleString()} annual documents and industry averages.
-              </p>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-2 max-w-md">
+          <TabsTrigger value="health" className="flex items-center gap-2">
+            <Activity className="h-4 w-4" />
+            System Health
+          </TabsTrigger>
+          <TabsTrigger value="roi" className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4" />
+            ROI Analysis
+          </TabsTrigger>
+        </TabsList>
+
+        {/* System Health Tab */}
+        <TabsContent value="health" className="space-y-6">
+          {/* Overall Status Header */}
+          <Card className={`border-2 ${
+            overallHealth === 'healthy' ? 'border-green-500/50 bg-green-500/5' :
+            overallHealth === 'degraded' ? 'border-yellow-500/50 bg-yellow-500/5' :
+            'border-red-500/50 bg-red-500/5'
+          }`}>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className={`p-3 rounded-full ${
+                    overallHealth === 'healthy' ? 'bg-green-500/20' :
+                    overallHealth === 'degraded' ? 'bg-yellow-500/20' :
+                    'bg-red-500/20'
+                  }`}>
+                    <Activity className={`h-8 w-8 ${
+                      overallHealth === 'healthy' ? 'text-green-500' :
+                      overallHealth === 'degraded' ? 'text-yellow-500' :
+                      'text-red-500'
+                    }`} />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-bold">
+                      {overallHealth === 'healthy' ? 'All Systems Operational' :
+                        overallHealth === 'degraded' ? 'Performance Degraded' : 'Issues Detected'}
+                    </h2>
+                    <p className="text-muted-foreground">
+                      Last checked: {format(lastRefresh, 'PPp')}
+                    </p>
+                  </div>
+                </div>
+                <Button onClick={refreshHealth} disabled={refreshing} variant="outline">
+                  <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
             </CardContent>
           </Card>
-        )}
+
+          {/* Service Health Grid */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {services.map((service) => (
+              <Card key={service.name} className="relative overflow-hidden">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-medium flex items-center gap-2">
+                      {service.name === 'Database' && <Database className="h-4 w-4" />}
+                      {service.name === 'Storage' && <HardDrive className="h-4 w-4" />}
+                      {service.name === 'Authentication' && <Users className="h-4 w-4" />}
+                      {service.name === 'Edge Functions' && <Server className="h-4 w-4" />}
+                      {service.name}
+                    </CardTitle>
+                    {getStatusIcon(service.status)}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {getStatusBadge(service.status)}
+                    {service.latency && (
+                      <p className="text-sm text-muted-foreground">
+                        Latency: {service.latency}ms
+                      </p>
+                    )}
+                    {service.message && service.status !== 'healthy' && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {service.message}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Processing Metrics */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Zap className="h-5 w-5" />
+                Processing Performance
+              </CardTitle>
+              <CardDescription>Job queue and processing statistics</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {processing && (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Job Queue Status</span>
+                      <Badge variant={processing.pendingJobs > 50 ? 'destructive' : 'secondary'}>
+                        {processing.pendingJobs} pending
+                      </Badge>
+                    </div>
+                    <Progress 
+                      value={Math.min((processing.processingJobs / Math.max(processing.pendingJobs, 1)) * 100, 100)} 
+                      className="h-2"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {processing.processingJobs} currently processing
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">24h Completion</span>
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-green-500" />
+                        <span className="font-bold">{processing.completedJobs24h}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Failed</span>
+                      <span className={processing.failedJobs24h > 10 ? 'text-red-500' : 'text-muted-foreground'}>
+                        {processing.failedJobs24h}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Success rate: {processing.completedJobs24h > 0 
+                        ? Math.round((processing.completedJobs24h / (processing.completedJobs24h + processing.failedJobs24h)) * 100)
+                        : 0}%
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Avg Processing Time</span>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4" />
+                        <span className="font-bold">{processing.avgProcessingTime}s</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Throughput</span>
+                      <span>{processing.throughputPerHour}/hr</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Application Statistics */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  Document Statistics
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {appStats && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Total Documents</span>
+                      <span className="text-2xl font-bold">{appStats.totalDocuments.toLocaleString()}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Documents Today</span>
+                      <span className="font-medium">{appStats.documentsToday}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Active Users (1hr)</span>
+                      <span className="font-medium">{appStats.activeUsers}</span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5" />
+                  Error Tracking
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {appStats && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Errors Today</span>
+                      <Badge variant={appStats.recentErrors > 10 ? 'destructive' : 'secondary'}>
+                        {appStats.recentErrors}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Error Rate</span>
+                      <div className="flex items-center gap-2">
+                        {appStats.errorRate > 5 ? (
+                          <TrendingDown className="h-4 w-4 text-red-500" />
+                        ) : (
+                          <TrendingUp className="h-4 w-4 text-green-500" />
+                        )}
+                        <span className={appStats.errorRate > 5 ? 'text-red-500 font-bold' : ''}>
+                          {appStats.errorRate}%
+                        </span>
+                      </div>
+                    </div>
+                    <Button variant="outline" size="sm" className="w-full" asChild>
+                      <a href="/admin/error-logs">View Error Logs</a>
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Alerting Thresholds */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5" />
+                Alerting Thresholds
+              </CardTitle>
+              <CardDescription>Current monitoring thresholds</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="p-3 rounded-lg bg-muted/50">
+                  <p className="text-sm font-medium">Database Latency</p>
+                  <p className="text-xs text-muted-foreground">Degraded: &gt;1000ms</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/50">
+                  <p className="text-sm font-medium">Storage Latency</p>
+                  <p className="text-xs text-muted-foreground">Degraded: &gt;2000ms</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/50">
+                  <p className="text-sm font-medium">Pending Jobs</p>
+                  <p className="text-xs text-muted-foreground">Warning: &gt;50 jobs</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/50">
+                  <p className="text-sm font-medium">Error Rate</p>
+                  <p className="text-xs text-muted-foreground">Warning: &gt;5%</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ROI Analysis Tab */}
+        <TabsContent value="roi" className="space-y-6">
+          {/* Data Source Indicator */}
+          {metrics?.isProjectedData && (
+            <Card className="bg-amber-500/10 border-amber-500/30">
+              <CardContent className="py-3">
+                <p className="text-sm text-center">
+                  <Badge variant="outline" className="mr-2">Projected Data</Badge>
+                  No documents processed yet. Showing projected ROI based on {metrics.projectedVolume.toLocaleString()} annual documents and industry averages.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+        {metrics && (
+        <>
         {/* ROI Hero Section */}
         <Card className="p-8 bg-gradient-to-br from-green-500/10 to-green-600/10 border-green-500/30">
           <div className="text-center space-y-4">
@@ -723,7 +1249,8 @@ const SystemViability = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
+        </TabsContent>
+      </Tabs>
     </AdminLayout>
   );
 };
