@@ -1615,7 +1615,7 @@ const [isExporting, setIsExporting] = useState(false);
       <header className="border-b bg-card/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
         <div className="container mx-auto px-2 sm:px-4">
           <div className="flex items-center justify-between h-14 sm:h-16">
-            <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0 demo-logo">
               <img 
                 src={wisdmLogo} 
                 alt="WISDM Logo" 
@@ -1630,7 +1630,7 @@ const [isExporting, setIsExporting] = useState(false);
               </div>
             </div>
             <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              <div className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-primary/10 rounded-full border border-primary/20">
+              <div className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-primary/10 rounded-full border border-primary/20 demo-ai-badge">
                 <span className="text-xs font-semibold text-primary">⚡ AI</span>
               </div>
               <Button 
@@ -1734,12 +1734,12 @@ const [isExporting, setIsExporting] = useState(false);
 
         {selectedProjectId && selectedBatchId && (
           <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 mb-3 sm:mb-6 h-auto sm:h-12 bg-muted/50 p-0.5 sm:p-1 backdrop-blur-sm">
+            <TabsList className="grid w-full grid-cols-4 mb-3 sm:mb-6 h-auto sm:h-12 bg-muted/50 p-0.5 sm:p-1 backdrop-blur-sm demo-upload">
               <TabsTrigger value="scan" className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 py-1.5 sm:py-0 text-[10px] sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
                 <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span className="font-medium">{t('document.scan')}</span>
               </TabsTrigger>
-              <TabsTrigger value="validation" className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 py-1.5 sm:py-0 text-[10px] sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300">
+              <TabsTrigger value="validation" className="flex flex-col sm:flex-row items-center gap-0.5 sm:gap-2 py-1.5 sm:py-0 text-[10px] sm:text-sm data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md transition-all duration-300 demo-validation">
                 <Eye className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span className="font-medium hidden sm:inline">{t('validation.title')}</span>
                 <span className="font-medium sm:hidden">Valid</span>

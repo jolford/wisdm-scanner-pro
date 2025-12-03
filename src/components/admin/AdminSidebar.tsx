@@ -186,13 +186,20 @@ export function AdminSidebar() {
                   <SidebarMenu>
                     {group.items.map((item) => {
                       const Icon = item.icon;
+                      // Add demo markers for specific menu items
+                      const demoClass = 
+                        item.url === '/admin/workflow-builder' ? 'demo-workflows' :
+                        item.url === '/admin/integrations' ? 'demo-integrations' :
+                        item.url === '/admin/analytics' ? 'demo-analytics' :
+                        item.url === '/admin/credential-migration' ? 'demo-security' :
+                        '';
                       return (
                         <SidebarMenuItem key={item.title}>
                           <SidebarMenuButton asChild>
                             <NavLink
                               to={item.url}
                               end={item.end}
-                              className="flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-accent"
+                              className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-accent ${demoClass}`}
                               activeClassName="bg-primary/10 text-primary font-medium"
                             >
                               <Icon className="h-4 w-4 flex-shrink-0" />

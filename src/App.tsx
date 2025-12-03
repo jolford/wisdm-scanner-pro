@@ -10,6 +10,10 @@ import { CommandPalette } from "@/components/CommandPalette";
 import { BrowserRouter, Routes, Route, useLocation, Navigate, useNavigate } from "react-router-dom";
 import { useFileLaunch } from "@/hooks/use-file-launch";
 import { toast } from "sonner";
+import { DemoModeProvider } from "@/contexts/DemoModeContext";
+import { DemoModeToggle } from "@/components/demo/DemoModeToggle";
+import { DemoGuidedTour } from "@/components/demo/DemoGuidedTour";
+import { DemoBanner } from "@/components/demo/DemoBanner";
 import Index from "./pages/Index";
 import Queue from "./pages/Queue";
 import Auth from "./pages/Auth";
@@ -166,10 +170,11 @@ const App = () => {
     }
   }, [launchedFiles]);
   return <ErrorBoundary>
+      <DemoModeProvider>
       <I18nextProvider i18n={i18n}>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider attribute="class" defaultTheme="light">{/* Theme toggle enabled */}
-            <div className="flex flex-col min-h-screen">
+            <div className="flex flex-col min-h-screen pt-0 demo-mode-container">
             <SkipToContent />
             <Toaster />
             <Sonner />
@@ -268,7 +273,7 @@ const App = () => {
             <SheetTrigger asChild>
               <Button
                 size="icon"
-                className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-lg z-50 bg-primary hover:bg-primary/90"
+                className="fixed bottom-24 right-6 h-14 w-14 rounded-full shadow-lg z-40 bg-primary hover:bg-primary/90"
                 aria-label="Open AI Copilot"
               >
                 <Bot className="h-6 w-6" />
@@ -283,10 +288,16 @@ const App = () => {
               </div>
             </SheetContent>
           </Sheet>
+          
+          {/* Demo Mode Components */}
+          <DemoModeToggle />
+          <DemoGuidedTour />
+          <DemoBanner />
           </div>
         </ThemeProvider>
       </QueryClientProvider>
       </I18nextProvider>
+      </DemoModeProvider>
     </ErrorBoundary>;
 };
 export default App;
