@@ -17,8 +17,11 @@ export default function Install() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if already installed
-    if (window.matchMedia('(display-mode: standalone)').matches) {
+    // Only mark as installed if actually running in standalone mode (opened from installed app)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                         (window.navigator as Navigator & { standalone?: boolean }).standalone === true;
+    
+    if (isStandalone) {
       setIsInstalled(true);
     }
 
@@ -29,8 +32,15 @@ export default function Install() {
 
     window.addEventListener('beforeinstallprompt', handler);
 
+    // Listen for app installed event
+    const installedHandler = () => {
+      setIsInstalled(true);
+    };
+    window.addEventListener('appinstalled', installedHandler);
+
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', installedHandler);
     };
   }, []);
 
@@ -102,11 +112,14 @@ export default function Install() {
                 </div>
               </div>
               <div>
-                <h3 className="text-xl font-semibold mb-2">Already Installed!</h3>
+                <h3 className="text-xl font-semibold mb-2">App Running in Standalone Mode</h3>
                 <p className="text-muted-foreground">
-                  WISDM Capture Pro is installed on your device.
+                  You're viewing this from the installed app.
                 </p>
               </div>
+              <Button variant="outline" size="sm" onClick={() => setIsInstalled(false)}>
+                Show Install Instructions Anyway
+              </Button>
             </div>
           ) : (
             <>
