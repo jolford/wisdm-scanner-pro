@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertCircle, Download, Scan, CheckCircle, Loader2, RefreshCw, Settings, Monitor } from 'lucide-react';
+import { AlertCircle, Download, Scan, CheckCircle, Loader2, RefreshCw, Monitor, Usb } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Label } from '@/components/ui/label';
+import { useDynamsoftScanner } from '@/hooks/use-dynamsoft-scanner';
 
 interface PhysicalScannerProps {
   projectId?: string;
@@ -27,10 +28,36 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
   const [selectedScanner, setSelectedScanner] = useState<string>('');
   const [availableScanners, setAvailableScanners] = useState<ScannerDevice[]>([]);
   const [isDetecting, setIsDetecting] = useState(false);
-  const [scanMode, setScanMode] = useState<'desktop-app' | 'browser'>('browser');
+  const [dynamsoftKey, setDynamsoftKey] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Dynamsoft TWAIN scanner hook
+  const {
+    isReady: isDynamsoftReady,
+    isLoading: isDynamsoftLoading,
+    error: dynamsoftError,
+    scanners: twainScanners,
+    scan: dynamsoftScan,
+    refreshScanners: refreshTwainScanners
+  } = useDynamsoftScanner(dynamsoftKey);
+
+  // Fetch Dynamsoft license key
+  useEffect(() => {
+    const fetchLicenseKey = async () => {
+      try {
+        const { data, error } = await supabase.functions.invoke('get-dynamsoft-key');
+        if (error) throw error;
+        if (data?.licenseKey) {
+          setDynamsoftKey(data.licenseKey);
+        }
+      } catch (err) {
+        console.log('Could not fetch Dynamsoft key:', err);
+      }
+    };
+    fetchLicenseKey();
+  }, []);
 
   // Check if desktop app is installed
   useEffect(() => {
@@ -64,6 +91,17 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
   const detectScanners = async () => {
     setIsDetecting(true);
     const detected: ScannerDevice[] = [];
+
+    // Add TWAIN scanners from Dynamsoft (priority)
+    if (isDynamsoftReady && twainScanners.length > 0) {
+      twainScanners.forEach((scanner) => {
+        detected.push({
+          id: scanner.id,
+          name: `🖨️ ${scanner.name}`,
+          type: 'twain'
+        });
+      });
+    }
 
     // Add browser capture option (always available)
     detected.push({
@@ -101,21 +139,26 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
     setAvailableScanners(detected);
     
     if (detected.length > 0 && !selectedScanner) {
-      setSelectedScanner(detected[0].id);
+      // Prefer TWAIN scanner if available
+      const twainScanner = detected.find(s => s.type === 'twain');
+      setSelectedScanner(twainScanner?.id || detected[0].id);
     }
 
     setIsDetecting(false);
     
+    const twainCount = detected.filter(s => s.type === 'twain').length;
     toast({
       title: 'Scanner Detection Complete',
-      description: `Found ${detected.length} scanner option(s)`,
+      description: twainCount > 0 
+        ? `Found ${twainCount} TWAIN scanner(s) and ${detected.length - twainCount} other option(s)`
+        : `Found ${detected.length} scanner option(s)`,
     });
   };
 
-  // Initial detection
+  // Initial detection - also refresh when Dynamsoft is ready
   useEffect(() => {
     detectScanners();
-  }, [isAppInstalled]);
+  }, [isAppInstalled, isDynamsoftReady, twainScanners.length]);
 
   const handleBrowserCapture = () => {
     if (fileInputRef.current) {
@@ -211,6 +254,37 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
     }
   };
 
+  const handleTwainScan = async () => {
+    setIsScanning(true);
+
+    try {
+      const blobs = await dynamsoftScan();
+      
+      // Convert blobs to Files
+      const files = blobs.map((blob, index) => 
+        new File([blob], `scan-${Date.now()}-${index}.png`, { type: 'image/png' })
+      );
+
+      toast({
+        title: 'Scan Complete',
+        description: `${files.length} page(s) scanned successfully`,
+      });
+
+      if (onScanComplete) {
+        onScanComplete(files);
+      }
+    } catch (error) {
+      console.error('TWAIN scan error:', error);
+      toast({
+        title: 'Scan Failed',
+        description: error instanceof Error ? error.message : 'Failed to scan document.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   const handleScan = () => {
     const scanner = availableScanners.find(s => s.id === selectedScanner);
     
@@ -223,7 +297,9 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
       return;
     }
 
-    if (scanner.type === 'desktop-app') {
+    if (scanner.type === 'twain') {
+      handleTwainScan();
+    } else if (scanner.type === 'desktop-app') {
       handleDesktopScan();
     } else {
       handleBrowserCapture();
@@ -255,11 +331,14 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
             <Button
               variant="ghost"
               size="sm"
-              onClick={detectScanners}
-              disabled={isDetecting}
+              onClick={() => {
+                detectScanners();
+                if (isDynamsoftReady) refreshTwainScanners();
+              }}
+              disabled={isDetecting || isDynamsoftLoading}
               className="h-8"
             >
-              {isDetecting ? (
+              {isDetecting || isDynamsoftLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <RefreshCw className="h-4 w-4" />
@@ -276,7 +355,9 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
               {availableScanners.map((scanner) => (
                 <SelectItem key={scanner.id} value={scanner.id}>
                   <div className="flex items-center gap-2">
-                    {scanner.type === 'desktop-app' ? (
+                    {scanner.type === 'twain' ? (
+                      <Usb className="h-4 w-4 text-green-600" />
+                    ) : scanner.type === 'desktop-app' ? (
                       <Monitor className="h-4 w-4 text-primary" />
                     ) : (
                       <Scan className="h-4 w-4 text-muted-foreground" />
@@ -293,6 +374,28 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
             </SelectContent>
           </Select>
 
+          {/* Dynamsoft TWAIN status */}
+          {isDynamsoftLoading && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>Initializing TWAIN scanner support...</span>
+            </div>
+          )}
+
+          {isDynamsoftReady && twainScanners.length > 0 && (
+            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+              <CheckCircle className="h-4 w-4" />
+              <span>{twainScanners.length} TWAIN scanner(s) detected</span>
+            </div>
+          )}
+
+          {dynamsoftError && !isDynamsoftLoading && (
+            <div className="flex items-center gap-2 text-sm text-amber-600">
+              <AlertCircle className="h-4 w-4" />
+              <span>TWAIN: {dynamsoftError}</span>
+            </div>
+          )}
+
           {/* Status indicators */}
           {isAppInstalled === true && (
             <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
@@ -301,14 +404,14 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
             </div>
           )}
 
-          {isAppInstalled === false && (
+          {isAppInstalled === false && !isDynamsoftReady && (
             <div className="bg-muted/50 rounded-lg p-4 space-y-3">
               <div className="flex items-start gap-2">
                 <AlertCircle className="h-4 w-4 text-amber-500 mt-0.5" />
                 <div className="text-sm">
-                  <p className="font-medium mb-1">Desktop App Not Installed</p>
+                  <p className="font-medium mb-1">No USB Scanners Detected</p>
                   <p className="text-muted-foreground text-xs">
-                    For Ricoh/Fujitsu USB scanners, install the desktop app.
+                    Connect a TWAIN-compatible scanner and refresh, or install the desktop app for Ricoh/Fujitsu scanners.
                   </p>
                 </div>
               </div>
