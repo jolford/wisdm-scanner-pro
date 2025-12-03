@@ -22,23 +22,25 @@ interface UseDynamsoftScannerReturn {
 // Global singleton to persist across component remounts
 let globalDwt: WebTwain | null = null;
 let globalInitPromise: Promise<WebTwain> | null = null;
+let isInitializing = false;
 
 export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScannerReturn => {
-  const [isReady, setIsReady] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isReady, setIsReady] = useState(!!globalDwt);
+  const [isLoading, setIsLoading] = useState(!globalDwt && !!licenseKey);
   const [error, setError] = useState<string | null>(null);
   const [scanners, setScanners] = useState<ScannerInfo[]>([]);
   const [selectedScanner, setSelectedScanner] = useState<string>('');
   const mountedRef = useRef(true);
+  const scannersLoadedRef = useRef(false);
 
-  const refreshScannerList = useCallback(async () => {
+  // Stable refresh function that doesn't depend on selectedScanner
+  const refreshScannerList = useCallback(() => {
     if (!globalDwt) {
       console.log('DWT not initialized');
       return;
     }
 
-    try {
-      const sources = await globalDwt.GetSourceNamesAsync(false);
+    globalDwt.GetSourceNamesAsync(false).then((sources: string[]) => {
       console.log('GetSourceNamesAsync result:', sources);
       
       const detected: ScannerInfo[] = sources.map((name: string, index: number) => ({
@@ -47,14 +49,14 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
         index
       }));
       
-      if (mountedRef.current) {
-        setScanners(detected);
-        
-        if (detected.length > 0 && !selectedScanner) {
-          setSelectedScanner(detected[0].id);
-        }
+      setScanners(detected);
+      
+      // Only set default scanner on first load
+      if (detected.length > 0 && !scannersLoadedRef.current) {
+        scannersLoadedRef.current = true;
+        setSelectedScanner(detected[0].id);
       }
-    } catch (err) {
+    }).catch((err: Error) => {
       console.error('GetSourceNamesAsync error:', err);
       // Fallback to sync method
       try {
@@ -68,20 +70,17 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
             index: i
           });
         }
-        if (mountedRef.current) {
-          setScanners(detected);
-          if (detected.length > 0 && !selectedScanner) {
-            setSelectedScanner(detected[0].id);
-          }
+        setScanners(detected);
+        if (detected.length > 0 && !scannersLoadedRef.current) {
+          scannersLoadedRef.current = true;
+          setSelectedScanner(detected[0].id);
         }
       } catch (syncErr) {
         console.error('Sync scanner enumeration failed:', syncErr);
-        if (mountedRef.current) {
-          setError('Cannot communicate with scanner service');
-        }
+        setError('Cannot communicate with scanner service');
       }
-    }
-  }, [selectedScanner]);
+    });
+  }, []); // No dependencies - stable reference
 
   // Initialize Dynamsoft Web TWAIN
   useEffect(() => {
@@ -98,53 +97,59 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
       console.log('Using existing DWT instance');
       setIsReady(true);
       setIsLoading(false);
-      refreshScannerList();
+      if (!scannersLoadedRef.current) {
+        refreshScannerList();
+      }
       return;
     }
 
-    // If initialization is in progress, wait for it
-    if (globalInitPromise) {
-      console.log('Waiting for existing DWT initialization...');
-      globalInitPromise.then(() => {
-        if (mountedRef.current && globalDwt) {
-          setIsReady(true);
-          setIsLoading(false);
-          refreshScannerList();
-        }
-      }).catch((err) => {
-        if (mountedRef.current) {
-          setError(err.message);
-          setIsLoading(false);
-        }
-      });
+    // If initialization is already in progress, don't start another
+    if (isInitializing || globalInitPromise) {
+      console.log('DWT initialization already in progress...');
+      if (globalInitPromise) {
+        globalInitPromise.then(() => {
+          if (mountedRef.current) {
+            setIsReady(true);
+            setIsLoading(false);
+            refreshScannerList();
+          }
+        }).catch((err) => {
+          if (mountedRef.current) {
+            setError(err.message);
+            setIsLoading(false);
+          }
+        });
+      }
       return;
     }
 
     // Start new initialization
+    isInitializing = true;
+    setIsLoading(true);
+    
+    console.log('Starting new DWT initialization...');
+    
+    // Configure Dynamsoft
+    Dynamsoft.DWT.ProductKey = licenseKey;
+    Dynamsoft.DWT.ResourcesPath = 'https://unpkg.com/dwt@latest/dist';
+    Dynamsoft.DWT.AutoLoad = false;
+
+    // Create hidden container
+    let container = document.getElementById('dwtcontrolContainer');
+    if (!container) {
+      container = document.createElement('div');
+      container.id = 'dwtcontrolContainer';
+      container.style.display = 'none';
+      document.body.appendChild(container);
+    }
+
     globalInitPromise = new Promise<WebTwain>((resolve, reject) => {
-      console.log('Starting new DWT initialization...');
-      
-      // Configure Dynamsoft
-      Dynamsoft.DWT.ProductKey = licenseKey;
-      Dynamsoft.DWT.ResourcesPath = 'https://unpkg.com/dwt@latest/dist';
-      Dynamsoft.DWT.AutoLoad = false;
-
-      // Create hidden container
-      let container = document.getElementById('dwtcontrolContainer');
-      if (!container) {
-        container = document.createElement('div');
-        container.id = 'dwtcontrolContainer';
-        container.style.display = 'none';
-        document.body.appendChild(container);
-      }
-
-      console.log('Creating DWT object...');
-
       Dynamsoft.DWT.CreateDWTObjectEx(
         { WebTwainId: 'dwtObject' },
         (dwt: WebTwain) => {
           console.log('DWT object created successfully');
           globalDwt = dwt;
+          isInitializing = false;
           resolve(dwt);
         },
         (err: { code: number; message: string }) => {
@@ -157,6 +162,7 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
             errorMsg = 'License expired or invalid';
           }
           
+          isInitializing = false;
           globalInitPromise = null;
           reject(new Error(errorMsg));
         }
@@ -178,7 +184,6 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
 
     return () => {
       mountedRef.current = false;
-      // Don't destroy the global instance on unmount
     };
   }, [licenseKey, refreshScannerList]);
 
@@ -250,7 +255,6 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
       }
       
       if (errorMessage.toLowerCase().includes('destroyed')) {
-        // Reset global state and prompt refresh
         globalDwt = null;
         globalInitPromise = null;
         throw new Error('Scanner connection lost. Please refresh the page and try again.');
