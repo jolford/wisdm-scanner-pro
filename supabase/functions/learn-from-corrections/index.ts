@@ -85,18 +85,20 @@ serve(async (req) => {
       await supabaseClient.from('field_learning_data').insert(learningRecords);
     }
 
-    // Update or create ML template with learned corrections
-    const { data: template } = await supabaseClient
+    // FIXED: Query for ANY active template for this project (consolidate per project, not per document_type)
+    const { data: templates } = await supabaseClient
       .from('ml_document_templates')
       .select('*')
       .eq('project_id', projectId)
-      .eq('document_type', document.document_type || 'other')
       .eq('is_active', true)
+      .order('training_data_count', { ascending: false })
       .limit(1);
 
-    if (template && template.length > 0) {
+    const template = templates?.[0];
+
+    if (template) {
       // Update existing template
-      const currentPatterns = template[0].field_patterns as any;
+      const currentPatterns = (template.field_patterns as any) || {};
       
       for (const correction of corrections) {
         if (!currentPatterns[correction.field_name]) {
@@ -118,14 +120,14 @@ serve(async (req) => {
         .from('ml_document_templates')
         .update({
           field_patterns: currentPatterns,
-          training_data_count: template[0].training_data_count + 1,
+          training_data_count: template.training_data_count + 1,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', template[0].id);
+        .eq('id', template.id);
 
-      console.log('Updated ML template with learned corrections');
+      console.log('Updated ML template:', template.id, 'with learned corrections');
     } else {
-      // Create new template
+      // Create new template - use consistent naming
       const fieldPatterns: any = {};
       for (const correction of corrections) {
         fieldPatterns[correction.field_name] = {
@@ -139,14 +141,14 @@ serve(async (req) => {
 
       await supabaseClient.from('ml_document_templates').insert({
         project_id: projectId,
-        template_name: `Learned from ${document.document_type || 'documents'}`,
-        document_type: document.document_type || 'other',
+        template_name: 'Learned from documents',  // Consistent name for all projects
+        document_type: 'other',  // Default type - consolidated
         field_patterns: fieldPatterns,
         training_data_count: 1,
         is_active: true,
       });
 
-      console.log('Created new ML template from corrections');
+      console.log('Created new ML template from corrections for project:', projectId);
     }
 
     return new Response(JSON.stringify({
