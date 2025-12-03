@@ -74,25 +74,13 @@ export const InteractiveDocumentViewer = ({
   const isPdf = typeof imageUrl === 'string' && imageUrl.toLowerCase().includes('.pdf');
   
   // Stabilize the image URL to prevent flashing on re-renders
-  const [stableImageUrl, setStableImageUrl] = useState(imageUrl);
-  useEffect(() => {
-    // Only update if the base path changes, not just query params (signed URL tokens)
-    const getBasePath = (url: string) => {
-      try {
-        const u = new URL(url);
-        return u.origin + u.pathname;
-      } catch {
-        return url.split('?')[0];
-      }
-    };
-    
-    const currentBase = getBasePath(stableImageUrl || '');
-    const newBase = getBasePath(imageUrl || '');
-    
-    if (currentBase !== newBase || !stableImageUrl) {
-      setStableImageUrl(imageUrl);
-    }
-  }, [imageUrl]);
+  const stableImageUrl = useMemo(() => imageUrl, [
+    // Only change when the base path changes, ignore query params (signed URL tokens)
+    imageUrl?.split('?')[0]
+  ]);
+  
+  // Track which URL we've already loaded to prevent re-loading
+  const loadedUrlRef = useRef<string | null>(null);
   
   // Enhanced hooks
   const { preloadImage, getCachedImage } = useDocumentCache();
@@ -108,11 +96,18 @@ export const InteractiveDocumentViewer = ({
     generateThumbnail,
     getPageText
   } = usePDFViewer(isPdf ? stableImageUrl : null);
+  
   // Load image with caching (only for non-PDF images)
   useEffect(() => {
     if (!stableImageUrl || isPdf) return;
     
+    // Skip if we've already loaded this URL
+    const baseUrl = stableImageUrl.split('?')[0];
+    if (loadedUrlRef.current === baseUrl) return;
+    
     setImageLoading(true);
+    loadedUrlRef.current = baseUrl;
+    
     preloadImage(stableImageUrl)
       .then((img) => {
         setImageDimensions({ width: img.width, height: img.height });
@@ -121,8 +116,9 @@ export const InteractiveDocumentViewer = ({
       .catch((err) => {
         console.error('Error preloading image:', err);
         setImageLoading(false);
+        loadedUrlRef.current = null; // Allow retry on error
       });
-  }, [stableImageUrl, isPdf, preloadImage]);
+  }, [stableImageUrl, isPdf]); // Removed preloadImage from deps
 
   // Keep canvas in sync with image size (handles page/container resize) - images only
   useEffect(() => {
