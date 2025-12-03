@@ -22,13 +22,15 @@ import {
   AlertCircle,
   FileText,
   Users,
-  Loader2
+  Loader2,
+  Gauge
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
+import { SLAMonitoring } from "@/components/admin/SLAMonitoring";
 
 interface ServiceStatus {
   name: string;
@@ -576,10 +578,14 @@ const SystemViability = () => {
       description="Monitor system health, performance, and ROI"
     >
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
+        <TabsList className="grid w-full grid-cols-3 max-w-lg">
           <TabsTrigger value="health" className="flex items-center gap-2">
             <Activity className="h-4 w-4" />
             System Health
+          </TabsTrigger>
+          <TabsTrigger value="sla" className="flex items-center gap-2">
+            <Gauge className="h-4 w-4" />
+            SLA Monitoring
           </TabsTrigger>
           <TabsTrigger value="roi" className="flex items-center gap-2">
             <TrendingUp className="h-4 w-4" />
@@ -832,6 +838,11 @@ const SystemViability = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* SLA Monitoring Tab */}
+        <TabsContent value="sla" className="space-y-6">
+          <SLAMonitoring />
         </TabsContent>
 
         {/* ROI Analysis Tab */}
