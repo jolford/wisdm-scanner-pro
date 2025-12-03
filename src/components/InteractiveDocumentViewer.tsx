@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -73,11 +73,8 @@ export const InteractiveDocumentViewer = ({
   const cardRef = useRef<HTMLDivElement>(null);
   const isPdf = typeof imageUrl === 'string' && imageUrl.toLowerCase().includes('.pdf');
   
-  // Stabilize the image URL to prevent flashing on re-renders
-  const stableImageUrl = useMemo(() => imageUrl, [
-    // Only change when the base path changes, ignore query params (signed URL tokens)
-    imageUrl?.split('?')[0]
-  ]);
+  // Use the image URL directly - stabilization was causing issues
+  const displayImageUrl = imageUrl;
   
   // Track which URL we've already loaded to prevent re-loading
   const loadedUrlRef = useRef<string | null>(null);
@@ -95,20 +92,20 @@ export const InteractiveDocumentViewer = ({
     renderPage,
     generateThumbnail,
     getPageText
-  } = usePDFViewer(isPdf ? stableImageUrl : null);
+  } = usePDFViewer(isPdf ? displayImageUrl : null);
   
   // Load image with caching (only for non-PDF images)
   useEffect(() => {
-    if (!stableImageUrl || isPdf) return;
+    if (!displayImageUrl || isPdf) return;
     
     // Skip if we've already loaded this URL
-    const baseUrl = stableImageUrl.split('?')[0];
+    const baseUrl = displayImageUrl.split('?')[0];
     if (loadedUrlRef.current === baseUrl) return;
     
     setImageLoading(true);
     loadedUrlRef.current = baseUrl;
     
-    preloadImage(stableImageUrl)
+    preloadImage(displayImageUrl)
       .then((img) => {
         setImageDimensions({ width: img.width, height: img.height });
         setImageLoading(false);
@@ -118,7 +115,7 @@ export const InteractiveDocumentViewer = ({
         setImageLoading(false);
         loadedUrlRef.current = null; // Allow retry on error
       });
-  }, [stableImageUrl, isPdf]); // Removed preloadImage from deps
+  }, [displayImageUrl, isPdf]); // Removed preloadImage from deps
 
   // Keep canvas in sync with image size (handles page/container resize) - images only
   useEffect(() => {
@@ -733,7 +730,7 @@ export const InteractiveDocumentViewer = ({
               <>
                 <img
                   ref={imageRef}
-                  src={stableImageUrl}
+                  src={displayImageUrl}
                   alt="Document"
                   className="max-w-none object-contain transition-all duration-300 ease-out select-none shadow-2xl rounded-lg border-2 border-primary/10 hover:border-primary/30 hover:shadow-primary/20"
                   style={{
