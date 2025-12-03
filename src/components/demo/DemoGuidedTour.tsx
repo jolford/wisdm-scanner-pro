@@ -26,41 +26,46 @@ export function DemoGuidedTour() {
   useEffect(() => {
     if (!isTourActive || !currentStepData) return;
 
-    const targetElement = document.querySelector(currentStepData.targetSelector);
-    
-    if (targetElement) {
-      const rect = targetElement.getBoundingClientRect();
-      setHighlightRect(rect);
+    // Use requestAnimationFrame to prevent blocking the main thread
+    const timeoutId = setTimeout(() => {
+      const targetElement = document.querySelector(currentStepData.targetSelector);
       
-      // Calculate tooltip position based on target element and preferred position
-      const padding = 20;
-      let top = '50%';
-      let left = '50%';
-      
-      switch (currentStepData.position) {
-        case 'top':
-          top = `${rect.top - padding}px`;
-          left = `${rect.left + rect.width / 2}px`;
-          break;
-        case 'bottom':
-          top = `${rect.bottom + padding}px`;
-          left = `${rect.left + rect.width / 2}px`;
-          break;
-        case 'left':
-          top = `${rect.top + rect.height / 2}px`;
-          left = `${rect.left - padding}px`;
-          break;
-        case 'right':
-          top = `${rect.top + rect.height / 2}px`;
-          left = `${rect.right + padding}px`;
-          break;
+      if (targetElement) {
+        const rect = targetElement.getBoundingClientRect();
+        setHighlightRect(rect);
+        
+        // Calculate tooltip position based on target element and preferred position
+        const padding = 20;
+        let top = '50%';
+        let left = '50%';
+        
+        switch (currentStepData.position) {
+          case 'top':
+            top = `${rect.top - padding}px`;
+            left = `${rect.left + rect.width / 2}px`;
+            break;
+          case 'bottom':
+            top = `${rect.bottom + padding}px`;
+            left = `${rect.left + rect.width / 2}px`;
+            break;
+          case 'left':
+            top = `${rect.top + rect.height / 2}px`;
+            left = `${rect.left - padding}px`;
+            break;
+          case 'right':
+            top = `${rect.top + rect.height / 2}px`;
+            left = `${rect.right + padding}px`;
+            break;
+        }
+        
+        setPosition({ top, left });
+      } else {
+        setHighlightRect(null);
+        setPosition({ top: '50%', left: '50%' });
       }
-      
-      setPosition({ top, left });
-    } else {
-      setHighlightRect(null);
-      setPosition({ top: '50%', left: '50%' });
-    }
+    }, 100);
+
+    return () => clearTimeout(timeoutId);
   }, [isTourActive, currentStep, currentStepData]);
 
   if (!isTourActive) return null;
