@@ -289,10 +289,11 @@ const App = () => {
             </SheetContent>
           </Sheet>
           
-          {/* Demo Mode Components */}
+          {/* Demo Mode Components - Disabled for now
           <DemoModeToggle />
           <DemoGuidedTour />
           <DemoBanner />
+          */}
           </div>
         </ThemeProvider>
       </QueryClientProvider>
