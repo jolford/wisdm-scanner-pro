@@ -65,6 +65,7 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
         }
 
         // Load DWT
+        console.log('Creating DWT object with license:', licenseKey?.substring(0, 20) + '...');
         Dynamsoft.DWT.CreateDWTObjectEx(
           { WebTwainId: 'dwtObject' },
           (dwt: WebTwain) => {
@@ -72,14 +73,23 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
             setIsReady(true);
             setIsLoading(false);
             console.log('Dynamsoft Web TWAIN initialized successfully');
+            console.log('SourceCount:', dwt.SourceCount);
+            
+            // List all detected scanners
+            for (let i = 0; i < dwt.SourceCount; i++) {
+              console.log(`Scanner ${i}:`, dwt.GetSourceNameItems(i));
+            }
+            
             refreshScannerList();
           },
           (error: { code: number; message: string }) => {
-            console.error('DWT init error:', error.message);
+            console.error('DWT init error code:', error.code, 'message:', error.message);
             if (error.message.includes('service') || error.code === -2300) {
               setError('Dynamsoft Service not responding. Try restarting the service.');
+            } else if (error.code === -2319) {
+              setError('License expired or invalid. Please contact support.');
             } else {
-              setError(error.message);
+              setError(`Init failed (${error.code}): ${error.message}`);
             }
             setIsLoading(false);
           }
