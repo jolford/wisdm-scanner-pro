@@ -232,58 +232,103 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
 
       for (let i = 0; i < imageCount; i++) {
         try {
-          // Try multiple methods to get image data
           let blob: Blob | null = null;
           
-          // Method 1: Try GetImageURL (returns data URL)
+          // Method 1: Use canvas to extract image data directly (no network)
           try {
-            const dataUrl = globalDwt!.GetImageURL(i, 300, 300);
-            if (dataUrl && dataUrl.startsWith('data:')) {
-              const base64 = dataUrl.split(',')[1];
-              const byteChars = atob(base64);
-              const byteNums = new Array(byteChars.length);
-              for (let j = 0; j < byteChars.length; j++) {
-                byteNums[j] = byteChars.charCodeAt(j);
+            const width = globalDwt!.GetImageWidth(i);
+            const height = globalDwt!.GetImageHeight(i);
+            
+            if (width > 0 && height > 0) {
+              // Create a temporary canvas and draw the image
+              const canvas = document.createElement('canvas');
+              canvas.width = width;
+              canvas.height = height;
+              const ctx = canvas.getContext('2d');
+              
+              if (ctx) {
+                // Get image data using GetImageData (synchronous, no network)
+                // @ts-ignore - DWT method exists but not in types
+                const imageData = globalDwt!['GetImageData'](i, 0, 0, width, height);
+                if (imageData && imageData.length > 0) {
+                  const imgData = ctx.createImageData(width, height);
+                  // DWT returns RGBA data
+                  for (let p = 0; p < imageData.length; p++) {
+                    imgData.data[p] = imageData[p];
+                  }
+                  ctx.putImageData(imgData, 0, 0);
+                  
+                  // Convert canvas to blob
+                  const dataUrl = canvas.toDataURL('image/png');
+                  const base64 = dataUrl.split(',')[1];
+                  const byteChars = atob(base64);
+                  const byteNums = new Array(byteChars.length);
+                  for (let j = 0; j < byteChars.length; j++) {
+                    byteNums[j] = byteChars.charCodeAt(j);
+                  }
+                  blob = new Blob([new Uint8Array(byteNums)], { type: 'image/png' });
+                  console.log(`Method 1 (GetImageData+Canvas) succeeded for image ${i + 1}, size: ${blob.size}`);
+                }
               }
-              blob = new Blob([new Uint8Array(byteNums)], { type: 'image/jpeg' });
-              console.log(`Method 1 (GetImageURL) succeeded for image ${i + 1}`);
             }
           } catch (e1) {
-            console.log('GetImageURL failed, trying ConvertToBase64...', e1);
+            console.log('GetImageData method failed:', e1);
           }
           
-          // Method 2: Try ConvertToBase64 if Method 1 failed
+          // Method 2: Try SaveToBase64 (synchronous string return)
+          if (!blob) {
+            try {
+              // @ts-ignore - SaveToBase64 exists but may not be in types
+              const base64Str = globalDwt!.SaveToBase64(i, Dynamsoft.DWT.EnumDWT_ImageType.IT_PNG);
+              if (base64Str && typeof base64Str === 'string' && base64Str.length > 100) {
+                const byteChars = atob(base64Str);
+                const byteNums = new Array(byteChars.length);
+                for (let j = 0; j < byteChars.length; j++) {
+                  byteNums[j] = byteChars.charCodeAt(j);
+                }
+                blob = new Blob([new Uint8Array(byteNums)], { type: 'image/png' });
+                console.log(`Method 2 (SaveToBase64) succeeded for image ${i + 1}`);
+              }
+            } catch (e2) {
+              console.log('SaveToBase64 failed:', e2);
+            }
+          }
+
+          // Method 3: ConvertToBase64 async (last resort)
           if (!blob) {
             try {
               const base64Result = await new Promise<string>((res, rej) => {
+                const timeout = setTimeout(() => rej(new Error('Timeout')), 5000);
                 globalDwt!.ConvertToBase64(
                   [i],
                   Dynamsoft.DWT.EnumDWT_ImageType.IT_PNG,
                   (result: { getData: (index: number, count: number) => string; getLength: () => number }) => {
-                    const base64String = result.getData(0, result.getLength());
-                    res(base64String);
+                    clearTimeout(timeout);
+                    res(result.getData(0, result.getLength()));
                   },
-                  (errorCode: number, errorString: string) => rej(new Error(`${errorCode}: ${errorString}`))
+                  (errorCode: number, errorString: string) => {
+                    clearTimeout(timeout);
+                    rej(new Error(`${errorCode}: ${errorString}`));
+                  }
                 );
               });
               
-              const byteCharacters = atob(base64Result);
-              const byteNumbers = new Array(byteCharacters.length);
-              for (let j = 0; j < byteCharacters.length; j++) {
-                byteNumbers[j] = byteCharacters.charCodeAt(j);
+              const byteChars = atob(base64Result);
+              const byteNums = new Array(byteChars.length);
+              for (let j = 0; j < byteChars.length; j++) {
+                byteNums[j] = byteChars.charCodeAt(j);
               }
-              blob = new Blob([new Uint8Array(byteNumbers)], { type: 'image/png' });
-              console.log(`Method 2 (ConvertToBase64) succeeded for image ${i + 1}`);
-            } catch (e2) {
-              console.log('ConvertToBase64 failed', e2);
+              blob = new Blob([new Uint8Array(byteNums)], { type: 'image/png' });
+              console.log(`Method 3 (ConvertToBase64) succeeded for image ${i + 1}`);
+            } catch (e3) {
+              console.log('ConvertToBase64 failed:', e3);
             }
           }
           
           if (blob && blob.size > 0) {
             blobs.push(blob);
-            console.log(`Image ${i + 1} converted successfully, size: ${blob.size} bytes`);
           } else {
-            console.error(`Failed to convert image ${i + 1}`);
+            console.error(`Failed to convert image ${i + 1} - all methods failed`);
           }
         } catch (e) {
           console.error('Error converting image:', e);
