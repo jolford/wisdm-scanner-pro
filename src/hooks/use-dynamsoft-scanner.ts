@@ -46,6 +46,17 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
         // Use CDN for resources
         Dynamsoft.DWT.ResourcesPath = 'https://unpkg.com/dwt@latest/dist';
         Dynamsoft.DWT.AutoLoad = false;
+        
+        // CRITICAL: Configure SSL for HTTPS pages
+        // The service listens on port 18623 for SSL connections
+        const isHttps = window.location.protocol === 'https:';
+        if (isHttps) {
+          console.log('HTTPS detected - configuring SSL connection to Dynamsoft Service');
+          // @ts-ignore - IfSSL exists but may not be in types
+          Dynamsoft.DWT.IfSSL = true;
+          // @ts-ignore - ServiceInstallerLocation for SSL
+          Dynamsoft.DWT.ServiceInstallerLocation = 'https://unpkg.com/dwt@latest/dist';
+        }
 
         // Create container if not exists
         let container = document.getElementById(containerRef.current);
@@ -65,15 +76,24 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
             dwtRef.current = dwt;
             setIsReady(true);
             setIsLoading(false);
-            console.log('Dynamsoft initialized. SourceCount:', dwt.SourceCount);
             
-            // List all detected scanners
-            for (let i = 0; i < dwt.SourceCount; i++) {
-              console.log(`Scanner ${i}:`, dwt.GetSourceNameItems(i));
-            }
-            
-            if (dwt.SourceCount === 0) {
-              console.log('No TWAIN scanners found. Ensure scanner has TWAIN driver installed.');
+            // Wrap SourceCount access in try-catch - can throw JSON parse errors
+            try {
+              const sourceCount = dwt.SourceCount;
+              console.log('Dynamsoft initialized. SourceCount:', sourceCount);
+              
+              // List all detected scanners
+              for (let i = 0; i < sourceCount; i++) {
+                console.log(`Scanner ${i}:`, dwt.GetSourceNameItems(i));
+              }
+              
+              if (sourceCount === 0) {
+                console.log('No TWAIN scanners found. Ensure scanner has TWAIN driver installed.');
+              }
+            } catch (sourceErr) {
+              console.error('Error accessing scanner sources:', sourceErr);
+              // SDK initialized but service communication may be unstable
+              console.log('Dynamsoft SDK ready but scanner enumeration failed. Try refreshing.');
             }
             
             refreshScannerList();
@@ -111,19 +131,37 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
   }, [licenseKey]);
 
   const refreshScannerList = useCallback(() => {
-    if (!dwtRef.current) return;
+    if (!dwtRef.current) {
+      console.log('DWT not initialized, cannot refresh scanner list');
+      return;
+    }
 
     try {
-      const count = dwtRef.current.SourceCount;
+      // SourceCount can throw JSON parse errors if service communication fails
+      let count = 0;
+      try {
+        count = dwtRef.current.SourceCount;
+      } catch (countErr) {
+        console.error('Error getting SourceCount:', countErr);
+        setError('Scanner service communication error. Please restart Dynamsoft Service and refresh the page.');
+        return;
+      }
+      
+      console.log('SourceCount:', count);
       const detected: ScannerInfo[] = [];
 
       for (let i = 0; i < count; i++) {
-        const name = dwtRef.current.GetSourceNameItems(i);
-        detected.push({
-          id: `twain-${i}`,
-          name: name || `Scanner ${i + 1}`,
-          index: i
-        });
+        try {
+          const name = dwtRef.current.GetSourceNameItems(i);
+          console.log(`Found scanner ${i}:`, name);
+          detected.push({
+            id: `twain-${i}`,
+            name: name || `Scanner ${i + 1}`,
+            index: i
+          });
+        } catch (nameErr) {
+          console.error(`Error getting scanner name for index ${i}:`, nameErr);
+        }
       }
 
       setScanners(detected);
@@ -131,8 +169,13 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
       if (detected.length > 0 && !selectedScanner) {
         setSelectedScanner(detected[0].id);
       }
+      
+      if (detected.length === 0) {
+        console.log('No TWAIN scanners detected. Check: 1) Scanner connected, 2) PaperStream TWAIN driver installed, 3) Restart Dynamsoft Service');
+      }
     } catch (err) {
-      console.error('Error getting scanners:', err);
+      console.error('Error refreshing scanner list:', err);
+      setError('Failed to enumerate scanners. Try restarting Dynamsoft Service.');
     }
   }, [selectedScanner]);
 
