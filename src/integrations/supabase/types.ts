@@ -58,6 +58,146 @@ export type Database = {
           },
         ]
       }
+      api_key_usage: {
+        Row: {
+          api_key_id: string
+          created_at: string
+          endpoint: string
+          id: string
+          ip_address: string | null
+          method: string
+          response_time_ms: number | null
+          status_code: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          api_key_id: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          ip_address?: string | null
+          method: string
+          response_time_ms?: number | null
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          api_key_id?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          ip_address?: string | null
+          method?: string
+          response_time_ms?: number | null
+          status_code?: number | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_key_usage_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      api_keys: {
+        Row: {
+          allowed_project_ids: string[] | null
+          created_at: string
+          created_by: string
+          customer_id: string
+          description: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          last_used_ip: string | null
+          name: string
+          rate_limit_per_day: number
+          rate_limit_per_hour: number
+          rate_limit_per_minute: number
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          rotated_at: string | null
+          rotated_from_key_id: string | null
+          scope: Database["public"]["Enums"]["api_key_scope"]
+          updated_at: string
+          usage_count: number
+        }
+        Insert: {
+          allowed_project_ids?: string[] | null
+          created_at?: string
+          created_by: string
+          customer_id: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          last_used_ip?: string | null
+          name: string
+          rate_limit_per_day?: number
+          rate_limit_per_hour?: number
+          rate_limit_per_minute?: number
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          rotated_at?: string | null
+          rotated_from_key_id?: string | null
+          scope?: Database["public"]["Enums"]["api_key_scope"]
+          updated_at?: string
+          usage_count?: number
+        }
+        Update: {
+          allowed_project_ids?: string[] | null
+          created_at?: string
+          created_by?: string
+          customer_id?: string
+          description?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          last_used_ip?: string | null
+          name?: string
+          rate_limit_per_day?: number
+          rate_limit_per_hour?: number
+          rate_limit_per_minute?: number
+          revocation_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          rotated_at?: string | null
+          rotated_from_key_id?: string | null
+          scope?: Database["public"]["Enums"]["api_key_scope"]
+          updated_at?: string
+          usage_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_keys_rotated_from_key_id_fkey"
+            columns: ["rotated_from_key_id"]
+            isOneToOne: false
+            referencedRelation: "api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_trail: {
         Row: {
           action_type: string
@@ -3314,6 +3454,7 @@ export type Database = {
         }
         Returns: number
       }
+      check_api_key_rate_limit: { Args: { _api_key_id: string }; Returns: Json }
       check_license_capacity: {
         Args: { _documents_needed?: number; _license_id: string }
         Returns: boolean
@@ -3422,8 +3563,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      validate_api_key: { Args: { _key_hash: string }; Returns: Json }
     }
     Enums: {
+      api_key_scope: "read" | "write" | "admin"
       app_role: "admin" | "user" | "system_admin"
       batch_status:
         | "new"
@@ -3584,6 +3727,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      api_key_scope: ["read", "write", "admin"],
       app_role: ["admin", "user", "system_admin"],
       batch_status: [
         "new",
