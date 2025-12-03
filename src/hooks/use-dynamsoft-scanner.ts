@@ -41,6 +41,14 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
       setError(null);
 
       try {
+        // First check if Dynamsoft Service is running
+        const serviceRunning = await checkDynamsoftService();
+        if (!serviceRunning) {
+          setError('Dynamsoft Service not detected. Please ensure it is installed and running.');
+          setIsLoading(false);
+          return;
+        }
+
         // Configure Dynamsoft
         Dynamsoft.DWT.ProductKey = licenseKey;
         // Use CDN for resources (no local copy needed)
@@ -63,11 +71,16 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
             dwtRef.current = dwt;
             setIsReady(true);
             setIsLoading(false);
+            console.log('Dynamsoft Web TWAIN initialized successfully');
             refreshScannerList();
           },
           (error: { code: number; message: string }) => {
             console.error('DWT init error:', error.message);
-            setError(error.message);
+            if (error.message.includes('service') || error.code === -2300) {
+              setError('Dynamsoft Service not responding. Try restarting the service.');
+            } else {
+              setError(error.message);
+            }
             setIsLoading(false);
           }
         );
@@ -75,6 +88,25 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
         console.error('DWT setup error:', err);
         setError(err instanceof Error ? err.message : 'Failed to initialize scanner SDK');
         setIsLoading(false);
+      }
+    };
+
+    // Check if Dynamsoft Service is running by pinging its local port
+    const checkDynamsoftService = async (): Promise<boolean> => {
+      try {
+        // Dynamsoft Service runs on port 18622 (HTTP) or 18623 (HTTPS)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        
+        const response = await fetch('http://127.0.0.1:18622/', {
+          method: 'GET',
+          signal: controller.signal,
+        }).catch(() => null);
+        
+        clearTimeout(timeoutId);
+        return response !== null;
+      } catch {
+        return false;
       }
     };
 
