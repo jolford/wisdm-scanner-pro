@@ -401,7 +401,7 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
                 </div>
               </div>
               <Button
-                onClick={() => window.open('https://download.dynamsoft.com/DynamsoftServiceSetup.exe', '_blank')}
+                onClick={() => window.open('https://demo.dynamsoft.com/DWT/Resources/dist/DynamsoftServiceSetup.msi', '_blank')}
                 size="sm"
                 variant="outline"
                 className="w-full border-amber-300 hover:bg-amber-100 dark:border-amber-700 dark:hover:bg-amber-900"
