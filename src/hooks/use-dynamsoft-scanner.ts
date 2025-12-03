@@ -249,14 +249,15 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
         try {
           let blob: Blob | null = null;
           
-          // Method 1: Use ConvertToBlob (modern API, returns Blob directly)
+          // Method 1: Use GetImageBitmap + Canvas (avoids service fetch issues)
           try {
-            blob = await new Promise<Blob>((resolve, reject) => {
-              const timeout = setTimeout(() => reject(new Error('Timeout')), 10000);
-              globalDwt!.ConvertToBlob(
+            const imageBitmap = await new Promise<ImageBitmap>((resolve, reject) => {
+              const timeout = setTimeout(() => reject(new Error('Timeout')), 15000);
+              // @ts-ignore - GetImageBitmap exists in newer DWT versions
+              globalDwt!.GetImageBitmap(
                 [i],
                 Dynamsoft.DWT.EnumDWT_ImageType.IT_PNG,
-                (result: Blob) => {
+                (result: ImageBitmap) => {
                   clearTimeout(timeout);
                   resolve(result);
                 },
@@ -266,43 +267,54 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
                 }
               );
             });
-            if (blob && blob.size > 0) {
-              console.log(`Method 1 (ConvertToBlob) succeeded for image ${i + 1}, size: ${blob.size}`);
+            
+            // Convert ImageBitmap to Blob via canvas
+            const canvas = document.createElement('canvas');
+            canvas.width = imageBitmap.width;
+            canvas.height = imageBitmap.height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(imageBitmap, 0, 0);
+              blob = await new Promise<Blob>((resolve, reject) => {
+                canvas.toBlob((b) => {
+                  if (b) resolve(b);
+                  else reject(new Error('Canvas toBlob failed'));
+                }, 'image/png');
+              });
+              console.log(`Method 1 (GetImageBitmap) succeeded for image ${i + 1}, size: ${blob.size}`);
             }
+            imageBitmap.close();
           } catch (e1) {
-            console.log('ConvertToBlob failed:', e1);
+            console.log('GetImageBitmap failed:', e1);
           }
 
-          // Method 2: Try OutputImage to get data URL
+          // Method 2: Use ConvertToBlob (fallback)
           if (!blob) {
             try {
-              const dataUrl = await new Promise<string>((resolve, reject) => {
+              blob = await new Promise<Blob>((resolve, reject) => {
                 const timeout = setTimeout(() => reject(new Error('Timeout')), 10000);
-                // @ts-ignore - OutputImage exists in DWT
-                globalDwt!.OutputImage(i, 'png', (result: string) => {
-                  clearTimeout(timeout);
-                  resolve(result);
-                }, (errorCode: number, errorString: string) => {
-                  clearTimeout(timeout);
-                  reject(new Error(`${errorCode}: ${errorString}`));
-                });
+                globalDwt!.ConvertToBlob(
+                  [i],
+                  Dynamsoft.DWT.EnumDWT_ImageType.IT_PNG,
+                  (result: Blob) => {
+                    clearTimeout(timeout);
+                    resolve(result);
+                  },
+                  (errorCode: number, errorString: string) => {
+                    clearTimeout(timeout);
+                    reject(new Error(`${errorCode}: ${errorString}`));
+                  }
+                );
               });
-              if (dataUrl && dataUrl.length > 100) {
-                const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
-                const byteChars = atob(base64);
-                const byteNums = new Array(byteChars.length);
-                for (let j = 0; j < byteChars.length; j++) {
-                  byteNums[j] = byteChars.charCodeAt(j);
-                }
-                blob = new Blob([new Uint8Array(byteNums)], { type: 'image/png' });
-                console.log(`Method 2 (OutputImage) succeeded for image ${i + 1}`);
+              if (blob && blob.size > 0) {
+                console.log(`Method 2 (ConvertToBlob) succeeded for image ${i + 1}, size: ${blob.size}`);
               }
             } catch (e2) {
-              console.log('OutputImage failed:', e2);
+              console.log('ConvertToBlob failed:', e2);
             }
           }
 
-          // Method 3: ConvertToBase64 async (fallback)
+          // Method 3: ConvertToBase64 (last resort)
           if (!blob) {
             try {
               const base64Result = await new Promise<string>((res, rej) => {
@@ -337,7 +349,6 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
             blobs.push(blob);
           } else {
             console.error(`Failed to convert image ${i + 1} - all methods failed`);
-            // If we couldn't get any images, likely certificate issue
             if (i === 0) {
               setNeedsCertificateTrust(true);
             }
