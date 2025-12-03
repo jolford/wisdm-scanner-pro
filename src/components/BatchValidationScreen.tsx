@@ -1690,9 +1690,9 @@ export const BatchValidationScreen = ({
                           <Badge variant="secondary" className="text-xs">
                             📄 {doc.document_type.replace(/_/g, ' ').toUpperCase()}
                           </Badge>
-                          {doc.classification_confidence !== undefined && (
+                          {(doc.classification_confidence !== undefined || (doc as any).confidence_score !== undefined) && (
                             <Badge variant="outline" className="text-xs">
-                              {Math.round(doc.classification_confidence * 100)}% confident
+                              {Math.round((doc.classification_confidence ?? (doc as any).confidence_score ?? 0) * 100)}% confident
                             </Badge>
                           )}
                         </div>
