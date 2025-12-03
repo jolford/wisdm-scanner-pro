@@ -3248,6 +3248,62 @@ export type Database = {
           },
         ]
       }
+      workflow_versions: {
+        Row: {
+          change_summary: string | null
+          change_type: string
+          changed_at: string | null
+          changed_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          trigger_events: string[] | null
+          version_number: number
+          workflow_edges: Json | null
+          workflow_id: string
+          workflow_nodes: Json | null
+        }
+        Insert: {
+          change_summary?: string | null
+          change_type: string
+          changed_at?: string | null
+          changed_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          trigger_events?: string[] | null
+          version_number: number
+          workflow_edges?: Json | null
+          workflow_id: string
+          workflow_nodes?: Json | null
+        }
+        Update: {
+          change_summary?: string | null
+          change_type?: string
+          changed_at?: string | null
+          changed_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          trigger_events?: string[] | null
+          version_number?: number
+          workflow_edges?: Json | null
+          workflow_id?: string
+          workflow_nodes?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_versions_workflow_id_fkey"
+            columns: ["workflow_id"]
+            isOneToOne: false
+            referencedRelation: "workflows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workflows: {
         Row: {
           created_at: string
