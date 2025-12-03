@@ -878,7 +878,9 @@ RESPONSE REQUIREMENTS:
                 console.log(`Extracted field "${key}": "${fields[key]}"`);
               } else if (fields[key] && typeof fields[key] === 'object') {
                 // New format: object with value, bbox, and confidence
-                const value = fields[key].value || fields[key];
+                // Use strict undefined check - empty string "" is valid
+                const value = fields[key].value !== undefined ? fields[key].value : 
+                              (typeof fields[key] === 'string' ? fields[key] : '');
                 const conf = fields[key].confidence || 0.85;
                 metadata[key] = value;
                 fieldConfidence[key] = conf;
@@ -2023,6 +2025,7 @@ Review the image and provide corrected text with any OCR errors fixed.`;
           .update({
             document_type: documentType,
             confidence_score: confidence,
+            classification_confidence: confidence,
             extracted_metadata: sanitizedMetadata,
             extracted_text: extractedText,
             line_items: lineItems && lineItems.length > 0 ? lineItems : null,
