@@ -228,15 +228,31 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
 
       for (let i = 0; i < imageCount; i++) {
         try {
-          const blob = await new Promise<Blob>((res, rej) => {
-            globalDwt!.ConvertToBlob(
+          // Use ConvertToBase64 instead of ConvertToBlob to avoid HTTPS/HTTP mixed content issues
+          const base64Result = await new Promise<string>((res, rej) => {
+            globalDwt!.ConvertToBase64(
               [i],
               Dynamsoft.DWT.EnumDWT_ImageType.IT_PNG,
-              (result: Blob) => res(result),
-              (errorCode: number, errorString: string) => rej(new Error(errorString))
+              (result: { getData: (index: number, count: number) => string; getLength: () => number }) => {
+                // Get the complete base64 string
+                const base64String = result.getData(0, result.getLength());
+                res(base64String);
+              },
+              (errorCode: number, errorString: string) => rej(new Error(`Convert error (${errorCode}): ${errorString}`))
             );
           });
+          
+          // Convert base64 to blob
+          const byteCharacters = atob(base64Result);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let j = 0; j < byteCharacters.length; j++) {
+            byteNumbers[j] = byteCharacters.charCodeAt(j);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: 'image/png' });
+          
           blobs.push(blob);
+          console.log(`Image ${i + 1} converted successfully, size: ${blob.size} bytes`);
         } catch (e) {
           console.error('Error converting image:', e);
         }
