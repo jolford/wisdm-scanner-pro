@@ -1125,12 +1125,7 @@ const Index = () => {
                     projectId={selectedProjectId || undefined}
                     batchId={selectedBatchId || undefined}
                     customerId={selectedProject?.customer_id}
-                    onScanComplete={() => {
-                      // Refresh the batch after scan completes
-                      if (selectedBatchId) {
-                        console.log('Scan completed, refreshing batch');
-                      }
-                    }}
+                    onScanComplete={handleMultipleFiles}
                   />
                 </TabsContent>
               </Tabs>
