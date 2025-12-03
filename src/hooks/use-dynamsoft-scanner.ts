@@ -17,6 +17,8 @@ interface UseDynamsoftScannerReturn {
   setSelectedScanner: (id: string) => void;
   scan: () => Promise<Blob[]>;
   refreshScanners: () => void;
+  needsCertificateTrust: boolean;
+  trustCertificate: () => void;
 }
 
 // Global singleton to persist across component remounts
@@ -31,8 +33,15 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
   const [error, setError] = useState<string | null>(null);
   const [scanners, setScanners] = useState<ScannerInfo[]>([]);
   const [selectedScanner, setSelectedScanner] = useState<string>('');
+  const [needsCertificateTrust, setNeedsCertificateTrust] = useState(false);
   const mountedRef = useRef(true);
   const scannersLoadedRef = useRef(false);
+
+  // Function to open Dynamsoft Service certificate page
+  const trustCertificate = useCallback(() => {
+    window.open('https://127.0.0.1:18623', '_blank');
+    // After user trusts, they should refresh the page
+  }, []);
 
   // Stable refresh function that doesn't depend on selectedScanner
   const refreshScannerList = useCallback(() => {
@@ -327,10 +336,20 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
             blobs.push(blob);
           } else {
             console.error(`Failed to convert image ${i + 1} - all methods failed`);
+            // If we couldn't get any images, likely certificate issue
+            if (i === 0) {
+              setNeedsCertificateTrust(true);
+            }
           }
         } catch (e) {
           console.error('Error converting image:', e);
         }
+      }
+      
+      // If we have images in buffer but couldn't extract any, certificate issue
+      if (imageCount > 0 && blobs.length === 0) {
+        setNeedsCertificateTrust(true);
+        throw new Error('CERTIFICATE_TRUST_REQUIRED');
       }
 
       globalDwt.RemoveAllImages();
@@ -363,6 +382,8 @@ export const useDynamsoftScanner = (licenseKey: string | null): UseDynamsoftScan
     selectedScanner,
     setSelectedScanner,
     scan,
-    refreshScanners: refreshScannerList
+    refreshScanners: refreshScannerList,
+    needsCertificateTrust,
+    trustCertificate
   };
 };

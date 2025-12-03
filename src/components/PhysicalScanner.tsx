@@ -40,7 +40,9 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
     error: dynamsoftError,
     scanners: twainScanners,
     scan: dynamsoftScan,
-    refreshScanners: refreshTwainScanners
+    refreshScanners: refreshTwainScanners,
+    needsCertificateTrust,
+    trustCertificate
   } = useDynamsoftScanner(dynamsoftKey);
 
   // Fetch Dynamsoft license key
@@ -260,6 +262,14 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
     try {
       const blobs = await dynamsoftScan();
       
+      if (blobs.length === 0) {
+        toast({
+          title: 'No Images',
+          description: 'No pages were scanned or scan was cancelled.',
+        });
+        return;
+      }
+      
       // Convert blobs to Files
       const files = blobs.map((blob, index) => 
         new File([blob], `scan-${Date.now()}-${index}.png`, { type: 'image/png' })
@@ -275,11 +285,21 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
       }
     } catch (error) {
       console.error('TWAIN scan error:', error);
-      toast({
-        title: 'Scan Failed',
-        description: error instanceof Error ? error.message : 'Failed to scan document.',
-        variant: 'destructive',
-      });
+      const errorMsg = error instanceof Error ? error.message : 'Failed to scan document.';
+      
+      if (errorMsg === 'CERTIFICATE_TRUST_REQUIRED') {
+        toast({
+          title: 'Security Certificate Required',
+          description: 'Please trust the Dynamsoft certificate first (see instructions below).',
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Scan Failed',
+          description: errorMsg,
+          variant: 'destructive',
+        });
+      }
     } finally {
       setIsScanning(false);
     }
@@ -419,6 +439,34 @@ export const PhysicalScanner = ({ projectId, batchId, customerId, onScanComplete
             <div className="flex items-center gap-2 text-sm text-amber-600">
               <AlertCircle className="h-4 w-4" />
               <span>TWAIN: {dynamsoftError}</span>
+            </div>
+          )}
+
+          {/* Certificate Trust Required */}
+          {needsCertificateTrust && (
+            <div className="bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg p-4 space-y-3">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-red-600 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium mb-1 text-red-800 dark:text-red-200">Security Certificate Required</p>
+                  <p className="text-red-700 dark:text-red-300 text-xs">
+                    Your browser is blocking the scanner service. You need to trust the Dynamsoft certificate first.
+                  </p>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs text-red-600 dark:text-red-400">
+                  <strong>Steps:</strong> 1) Click the button below → 2) Accept the security warning → 3) Refresh this page
+                </p>
+                <Button
+                  onClick={trustCertificate}
+                  size="sm"
+                  variant="destructive"
+                  className="w-full"
+                >
+                  Open Certificate Trust Page
+                </Button>
+              </div>
             </div>
           )}
 
