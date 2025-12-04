@@ -80,7 +80,7 @@ export const QuickActionsMenu = () => {
       icon: Settings,
       label: 'Settings',
       description: 'Configure application',
-      action: () => navigate('/admin/system-viability'),
+      action: () => navigate('/settings'),
       color: 'text-gray-600 bg-gray-50 hover:bg-gray-100',
     },
   ];
