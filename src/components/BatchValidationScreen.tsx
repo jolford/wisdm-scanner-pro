@@ -112,6 +112,7 @@ interface DocumentViewerWithSignedUrlProps {
   boundingBoxes: Record<string, { x: number; y: number; width: number; height: number }>;
   highlightedField?: string;
   piiRegions?: Array<{ type: string; category: string; text: string; bbox?: any }>;
+  ab1466Violations?: Array<{ term: string; category: string; text: string; boundingBox?: { x: number; y: number; width: number; height: number } }>;
   showingOriginal: boolean;
   onToggleOriginal: () => void;
   onPopout: () => void;
@@ -124,6 +125,7 @@ const DocumentViewerWithSignedUrl = ({
   boundingBoxes,
   highlightedField,
   piiRegions = [],
+  ab1466Violations = [],
   showingOriginal,
   onToggleOriginal,
   onPopout,
@@ -157,6 +159,7 @@ const DocumentViewerWithSignedUrl = ({
       boundingBoxes={boundingBoxes}
       highlightedField={highlightedField}
       piiRegions={piiRegions}
+      ab1466Violations={ab1466Violations}
       showingOriginal={showingOriginal}
       onToggleOriginal={onToggleOriginal}
       onPopout={onPopout}
@@ -1916,6 +1919,7 @@ export const BatchValidationScreen = ({
                               boundingBoxes={fieldBoundingBoxes[doc.id] || {}}
                               highlightedField={focusedField[doc.id]}
                               piiRegions={(doc as any).detected_pii_regions || []}
+                              ab1466Violations={(doc as any).ab1466_detected_terms || []}
                               showingOriginal={showingOriginal.has(doc.id)}
                               onToggleOriginal={() => {
                                 setShowingOriginal(prev => {
