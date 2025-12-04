@@ -68,7 +68,7 @@ const menuItems = [
       { title: 'Confidence Scoring', url: '/admin/confidence', icon: Target },
       { title: 'Validation Rules', url: '/admin/validation-rules', icon: Shield },
       { title: 'Validation Lookups', url: '/admin/validation-lookups', icon: Database },
-      { title: 'Duplicate Detection', url: '/admin/duplicates', icon: Copy },
+      
       { title: 'Validation Analytics', url: '/admin/analytics', icon: BarChart2 },
       { title: 'QA Metrics', url: '/admin/qa-metrics', icon: Activity },
       { title: 'Advanced Search', url: '/admin/advanced-search', icon: Search },
