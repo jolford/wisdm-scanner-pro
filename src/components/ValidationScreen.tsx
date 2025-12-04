@@ -24,6 +24,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useSignedUrl } from '@/hooks/use-signed-url';
 import { ViewOriginalButton } from './ViewOriginalButton';
 import { detectKeywords } from '@/lib/keyword-redaction';
+import { AB1466ViolationAlert } from './AB1466ViolationAlert';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
 
@@ -192,23 +193,35 @@ export const ValidationScreen = ({
   const [resolvedBoundingBoxes, setResolvedBoundingBoxes] = useState(boundingBoxes);
   const [resolvedWordBoxes, setResolvedWordBoxes] = useState<Array<{ text: string; bbox: any }>>(wordBoundingBoxes || []);
 
-  // Load PII detection data from database on mount
+  // AB 1466 compliance state
+  const [ab1466ViolationsDetected, setAb1466ViolationsDetected] = useState(false);
+  const [ab1466ViolationCount, setAb1466ViolationCount] = useState(0);
+  const [ab1466DetectedTerms, setAb1466DetectedTerms] = useState<any[]>([]);
+  const [ab1466RedactionApplied, setAb1466RedactionApplied] = useState(false);
+
+  // Load PII and AB 1466 detection data from database on mount
   useEffect(() => {
     if (!documentId) return;
     (async () => {
       try {
         const { data } = await supabase
           .from('documents')
-          .select('pii_detected, detected_pii_regions')
+          .select('pii_detected, detected_pii_regions, ab1466_violations_detected, ab1466_violation_count, ab1466_detected_terms, ab1466_redaction_applied')
           .eq('id', documentId)
           .single();
         if (data) {
           setPiiDetected(data.pii_detected || false);
           const regions = data.detected_pii_regions;
           setDetectedPiiRegions(Array.isArray(regions) ? regions : []);
+          
+          // AB 1466 data
+          setAb1466ViolationsDetected((data as any).ab1466_violations_detected || false);
+          setAb1466ViolationCount((data as any).ab1466_violation_count || 0);
+          setAb1466DetectedTerms((data as any).ab1466_detected_terms || []);
+          setAb1466RedactionApplied((data as any).ab1466_redaction_applied || false);
         }
       } catch (error) {
-        console.error('Failed to load PII data:', error);
+        console.error('Failed to load PII/AB1466 data:', error);
       }
     })();
   }, [documentId]);
@@ -2014,6 +2027,13 @@ useEffect(() => {
           {/* Petition Validation Warnings */}
         {documentId && (
           <div className="mb-4">
+            {/* AB 1466 Compliance Alert */}
+            <AB1466ViolationAlert
+              violationsDetected={ab1466ViolationsDetected}
+              violationCount={ab1466ViolationCount}
+              detectedTerms={ab1466DetectedTerms}
+              redactionApplied={ab1466RedactionApplied}
+            />
             <PetitionValidationWarnings
               documentId={documentId}
               batchId={documentId}

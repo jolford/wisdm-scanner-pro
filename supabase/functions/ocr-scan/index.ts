@@ -2071,6 +2071,41 @@ Review the image and provide corrected text with any OCR errors fixed.`;
         } catch (counterError) {
           console.error('Failed to update batch counters:', counterError);
         }
+        
+        // --- AB 1466 AUTO-REDACTION (ASYNC - NON-BLOCKING) ---
+        // Trigger AB 1466 compliance redaction for California county property documents
+        EdgeRuntime.waitUntil(
+          (async () => {
+            try {
+              // Check if project has AB 1466 enabled
+              const { data: projectSettings } = await supabaseAdmin
+                .from('projects')
+                .select('enable_ab1466_redaction')
+                .eq('id', projectId)
+                .single();
+              
+              if (projectSettings?.enable_ab1466_redaction) {
+                console.log(`AB 1466: Triggering auto-redaction for document ${documentId}`);
+                
+                const ab1466Result = await supabaseAdmin.functions.invoke('auto-redact-ab1466', {
+                  body: {
+                    documentId: documentId,
+                    extractedText: extractedText,
+                    wordBoundingBoxes: wordBoundingBoxes
+                  }
+                });
+                
+                if (ab1466Result.error) {
+                  console.error('AB 1466 redaction error:', ab1466Result.error);
+                } else {
+                  console.log(`AB 1466: Auto-redaction complete - ${ab1466Result.data?.violationsFound || 0} violations found`);
+                }
+              }
+            } catch (ab1466Error) {
+              console.error('AB 1466 background task failed:', ab1466Error);
+            }
+          })()
+        );
       } catch (dbError) {
         console.error('Failed to save OCR results to database:', dbError);
         // Continue even if save fails - we'll still return the data

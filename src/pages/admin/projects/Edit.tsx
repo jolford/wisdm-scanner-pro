@@ -77,6 +77,7 @@ const EditProject = () => {
   const [enableCheckScanning, setEnableCheckScanning] = useState(false);
   const [enableSignatureVerification, setEnableSignatureVerification] = useState(false);
   const [detectPii, setDetectPii] = useState(false);
+  const [enableAb1466Redaction, setEnableAb1466Redaction] = useState(false);
   const [displayFieldsAbove, setDisplayFieldsAbove] = useState(false);
   const [ocrModel, setOcrModel] = useState('google/gemini-2.5-flash');
   const [documentNamingPattern, setDocumentNamingPattern] = useState('');
@@ -207,6 +208,7 @@ const EditProject = () => {
         setEnableCheckScanning(projectData.enable_check_scanning || false);
         setEnableSignatureVerification(projectData.enable_signature_verification || false);
         setDetectPii(projectData.detect_pii || false);
+        setEnableAb1466Redaction((projectData as any).enable_ab1466_redaction || false);
         setDisplayFieldsAbove(projectData.display_fields_above || false);
         setOcrModel(projectData.ocr_model || 'google/gemini-2.5-flash');
         setCustomerId(projectData.customer_id || undefined);
@@ -432,6 +434,7 @@ const EditProject = () => {
           enable_check_scanning: enableCheckScanning,
           enable_signature_verification: enableSignatureVerification,
           detect_pii: detectPii,
+          enable_ab1466_redaction: enableAb1466Redaction,
           display_fields_above: displayFieldsAbove,
           ocr_model: ocrModel,
           extraction_fields: validFields as any,
@@ -733,6 +736,25 @@ const EditProject = () => {
                 </Label>
                 <p className="text-xs text-muted-foreground mt-0.5">
                   Automatically detect and redact PII (SSN, credit cards, phone numbers, etc.) for privacy compliance
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2 p-4 border border-amber-500/30 rounded-lg bg-amber-500/10 mb-6">
+              <Checkbox
+                id="enable-ab1466"
+                checked={enableAb1466Redaction}
+                onCheckedChange={(checked) => setEnableAb1466Redaction(checked as boolean)}
+              />
+              <div className="flex-1">
+                <Label htmlFor="enable-ab1466" className="cursor-pointer font-medium flex items-center gap-2">
+                  Enable California AB 1466 Auto-Redaction
+                  <Badge variant="outline" className="text-xs bg-amber-500/20 text-amber-700 border-amber-500/30">
+                    County Compliance
+                  </Badge>
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Automatically detect and redact unlawfully restrictive covenant language in property documents per California Assembly Bill 1466. Required for county recorder compliance.
                 </p>
               </div>
             </div>
