@@ -309,29 +309,44 @@ serve(async (req) => {
       );
     }
 
-    // Step 3: Generate redaction metadata (NOT a redacted image URL)
+    // Step 3: Generate actual redacted image using AI
     const violationsWithBoxes = detectedViolations.filter(v => v.boundingBox);
-    let redactionMetadata = null;
+    let redactedFilePath: string | null = null;
 
-    if (violationsWithBoxes.length > 0) {
-      // Store redaction boxes as metadata for client-side rendering
-      // Do NOT set redacted_file_url to a JSON path - keep original image URL
-      redactionMetadata = {
-        redactionBoxes: violationsWithBoxes.map(v => ({
-          ...v.boundingBox,
-          category: v.category,
-          term: v.term,
-          padding: 5
-        })),
-        createdAt: new Date().toISOString(),
-        violationCount: violationsWithBoxes.length
-      };
+    if (violationsWithBoxes.length > 0 && LOVABLE_API_KEY) {
+      console.log(`Generating server-side redacted image with ${violationsWithBoxes.length} redaction boxes`);
+      try {
+        redactedFilePath = await generateRedactedImage(
+          supabase,
+          document,
+          detectedViolations,
+          LOVABLE_API_KEY
+        );
+        if (redactedFilePath) {
+          console.log(`Redacted image created: ${redactedFilePath}`);
+        }
+      } catch (redactError) {
+        console.warn('Failed to generate redacted image:', redactError);
+      }
+    }
+
+    // Store redaction boxes as metadata for client-side fallback
+    const redactionMetadata = violationsWithBoxes.length > 0 ? {
+      redactionBoxes: violationsWithBoxes.map(v => ({
+        ...v.boundingBox,
+        category: v.category,
+        term: v.term,
+        padding: 5
+      })),
+      createdAt: new Date().toISOString(),
+      violationCount: violationsWithBoxes.length
+    } : null;
+    
+    if (redactionMetadata) {
       console.log('Generated redaction metadata with', violationsWithBoxes.length, 'boxes');
     }
 
-    // Step 4: Update document with violation info
-    // IMPORTANT: Do NOT set redacted_file_url - keep using original image
-    // The client renders redaction boxes as overlays using ab1466_detected_terms
+    // Step 4: Update document with violation info and redacted file path
     const updateData: any = {
       ab1466_violations_detected: true,
       ab1466_violation_count: detectedViolations.length,
@@ -344,7 +359,7 @@ serve(async (req) => {
         boundingBox: v.boundingBox
       })),
       redaction_metadata: redactionMetadata,
-      redacted_file_url: null, // Clear any previously set JSON path
+      redacted_file_url: redactedFilePath, // Store path to actual redacted image
       needs_review: true // Flag for manual review
     };
 
@@ -701,18 +716,27 @@ DO NOT include any explanatory text, only the JSON array.`
 }
 
 /**
- * Generate a redacted version of the document image
- * Uses canvas-like approach via image manipulation
+ * Generate a redacted version of the document image using AI image editing
+ * Draws solid black rectangles over discriminatory text
  */
 async function generateRedactedImage(
   supabase: any,
   document: any,
-  violations: DetectedViolation[]
+  violations: DetectedViolation[],
+  apiKey: string
 ): Promise<string | null> {
+  const violationsWithBoxes = violations.filter(v => v.boundingBox);
+  if (violationsWithBoxes.length === 0) {
+    console.log('No violations with bounding boxes to redact');
+    return null;
+  }
+
   // Download original file
   const fileName = document.file_url?.split('/').pop();
   const batchId = document.batch_id || 'unknown-batch';
   const storagePath = `${batchId}/${fileName}`;
+
+  console.log(`Downloading original file: ${storagePath}`);
 
   const { data: fileBlob, error: downloadError } = await supabase.storage
     .from('documents')
@@ -733,40 +757,136 @@ async function generateRedactedImage(
     binaryString += String.fromCharCode.apply(null, Array.from(chunk));
   }
   const base64 = btoa(binaryString);
+  
+  // Determine mime type
+  const ext = fileName?.split('.').pop()?.toLowerCase() || 'png';
+  const mimeType = ext === 'pdf' ? 'application/pdf' : 
+                   ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 
+                   ext === 'png' ? 'image/png' : 'image/png';
 
-  // For images, we'll create redaction metadata that the client can overlay
-  // For a production system, you would use an image processing library
-  // Since Deno doesn't have native canvas, we store redaction boxes as metadata
-  // and generate the visual redaction client-side or via a dedicated image service
-
-  // Create redacted version metadata file
-  const redactionMetadata = {
-    originalFile: storagePath,
-    redactionBoxes: violations.map(v => ({
-      ...v.boundingBox,
-      category: v.category,
-      padding: 5 // pixels of padding around text
-    })),
-    createdAt: new Date().toISOString(),
-    violationCount: violations.length
-  };
-
-  // Upload redaction metadata
-  const redactedFileName = `redacted_${fileName}.json`;
-  const redactedPath = `${batchId}/${redactedFileName}`;
-
-  const { error: uploadError } = await supabase.storage
-    .from('documents')
-    .upload(redactedPath, JSON.stringify(redactionMetadata), {
-      contentType: 'application/json',
-      upsert: true
-    });
-
-  if (uploadError) {
-    console.error('Failed to upload redaction metadata:', uploadError);
-    return null;
+  // For PDFs, we can't directly edit - return metadata only
+  if (mimeType === 'application/pdf') {
+    console.log('PDF detected - storing redaction metadata only');
+    const redactionMetadata = {
+      originalFile: storagePath,
+      redactionBoxes: violationsWithBoxes.map(v => ({
+        ...v.boundingBox,
+        category: v.category,
+        term: v.term
+      })),
+      createdAt: new Date().toISOString(),
+      violationCount: violationsWithBoxes.length
+    };
+    return JSON.stringify(redactionMetadata);
   }
 
-  // Return the storage path for the redaction metadata
-  return redactedPath;
+  // Build redaction instruction with all bounding boxes
+  const boxDescriptions = violationsWithBoxes.map((v, i) => {
+    const b = v.boundingBox!;
+    // Add padding to coordinates
+    const x = Math.max(0, b.x - 1);
+    const y = Math.max(0, b.y - 0.5);
+    const w = Math.min(100 - x, b.width + 2);
+    const h = Math.min(100 - y, Math.max(b.height + 1, 4));
+    return `Box ${i + 1}: x=${x.toFixed(1)}%, y=${y.toFixed(1)}%, width=${w.toFixed(1)}%, height=${h.toFixed(1)}%`;
+  }).join('\n');
+
+  console.log(`Requesting AI to redact ${violationsWithBoxes.length} areas`);
+
+  try {
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash-image-preview',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `REDACTION TASK: Draw solid BLACK rectangles to completely cover and hide the following areas of this document image. The rectangles must be completely opaque black (#000000) to hide the text underneath.
+
+CRITICAL: The black boxes must be:
+- Completely solid black (not transparent)
+- Large enough to fully cover the text
+- Positioned exactly at the specified percentage coordinates
+
+Areas to redact (coordinates are percentages of image dimensions):
+${boxDescriptions}
+
+Draw solid black filled rectangles at each location to permanently redact/hide the discriminatory text. Keep everything else in the image exactly the same.`
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:${mimeType};base64,${base64}`
+                }
+              }
+            ]
+          }
+        ],
+        modalities: ['image', 'text']
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('AI image editing failed:', response.status, errorText);
+      return null;
+    }
+
+    const data = await response.json();
+    const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+
+    if (!imageData || !imageData.startsWith('data:image')) {
+      console.log('AI did not return a redacted image');
+      return null;
+    }
+
+    // Extract base64 from data URL
+    const base64Match = imageData.match(/^data:image\/(\w+);base64,(.+)$/);
+    if (!base64Match) {
+      console.error('Invalid image data format');
+      return null;
+    }
+
+    const outputFormat = base64Match[1];
+    const redactedBase64 = base64Match[2];
+
+    // Convert base64 to blob
+    const redactedBinary = atob(redactedBase64);
+    const redactedArray = new Uint8Array(redactedBinary.length);
+    for (let i = 0; i < redactedBinary.length; i++) {
+      redactedArray[i] = redactedBinary.charCodeAt(i);
+    }
+    const redactedBlob = new Blob([redactedArray], { type: `image/${outputFormat}` });
+
+    // Upload redacted image
+    const redactedFileName = `redacted_${fileName.replace(/\.[^.]+$/, '')}.${outputFormat}`;
+    const redactedPath = `${batchId}/${redactedFileName}`;
+
+    console.log(`Uploading redacted image to: ${redactedPath}`);
+
+    const { error: uploadError } = await supabase.storage
+      .from('documents')
+      .upload(redactedPath, redactedBlob, {
+        contentType: `image/${outputFormat}`,
+        upsert: true
+      });
+
+    if (uploadError) {
+      console.error('Failed to upload redacted image:', uploadError);
+      return null;
+    }
+
+    console.log(`Successfully created redacted image: ${redactedPath}`);
+    return redactedPath;
+  } catch (error) {
+    console.error('Error generating redacted image:', error);
+    return null;
+  }
 }
