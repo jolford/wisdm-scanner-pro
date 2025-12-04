@@ -477,6 +477,8 @@ async function detectViolationsWithAIVision(
     
     const allTargets = [...new Set([...targetKeywords, ...shortTerms])];
     
+    console.log(`AI Vision searching for terms: ${allTargets.slice(0, 15).join(', ')}`);
+    
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -484,33 +486,40 @@ async function detectViolationsWithAIVision(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-pro', // Use Pro for better vision accuracy
+        model: 'google/gemini-2.5-pro',
         messages: [
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: `Analyze this property document for California AB 1466 discriminatory language that must be redacted.
+                text: `You are an expert at finding discriminatory language in historical property documents for California AB 1466 compliance.
 
-FIND these discriminatory words: ${allTargets.join(', ')}
+TASK: Find ALL occurrences of these discriminatory words and phrases in this document image:
+${allTargets.join(', ')}
 
-RETURN a JSON array with bounding boxes that FULLY COVER each word for redaction:
+IMPORTANT: This is a scanned historical document. Look carefully at ALL text, including:
+- Old typewriter fonts and handwriting
+- Faded or low contrast text
+- Legal language in dense paragraphs
 
-FORMAT: [{"text":"word","category":"race","boundingBox":{"x":LEFT,"y":TOP,"width":WIDTH,"height":HEIGHT}}]
+For EACH discriminatory word/phrase found, provide its exact bounding box location.
 
-BOUNDING BOX RULES (all values are PERCENTAGES 0-100):
-- x = left edge (0=left margin, 100=right margin)
-- y = TOP of the text (not bottom!)
-- width = word width (typically 5-15% for single words)
-- height = FULL text line height (typically 3-5% to COVER the word completely)
+OUTPUT FORMAT - Return ONLY a JSON array:
+[{"text":"exact word found","category":"race","boundingBox":{"x":LEFT,"y":TOP,"width":WIDTH,"height":HEIGHT}}]
 
-CRITICAL: The box must be tall enough to COMPLETELY HIDE the word when filled black. A typical text line is 3-5% of image height.
+BOUNDING BOX COORDINATES (percentages 0-100 of image dimensions):
+- x = left edge of the word (0=left margin, 100=right margin)
+- y = TOP edge of the text line
+- width = width of the word (typically 5-20% for single words)
+- height = line height (typically 2-5% - must FULLY COVER the text)
 
-EXAMPLE for word "caucasian" at middle of page:
-{"text":"caucasian","category":"race","boundingBox":{"x":45,"y":50,"width":12,"height":4}}
+EXAMPLES:
+- Word "negro" at 20% from left, 45% from top: {"text":"negro","category":"race","boundingBox":{"x":20,"y":45,"width":8,"height":3}}
+- Phrase "white persons" at center: {"text":"white persons","category":"race","boundingBox":{"x":40,"y":30,"width":18,"height":3}}
+- Word "colored" near bottom: {"text":"colored","category":"race","boundingBox":{"x":55,"y":70,"width":10,"height":3}}
 
-Return [] if nothing found. No markdown, no explanation - ONLY the JSON array.`
+Return [] if nothing found. Output ONLY the JSON array, no markdown or explanation.`
               },
               {
                 type: 'image_url',
