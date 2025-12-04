@@ -429,6 +429,7 @@ ${xmlDocs}
                 projectFields={(batch.projects?.extraction_fields as Array<{ name: string; description: string }>) || []}
                 projectName={batch.projects?.name}
                 enableSignatureVerification={(batch.projects as any)?.enable_signature_verification || false}
+                showAB1466Alert={false}
                 onValidate={async () => {
                   setSelectedDocument(null);
                 }}

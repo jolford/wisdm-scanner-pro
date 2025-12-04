@@ -44,6 +44,7 @@ interface ValidationScreenProps {
   projectFields: Array<{ name: string; description: string }>;
   projectName?: string; // Added to detect AB1466 project
   enableSignatureVerification?: boolean; // Enable signature verification for this project
+  showAB1466Alert?: boolean; // Show AB 1466 compliance alert (default true)
   boundingBoxes?: Record<string, { x: number; y: number; width: number; height: number }>;
   wordBoundingBoxes?: Array<{ text: string; bbox: any }>;
   onValidate: (status: 'validated' | 'rejected', metadata: Record<string, string>) => void;
@@ -66,6 +67,7 @@ export const ValidationScreen = ({
   projectFields,
   projectName,
   enableSignatureVerification = false,
+  showAB1466Alert = true,
   boundingBoxes = {},
   wordBoundingBoxes = [],
   onValidate,
@@ -1596,8 +1598,8 @@ useEffect(() => {
           </Card>
         )}
         
-        {/* AB 1466 Compliance Alert - Show prominently above document */}
-        {ab1466ViolationsDetected && (
+        {/* AB 1466 Compliance Alert - Show prominently above document (only on validation page) */}
+        {showAB1466Alert && ab1466ViolationsDetected && (
           <AB1466ViolationAlert
             violationsDetected={ab1466ViolationsDetected}
             violationCount={ab1466ViolationCount}
@@ -2120,15 +2122,17 @@ useEffect(() => {
           {/* Petition Validation Warnings */}
         {documentId && (
           <div className="mb-4">
-            {/* AB 1466 Compliance Alert */}
-            <AB1466ViolationAlert
-              violationsDetected={ab1466ViolationsDetected}
-              violationCount={ab1466ViolationCount}
-              detectedTerms={ab1466DetectedTerms}
-              redactionApplied={ab1466RedactionApplied}
-              onRescan={handleRescanAb1466}
-              isRescanning={isRescanningAb1466}
-            />
+            {/* AB 1466 Compliance Alert (only on validation page) */}
+            {showAB1466Alert && (
+              <AB1466ViolationAlert
+                violationsDetected={ab1466ViolationsDetected}
+                violationCount={ab1466ViolationCount}
+                detectedTerms={ab1466DetectedTerms}
+                redactionApplied={ab1466RedactionApplied}
+                onRescan={handleRescanAb1466}
+                isRescanning={isRescanningAb1466}
+              />
+            )}
             <PetitionValidationWarnings
               documentId={documentId}
               batchId={documentId}
