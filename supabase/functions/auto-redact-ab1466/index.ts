@@ -294,25 +294,29 @@ serve(async (req) => {
       );
     }
 
-    // Step 3: Generate redacted image
-    let redactedFileUrl = null;
+    // Step 3: Generate redaction metadata (NOT a redacted image URL)
     const violationsWithBoxes = detectedViolations.filter(v => v.boundingBox);
+    let redactionMetadata = null;
 
-    if (violationsWithBoxes.length > 0 && document.file_url) {
-      try {
-        redactedFileUrl = await generateRedactedImage(
-          supabase,
-          document,
-          violationsWithBoxes
-        );
-        console.log('Generated redacted image:', redactedFileUrl);
-      } catch (redactError) {
-        console.error('Failed to generate redacted image:', redactError);
-        // Continue without redacted image - violations are still recorded
-      }
+    if (violationsWithBoxes.length > 0) {
+      // Store redaction boxes as metadata for client-side rendering
+      // Do NOT set redacted_file_url to a JSON path - keep original image URL
+      redactionMetadata = {
+        redactionBoxes: violationsWithBoxes.map(v => ({
+          ...v.boundingBox,
+          category: v.category,
+          term: v.term,
+          padding: 5
+        })),
+        createdAt: new Date().toISOString(),
+        violationCount: violationsWithBoxes.length
+      };
+      console.log('Generated redaction metadata with', violationsWithBoxes.length, 'boxes');
     }
 
     // Step 4: Update document with violation info
+    // IMPORTANT: Do NOT set redacted_file_url - keep using original image
+    // The client renders redaction boxes as overlays using ab1466_detected_terms
     const updateData: any = {
       ab1466_violations_detected: true,
       ab1466_violation_count: detectedViolations.length,
@@ -324,12 +328,10 @@ serve(async (req) => {
         confidence: v.confidence,
         boundingBox: v.boundingBox
       })),
+      redaction_metadata: redactionMetadata,
+      redacted_file_url: null, // Clear any previously set JSON path
       needs_review: true // Flag for manual review
     };
-
-    if (redactedFileUrl) {
-      updateData.redacted_file_url = redactedFileUrl;
-    }
 
     await supabase
       .from('documents')
@@ -346,7 +348,7 @@ serve(async (req) => {
         metadata: {
           violations_count: detectedViolations.length,
           categories: [...new Set(detectedViolations.map(v => v.category))],
-          redacted_image_created: !!redactedFileUrl
+          redaction_boxes_count: violationsWithBoxes.length
         },
         success: true
       });
@@ -356,7 +358,7 @@ serve(async (req) => {
         success: true,
         violationsFound: detectedViolations.length,
         violations: detectedViolations,
-        redactedFileUrl,
+        redactionMetadata,
         message: `Detected and processed ${detectedViolations.length} AB 1466 violation(s)`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
