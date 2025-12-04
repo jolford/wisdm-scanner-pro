@@ -489,26 +489,26 @@ async function detectViolationsWithAIVision(
             content: [
               {
                 type: 'text',
-                text: `You are analyzing a property document image for California AB 1466 discriminatory language.
+                text: `Analyze this property document for California AB 1466 discriminatory language that must be redacted.
 
-TASK: Find ALL occurrences of these discriminatory words in the image and return their EXACT pixel locations as percentages of image size:
+FIND these discriminatory words: ${allTargets.join(', ')}
 
-TARGET WORDS: ${allTargets.join(', ')}
+RETURN a JSON array with bounding boxes that FULLY COVER each word for redaction:
 
-CRITICAL REQUIREMENTS:
-1. Return ONLY a JSON array - no other text, no markdown, no explanation
-2. For EACH word found, return: {"text":"word","category":"race","boundingBox":{"x":NUMBER,"y":NUMBER,"width":NUMBER,"height":NUMBER}}
-3. ALL numbers must be PERCENTAGES from 0-100 representing position/size relative to image dimensions
-4. x = left edge percentage (0=left, 100=right)
-5. y = top edge percentage (0=top, 100=bottom)  
-6. width/height = size as percentage of image
-7. Draw TIGHT boxes around individual words only
-8. If a word appears multiple times, include ALL occurrences
+FORMAT: [{"text":"word","category":"race","boundingBox":{"x":LEFT,"y":TOP,"width":WIDTH,"height":HEIGHT}}]
 
-EXAMPLE OUTPUT:
-[{"text":"negro","category":"race","boundingBox":{"x":25.5,"y":42.3,"width":8.2,"height":2.1}},{"text":"colored","category":"race","boundingBox":{"x":45.0,"y":55.7,"width":9.5,"height":2.0}}]
+BOUNDING BOX RULES (all values are PERCENTAGES 0-100):
+- x = left edge (0=left margin, 100=right margin)
+- y = TOP of the text (not bottom!)
+- width = word width (typically 5-15% for single words)
+- height = FULL text line height (typically 3-5% to COVER the word completely)
 
-Return [] if no discriminatory words found. START WITH [ and END WITH ]`
+CRITICAL: The box must be tall enough to COMPLETELY HIDE the word when filled black. A typical text line is 3-5% of image height.
+
+EXAMPLE for word "caucasian" at middle of page:
+{"text":"caucasian","category":"race","boundingBox":{"x":45,"y":50,"width":12,"height":4}}
+
+Return [] if nothing found. No markdown, no explanation - ONLY the JSON array.`
               },
               {
                 type: 'image_url',

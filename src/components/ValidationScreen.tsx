@@ -277,12 +277,25 @@ export const ValidationScreen = ({
       console.log('[AB1466] Processing detected terms:', ab1466DetectedTerms.length);
       ab1466DetectedTerms.forEach((term: any, idx: number) => {
         if (term.boundingBox) {
-          console.log(`[AB1466] Term ${idx} "${term.text?.substring(0, 30)}..." has bbox:`, term.boundingBox);
+          // Ensure minimum height of 4% to properly cover text (AI often returns thin boxes)
+          const bbox = { ...term.boundingBox };
+          if (bbox.height < 4) {
+            // Center the expanded box vertically
+            const heightDiff = 4 - bbox.height;
+            bbox.y = Math.max(0, bbox.y - heightDiff / 2);
+            bbox.height = 4;
+          }
+          // Ensure minimum width for readability
+          if (bbox.width < 5) {
+            bbox.width = Math.max(5, bbox.width);
+          }
+          
+          console.log(`[AB1466] Term ${idx} "${term.text?.substring(0, 30)}..." bbox adjusted:`, bbox);
           regions.push({
             type: 'AB1466',
             category: term.category || 'restrictive_covenant',
             text: term.text || term.term,
-            bbox: term.boundingBox
+            bbox: bbox
           });
         } else {
           console.log(`[AB1466] Term ${idx} "${term.text?.substring(0, 30)}..." has NO bbox`);
