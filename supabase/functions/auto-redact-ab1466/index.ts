@@ -237,6 +237,41 @@ serve(async (req) => {
 
     console.log(`Detected ${detectedViolations.length} AB 1466 violations`);
 
+    // Step 3: If we have violations but no bounding boxes, use AI vision to locate them
+    const violationsWithoutBoxes = detectedViolations.filter(v => !v.boundingBox);
+    if (LOVABLE_API_KEY && violationsWithoutBoxes.length > 0 && document.file_url) {
+      console.log(`Using AI Vision to locate ${violationsWithoutBoxes.length} violations without bounding boxes`);
+      try {
+        const termsToFind = violationsWithoutBoxes.map(v => v.text);
+        const visionResults = await detectViolationsWithAIVision(
+          document.file_url,
+          supabase,
+          document,
+          LOVABLE_API_KEY,
+          termsToFind
+        );
+        
+        console.log(`AI Vision found ${visionResults.length} violations with bounding boxes`);
+        
+        // Update existing violations with bounding boxes from vision
+        for (const visionResult of visionResults) {
+          const matchingViolation = detectedViolations.find(v => 
+            v.text.toLowerCase().includes(visionResult.text.toLowerCase()) ||
+            visionResult.text.toLowerCase().includes(v.text.toLowerCase())
+          );
+          
+          if (matchingViolation && !matchingViolation.boundingBox && visionResult.boundingBox) {
+            matchingViolation.boundingBox = visionResult.boundingBox;
+          } else if (!matchingViolation && visionResult.boundingBox) {
+            // New violation found by vision
+            detectedViolations.push(visionResult);
+          }
+        }
+      } catch (visionError) {
+        console.warn('AI Vision bounding box detection failed:', visionError);
+      }
+    }
+
     if (detectedViolations.length === 0) {
       // No violations found - update document to mark as checked
       await supabase
@@ -385,6 +420,140 @@ function findBoundingBoxForText(
   }
 
   return null;
+}
+
+/**
+ * Use AI vision to detect violations AND get bounding boxes directly from the image
+ */
+async function detectViolationsWithAIVision(
+  imageUrl: string,
+  supabase: any,
+  document: any,
+  apiKey: string,
+  existingViolationTerms: string[]
+): Promise<DetectedViolation[]> {
+  try {
+    // Download the image to get base64
+    const fileName = document.file_url?.split('/').pop();
+    const batchId = document.batch_id || 'unknown-batch';
+    const storagePath = `${batchId}/${fileName}`;
+
+    const { data: fileBlob, error: downloadError } = await supabase.storage
+      .from('documents')
+      .download(storagePath);
+
+    if (downloadError || !fileBlob) {
+      console.error('Failed to download image for AI vision:', downloadError);
+      return [];
+    }
+
+    const arrayBuffer = await fileBlob.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    let binaryString = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.subarray(i, i + chunkSize);
+      binaryString += String.fromCharCode.apply(null, Array.from(chunk));
+    }
+    const base64 = btoa(binaryString);
+    
+    const mimeType = document.file_type || 'image/jpeg';
+    const imageDataUrl = `data:${mimeType};base64,${base64}`;
+
+    // Ask AI to locate the violating text and return bounding boxes
+    const termsToFind = existingViolationTerms.slice(0, 20); // Limit for prompt size
+    
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: `You are analyzing a property document image for California AB 1466 compliance. I need you to locate discriminatory/restrictive covenant language and provide precise bounding boxes.
+
+IMPORTANT: Return ONLY a JSON array with bounding boxes as PERCENTAGES of the image dimensions (0-100 scale).
+
+For each violation found, include:
+- "text": the exact discriminatory text
+- "category": "race", "religion", "national_origin", or "restrictive_covenant"  
+- "boundingBox": {"x": number, "y": number, "width": number, "height": number} as PERCENTAGES (0-100)
+
+Known terms to locate (find these and any similar discriminatory text):
+${termsToFind.join(', ')}
+
+Return ONLY the JSON array, no other text. Example format:
+[{"text":"colored person","category":"race","boundingBox":{"x":15,"y":42,"width":20,"height":3}}]
+
+If you cannot locate any text precisely, return empty array: []`
+              },
+              {
+                type: 'image_url',
+                image_url: { url: imageDataUrl }
+              }
+            ]
+          }
+        ],
+        max_tokens: 4000
+      })
+    });
+
+    if (!response.ok) {
+      console.error('AI Vision API error:', response.status);
+      return [];
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content || '[]';
+    
+    console.log('AI Vision response for bounding boxes:', content.substring(0, 500));
+    
+    // Parse response
+    const jsonMatch = content.match(/\[[\s\S]*?\]/);
+    if (!jsonMatch) {
+      console.log('No JSON array found in AI response');
+      return [];
+    }
+    
+    const aiResults = JSON.parse(jsonMatch[0]);
+    
+    return aiResults.map((result: any) => {
+      const violation: DetectedViolation = {
+        term: result.text || '',
+        category: result.category || 'restrictive_covenant',
+        text: result.text || '',
+        confidence: 0.90
+      };
+
+      if (result.boundingBox) {
+        // Validate bounding box values are reasonable percentages
+        const bbox = result.boundingBox;
+        if (bbox.x >= 0 && bbox.x <= 100 && 
+            bbox.y >= 0 && bbox.y <= 100 &&
+            bbox.width > 0 && bbox.width <= 100 &&
+            bbox.height > 0 && bbox.height <= 100) {
+          violation.boundingBox = {
+            x: Number(bbox.x),
+            y: Number(bbox.y),
+            width: Number(bbox.width),
+            height: Number(bbox.height)
+          };
+        }
+      }
+
+      return violation;
+    }).filter((v: DetectedViolation) => v.text && v.boundingBox);
+  } catch (error) {
+    console.error('AI Vision detection error:', error);
+    return [];
+  }
 }
 
 /**
