@@ -1596,6 +1596,18 @@ useEffect(() => {
           </Card>
         )}
         
+        {/* AB 1466 Compliance Alert - Show prominently above document */}
+        {ab1466ViolationsDetected && (
+          <AB1466ViolationAlert
+            violationsDetected={ab1466ViolationsDetected}
+            violationCount={ab1466ViolationCount}
+            detectedTerms={ab1466DetectedTerms}
+            redactionApplied={ab1466RedactionApplied}
+            onRescan={handleRescanAb1466}
+            isRescanning={isRescanningAb1466}
+          />
+        )}
+        
         {/* Document and Text Grid (always visible) */}
         <div className={displayFieldsAbove ? "grid grid-cols-[3fr_2fr] gap-6" : "contents"}>
         {/* Left: Document Viewer */}
