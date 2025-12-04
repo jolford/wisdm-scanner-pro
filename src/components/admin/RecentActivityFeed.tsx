@@ -62,48 +62,44 @@ export const RecentActivityFeed = () => {
     refetchInterval: 60000, // Refresh every minute
   });
 
-  const getActivityIcon = (actionType: string) => {
-    switch (actionType) {
-      case 'document_upload':
-      case 'document_created':
-        return Upload;
-      case 'document_validated':
-      case 'document_approved':
-        return CheckCircle;
-      case 'batch_created':
+  const getActivityIcon = (entityType: string) => {
+    switch (entityType) {
+      case 'document':
+        return FileText;
+      case 'batch':
         return FolderPlus;
-      case 'batch_exported':
-        return Send;
-      case 'user_created':
-      case 'user_updated':
+      case 'user':
         return User;
+      case 'project':
+        return Activity;
       default:
         return Activity;
     }
   };
 
   const getActivityColor = (actionType: string) => {
-    switch (actionType) {
-      case 'document_validated':
-      case 'document_approved':
-      case 'batch_exported':
-        return 'text-green-600';
-      case 'document_upload':
-      case 'document_created':
-      case 'batch_created':
-        return 'text-blue-600';
-      case 'user_created':
-        return 'text-purple-600';
-      default:
-        return 'text-gray-600';
+    if (actionType.includes('delete') || actionType.includes('remove')) {
+      return 'text-destructive';
     }
+    if (actionType.includes('create') || actionType.includes('upload') || actionType.includes('validated') || actionType.includes('approved') || actionType.includes('export')) {
+      return 'text-green-600';
+    }
+    if (actionType.includes('update') || actionType.includes('edit')) {
+      return 'text-blue-600';
+    }
+    return 'text-muted-foreground';
   };
 
-  const getActivityLabel = (actionType: string) => {
-    return actionType
-      .split('_')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
+  const getActivityDescription = (activity: any) => {
+    const action = activity.action_type?.replace(/_/g, ' ') || 'Action';
+    const entity = activity.entity_type || 'item';
+    const name = activity.contextName;
+    
+    // Create a more readable description
+    if (name) {
+      return `${action} ${entity}: "${name}"`;
+    }
+    return `${action} ${entity}`;
   };
 
   if (isLoading) {
@@ -144,49 +140,40 @@ export const RecentActivityFeed = () => {
           {activities && activities.length > 0 ? (
             <div className="space-y-4">
               {activities.map((activity) => {
-                const Icon = getActivityIcon(activity.action_type);
+                const Icon = getActivityIcon(activity.entity_type);
                 const color = getActivityColor(activity.action_type);
                 
                 return (
                   <div
                     key={activity.id}
-                    className="flex items-start gap-4 pb-4 border-b border-border last:border-0 last:pb-0"
+                    className="flex items-start gap-4 pb-3 border-b border-border last:border-0 last:pb-0"
                   >
-                    <div className={`p-2.5 rounded-lg bg-muted/50 ${color}`}>
+                    <div className={`p-2 rounded-lg bg-muted/50 ${color}`}>
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-4 mb-1">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm">
-                            {getActivityLabel(activity.action_type)}
-                          </p>
-                          {activity.contextName && (
-                            <p className="text-sm text-muted-foreground truncate mt-0.5">
-                              {activity.contextName}
-                            </p>
-                          )}
-                        </div>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="font-medium text-sm leading-tight">
+                          {getActivityDescription(activity)}
+                        </p>
                         <span className="text-xs text-muted-foreground whitespace-nowrap">
                           {formatDistanceToNow(new Date(activity.created_at), { addSuffix: true })}
                         </span>
                       </div>
                       
-                      {activity.userName && (
-                        <p className="text-xs text-muted-foreground mb-2">
-                          by {activity.userName}
-                        </p>
-                      )}
-
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge 
-                          variant={activity.success ? "outline" : "destructive"} 
-                          className="text-xs"
-                        >
-                          {activity.success ? "Success" : "Failed"}
-                        </Badge>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        {activity.userName && (
+                          <span className="text-xs text-muted-foreground">
+                            {activity.userName}
+                          </span>
+                        )}
+                        {!activity.success && (
+                          <Badge variant="destructive" className="text-xs">
+                            Failed
+                          </Badge>
+                        )}
                         {activity.error_message && (
-                          <span className="text-xs text-destructive truncate max-w-[200px]">
+                          <span className="text-xs text-destructive truncate max-w-[180px]">
                             {activity.error_message}
                           </span>
                         )}
