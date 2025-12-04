@@ -460,11 +460,20 @@ async function detectViolationsWithAIVision(
     const mimeType = document.file_type || 'image/jpeg';
     const imageDataUrl = `data:${mimeType};base64,${base64}`;
 
-    // Ask AI to locate the violating text and return bounding boxes
-    // Extract just the short discriminatory terms (not full paragraphs)
+    // Focus on specific discriminatory keywords that are easy to locate
+    const targetKeywords = [
+      'negro', 'colored', 'caucasian', 'white', 'asian', 'oriental',
+      'african', 'chinese', 'japanese', 'mexican', 'hispanic', 'jewish',
+      'hebrew', 'aryan', 'mongolian', 'semitic', 'malay', 'ethiopian'
+    ];
+    
+    // Also include short detected terms
     const shortTerms = existingViolationTerms
-      .filter(t => t.length < 50) // Only short terms
-      .slice(0, 30);
+      .filter(t => t.length < 30)
+      .map(t => t.toLowerCase())
+      .slice(0, 10);
+    
+    const allTargets = [...new Set([...targetKeywords, ...shortTerms])];
     
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -473,28 +482,33 @@ async function detectViolationsWithAIVision(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash',
+        model: 'google/gemini-2.5-pro', // Use Pro for better vision accuracy
         messages: [
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: `Analyze this property document for California AB 1466 discriminatory language. Find and locate these SPECIFIC WORDS in the image:
+                text: `You are analyzing a property document image for California AB 1466 discriminatory language.
 
-${shortTerms.map(t => `- "${t}"`).join('\n')}
+TASK: Find ALL occurrences of these discriminatory words in the image and return their EXACT pixel locations as percentages of image size:
 
-Also look for these common discriminatory terms: "negro", "colored", "caucasian", "white persons", "race or color", "shall not be sold to", "shall not be occupied by"
+TARGET WORDS: ${allTargets.join(', ')}
 
-CRITICAL INSTRUCTIONS:
-1. Return a JSON array (no markdown, no code blocks)
-2. For EACH occurrence of a discriminatory word/phrase, provide a separate entry
-3. Bounding boxes must be PERCENTAGES (0-100) of image dimensions
-4. Draw tight boxes around INDIVIDUAL WORDS or SHORT PHRASES only (not paragraphs)
+CRITICAL REQUIREMENTS:
+1. Return ONLY a JSON array - no other text, no markdown, no explanation
+2. For EACH word found, return: {"text":"word","category":"race","boundingBox":{"x":NUMBER,"y":NUMBER,"width":NUMBER,"height":NUMBER}}
+3. ALL numbers must be PERCENTAGES from 0-100 representing position/size relative to image dimensions
+4. x = left edge percentage (0=left, 100=right)
+5. y = top edge percentage (0=top, 100=bottom)  
+6. width/height = size as percentage of image
+7. Draw TIGHT boxes around individual words only
+8. If a word appears multiple times, include ALL occurrences
 
-Format: [{"text":"negro","category":"race","boundingBox":{"x":45,"y":32,"width":8,"height":2}}]
+EXAMPLE OUTPUT:
+[{"text":"negro","category":"race","boundingBox":{"x":25.5,"y":42.3,"width":8.2,"height":2.1}},{"text":"colored","category":"race","boundingBox":{"x":45.0,"y":55.7,"width":9.5,"height":2.0}}]
 
-Return [] if nothing found. Do NOT wrap in markdown code blocks.`
+Return [] if no discriminatory words found. START WITH [ and END WITH ]`
               },
               {
                 type: 'image_url',
@@ -508,30 +522,43 @@ Return [] if nothing found. Do NOT wrap in markdown code blocks.`
     });
 
     if (!response.ok) {
-      console.error('AI Vision API error:', response.status);
+      const errorText = await response.text();
+      console.error('AI Vision API error:', response.status, errorText);
       return [];
     }
 
     const data = await response.json();
     let content = data.choices?.[0]?.message?.content || '[]';
     
-    console.log('AI Vision raw response:', content.substring(0, 800));
+    console.log('AI Vision raw response (first 1000 chars):', content.substring(0, 1000));
     
-    // Remove markdown code blocks if present
-    content = content.replace(/```json\s*/gi, '').replace(/```\s*/g, '').trim();
+    // Clean response - remove any markdown or extra text
+    content = content.trim();
+    if (content.startsWith('```')) {
+      content = content.replace(/```json?\s*/gi, '').replace(/```\s*/g, '');
+    }
     
-    // Parse response - find the JSON array
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (!jsonMatch) {
-      console.log('No JSON array found in AI response after cleanup');
+    // Find the JSON array
+    const startIdx = content.indexOf('[');
+    const endIdx = content.lastIndexOf(']');
+    
+    if (startIdx === -1 || endIdx === -1 || endIdx <= startIdx) {
+      console.log('No valid JSON array found in AI response');
       return [];
     }
     
+    const jsonStr = content.substring(startIdx, endIdx + 1);
+    
     let aiResults;
     try {
-      aiResults = JSON.parse(jsonMatch[0]);
+      aiResults = JSON.parse(jsonStr);
     } catch (parseError) {
-      console.error('Failed to parse AI JSON:', parseError, 'Content:', jsonMatch[0].substring(0, 200));
+      console.error('Failed to parse AI JSON:', parseError, 'Content:', jsonStr.substring(0, 300));
+      return [];
+    }
+    
+    if (!Array.isArray(aiResults)) {
+      console.log('AI response is not an array');
       return [];
     }
     
