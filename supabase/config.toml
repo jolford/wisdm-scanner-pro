@@ -128,3 +128,7 @@ verify_jwt = true
 # SCIM Provisioning (uses own bearer token auth)
 [functions.scim-provisioning]
 verify_jwt = false
+
+# SSO/SAML Testing
+[functions.test-sso-config]
+verify_jwt = true
