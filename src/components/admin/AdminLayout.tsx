@@ -1,15 +1,12 @@
 import { ReactNode } from 'react';
-import { Menu, BookOpen } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { Menu } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import {
   SidebarProvider,
   SidebarTrigger,
 } from '@/components/ui/sidebar';
 import { AdminSidebar } from './AdminSidebar';
-import { LanguageSelector } from '@/components/LanguageSelector';
-import { ThemeToggle } from '@/components/ThemeToggle';
+import { AdminHeader } from './AdminHeader';
 import { Breadcrumbs } from '@/components/Breadcrumbs';
 
 interface AdminLayoutProps {
@@ -19,8 +16,6 @@ interface AdminLayoutProps {
 }
 
 export function AdminLayout({ children, title, description }: AdminLayoutProps) {
-  const navigate = useNavigate();
-
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gradient-to-br from-background via-background to-accent/5">
@@ -43,19 +38,7 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
                   </div>
                 </div>
                 <nav aria-label="Utility navigation">
-                  <div className="flex items-center gap-2">
-                    <LanguageSelector variant="dropdown" />
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      onClick={() => navigate('/api-docs')}
-                      className="h-9 w-9"
-                      title="API Documentation"
-                    >
-                      <BookOpen className="h-4 w-4" />
-                    </Button>
-                    <ThemeToggle />
-                  </div>
+                  <AdminHeader />
                 </nav>
               </div>
             </div>
