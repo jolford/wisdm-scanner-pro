@@ -1116,6 +1116,10 @@ export type Database = {
       }
       documents: {
         Row: {
+          ab1466_detected_terms: Json | null
+          ab1466_redaction_applied: boolean | null
+          ab1466_violation_count: number | null
+          ab1466_violations_detected: boolean | null
           batch_id: string | null
           classification_confidence: number | null
           classification_metadata: Json | null
@@ -1151,6 +1155,10 @@ export type Database = {
           word_bounding_boxes: Json | null
         }
         Insert: {
+          ab1466_detected_terms?: Json | null
+          ab1466_redaction_applied?: boolean | null
+          ab1466_violation_count?: number | null
+          ab1466_violations_detected?: boolean | null
           batch_id?: string | null
           classification_confidence?: number | null
           classification_metadata?: Json | null
@@ -1186,6 +1194,10 @@ export type Database = {
           word_bounding_boxes?: Json | null
         }
         Update: {
+          ab1466_detected_terms?: Json | null
+          ab1466_redaction_applied?: boolean | null
+          ab1466_violation_count?: number | null
+          ab1466_violations_detected?: boolean | null
           batch_id?: string | null
           classification_confidence?: number | null
           classification_metadata?: Json | null
@@ -2180,6 +2192,7 @@ export type Database = {
           description: string | null
           detect_pii: boolean | null
           display_fields_above: boolean
+          enable_ab1466_redaction: boolean | null
           enable_check_scanning: boolean | null
           enable_signature_verification: boolean | null
           export_types: string[] | null
@@ -2200,6 +2213,7 @@ export type Database = {
           description?: string | null
           detect_pii?: boolean | null
           display_fields_above?: boolean
+          enable_ab1466_redaction?: boolean | null
           enable_check_scanning?: boolean | null
           enable_signature_verification?: boolean | null
           export_types?: string[] | null
@@ -2220,6 +2234,7 @@ export type Database = {
           description?: string | null
           detect_pii?: boolean | null
           display_fields_above?: boolean
+          enable_ab1466_redaction?: boolean | null
           enable_check_scanning?: boolean | null
           enable_signature_verification?: boolean | null
           export_types?: string[] | null
