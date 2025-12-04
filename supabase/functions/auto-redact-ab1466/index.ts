@@ -254,17 +254,32 @@ serve(async (req) => {
         console.log(`AI Vision found ${visionResults.length} violations with bounding boxes`);
         
         // Update existing violations with bounding boxes from vision
+        // Track which violations have been assigned to avoid re-assignment
+        const assignedIndices = new Set<number>();
+        
         for (const visionResult of visionResults) {
-          const matchingViolation = detectedViolations.find(v => 
-            v.text.toLowerCase().includes(visionResult.text.toLowerCase()) ||
-            visionResult.text.toLowerCase().includes(v.text.toLowerCase())
+          if (!visionResult.boundingBox) continue;
+          
+          // Find a matching violation that doesn't already have a bounding box
+          // and hasn't been assigned in this loop
+          const matchIdx = detectedViolations.findIndex((v, idx) => 
+            !assignedIndices.has(idx) &&
+            !v.boundingBox &&
+            (v.text.toLowerCase().includes(visionResult.text.toLowerCase()) ||
+             visionResult.text.toLowerCase().includes(v.text.toLowerCase()) ||
+             v.term.toLowerCase().includes(visionResult.text.toLowerCase()) ||
+             visionResult.text.toLowerCase().includes(v.term.toLowerCase()))
           );
           
-          if (matchingViolation && !matchingViolation.boundingBox && visionResult.boundingBox) {
-            matchingViolation.boundingBox = visionResult.boundingBox;
-          } else if (!matchingViolation && visionResult.boundingBox) {
-            // New violation found by vision
+          if (matchIdx !== -1) {
+            // Assign bounding box to this violation
+            detectedViolations[matchIdx].boundingBox = visionResult.boundingBox;
+            assignedIndices.add(matchIdx);
+            console.log(`Assigned bbox to violation ${matchIdx}: "${detectedViolations[matchIdx].term}"`);
+          } else {
+            // New violation found by vision - add it
             detectedViolations.push(visionResult);
+            console.log(`Added new vision-detected violation: "${visionResult.text}"`);
           }
         }
       } catch (visionError) {
