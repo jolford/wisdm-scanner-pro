@@ -274,18 +274,23 @@ export const ValidationScreen = ({
     
     // Add AB 1466 violations as redaction regions (only if not showing original)
     if (ab1466ViolationsDetected && ab1466DetectedTerms?.length > 0) {
-      ab1466DetectedTerms.forEach((term: any) => {
+      console.log('[AB1466] Processing detected terms:', ab1466DetectedTerms.length);
+      ab1466DetectedTerms.forEach((term: any, idx: number) => {
         if (term.boundingBox) {
+          console.log(`[AB1466] Term ${idx} "${term.text?.substring(0, 30)}..." has bbox:`, term.boundingBox);
           regions.push({
             type: 'AB1466',
             category: term.category || 'restrictive_covenant',
             text: term.text || term.term,
             bbox: term.boundingBox
           });
+        } else {
+          console.log(`[AB1466] Term ${idx} "${term.text?.substring(0, 30)}..." has NO bbox`);
         }
       });
     }
     
+    console.log('[AB1466] Combined redaction regions:', regions.length);
     return regions;
   }, [detectedPiiRegions, ab1466ViolationsDetected, ab1466DetectedTerms]);
 
