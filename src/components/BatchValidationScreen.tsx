@@ -1204,7 +1204,7 @@ export const BatchValidationScreen = ({
       const doc = documents.find(d => d.id === docId);
       if (!doc) return;
 
-      const { error } = await supabase.functions.invoke('auto-redact-ab1466', {
+      const { data, error } = await supabase.functions.invoke('auto-redact-ab1466', {
         body: {
           documentId: docId,
           extractedText: doc.extracted_text,
@@ -1215,11 +1215,15 @@ export const BatchValidationScreen = ({
 
       if (error) throw error;
 
+      const violationsWithBoxes = data?.violations?.filter((v: any) => v.boundingBox)?.length || 0;
       toast({
         title: 'AB 1466 Rescan Complete',
-        description: 'Violation locations have been updated. Refresh to see changes.',
+        description: violationsWithBoxes > 0 
+          ? `Found ${violationsWithBoxes} violations with locations. Redaction boxes are now visible.`
+          : 'Violations detected but could not determine exact locations.',
       });
       
+      // Refresh to get updated document data with new bounding boxes
       onValidationComplete();
     } catch (error: any) {
       console.error('AB1466 rescan failed:', error);
