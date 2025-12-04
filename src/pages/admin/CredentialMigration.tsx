@@ -5,8 +5,9 @@ import { safeInvokeEdgeFunction } from '@/lib/edge-function-helper';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Shield, AlertTriangle, CheckCircle2, Loader2, ArrowLeft } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 
 export default function CredentialMigration() {
   const { isSystemAdmin, loading: authLoading } = useRequireAuth(false, true);
@@ -44,9 +45,11 @@ export default function CredentialMigration() {
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
+      <AdminLayout title="Credential Migration" description="Encrypt existing credentials">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        </div>
+      </AdminLayout>
     );
   }
 
@@ -56,27 +59,8 @@ export default function CredentialMigration() {
   }
 
   return (
-    <div className="container py-8 max-w-4xl">
-      <div className="mb-8">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate('/admin')}
-          className="mb-4"
-        >
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Back to Dashboard
-        </Button>
-        <h1 className="text-3xl font-bold flex items-center gap-2">
-          <Shield className="h-8 w-8 text-primary" />
-          Credential Encryption Migration
-        </h1>
-        <p className="text-muted-foreground mt-2">
-          Encrypt existing plaintext credentials for enhanced security
-        </p>
-      </div>
-
-      <div className="space-y-6">
+    <AdminLayout title="Credential Encryption Migration" description="Encrypt existing plaintext credentials for enhanced security">
+      <div className="space-y-6 max-w-4xl">
         <Alert>
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
@@ -172,6 +156,6 @@ export default function CredentialMigration() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </AdminLayout>
   );
 }
