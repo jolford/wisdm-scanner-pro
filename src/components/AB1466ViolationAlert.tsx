@@ -1,4 +1,4 @@
-import { AlertTriangle, FileWarning, Shield } from 'lucide-react';
+import { AlertTriangle, FileWarning, Shield, RefreshCw, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -24,6 +24,8 @@ interface AB1466ViolationAlertProps {
   detectedTerms?: AB1466Violation[];
   redactionApplied?: boolean;
   onViewRedacted?: () => void;
+  onRescan?: () => Promise<void>;
+  isRescanning?: boolean;
 }
 
 const categoryLabels: Record<string, string> = {
@@ -50,6 +52,8 @@ export function AB1466ViolationAlert({
   detectedTerms = [],
   redactionApplied,
   onViewRedacted,
+  onRescan,
+  isRescanning = false,
 }: AB1466ViolationAlertProps) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -65,18 +69,28 @@ export function AB1466ViolationAlert({
     return acc;
   }, {} as Record<string, AB1466Violation[]>);
 
+  // Check if any violations are missing bounding boxes (need re-scan)
+  const violationsWithoutBoxes = detectedTerms.filter(v => !v.boundingBox);
+  const hasViolationsWithoutBoxes = violationsWithoutBoxes.length > 0;
+  const violationsWithBoxes = detectedTerms.filter(v => v.boundingBox);
+
   return (
     <Alert className="border-amber-500/50 bg-amber-500/10 mb-4">
       <AlertTriangle className="h-5 w-5 text-amber-600" />
-      <AlertTitle className="text-amber-700 flex items-center gap-2">
+      <AlertTitle className="text-amber-700 flex items-center gap-2 flex-wrap">
         California AB 1466 Compliance Alert
         <Badge variant="outline" className="bg-amber-500/20 text-amber-700 border-amber-500/30 text-xs">
           {violationCount} Violation{violationCount !== 1 ? 's' : ''} Detected
         </Badge>
-        {redactionApplied && (
+        {violationsWithBoxes.length > 0 && (
           <Badge variant="outline" className="bg-green-500/20 text-green-700 border-green-500/30 text-xs">
             <Shield className="h-3 w-3 mr-1" />
-            Auto-Redacted
+            {violationsWithBoxes.length} Redacted
+          </Badge>
+        )}
+        {hasViolationsWithoutBoxes && (
+          <Badge variant="outline" className="bg-orange-500/20 text-orange-700 border-orange-500/30 text-xs">
+            {violationsWithoutBoxes.length} Need Location
           </Badge>
         )}
       </AlertTitle>
@@ -85,6 +99,29 @@ export function AB1466ViolationAlert({
           This document contains unlawfully restrictive covenant language that must be redacted 
           per California Assembly Bill 1466 before recording.
         </p>
+        
+        {hasViolationsWithoutBoxes && onRescan && (
+          <div className="mb-3 p-3 bg-orange-500/10 rounded-lg border border-orange-500/20">
+            <p className="text-sm mb-2 text-orange-700">
+              <strong>{violationsWithoutBoxes.length}</strong> violation{violationsWithoutBoxes.length !== 1 ? 's' : ''} detected but could not be visually located. 
+              Re-scan to identify exact positions for redaction.
+            </p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onRescan}
+              disabled={isRescanning}
+              className="bg-orange-500/10 border-orange-500/30 hover:bg-orange-500/20 text-orange-700"
+            >
+              {isRescanning ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              {isRescanning ? 'Scanning...' : 'Re-scan for Locations'}
+            </Button>
+          </div>
+        )}
         
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           <CollapsibleTrigger asChild>
@@ -110,12 +147,22 @@ export function AB1466ViolationAlert({
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {violations.map((v, idx) => (
-                      <code 
-                        key={`${v.term}-${idx}`}
-                        className="text-xs bg-red-500/10 text-red-700 px-2 py-1 rounded border border-red-500/20"
-                      >
-                        "{v.text}"
-                      </code>
+                      <div key={`${v.term}-${idx}`} className="flex items-center gap-1">
+                        <code 
+                          className={`text-xs px-2 py-1 rounded border ${
+                            v.boundingBox 
+                              ? 'bg-green-500/10 text-green-700 border-green-500/20' 
+                              : 'bg-red-500/10 text-red-700 border-red-500/20'
+                          }`}
+                        >
+                          "{v.text.length > 50 ? v.text.substring(0, 50) + '...' : v.text}"
+                        </code>
+                        {v.boundingBox ? (
+                          <span title="Redacted"><Shield className="h-3 w-3 text-green-600" /></span>
+                        ) : (
+                          <span title="Location unknown"><AlertTriangle className="h-3 w-3 text-orange-600" /></span>
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>

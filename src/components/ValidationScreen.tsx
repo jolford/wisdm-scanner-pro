@@ -198,6 +198,48 @@ export const ValidationScreen = ({
   const [ab1466ViolationCount, setAb1466ViolationCount] = useState(0);
   const [ab1466DetectedTerms, setAb1466DetectedTerms] = useState<any[]>([]);
   const [ab1466RedactionApplied, setAb1466RedactionApplied] = useState(false);
+  const [isRescanningAb1466, setIsRescanningAb1466] = useState(false);
+
+  // Re-scan document for AB 1466 violations with AI vision (to get bounding boxes)
+  const handleRescanAb1466 = async () => {
+    if (!documentId) return;
+    setIsRescanningAb1466(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('auto-redact-ab1466', {
+        body: { documentId, forceRedaction: true }
+      });
+      
+      if (error) throw error;
+      
+      // Refresh the AB 1466 data from the database
+      const { data: refreshedDoc } = await supabase
+        .from('documents')
+        .select('ab1466_violations_detected, ab1466_violation_count, ab1466_detected_terms, ab1466_redaction_applied')
+        .eq('id', documentId)
+        .single();
+      
+      if (refreshedDoc) {
+        setAb1466ViolationsDetected((refreshedDoc as any).ab1466_violations_detected || false);
+        setAb1466ViolationCount((refreshedDoc as any).ab1466_violation_count || 0);
+        setAb1466DetectedTerms((refreshedDoc as any).ab1466_detected_terms || []);
+        setAb1466RedactionApplied((refreshedDoc as any).ab1466_redaction_applied || false);
+      }
+      
+      toast({
+        title: 'AB 1466 Scan Complete',
+        description: `Found ${data?.violationsFound || 0} violations. ${data?.violations?.filter((v: any) => v.boundingBox)?.length || 0} with locations.`,
+      });
+    } catch (error: any) {
+      console.error('AB 1466 rescan error:', error);
+      toast({
+        title: 'Rescan Failed',
+        description: error.message || 'Failed to re-scan document for AB 1466 violations',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsRescanningAb1466(false);
+    }
+  };
 
   // Load PII and AB 1466 detection data from database on mount
   useEffect(() => {
@@ -2054,6 +2096,8 @@ useEffect(() => {
               violationCount={ab1466ViolationCount}
               detectedTerms={ab1466DetectedTerms}
               redactionApplied={ab1466RedactionApplied}
+              onRescan={handleRescanAb1466}
+              isRescanning={isRescanningAb1466}
             />
             <PetitionValidationWarnings
               documentId={documentId}
