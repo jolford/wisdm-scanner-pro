@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { auditLog } from '@/lib/audit-logger';
 import { Card } from '@/components/ui/card';
@@ -225,6 +225,27 @@ export const ValidationScreen = ({
       }
     })();
   }, [documentId]);
+
+  // Combine PII regions with AB 1466 violations for redaction overlay
+  const combinedRedactionRegions = useMemo(() => {
+    const regions = [...(detectedPiiRegions || [])];
+    
+    // Add AB 1466 violations as redaction regions (only if not showing original)
+    if (ab1466ViolationsDetected && ab1466DetectedTerms?.length > 0) {
+      ab1466DetectedTerms.forEach((term: any) => {
+        if (term.boundingBox) {
+          regions.push({
+            type: 'AB1466',
+            category: term.category || 'restrictive_covenant',
+            text: term.text || term.term,
+            bbox: term.boundingBox
+          });
+        }
+      });
+    }
+    
+    return regions;
+  }, [detectedPiiRegions, ab1466ViolationsDetected, ab1466DetectedTerms]);
 
   // Helper to normalize any metadata value to a displayable string
   const toFieldString = (v: any): string => {
@@ -1528,7 +1549,7 @@ useEffect(() => {
             onRegionClick={handleRegionClick}
             highlightedField={focusedField}
             offensiveHighlights={offensiveHighlights}
-            piiRegions={detectedPiiRegions}
+            piiRegions={combinedRedactionRegions}
             showingOriginal={showingOriginal}
             onToggleOriginal={() => setShowingOriginal(!showingOriginal)}
             piiDebug={piiDebug}
@@ -1653,7 +1674,7 @@ useEffect(() => {
                 boundingBoxes={fieldBoundingBoxes}
                 highlightedField={focusedField}
                 offensiveHighlights={offensiveHighlights}
-                piiRegions={detectedPiiRegions}
+                piiRegions={combinedRedactionRegions}
                 showingOriginal={showingOriginal}
                 onToggleOriginal={() => setShowingOriginal(!showingOriginal)}
                 onFieldClick={handleFieldFocus}
