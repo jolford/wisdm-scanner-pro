@@ -33,6 +33,7 @@ interface InteractiveDocumentViewerProps {
     boundingBox: { x: number; y: number; width: number; height: number } | null;
   }>;
   piiRegions?: Array<{ type: string; category: string; text: string; bbox?: any }>; 
+  ab1466Violations?: Array<{ term: string; category: string; text: string; boundingBox?: BoundingBox }>;
   showingOriginal?: boolean;
   onToggleOriginal?: () => void;
   piiDebug?: boolean;
@@ -49,6 +50,7 @@ export const InteractiveDocumentViewer = ({
   highlightedField,
   offensiveHighlights = [],
   piiRegions = [],
+  ab1466Violations = [],
   showingOriginal = false,
   onToggleOriginal,
   piiDebug = false,
@@ -246,7 +248,31 @@ export const InteractiveDocumentViewer = ({
         }
       });
     }
-  }, [boundingBoxes, highlightedField, imageZoom, offensiveHighlights, canvasSize, piiRegions, showingOriginal, piiDebug, isPdf]);
+
+    // Draw AB1466 violation redaction boxes (black boxes over discriminatory text)
+    if (!showingOriginal && ab1466Violations && ab1466Violations.length > 0) {
+      ab1466Violations.forEach((violation) => {
+        if (!violation.boundingBox) return;
+        const bbox = violation.boundingBox;
+        const bx = Number(bbox.x); const by = Number(bbox.y); const bw = Number(bbox.width); const bh = Number(bbox.height);
+        if (![bx,by,bw,bh].every((n) => isFinite(n))) return;
+        
+        // Assume percentage coordinates (0-100)
+        const isPercent = bx <= 100 && by <= 100 && bw <= 100 && bh <= 100;
+        const x = isPercent ? (bx / 100) * canvas.width : bx;
+        const y = isPercent ? (by / 100) * canvas.height : by;
+        const width = isPercent ? (bw / 100) * canvas.width : bw;
+        const height = isPercent ? (bh / 100) * canvas.height : bh;
+
+        // Draw solid black redaction box for AB1466 violations
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+        ctx.fillRect(x, y, width, height);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(x, y, width, height);
+      });
+    }
+  }, [boundingBoxes, highlightedField, imageZoom, offensiveHighlights, canvasSize, piiRegions, ab1466Violations, showingOriginal, piiDebug, isPdf]);
 
   // Pan handling
   const handleMouseDown = (e: React.MouseEvent) => {
