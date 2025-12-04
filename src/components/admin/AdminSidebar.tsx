@@ -89,7 +89,7 @@ const menuItems = [
       { title: 'Validation Analytics', url: '/admin/analytics', icon: BarChart2 },
       { title: 'SSO/SAML Config', url: '/admin/sso', icon: KeyRound },
       { title: 'SCIM Provisioning', url: '/admin/scim', icon: UserCog },
-      { title: 'Retention Policies', url: '/admin/retention', icon: Archive },
+      
       { title: 'SLA Monitoring', url: '/admin/sla-monitoring', icon: Gauge },
       { title: 'Custom Scripts', url: '/admin/custom-scripts', icon: Code },
       { title: 'Scheduled Batches', url: '/admin/scheduled-batches', icon: Clock },
