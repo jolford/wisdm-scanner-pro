@@ -33,6 +33,7 @@ import { SearchFilterBar, DocumentFilters } from './SearchFilterBar';
 import { ProgressTrackingDashboard } from './ProgressTrackingDashboard';
 import { SmartSuggestionsPanel } from './SmartSuggestionsPanel';
 import { PetitionValidationWarnings } from './PetitionValidationWarnings';
+import { AB1466ViolationAlert } from './AB1466ViolationAlert';
 import { InteractiveDocumentViewer } from './InteractiveDocumentViewer';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { useBulkSelection } from '@/hooks/use-bulk-selection';
@@ -217,6 +218,9 @@ export const BatchValidationScreen = ({
   // Track offensive language detection results for each document
   const [offensiveLanguageResults, setOffensiveLanguageResults] = useState<Record<string, { highlights: any[] }>>({});
   const [isScanning, setIsScanning] = useState(false);
+  
+  // Track AB1466 rescanning state per document
+  const [rescanningAb1466, setRescanningAb1466] = useState<Set<string>>(new Set());
   
   // Fallback PII detection counts computed client-side when DB flag not present
   const [computedPiiCounts, setComputedPiiCounts] = useState<Record<string, number>>({});
@@ -1189,6 +1193,48 @@ export const BatchValidationScreen = ({
   };
 
   /**
+   * Handle AB1466 rescan for violation locations
+   */
+  const handleRescanAb1466 = async (docId: string) => {
+    setRescanningAb1466(prev => new Set(prev).add(docId));
+    try {
+      const doc = documents.find(d => d.id === docId);
+      if (!doc) return;
+
+      const { error } = await supabase.functions.invoke('auto-redact-ab1466', {
+        body: {
+          documentId: docId,
+          extractedText: doc.extracted_text,
+          wordBoundingBoxes: (doc as any).word_bounding_boxes,
+          forceRedaction: true,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'AB 1466 Rescan Complete',
+        description: 'Violation locations have been updated. Refresh to see changes.',
+      });
+      
+      onValidationComplete();
+    } catch (error: any) {
+      console.error('AB1466 rescan failed:', error);
+      toast({
+        title: 'Rescan Failed',
+        description: error.message || 'Could not rescan for violations',
+        variant: 'destructive',
+      });
+    } finally {
+      setRescanningAb1466(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(docId);
+        return newSet;
+      });
+    }
+  };
+
+  /**
    * Handle print for a document
    */
   const handlePrint = async (docId: string, fileUrl: string) => {
@@ -1835,6 +1881,18 @@ export const BatchValidationScreen = ({
                 {/* Expanded content: image viewer and editable fields */}
                 <CollapsibleContent>
                   <div className="p-2 sm:p-4 space-y-4 border-t">
+                    {/* AB 1466 Compliance Alert */}
+                    {(doc as any).ab1466_violations_detected && (
+                      <AB1466ViolationAlert
+                        violationsDetected={(doc as any).ab1466_violations_detected}
+                        violationCount={(doc as any).ab1466_violation_count || 0}
+                        detectedTerms={(doc as any).ab1466_detected_terms}
+                        redactionApplied={(doc as any).ab1466_redaction_applied}
+                        onRescan={() => handleRescanAb1466(doc.id)}
+                        isRescanning={rescanningAb1466.has(doc.id)}
+                      />
+                    )}
+                    
                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {/* Left column: Document Viewer */}
                       <div className="space-y-3">
