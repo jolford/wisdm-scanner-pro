@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/use-auth';
+import { AdminLayout } from '@/components/admin/AdminLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -428,56 +429,8 @@ const Help = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/10">
-      <header className="border-b bg-card/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate('/')}
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <img 
-                src={wisdmLogo} 
-                alt="WISDM Logo" 
-                className="h-10 w-auto" 
-              />
-              <div className="h-8 w-px bg-border" />
-              <div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                  Help Center
-                </h1>
-                <p className="text-xs text-muted-foreground">Documentation & Support</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="default" onClick={() => navigate('/training')} className="gap-2">
-                <GraduationCap className="h-4 w-4" />
-                Training Center
-              </Button>
-              <Button variant="outline" onClick={() => navigate('/release-notes')} className="gap-2">
-                <FileText className="h-4 w-4" />
-                Release Notes
-              </Button>
-              {isAdmin && (
-                <Button variant="outline" onClick={() => navigate('/admin')} className="gap-2">
-                  <Settings className="h-4 w-4" />
-                  Admin
-                </Button>
-              )}
-              <Button variant="outline" onClick={() => navigate('/')} className="gap-2">
-                <ArrowLeft className="h-4 w-4" />
-                Back to App
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
+    <AdminLayout title="Help Center" description="Documentation & Support">
+      <div className="max-w-6xl mx-auto">
         {/* Search Bar */}
         <Card className="mb-8 border-primary/20 bg-gradient-to-r from-primary/5 to-accent/5">
           <CardContent className="pt-6">
@@ -790,8 +743,8 @@ const Help = () => {
             </DialogFooter>
           </DialogContent>
         </Dialog>
-      </main>
-    </div>
+      </div>
+    </AdminLayout>
   );
 };
 
