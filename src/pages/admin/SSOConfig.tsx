@@ -7,14 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Shield, Plus, Settings, Trash2, CheckCircle, XCircle, Key, Link2, FileText } from "lucide-react";
+import { Shield, Plus, Settings, Trash2, CheckCircle, XCircle, Key, Link2, FileText, TestTube, Loader2, AlertTriangle } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
+import { Alert, AlertDescription } from "@/components/ui/alert";
 interface SSOConfig {
   id: string;
   customer_id: string;
@@ -61,10 +60,27 @@ const providerTemplates = {
   }
 };
 
+interface TestResult {
+  check: string;
+  status: 'pass' | 'fail' | 'warn';
+  message: string;
+}
+
+interface TestSummary {
+  status: 'pass' | 'fail' | 'warn';
+  message: string;
+  passCount: number;
+  failCount: number;
+  warnCount: number;
+}
+
 export default function SSOConfig() {
   const queryClient = useQueryClient();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedConfig, setSelectedConfig] = useState<SSOConfig | null>(null);
+  const [testResults, setTestResults] = useState<TestResult[] | null>(null);
+  const [testSummary, setTestSummary] = useState<TestSummary | null>(null);
+  const [isTesting, setIsTesting] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     provider_type: "azure_ad",
     provider_name: "",
@@ -75,6 +91,43 @@ export default function SSOConfig() {
     attribute_mapping: { email: "email", name: "name", groups: "groups" },
     enforce_sso: false
   });
+
+  const testConnection = async (config: SSOConfig) => {
+    setIsTesting(config.id);
+    setSelectedConfig(config);
+    setTestResults(null);
+    setTestSummary(null);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('test-sso-config', {
+        body: {
+          config_id: config.id,
+          entity_id: config.entity_id,
+          sso_url: config.sso_url,
+          certificate: config.certificate,
+          metadata_url: config.metadata_url
+        }
+      });
+
+      if (error) throw error;
+      
+      setTestResults(data.results);
+      setTestSummary(data.summary);
+      
+      if (data.summary.status === 'pass') {
+        toast.success('All tests passed!');
+      } else if (data.summary.status === 'warn') {
+        toast.warning('Tests completed with warnings');
+      } else {
+        toast.error('Some tests failed');
+      }
+    } catch (err) {
+      toast.error('Failed to test connection');
+      console.error(err);
+    } finally {
+      setIsTesting(null);
+    }
+  };
 
   const { data: configs, isLoading } = useQuery({
     queryKey: ["sso-configs"],
@@ -355,6 +408,18 @@ export default function SSOConfig() {
                         checked={config.is_active}
                         onCheckedChange={(checked) => updateMutation.mutate({ id: config.id, is_active: checked })}
                       />
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => testConnection(config)}
+                        disabled={isTesting === config.id}
+                      >
+                        {isTesting === config.id ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Testing...</>
+                        ) : (
+                          <><TestTube className="h-4 w-4 mr-2" /> Test Connection</>
+                        )}
+                      </Button>
                       <Button variant="outline" size="sm">
                         <Settings className="h-4 w-4 mr-2" />
                         Configure
@@ -368,6 +433,49 @@ export default function SSOConfig() {
                         Delete
                       </Button>
                     </div>
+                    
+                    {/* Test Results Display */}
+                    {isTesting === config.id && (
+                      <div className="mt-4 pt-4 border-t text-center text-muted-foreground">
+                        <Loader2 className="h-6 w-6 mx-auto animate-spin" />
+                        <p className="mt-2">Running connection tests...</p>
+                      </div>
+                    )}
+                    
+                    {testResults && testSummary && selectedConfig?.id === config.id && (
+                      <div className="mt-4 pt-4 border-t space-y-4">
+                        <Alert variant={testSummary.status === 'pass' ? 'default' : testSummary.status === 'warn' ? 'default' : 'destructive'}>
+                          <div className="flex items-center gap-2">
+                            {testSummary.status === 'pass' ? (
+                              <CheckCircle className="h-4 w-4 text-green-500" />
+                            ) : testSummary.status === 'warn' ? (
+                              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                            ) : (
+                              <XCircle className="h-4 w-4" />
+                            )}
+                            <AlertDescription>{testSummary.message}</AlertDescription>
+                          </div>
+                        </Alert>
+                        
+                        <div className="space-y-2">
+                          {testResults.map((result, idx) => (
+                            <div key={idx} className="flex items-center justify-between text-sm py-2 px-3 rounded bg-muted/50">
+                              <span className="font-medium">{result.check}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-muted-foreground">{result.message}</span>
+                                {result.status === 'pass' ? (
+                                  <CheckCircle className="h-4 w-4 text-green-500" />
+                                ) : result.status === 'warn' ? (
+                                  <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                                ) : (
+                                  <XCircle className="h-4 w-4 text-red-500" />
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );
@@ -390,6 +498,29 @@ export default function SSOConfig() {
                 <Label>Entity ID / Audience</Label>
                 <Input readOnly value={`${window.location.origin}`} className="font-mono text-sm" />
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Testing Resources</CardTitle>
+            <CardDescription>Use these free services to test your SAML configuration</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4">
+              <a href="https://samltest.id" target="_blank" rel="noopener noreferrer" className="block p-4 rounded-lg border hover:border-primary transition-colors">
+                <h4 className="font-medium">SAMLtest.id</h4>
+                <p className="text-sm text-muted-foreground">Free SAML testing service</p>
+              </a>
+              <a href="https://developer.okta.com/signup/" target="_blank" rel="noopener noreferrer" className="block p-4 rounded-lg border hover:border-primary transition-colors">
+                <h4 className="font-medium">Okta Developer</h4>
+                <p className="text-sm text-muted-foreground">Free developer account</p>
+              </a>
+              <a href="https://auth0.com/signup" target="_blank" rel="noopener noreferrer" className="block p-4 rounded-lg border hover:border-primary transition-colors">
+                <h4 className="font-medium">Auth0</h4>
+                <p className="text-sm text-muted-foreground">Free tier available</p>
+              </a>
             </div>
           </CardContent>
         </Card>
