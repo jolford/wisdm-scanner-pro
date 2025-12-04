@@ -5,9 +5,10 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Rocket, Zap, Shield, TrendingUp, Calendar, Package, Download } from "lucide-react";
+import { CheckCircle2, Zap, Shield, Calendar, Package, Download } from "lucide-react";
 import { format } from "date-fns";
 import { jsPDF } from "jspdf";
+import { AdminLayout } from "@/components/admin/AdminLayout";
 
 // Helper function to compare semantic versions
 const compareVersions = (a: string, b: string): number => {
@@ -18,7 +19,7 @@ const compareVersions = (a: string, b: string): number => {
     const aPart = aParts[i] || 0;
     const bPart = bParts[i] || 0;
     
-    if (aPart > bPart) return -1; // Descending order (newer first)
+    if (aPart > bPart) return -1;
     if (aPart < bPart) return 1;
   }
   
@@ -36,36 +37,29 @@ export default function ReleaseNotes() {
         .order("release_date", { ascending: false });
       if (error) throw error;
       
-      // Sort by semantic version (descending)
       return data?.sort((a, b) => compareVersions(a.version, b.version)) || [];
     },
   });
 
   const latestRelease = releases?.find(r => r.is_latest) || releases?.[0];
-  const olderReleases = releases?.filter(r => r.id !== latestRelease?.id) || [];
 
   const handleDownloadPDF = () => {
     if (!releases || releases.length === 0) return;
 
     const doc = new jsPDF();
     let yPos = 20;
-    const pageWidth = doc.internal.pageSize.getWidth();
     const margin = 20;
-    const maxWidth = pageWidth - 2 * margin;
 
-    // Title
     doc.setFontSize(20);
     doc.text("WISDM Capture Pro - Release Notes", margin, yPos);
     yPos += 15;
 
-    releases.forEach((release: any, releaseIndex: number) => {
-      // Check if we need a new page
+    releases.forEach((release: any) => {
       if (yPos > 250) {
         doc.addPage();
         yPos = 20;
       }
 
-      // Version header
       doc.setFontSize(16);
       doc.text(`Version ${release.version} - ${release.version_name}`, margin, yPos);
       yPos += 7;
@@ -74,13 +68,11 @@ export default function ReleaseNotes() {
       doc.text(`Released: ${format(new Date(release.release_date), "MMMM d, yyyy")}`, margin, yPos);
       yPos += 10;
 
-      // Description
       doc.setFontSize(11);
       const descriptionText = typeof release.description === "string" ? release.description : String(release.description ?? "");
       doc.text(descriptionText, margin, yPos);
       yPos += 10;
 
-      // Features
       if (release.features && Array.isArray(release.features)) {
         release.features.forEach((feature: any) => {
           if (yPos > 250) {
@@ -113,35 +105,26 @@ export default function ReleaseNotes() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="container mx-auto px-4 py-12 max-w-5xl">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center gap-2 mb-4">
-            <Rocket className="h-8 w-8 text-primary" />
-            <h1 className="text-4xl font-bold">Release Notes</h1>
-          </div>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Stay up to date with the latest features, improvements, and updates to WISDM Capture Pro
-          </p>
-          {latestRelease && (
-            <div className="flex flex-col items-center gap-4 mt-6">
-              <div className="flex items-center gap-4">
-                <Badge variant="default" className="text-sm py-1.5">
-                  <Calendar className="h-3 w-3 mr-1" />
-                  Version {latestRelease.version}
-                </Badge>
-                <Badge variant="outline" className="text-sm py-1.5">
-                  {format(new Date(latestRelease.release_date), "MMMM yyyy")}
-                </Badge>
-              </div>
-              <Button onClick={handleDownloadPDF} variant="outline" size="sm">
-                <Download className="h-4 w-4 mr-2" />
-                Download Release Notes
-              </Button>
+    <AdminLayout title="Release Notes" description="Stay up to date with the latest features and improvements">
+      <div className="space-y-8">
+        {/* Header with version info */}
+        {latestRelease && (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Badge variant="default" className="text-sm py-1.5">
+                <Calendar className="h-3 w-3 mr-1" />
+                Version {latestRelease.version}
+              </Badge>
+              <Badge variant="outline" className="text-sm py-1.5">
+                {format(new Date(latestRelease.release_date), "MMMM yyyy")}
+              </Badge>
             </div>
-          )}
-        </div>
+            <Button onClick={handleDownloadPDF} variant="outline" size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              Download PDF
+            </Button>
+          </div>
+        )}
 
         {isLoading ? (
           <div className="text-center py-12 text-muted-foreground">Loading releases...</div>
@@ -150,7 +133,7 @@ export default function ReleaseNotes() {
         ) : (
           <>
             {/* Latest Release Highlight */}
-            <Card className="mb-8 border-primary/50 bg-gradient-to-br from-primary/5 to-accent/5">
+            <Card className="border-primary/50 bg-gradient-to-br from-primary/5 to-accent/5">
               <CardHeader>
                 <div className="flex items-start justify-between">
                   <div>
@@ -194,7 +177,6 @@ export default function ReleaseNotes() {
               </CardHeader>
               <CardContent>
                 <Accordion type="single" collapsible className="w-full">
-                  {/* Sorted Releases */}
                   {releases?.map((release: any) => (
                     <AccordionItem key={release.id} value={release.id}>
                       <AccordionTrigger className="text-lg font-semibold">
@@ -231,7 +213,7 @@ export default function ReleaseNotes() {
             </Card>
 
             {/* Technical Details */}
-            <Card className="mt-8">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-xl flex items-center gap-2">
                   <Shield className="h-5 w-5" />
@@ -265,6 +247,6 @@ export default function ReleaseNotes() {
           </>
         )}
       </div>
-    </div>
+    </AdminLayout>
   );
 }
