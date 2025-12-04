@@ -256,15 +256,11 @@ const AdminDashboard = () => {
           )}
         </div>
 
-        {/* Quick Actions & Recent Activity */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        {/* Quick Actions, Sales Tools & Recent Activity */}
+        <div className="grid gap-6 lg:grid-cols-3">
           <QuickActionsMenu />
-          <RecentActivityFeed />
-        </div>
-
-        {/* Sales Tools */}
-        <div className="grid md:grid-cols-1 gap-6">
           <PricingPDFGenerator />
+          <RecentActivityFeed />
         </div>
       </div>
     </AdminLayout>
