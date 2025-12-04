@@ -254,22 +254,31 @@ export const InteractiveDocumentViewer = ({
       ab1466Violations.forEach((violation) => {
         if (!violation.boundingBox) return;
         const bbox = violation.boundingBox;
-        const bx = Number(bbox.x); const by = Number(bbox.y); const bw = Number(bbox.width); const bh = Number(bbox.height);
+        const bx = Number(bbox.x); const by = Number(bbox.y); const bw = Number(bbox.width); let bh = Number(bbox.height);
         if (![bx,by,bw,bh].every((n) => isFinite(n))) return;
         
         // Assume percentage coordinates (0-100)
         const isPercent = bx <= 100 && by <= 100 && bw <= 100 && bh <= 100;
-        const x = isPercent ? (bx / 100) * canvas.width : bx;
-        const y = isPercent ? (by / 100) * canvas.height : by;
-        const width = isPercent ? (bw / 100) * canvas.width : bw;
-        const height = isPercent ? (bh / 100) * canvas.height : bh;
+        
+        // Enforce minimum height of 4% for proper text coverage
+        if (isPercent && bh < 4) bh = 4;
+        
+        let x = isPercent ? (bx / 100) * canvas.width : bx;
+        let y = isPercent ? (by / 100) * canvas.height : by;
+        let width = isPercent ? (bw / 100) * canvas.width : bw;
+        let height = isPercent ? (bh / 100) * canvas.height : bh;
+        
+        // Add padding to ensure full text coverage
+        const paddingX = width * 0.15;
+        const paddingY = height * 0.2;
+        x = Math.max(0, x - paddingX / 2);
+        width = width + paddingX;
+        y = Math.max(0, y - paddingY / 2);
+        height = height + paddingY;
 
         // Draw solid black redaction box for AB1466 violations
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.95)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 1)';
         ctx.fillRect(x, y, width, height);
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 2;
-        ctx.strokeRect(x, y, width, height);
       });
     }
   }, [boundingBoxes, highlightedField, imageZoom, offensiveHighlights, canvasSize, piiRegions, ab1466Violations, showingOriginal, piiDebug, isPdf]);
