@@ -27,6 +27,7 @@ interface AB1466ViolationAlertProps {
   onRescan?: () => Promise<void>;
   onManualRedact?: () => void;
   isRescanning?: boolean;
+  notYetScanned?: boolean;
 }
 
 const categoryLabels: Record<string, string> = {
@@ -56,10 +57,12 @@ export function AB1466ViolationAlert({
   onRescan,
   onManualRedact,
   isRescanning = false,
+  notYetScanned = false,
 }: AB1466ViolationAlertProps) {
   const [isOpen, setIsOpen] = useState(false);
 
-  if (!violationsDetected) {
+  // Show component if violations detected OR not yet scanned
+  if (!violationsDetected && !notYetScanned) {
     return null;
   }
 
@@ -81,30 +84,49 @@ export function AB1466ViolationAlert({
       <AlertTriangle className="h-5 w-5 text-amber-600" />
       <AlertTitle className="text-amber-700 flex items-center gap-2 flex-wrap">
         California AB 1466 Compliance Alert
-        <Badge variant="outline" className="bg-amber-500/20 text-amber-700 border-amber-500/30 text-xs">
-          {violationCount} Violation{violationCount !== 1 ? 's' : ''} Detected
-        </Badge>
-        {violationsWithBoxes.length > 0 && (
-          <Badge variant="outline" className="bg-green-500/20 text-green-700 border-green-500/30 text-xs">
-            <Shield className="h-3 w-3 mr-1" />
-            {violationsWithBoxes.length} Redacted
+        {notYetScanned ? (
+          <Badge variant="outline" className="bg-blue-500/20 text-blue-700 border-blue-500/30 text-xs">
+            Not Yet Scanned
           </Badge>
-        )}
-        {hasViolationsWithoutBoxes && (
-          <Badge variant="outline" className="bg-orange-500/20 text-orange-700 border-orange-500/30 text-xs">
-            {violationsWithoutBoxes.length} Need Location
-          </Badge>
+        ) : (
+          <>
+            <Badge variant="outline" className="bg-amber-500/20 text-amber-700 border-amber-500/30 text-xs">
+              {violationCount} Violation{violationCount !== 1 ? 's' : ''} Detected
+            </Badge>
+            {violationsWithBoxes.length > 0 && (
+              <Badge variant="outline" className="bg-green-500/20 text-green-700 border-green-500/30 text-xs">
+                <Shield className="h-3 w-3 mr-1" />
+                {violationsWithBoxes.length} Redacted
+              </Badge>
+            )}
+            {hasViolationsWithoutBoxes && (
+              <Badge variant="outline" className="bg-orange-500/20 text-orange-700 border-orange-500/30 text-xs">
+                {violationsWithoutBoxes.length} Need Location
+              </Badge>
+            )}
+          </>
         )}
       </AlertTitle>
       <AlertDescription className="text-amber-700/90 mt-2">
-        <p className="mb-3">
-          This document contains unlawfully restrictive covenant language that must be redacted 
-          per California Assembly Bill 1466 before recording.
-        </p>
+        {notYetScanned ? (
+          <p className="mb-3">
+            This document has not been scanned for AB 1466 restrictive covenant violations yet.
+            Click the button below to scan for discriminatory language.
+          </p>
+        ) : (
+          <p className="mb-3">
+            This document contains unlawfully restrictive covenant language that must be redacted 
+            per California Assembly Bill 1466 before recording.
+          </p>
+        )}
         
         {onRescan && (
           <div className="mb-3 p-3 bg-orange-500/10 rounded-lg border border-orange-500/20">
-            {hasViolationsWithoutBoxes ? (
+            {notYetScanned ? (
+              <p className="text-sm mb-2 text-orange-700">
+                Scan this document to detect any restrictive covenant language that requires redaction.
+              </p>
+            ) : hasViolationsWithoutBoxes ? (
               <p className="text-sm mb-2 text-orange-700">
                 <strong>{violationsWithoutBoxes.length}</strong> violation{violationsWithoutBoxes.length !== 1 ? 's' : ''} detected but could not be visually located. 
                 Re-scan to identify exact positions for redaction.
@@ -126,7 +148,7 @@ export function AB1466ViolationAlert({
               ) : (
                 <RefreshCw className="h-4 w-4 mr-2" />
               )}
-              {isRescanning ? 'Scanning...' : 'Re-scan Document'}
+              {isRescanning ? 'Scanning...' : notYetScanned ? 'Scan for Violations' : 'Re-scan Document'}
             </Button>
           </div>
         )}
