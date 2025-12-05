@@ -73,7 +73,6 @@ import ValidationRules from "./pages/admin/ValidationRules";
 import ScheduledBatches from "./pages/admin/ScheduledBatches";
 import ReleaseNotes from "./pages/ReleaseNotes";
 import ReleaseNotesManager from "./pages/admin/ReleaseNotesManager";
-import BulkEdit from "./pages/admin/BulkEdit";
 import DocumentComparison from "./pages/admin/DocumentComparison";
 import QAMetrics from "./pages/admin/QAMetrics";
 import Downloads from "./pages/Downloads";
@@ -85,7 +84,6 @@ import WorkflowBuilder from "./pages/admin/WorkflowBuilder";
 import Workflows from "./pages/admin/Workflows";
 import CustomScripts from "./pages/admin/CustomScripts";
 import IntegrationMarketplace from "./pages/admin/IntegrationMarketplace";
-import AdvancedSearch from "./pages/admin/AdvancedSearch";
 import SSOConfig from "./pages/admin/SSOConfig";
 import SCIMConfig from "./pages/admin/SCIMConfig";
 import RetentionPolicies from "./pages/admin/RetentionPolicies";
@@ -243,7 +241,6 @@ const App = () => {
           <Route path="/admin/workflow-builder" element={<WorkflowBuilder />} />
           <Route path="/admin/custom-scripts" element={<CustomScripts />} />
           <Route path="/admin/integrations" element={<IntegrationMarketplace />} />
-          <Route path="/admin/advanced-search" element={<AdvancedSearch />} />
           
           {/* Enterprise Features */}
           <Route path="/admin/sso" element={<SSOConfig />} />
@@ -251,8 +248,7 @@ const App = () => {
           <Route path="/admin/retention" element={<RetentionPolicies />} />
           <Route path="/admin/sla-monitoring" element={<EnhancedSLAMonitoring />} />
           
-          {/* Phase 3: Bulk Operations & QA */}
-          <Route path="/admin/bulk-edit" element={<BulkEdit />} />
+          {/* Phase 3: QA */}
           <Route path="/admin/document-comparison" element={<DocumentComparison />} />
           <Route path="/admin/qa-metrics" element={<QAMetrics />} />
             <Route path="/help" element={<Help />} />

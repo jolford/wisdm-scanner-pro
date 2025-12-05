@@ -1,11 +1,11 @@
 import { 
   LayoutDashboard, FolderKanban, FileText, Users, Key, Building2, 
-  Target, AlertTriangle, Webhook, Copy, Shield, Clock,
-  BarChart2, DollarSign, TrendingUp, Edit3, GitCompare,
-  Brain, TestTube2, RefreshCw, Database, Palette, Activity,
-  BookOpen, Settings, LogOut, HelpCircle, GitBranch, FileType,
-  Smartphone, Package, ChevronDown, Search, History, Zap, Bug, Code,
-  KeyRound, UserCog, Archive, Gauge
+  Target, AlertTriangle, Webhook, Shield, Clock,
+  BarChart2, DollarSign, TrendingUp,
+  Brain, RefreshCw, Database, Palette, Activity,
+  Settings, LogOut, HelpCircle, GitBranch, FileType,
+  Smartphone, Package, ChevronDown, History, Zap, Bug, Code,
+  KeyRound, UserCog, Gauge
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -37,17 +37,24 @@ const menuItems = [
     defaultOpen: true,
   },
   {
-    title: 'Core Management',
+    title: 'Batch Management',
     items: [
       { title: 'Projects', url: '/admin/projects', icon: FolderKanban },
       { title: 'Batches', url: '/admin/batches', icon: FileText },
       { title: 'Documents', url: '/admin/documents', icon: FileText },
-      { title: 'Users', url: '/admin/users', icon: Users },
-      { title: 'Customers', url: '/admin/customers', icon: Building2 },
-      { title: 'Licenses', url: '/admin/licenses', icon: Key },
       { title: 'Mobile Validation', url: '/admin/mobile-validation', icon: Smartphone },
     ],
     defaultOpen: true,
+  },
+  {
+    title: 'Security Settings',
+    items: [
+      { title: 'Users', url: '/admin/users', icon: Users },
+      { title: 'Customers', url: '/admin/customers', icon: Building2 },
+      { title: 'Licenses', url: '/admin/licenses', icon: Key },
+      { title: 'Credential Migration', url: '/admin/credential-migration', icon: Shield },
+    ],
+    defaultOpen: false,
   },
   {
     title: 'Automation & Intelligence',
@@ -71,7 +78,6 @@ const menuItems = [
       { title: 'SLA Monitoring', url: '/admin/sla-monitoring', icon: Gauge },
       { title: 'QA Metrics', url: '/admin/qa-metrics', icon: Activity },
       { title: 'Error Logs', url: '/admin/error-logs', icon: Bug },
-      { title: 'Advanced Search', url: '/admin/advanced-search', icon: Search },
     ],
     defaultOpen: false,
   },
@@ -101,9 +107,7 @@ const menuItems = [
     title: 'Advanced',
     items: [
       { title: 'ML Templates', url: '/admin/ml-templates', icon: FileType },
-      { title: 'Bulk Edit', url: '/admin/bulk-edit', icon: Edit3 },
       { title: 'Document Reprocessing', url: '/admin/document-reprocessing', icon: RefreshCw },
-      { title: 'Credential Migration', url: '/admin/credential-migration', icon: Shield },
     ],
     defaultOpen: false,
   },
