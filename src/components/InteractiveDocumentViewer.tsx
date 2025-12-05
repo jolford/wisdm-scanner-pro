@@ -33,7 +33,7 @@ interface InteractiveDocumentViewerProps {
     boundingBox: { x: number; y: number; width: number; height: number } | null;
   }>;
   piiRegions?: Array<{ type: string; category: string; text: string; bbox?: any }>; 
-  ab1466Violations?: Array<{ term: string; category: string; text: string; boundingBox?: BoundingBox }>;
+  ab1466Violations?: Array<{ term: string; category: string; text: string; boundingBox?: BoundingBox; needsManualRedaction?: boolean }>;
   showingOriginal?: boolean;
   onToggleOriginal?: () => void;
   piiDebug?: boolean;
@@ -249,7 +249,7 @@ export const InteractiveDocumentViewer = ({
       });
     }
 
-    // Draw AB1466 violation redaction boxes (black boxes over discriminatory text)
+    // Draw AB1466 violation redaction boxes
     if (!showingOriginal && ab1466Violations && ab1466Violations.length > 0) {
       ab1466Violations.forEach((violation) => {
         if (!violation.boundingBox) return;
@@ -268,9 +268,22 @@ export const InteractiveDocumentViewer = ({
         const width = isPercent ? (bw / 100) * canvas.width : bw;
         const height = isPercent ? (bh / 100) * canvas.height : bh;
 
-        // Draw solid black redaction box for AB1466 violations
-        ctx.fillStyle = 'rgba(0, 0, 0, 1)';
-        ctx.fillRect(x, y, width, height);
+        if (violation.needsManualRedaction) {
+          // Draw YELLOW highlight for violations that need manual redaction
+          ctx.fillStyle = 'rgba(250, 204, 21, 0.5)';
+          ctx.fillRect(x, y, width, height);
+          ctx.strokeStyle = '#facc15';
+          ctx.lineWidth = 3;
+          ctx.strokeRect(x, y, width, height);
+          // Draw label
+          ctx.fillStyle = '#000';
+          ctx.font = 'bold 10px sans-serif';
+          ctx.fillText('⚠ REDACT', x + 2, y + height - 3);
+        } else {
+          // Draw solid black redaction box for successfully redacted violations
+          ctx.fillStyle = 'rgba(0, 0, 0, 1)';
+          ctx.fillRect(x, y, width, height);
+        }
       });
     }
   }, [boundingBoxes, highlightedField, imageZoom, offensiveHighlights, canvasSize, piiRegions, ab1466Violations, showingOriginal, piiDebug, isPdf]);

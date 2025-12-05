@@ -1625,6 +1625,10 @@ useEffect(() => {
             highlightedField={focusedField}
             offensiveHighlights={offensiveHighlights}
             piiRegions={combinedRedactionRegions}
+            ab1466Violations={ab1466DetectedTerms.map((v: any) => ({
+              ...v,
+              needsManualRedaction: !ab1466RedactionApplied || !v.boundingBox
+            }))}
             showingOriginal={showingOriginal}
             onToggleOriginal={() => setShowingOriginal(!showingOriginal)}
             piiDebug={piiDebug}
@@ -1750,6 +1754,10 @@ useEffect(() => {
                 highlightedField={focusedField}
                 offensiveHighlights={offensiveHighlights}
                 piiRegions={combinedRedactionRegions}
+                ab1466Violations={ab1466DetectedTerms.map((v: any) => ({
+                  ...v,
+                  needsManualRedaction: !ab1466RedactionApplied || !v.boundingBox
+                }))}
                 showingOriginal={showingOriginal}
                 onToggleOriginal={() => setShowingOriginal(!showingOriginal)}
                 onFieldClick={handleFieldFocus}
