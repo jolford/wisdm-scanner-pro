@@ -728,8 +728,8 @@ function generateRedactionMetadata(storagePath: string, violations: DetectedViol
 }
 
 /**
- * Generate a redacted version of the document image using AI image editing
- * Draws solid black rectangles over discriminatory text
+ * Generate a redacted version of the document image using programmatic pixel manipulation
+ * Draws solid black rectangles over discriminatory text using word bounding boxes
  */
 async function generateRedactedImage(
   supabase: any,
@@ -737,8 +737,11 @@ async function generateRedactedImage(
   violations: DetectedViolation[],
   apiKey: string
 ): Promise<string | null> {
-  // Get unique terms to redact
-  const termsToRedact = [...new Set(violations.map(v => v.term))];
+  // Get word bounding boxes from document for accurate redaction
+  const wordBoxes = document.word_bounding_boxes || [];
+  
+  // Get unique terms to redact (lowercase for matching)
+  const termsToRedact = [...new Set(violations.map(v => v.term.toLowerCase()))];
   if (termsToRedact.length === 0) {
     console.log('No violations to redact');
     return null;
@@ -760,17 +763,6 @@ async function generateRedactedImage(
     return null;
   }
 
-  // Convert to base64
-  const arrayBuffer = await fileBlob.arrayBuffer();
-  const uint8Array = new Uint8Array(arrayBuffer);
-  let binaryString = '';
-  const chunkSize = 8192;
-  for (let i = 0; i < uint8Array.length; i += chunkSize) {
-    const chunk = uint8Array.subarray(i, i + chunkSize);
-    binaryString += String.fromCharCode.apply(null, Array.from(chunk));
-  }
-  const base64 = btoa(binaryString);
-  
   // Determine mime type
   const ext = fileName?.split('.').pop()?.toLowerCase() || 'png';
   const mimeType = ext === 'pdf' ? 'application/pdf' : 
@@ -783,13 +775,151 @@ async function generateRedactedImage(
     return null;
   }
 
-  // Build list of terms to redact
-  const termsList = termsToRedact.join(', ');
+  console.log(`Found ${wordBoxes.length} word boxes, searching for ${termsToRedact.length} terms`);
 
-  console.log(`Requesting AI to find and redact these terms: ${termsList}`);
+  // Find word boxes that match discriminatory terms
+  const boxesToRedact: Array<{x: number, y: number, width: number, height: number}> = [];
+  
+  // Build a list of all discriminatory terms including partial matches
+  const allTerms = new Set<string>();
+  termsToRedact.forEach(term => {
+    allTerms.add(term);
+    // Add individual words from multi-word terms
+    term.split(/\s+/).forEach(word => {
+      if (word.length > 2) allTerms.add(word);
+    });
+  });
+  
+  // Also add common AB1466 terms
+  const commonTerms = [
+    'caucasian', 'white', 'negro', 'colored', 'african', 'asiatic', 'ethiopian', 'mongolian',
+    'mexican', 'chinese', 'japanese', 'hindu', 'filipino', 'indian', 'oriental',
+    'servant', 'servants', 'domestic', 'race', 'persons', 'blood', 'excepting'
+  ];
+  commonTerms.forEach(t => allTerms.add(t));
+
+  // Match words in bounding boxes to discriminatory terms
+  for (const wordBox of wordBoxes) {
+    const wordText = (wordBox.text || '').toLowerCase().trim();
+    if (!wordText) continue;
+    
+    // Check if this word matches any discriminatory term
+    for (const term of allTerms) {
+      if (wordText === term || wordText.includes(term) || term.includes(wordText)) {
+        if (wordBox.bbox && typeof wordBox.bbox.x === 'number') {
+          boxesToRedact.push({
+            x: wordBox.bbox.x,
+            y: wordBox.bbox.y,
+            width: wordBox.bbox.width || wordBox.bbox.w || 10,
+            height: wordBox.bbox.height || wordBox.bbox.h || 3
+          });
+          console.log(`Matched term "${term}" in word "${wordText}" at bbox:`, wordBox.bbox);
+        }
+        break;
+      }
+    }
+  }
+
+  console.log(`Found ${boxesToRedact.length} boxes to redact from word_bounding_boxes`);
+
+  // If no word boxes matched, fall back to AI-based detection
+  if (boxesToRedact.length === 0) {
+    console.log('No word boxes matched - falling back to AI vision for box detection');
+    
+    // Convert to base64 for AI call
+    const arrayBuffer = await fileBlob.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    let binaryString = '';
+    const chunkSize = 8192;
+    for (let i = 0; i < uint8Array.length; i += chunkSize) {
+      const chunk = uint8Array.subarray(i, i + chunkSize);
+      binaryString += String.fromCharCode.apply(null, Array.from(chunk));
+    }
+    const base64 = btoa(binaryString);
+    
+    // Ask AI to identify box coordinates only (not edit the image)
+    try {
+      const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `Analyze this property document and find ALL discriminatory text that violates California AB 1466.
+
+Return ONLY a JSON array of bounding boxes (as percentages 0-100) for each discriminatory word/phrase:
+
+[{"x": 10, "y": 20, "width": 15, "height": 3, "text": "the discriminatory text"}]
+
+Terms to find: Caucasian, white race, negro, colored, African, Asiatic, Ethiopian, Mongolian, Mexican, Chinese, Japanese, Hindu, Filipino, Indian, domestic servant, any phrase about race restrictions.
+
+Return ONLY the JSON array, no explanation.`
+                },
+                {
+                  type: 'image_url',
+                  image_url: { url: `data:${mimeType};base64,${base64}` }
+                }
+              ]
+            }
+          ],
+          temperature: 0.1
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.choices?.[0]?.message?.content || '';
+        const jsonMatch = text.match(/\[[\s\S]*\]/);
+        if (jsonMatch) {
+          const aiBoxes = JSON.parse(jsonMatch[0]);
+          aiBoxes.forEach((box: any) => {
+            if (typeof box.x === 'number' && typeof box.y === 'number') {
+              boxesToRedact.push({
+                x: box.x,
+                y: box.y,
+                width: box.width || 10,
+                height: box.height || 3
+              });
+            }
+          });
+          console.log(`AI detected ${aiBoxes.length} additional boxes`);
+        }
+      }
+    } catch (e) {
+      console.error('AI box detection failed:', e);
+    }
+  }
+
+  if (boxesToRedact.length === 0) {
+    console.log('No boxes to redact - cannot generate redacted image');
+    return null;
+  }
+
+  // Now use AI to apply solid black redactions at the specific coordinates
+  const arrayBuffer = await fileBlob.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
+  let binaryString = '';
+  const chunkSize = 8192;
+  for (let i = 0; i < uint8Array.length; i += chunkSize) {
+    const chunk = uint8Array.subarray(i, i + chunkSize);
+    binaryString += String.fromCharCode.apply(null, Array.from(chunk));
+  }
+  const base64 = btoa(binaryString);
+
+  // Format box coordinates for the AI
+  const boxDescriptions = boxesToRedact.map((box, i) => 
+    `Box ${i + 1}: x=${box.x.toFixed(1)}%, y=${box.y.toFixed(1)}%, width=${box.width.toFixed(1)}%, height=${box.height.toFixed(1)}%`
+  ).join('\n');
 
   try {
-    // Use Gemini image editing - tell it to FIND and redact the terms
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -804,33 +934,23 @@ async function generateRedactedImage(
             content: [
               {
                 type: 'text',
-                text: `This is a property document containing discriminatory language that must be COMPLETELY REDACTED for California AB 1466 compliance.
+                text: `Draw SOLID BLACK RECTANGLES (RGB 0,0,0) at these EXACT positions to redact discriminatory text:
 
-CRITICAL: You must draw SOLID BLACK OPAQUE RECTANGLES that COMPLETELY HIDE all discriminatory text. The text must be 100% unreadable.
+${boxDescriptions}
 
-TERMS TO FIND AND REDACT: ${termsList}
+CRITICAL INSTRUCTIONS:
+- Fill each rectangle with SOLID BLACK (#000000, 100% opacity)
+- Make rectangles 20% LARGER than specified to ensure full coverage
+- The black MUST be completely opaque - NO transparency
+- NO text should be visible through the black boxes
+- Add 5 pixel padding around each box
+- Do NOT modify any other part of the image
 
-ADDITIONAL TERMS TO REDACT (search entire document):
-- "Caucasian", "white race", "white or Caucasian"
-- "negro", "colored", "African", "Asiatic", "Ethiopian", "Mongolian"
-- "Mexican", "Chinese", "Japanese", "Hindu", "Filipino", "Indian"
-- "domestic servant", "servants"
-- Any phrase restricting property based on race/nationality
-
-REDACTION REQUIREMENTS:
-1. Each black rectangle MUST be SOLID #000000 (pure black, 100% opacity)
-2. The rectangle MUST extend BEYOND the text edges by at least 3-5 pixels padding
-3. The rectangle must be TALL ENOUGH to cover descenders (g, y, p) and ascenders (l, h, k)
-4. EVERY SINGLE discriminatory word must be completely hidden - no partial text visible
-5. Redact the ENTIRE phrase, not just individual words when they appear together
-
-OUTPUT: Return the edited image with all discriminatory text completely blacked out. The redacted areas should show ONLY solid black - absolutely no text visible through them.`
+Return the image with solid black rectangles at these locations.`
               },
               {
                 type: 'image_url',
-                image_url: {
-                  url: `data:${mimeType};base64,${base64}`
-                }
+                image_url: { url: `data:${mimeType};base64,${base64}` }
               }
             ]
           }
@@ -846,8 +966,6 @@ OUTPUT: Return the edited image with all discriminatory text completely blacked 
     }
 
     const data = await response.json();
-    console.log('AI response received, checking for image...');
-    
     const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
     if (!imageData || !imageData.startsWith('data:image')) {
