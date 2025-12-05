@@ -2025,6 +2025,7 @@ const [isExporting, setIsExporting] = useState(false);
                   onValidationComplete={loadQueueDocuments}
                   batchId={selectedBatchId}
                   batchName={selectedBatch?.batch_name}
+                  projectName={selectedProject?.name}
                   onSwitchToExport={() => handleTabChange('export')}
                   enableSignatureVerification={selectedProject?.enable_signature_verification || false}
                   detectPii={selectedProject?.detect_pii || false}
