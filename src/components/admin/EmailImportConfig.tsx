@@ -90,48 +90,33 @@ export function EmailImportConfig({ projectId, customerId }: EmailImportConfigPr
 
     try {
       setSaving(true);
-      const { data: { user } } = await supabase.auth.getUser();
       
-      if (!user) throw new Error("Not authenticated");
+      // Use edge function to encrypt password before saving
+      const { data, error } = await supabase.functions.invoke('encrypt-email-password', {
+        body: {
+          config_id: configId,
+          password: emailPassword,
+          project_id: projectId,
+          customer_id: customerId,
+          email_host: emailHost,
+          email_port: emailPort,
+          email_username: emailUsername,
+          email_folder: emailFolder,
+          use_ssl: useSsl,
+          is_active: isActive,
+          auto_create_batch: autoCreateBatch,
+          batch_name_template: batchTemplate,
+          delete_after_import: deleteAfterImport,
+          mark_as_read: markAsRead,
+        },
+      });
 
-      const configData = {
-        project_id: projectId,
-        customer_id: customerId,
-        email_host: emailHost,
-        email_port: emailPort,
-        email_username: emailUsername,
-        email_password: emailPassword,
-        email_folder: emailFolder,
-        use_ssl: useSsl,
-        is_active: isActive,
-        auto_create_batch: autoCreateBatch,
-        batch_name_template: batchTemplate,
-        delete_after_import: deleteAfterImport,
-        mark_as_read: markAsRead,
-        created_by: user.id,
-      };
+      if (error) throw error;
 
-      if (configId) {
-        const { error } = await supabase
-          .from("email_import_configs")
-          .update(configData)
-          .eq("id", configId);
-
-        if (error) throw error;
-      } else {
-        const { data, error } = await supabase
-          .from("email_import_configs")
-          .insert(configData)
-          .select()
-          .single();
-
-        if (error) throw error;
-        setConfigId(data.id);
-      }
-
+      setConfigId(data.config_id);
       toast({
         title: "Success",
-        description: "Email import configuration saved",
+        description: "Email import configuration saved securely",
       });
     } catch (error: any) {
       console.error("Error saving config:", error);

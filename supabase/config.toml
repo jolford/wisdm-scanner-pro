@@ -136,3 +136,7 @@ verify_jwt = true
 # AB 1466 Compliance
 [functions.auto-redact-ab1466]
 verify_jwt = true
+
+# Email Password Encryption
+[functions.encrypt-email-password]
+verify_jwt = true
