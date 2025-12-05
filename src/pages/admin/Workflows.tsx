@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
@@ -17,12 +17,22 @@ import {
   Plus,
   ChevronDown,
   ChevronRight,
-  RotateCcw
+  RotateCcw,
+  ArrowRightLeft
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 interface WorkflowVersion {
   id: string;
@@ -53,8 +63,14 @@ interface Workflow {
 
 export default function Workflows() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [filterProject, setFilterProject] = useState<string>("all");
   const [expandedWorkflows, setExpandedWorkflows] = useState<Set<string>>(new Set());
+  const [reassignDialog, setReassignDialog] = useState<{ open: boolean; workflow: Workflow | null }>({
+    open: false,
+    workflow: null,
+  });
+  const [newProjectId, setNewProjectId] = useState<string>("");
 
   const { data: workflows, isLoading: workflowsLoading } = useQuery({
     queryKey: ["workflows"],
@@ -168,6 +184,32 @@ export default function Workflows() {
       console.error("Error restoring version:", error);
       toast.error("Failed to restore version");
     }
+  };
+
+  const handleReassignWorkflow = async () => {
+    if (!reassignDialog.workflow || !newProjectId) return;
+
+    try {
+      const { error } = await supabase
+        .from("workflows")
+        .update({ project_id: newProjectId })
+        .eq("id", reassignDialog.workflow.id);
+
+      if (error) throw error;
+
+      toast.success("Workflow reassigned successfully");
+      queryClient.invalidateQueries({ queryKey: ["workflows"] });
+      setReassignDialog({ open: false, workflow: null });
+      setNewProjectId("");
+    } catch (error) {
+      console.error("Error reassigning workflow:", error);
+      toast.error("Failed to reassign workflow");
+    }
+  };
+
+  const openReassignDialog = (workflow: Workflow) => {
+    setNewProjectId(workflow.project_id);
+    setReassignDialog({ open: true, workflow });
   };
 
   const filteredWorkflows = workflows?.filter(w => 
@@ -335,17 +377,30 @@ export default function Workflows() {
                                   </p>
                                 </div>
                               </div>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  navigate(`/admin/workflow-builder?projectId=${workflow.project_id}&workflowId=${workflow.id}`);
-                                }}
-                              >
-                                <FileEdit className="h-4 w-4 mr-1" />
-                                Edit
-                              </Button>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    openReassignDialog(workflow);
+                                  }}
+                                >
+                                  <ArrowRightLeft className="h-4 w-4 mr-1" />
+                                  Reassign
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/admin/workflow-builder?projectId=${workflow.project_id}&workflowId=${workflow.id}`);
+                                  }}
+                                >
+                                  <FileEdit className="h-4 w-4 mr-1" />
+                                  Edit
+                                </Button>
+                              </div>
                             </div>
                           </CardContent>
                         </CollapsibleTrigger>
@@ -434,6 +489,63 @@ export default function Workflows() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Reassign Dialog */}
+      <Dialog open={reassignDialog.open} onOpenChange={(open) => {
+        if (!open) {
+          setReassignDialog({ open: false, workflow: null });
+          setNewProjectId("");
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reassign Workflow</DialogTitle>
+            <DialogDescription>
+              Move "{reassignDialog.workflow?.name}" to a different project.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Current Project</Label>
+              <p className="text-sm text-muted-foreground">
+                {reassignDialog.workflow?.projects?.name}
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-project">New Project</Label>
+              <Select value={newProjectId} onValueChange={setNewProjectId}>
+                <SelectTrigger id="new-project">
+                  <SelectValue placeholder="Select a project" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projects?.map((project) => (
+                    <SelectItem key={project.id} value={project.id}>
+                      {project.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setReassignDialog({ open: false, workflow: null });
+                setNewProjectId("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleReassignWorkflow}
+              disabled={!newProjectId || newProjectId === reassignDialog.workflow?.project_id}
+            >
+              Reassign Workflow
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
