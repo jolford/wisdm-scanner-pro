@@ -207,7 +207,6 @@ export const BatchTemplates = () => {
                   className="flex-1"
                   onClick={() => handleApplyTemplate(template)}
                 >
-                  <Play className="w-4 h-4 mr-1" />
                   Apply
                 </Button>
                 <Button 
