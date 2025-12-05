@@ -2301,7 +2301,7 @@ const [isExporting, setIsExporting] = useState(false);
                   )}
 
                   <div className="pt-4 border-t">
-                    <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">AB1466 Redacted Images</h4>
+                    <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">AB1466 Redacted PDF</h4>
                     <Button 
                       onClick={downloadRedactedImages} 
                       disabled={validatedDocs.length === 0} 
@@ -2309,10 +2309,10 @@ const [isExporting, setIsExporting] = useState(false);
                       className="w-full h-16 gap-2 hover:border-primary/50 hover:bg-primary/5"
                     >
                       <Shield className="h-5 w-5" />
-                      <span className="font-medium">Download Redacted Images</span>
+                      <span className="font-medium">Download Redacted PDF</span>
                     </Button>
                     <p className="text-xs text-muted-foreground mt-2 text-center">
-                      Downloads documents with AB1466 violations redacted
+                      Combines all redacted documents into a single PDF
                     </p>
                   </div>
 
