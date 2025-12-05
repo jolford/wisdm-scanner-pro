@@ -41,7 +41,6 @@ const menuItems = [
     items: [
       { title: 'Projects', url: '/admin/projects', icon: FolderKanban },
       { title: 'Batches', url: '/admin/batches', icon: FileText },
-      { title: 'Documents', url: '/admin/documents', icon: FileText },
       { title: 'Mobile Validation', url: '/admin/mobile-validation', icon: Smartphone },
     ],
     defaultOpen: true,
