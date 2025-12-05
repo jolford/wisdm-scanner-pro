@@ -101,6 +101,7 @@ interface BatchValidationScreenProps {
   onValidationComplete: () => void;
   batchId: string;
   batchName?: string;
+  projectName?: string; // Project name for AB1466 detection
   onSwitchToExport?: () => void;
   enableSignatureVerification?: boolean;
   detectPii?: boolean; // Whether PII detection is enabled for this project
@@ -180,14 +181,15 @@ export const BatchValidationScreen = ({
   onValidationComplete,
   batchId,
   batchName,
+  projectName,
   onSwitchToExport,
   enableSignatureVerification = false,
   detectPii = false,
 }: BatchValidationScreenProps) => {
-  // Check if this is an AB1466 batch
-  const isAB1466Batch = batchName?.includes('AB1466');
+  // Check if this is an AB1466 project (by project name, not batch name)
+  const isAB1466Project = projectName?.toLowerCase().includes('ab1466') || projectName?.toLowerCase().includes('ab 1466');
   // Check if this is a petition processing project (AB1466 or contains "petition" in name)
-  const isPetitionProject = batchName?.toLowerCase().includes('petition') || isAB1466Batch;
+  const isPetitionProject = projectName?.toLowerCase().includes('petition') || isAB1466Project;
   // Track which document cards are expanded (showing details)
   const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
   
@@ -2018,12 +2020,12 @@ export const BatchValidationScreen = ({
                       {/* Right column: Editable metadata fields */}
                       <div className="space-y-4">
                         <Tabs defaultValue="fields" className="w-full">
-                          <TabsList className={`w-full grid ${isAB1466Batch ? 'grid-cols-3' : 'grid-cols-2'} p-0.5 sm:p-1 h-auto`}>
+                          <TabsList className={`w-full grid ${isAB1466Project ? 'grid-cols-3' : 'grid-cols-2'} p-0.5 sm:p-1 h-auto`}>
                             <TabsTrigger value="fields" className="text-[10px] sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 data-[state=active]:text-xs sm:data-[state=active]:text-sm">
                               <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
                               Edit Fields
                             </TabsTrigger>
-                            {isAB1466Batch && (
+                            {isAB1466Project && (
                               <TabsTrigger value="image" className="text-[10px] sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 data-[state=active]:text-xs sm:data-[state=active]:text-sm">
                                 <ImageIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
                                 Sensitive
