@@ -126,6 +126,13 @@ export const ValidationScreen = ({
   const [detectedPiiRegions, setDetectedPiiRegions] = useState<any[]>([]);
   const [piiDebug, setPiiDebug] = useState(false);
   const [displayFieldsAbove, setDisplayFieldsAbove] = useState(false);
+  
+  // Redacted file URL state and signed URL
+  const [ab1466RedactedPath, setAb1466RedactedPath] = useState<string | null>(null);
+  const { signedUrl: redactedSignedUrl } = useSignedUrl(ab1466RedactedPath || undefined);
+  
+  // Use redacted image URL when available (unless showing original)
+  const effectiveImageUrl = (!showingOriginal && redactedSignedUrl) ? redactedSignedUrl : (previewUrl || displayUrl || currentImageUrl);
 
   // Resolve signature verification from prop or backend (project settings)
   const [sigEnabled, setSigEnabled] = useState<boolean>(enableSignatureVerification);
@@ -200,6 +207,7 @@ export const ValidationScreen = ({
   const [ab1466ViolationCount, setAb1466ViolationCount] = useState(0);
   const [ab1466DetectedTerms, setAb1466DetectedTerms] = useState<any[]>([]);
   const [ab1466RedactionApplied, setAb1466RedactionApplied] = useState(false);
+  const [ab1466RedactedFileUrl, setAb1466RedactedFileUrl] = useState<string | null>(null);
   const [isRescanningAb1466, setIsRescanningAb1466] = useState(false);
   const [ab1466NotYetScanned, setAb1466NotYetScanned] = useState(true); // Track if document hasn't been scanned
 
@@ -217,7 +225,7 @@ export const ValidationScreen = ({
       // Refresh the AB 1466 data from the database
       const { data: refreshedDoc } = await supabase
         .from('documents')
-        .select('ab1466_violations_detected, ab1466_violation_count, ab1466_detected_terms, ab1466_redaction_applied')
+        .select('ab1466_violations_detected, ab1466_violation_count, ab1466_detected_terms, ab1466_redaction_applied, redacted_file_url')
         .eq('id', documentId)
         .single();
       
@@ -227,6 +235,9 @@ export const ValidationScreen = ({
         setAb1466ViolationCount((refreshedDoc as any).ab1466_violation_count || 0);
         setAb1466DetectedTerms((refreshedDoc as any).ab1466_detected_terms || []);
         setAb1466RedactionApplied((refreshedDoc as any).ab1466_redaction_applied || false);
+        const redactedUrl = (refreshedDoc as any).redacted_file_url || null;
+        setAb1466RedactedFileUrl(redactedUrl);
+        setAb1466RedactedPath(redactedUrl);
         setAb1466NotYetScanned(ab1466Detected === null || ab1466Detected === undefined);
       }
       
@@ -253,7 +264,7 @@ export const ValidationScreen = ({
       try {
         const { data } = await supabase
           .from('documents')
-          .select('pii_detected, detected_pii_regions, ab1466_violations_detected, ab1466_violation_count, ab1466_detected_terms, ab1466_redaction_applied')
+          .select('pii_detected, detected_pii_regions, ab1466_violations_detected, ab1466_violation_count, ab1466_detected_terms, ab1466_redaction_applied, redacted_file_url')
           .eq('id', documentId)
           .single();
         if (data) {
@@ -267,6 +278,9 @@ export const ValidationScreen = ({
           setAb1466ViolationCount((data as any).ab1466_violation_count || 0);
           setAb1466DetectedTerms((data as any).ab1466_detected_terms || []);
           setAb1466RedactionApplied((data as any).ab1466_redaction_applied || false);
+          const redactedUrl = (data as any).redacted_file_url || null;
+          setAb1466RedactedFileUrl(redactedUrl);
+          setAb1466RedactedPath(redactedUrl);
           // Track if not yet scanned (null/undefined means not scanned)
           setAb1466NotYetScanned(ab1466Detected === null || ab1466Detected === undefined);
         }
@@ -1421,7 +1435,7 @@ useEffect(() => {
           </style>
         </head>
         <body>
-          <img src="${previewUrl || displayUrl || currentImageUrl}" alt="${fileName}" />
+          <img src="${effectiveImageUrl}" alt="${fileName}" />
         </body>
       </html>
     `);
@@ -1623,7 +1637,7 @@ useEffect(() => {
         {/* Left: Document Viewer */}
         {useInteractiveViewer ? (
           <InteractiveDocumentViewer
-            imageUrl={previewUrl || displayUrl || currentImageUrl}
+            imageUrl={effectiveImageUrl}
             fileName={fileName}
             documentId={documentId}
             boundingBoxes={boundingBoxes}
@@ -1632,10 +1646,14 @@ useEffect(() => {
             highlightedField={focusedField}
             offensiveHighlights={offensiveHighlights}
             piiRegions={combinedRedactionRegions}
-            ab1466Violations={ab1466DetectedTerms.map((v: any) => ({
-              ...v,
-              needsManualRedaction: true
-            }))}
+            ab1466Violations={
+              // If server-generated redacted image exists, don't show client-side highlights
+              ab1466RedactedFileUrl ? [] :
+              ab1466DetectedTerms.map((v: any) => ({
+                ...v,
+                needsManualRedaction: true
+              }))
+            }
             showingOriginal={showingOriginal}
             onToggleOriginal={() => setShowingOriginal(!showingOriginal)}
             piiDebug={piiDebug}
@@ -1754,17 +1772,21 @@ useEffect(() => {
           >
             {currentImageUrl ? (
               <InteractiveDocumentViewer
-                imageUrl={previewUrl || displayUrl || currentImageUrl}
+                imageUrl={effectiveImageUrl}
                 fileName={fileName}
                 documentId={documentId}
                 boundingBoxes={fieldBoundingBoxes}
                 highlightedField={focusedField}
                 offensiveHighlights={offensiveHighlights}
                 piiRegions={combinedRedactionRegions}
-                ab1466Violations={ab1466DetectedTerms.map((v: any) => ({
-                  ...v,
-                  needsManualRedaction: true
-                }))}
+                ab1466Violations={
+                  // If server-generated redacted image exists, don't show client-side highlights
+                  ab1466RedactedFileUrl ? [] :
+                  ab1466DetectedTerms.map((v: any) => ({
+                    ...v,
+                    needsManualRedaction: true
+                  }))
+                }
                 showingOriginal={showingOriginal}
                 onToggleOriginal={() => setShowingOriginal(!showingOriginal)}
                 onFieldClick={handleFieldFocus}
