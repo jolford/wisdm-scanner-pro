@@ -49,7 +49,6 @@ const adminRoutes = [
   { title: "Dashboard", url: "/admin", icon: Home, group: "Overview" },
   { title: "Projects", url: "/admin/projects", icon: FolderOpen, group: "Core" },
   { title: "Batches", url: "/admin/batches", icon: FileText, group: "Core" },
-  { title: "Documents", url: "/admin/documents", icon: FileText, group: "Core" },
   { title: "Users", url: "/admin/users", icon: Users, group: "Core" },
   { title: "Customers", url: "/admin/customers", icon: Building2, group: "Core" },
   { title: "Licenses", url: "/admin/licenses", icon: Key, group: "Core" },
