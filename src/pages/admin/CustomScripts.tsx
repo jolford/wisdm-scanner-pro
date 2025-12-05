@@ -97,18 +97,19 @@ export default function CustomScripts() {
     is_active: true,
   });
 
-  const loadTemplate = (templateIndex: string) => {
-    if (!formData.script_language) {
-      console.warn('Script language not selected.');
-      return;
-    }
-
-    const templates = SCRIPT_TEMPLATES[formData.script_language as keyof typeof SCRIPT_TEMPLATES];
-    if (templates && templates[parseInt(templateIndex)]) {
-      const template = templates[parseInt(templateIndex)];
-      setFormData({ ...formData, script_code: template.code });
-    } else {
-      console.warn('Template not found.');
+  const loadTemplate = (templateKey: string) => {
+    // Parse the template key (format: "language-index")
+    const [language, indexStr] = templateKey.split('-');
+    const index = parseInt(indexStr);
+    
+    const templates = SCRIPT_TEMPLATES[language as keyof typeof SCRIPT_TEMPLATES];
+    if (templates && templates[index]) {
+      const template = templates[index];
+      setFormData(prev => ({ 
+        ...prev, 
+        script_code: template.code,
+        script_language: language 
+      }));
     }
   };
 
@@ -338,11 +339,11 @@ export default function CustomScripts() {
                     <SelectContent>
                       {Object.entries(SCRIPT_TEMPLATES).map(([language, templates]) => (
                         <div key={language}>
-                          <SelectItem disabled value={language} className="font-bold text-gray-500">
-                            {language.toUpperCase()}
-                          </SelectItem>
+                          <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase">
+                            {language}
+                          </div>
                           {templates.map((template, index) => (
-                            <SelectItem key={index} value={index.toString()}>
+                            <SelectItem key={`${language}-${index}`} value={`${language}-${index}`}>
                               {template.name}
                             </SelectItem>
                           ))}
