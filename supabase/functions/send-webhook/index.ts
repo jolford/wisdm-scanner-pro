@@ -58,17 +58,21 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // SECURITY: Verify caller authorization
-    // Check if this is an internal service call (from other edge functions) 
-    // or an authenticated user call
+    // All webhook triggers must be authenticated - either via JWT or service secret
     const authHeader = req.headers.get('authorization');
-    const isServiceCall = req.headers.get('x-internal-service') === 'true';
+    const serviceSecret = req.headers.get('x-service-secret');
+    const expectedServiceSecret = Deno.env.get('WEBHOOK_SERVICE_SECRET');
     
-    if (!isServiceCall && authHeader) {
+    // Check for internal service-to-service calls using shared secret
+    const isValidServiceCall = serviceSecret && expectedServiceSecret && serviceSecret === expectedServiceSecret;
+    
+    if (isValidServiceCall) {
+      console.log('[Webhook] Valid service-to-service call via shared secret');
+    } else if (authHeader) {
       // Verify the user has access to this customer
       const authResult = await verifyAuth(req);
       
       if (authResult instanceof Response) {
-        // Auth failed, return the error response
         return authResult;
       }
       
@@ -100,11 +104,13 @@ Deno.serve(async (req) => {
       }
       
       console.log(`[Webhook] Authorized user ${user.id} triggering webhook for customer ${customer_id}`);
-    } else if (!isServiceCall) {
-      // No auth header and not a service call - require at least some authentication for external calls
-      // Allow internal service calls without auth (they set x-internal-service header)
-      console.warn('[Webhook] Request without authentication - allowing for backward compatibility');
-      // Note: In a future version, we should require authentication for all external calls
+    } else {
+      // No authentication provided - reject the request
+      console.error('[Webhook] Request without authentication - rejected');
+      return new Response(
+        JSON.stringify({ success: false, error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log(`[Webhook] Processing event: ${event_type} for customer: ${customer_id}`);
