@@ -1885,17 +1885,18 @@ export const BatchValidationScreen = ({
                   </div>
                 </div>
                 
-                {/* AB 1466 Compliance Alert - Always visible (not inside collapsible) */}
-                {(doc as any).ab1466_violations_detected && (
+                {/* AB 1466 Compliance Alert - Show when violations detected OR when not yet scanned */}
+                {((doc as any).ab1466_violations_detected || (doc as any).ab1466_violations_detected === null || (doc as any).ab1466_violations_detected === undefined) && (
                   <div className="px-2 sm:px-4 pt-2">
                     <AB1466ViolationAlert
-                      violationsDetected={(doc as any).ab1466_violations_detected}
+                      violationsDetected={(doc as any).ab1466_violations_detected || false}
                       violationCount={(doc as any).ab1466_violation_count || 0}
                       detectedTerms={(doc as any).ab1466_detected_terms}
                       redactionApplied={(doc as any).ab1466_redaction_applied}
                       onRescan={() => handleRescanAb1466(doc.id)}
                       onManualRedact={() => setRedactionDialogDocId(doc.id)}
                       isRescanning={rescanningAb1466.has(doc.id)}
+                      notYetScanned={(doc as any).ab1466_violations_detected === null || (doc as any).ab1466_violations_detected === undefined}
                     />
                   </div>
                 )}
