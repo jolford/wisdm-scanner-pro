@@ -1458,53 +1458,77 @@ const [isExporting, setIsExporting] = useState(false);
       const pageHeight = pdf.internal.pageSize.getHeight();
       let isFirstPage = true;
 
+      let addedPages = 0;
       for (const doc of redactedDocs) {
         try {
-          const { data: urlData } = supabase.storage
+          // Use signed URL instead of public URL for better compatibility
+          const { data: signedData, error: signError } = await supabase.storage
             .from('documents')
-            .getPublicUrl(doc.redacted_file_url!);
+            .createSignedUrl(doc.redacted_file_url!, 300);
 
-          if (urlData?.publicUrl) {
-            const response = await fetch(urlData.publicUrl);
-            const blob = await response.blob();
-            
-            // Convert blob to base64
-            const base64 = await new Promise<string>((resolve) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.readAsDataURL(blob);
-            });
-
-            if (!isFirstPage) {
-              pdf.addPage();
-            }
-            isFirstPage = false;
-
-            // Add image to PDF, fitting to page
-            const img = new Image();
-            img.src = base64;
-            await new Promise((resolve) => { img.onload = resolve; });
-            
-            const imgRatio = img.width / img.height;
-            const pageRatio = pageWidth / pageHeight;
-            
-            let imgWidth, imgHeight;
-            if (imgRatio > pageRatio) {
-              imgWidth = pageWidth - 20;
-              imgHeight = imgWidth / imgRatio;
-            } else {
-              imgHeight = pageHeight - 20;
-              imgWidth = imgHeight * imgRatio;
-            }
-            
-            const x = (pageWidth - imgWidth) / 2;
-            const y = (pageHeight - imgHeight) / 2;
-            
-            pdf.addImage(base64, 'PNG', x, y, imgWidth, imgHeight);
+          if (signError || !signedData?.signedUrl) {
+            console.error(`Failed to get signed URL for ${doc.file_name}:`, signError);
+            continue;
           }
+
+          const response = await fetch(signedData.signedUrl);
+          if (!response.ok) {
+            console.error(`Failed to fetch ${doc.file_name}: ${response.status}`);
+            continue;
+          }
+          
+          const blob = await response.blob();
+          
+          // Convert blob to base64
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+
+          if (!isFirstPage) {
+            pdf.addPage();
+          }
+          isFirstPage = false;
+          addedPages++;
+
+          // Add image to PDF, fitting to page
+          const img = new Image();
+          img.src = base64;
+          await new Promise((resolve, reject) => { 
+            img.onload = resolve; 
+            img.onerror = reject;
+          });
+          
+          const imgRatio = img.width / img.height;
+          const pageRatio = pageWidth / pageHeight;
+          
+          let imgWidth, imgHeight;
+          if (imgRatio > pageRatio) {
+            imgWidth = pageWidth - 20;
+            imgHeight = imgWidth / imgRatio;
+          } else {
+            imgHeight = pageHeight - 20;
+            imgWidth = imgHeight * imgRatio;
+          }
+          
+          const x = (pageWidth - imgWidth) / 2;
+          const y = (pageHeight - imgHeight) / 2;
+          
+          pdf.addImage(base64, 'PNG', x, y, imgWidth, imgHeight);
         } catch (error) {
           console.error(`Failed to add redacted version of ${doc.file_name}:`, error);
         }
+      }
+
+      if (addedPages === 0) {
+        toast({
+          title: 'Error',
+          description: 'Could not add any images to the PDF. Check that redacted files exist in storage.',
+          variant: 'destructive',
+        });
+        return;
       }
 
       const batchName = selectedBatch?.batch_name || 'batch';
