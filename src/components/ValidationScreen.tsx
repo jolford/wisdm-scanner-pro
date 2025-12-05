@@ -1645,7 +1645,7 @@ useEffect(() => {
             onFieldClick={handleFieldFocus}
             onRegionClick={handleRegionClick}
             highlightedField={focusedField}
-            offensiveHighlights={offensiveHighlights}
+            offensiveHighlights={ab1466RedactedFileUrl ? [] : offensiveHighlights}
             piiRegions={combinedRedactionRegions}
             ab1466Violations={
               // If server-generated redacted image exists, don't show client-side highlights
@@ -1778,7 +1778,7 @@ useEffect(() => {
                 documentId={documentId}
                 boundingBoxes={fieldBoundingBoxes}
                 highlightedField={focusedField}
-                offensiveHighlights={offensiveHighlights}
+                offensiveHighlights={ab1466RedactedFileUrl ? [] : offensiveHighlights}
                 piiRegions={combinedRedactionRegions}
                 ab1466Violations={
                   // If server-generated redacted image exists, don't show client-side highlights
