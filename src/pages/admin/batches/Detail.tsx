@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowLeft, FileText, CheckCircle2, XCircle, AlertCircle, Trash2, Download, FileSpreadsheet, FileJson, FileType, Cloud, Database, Clock } from 'lucide-react';
+import { ArrowLeft, FileText, CheckCircle2, XCircle, AlertCircle, Trash2, Download, FileSpreadsheet, FileJson, FileType, Cloud, Database, Clock, Shield } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
@@ -419,6 +419,57 @@ ${xmlDocs}
     });
   };
 
+  const downloadRedactedImages = async () => {
+    if (!documents || documents.length === 0) {
+      toast({ title: 'No documents to export', variant: 'destructive' });
+      return;
+    }
+
+    // Find documents with redacted versions
+    const redactedDocs = documents.filter(doc => doc.redacted_file_url);
+    
+    if (redactedDocs.length === 0) {
+      toast({ 
+        title: 'No redacted documents', 
+        description: 'No documents in this batch have redacted versions. Process documents with AB1466 redaction first.',
+        variant: 'destructive' 
+      });
+      return;
+    }
+
+    toast({ title: 'Downloading...', description: `Downloading ${redactedDocs.length} redacted document(s)` });
+
+    for (const doc of redactedDocs) {
+      try {
+        // Get public URL for redacted file
+        const { data: urlData } = supabase.storage
+          .from('documents')
+          .getPublicUrl(doc.redacted_file_url!);
+
+        if (urlData?.publicUrl) {
+          const response = await fetch(urlData.publicUrl);
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          // Use original filename with _redacted suffix
+          const ext = doc.redacted_file_url!.split('.').pop() || 'png';
+          const baseName = doc.file_name.replace(/\.[^/.]+$/, '');
+          a.download = `${baseName}_redacted.${ext}`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      } catch (error) {
+        console.error(`Failed to download redacted version of ${doc.file_name}:`, error);
+      }
+    }
+
+    toast({ 
+      title: 'Download complete', 
+      description: `Downloaded ${redactedDocs.length} redacted document(s)` 
+    });
+  };
+
   const exportToFilebound = async () => {
     const exportConfig = getExportConfig();
     const fileboundConfig = exportConfig?.filebound;
@@ -623,6 +674,10 @@ ${xmlDocs}
                     Export to Docmgt
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuItem onClick={downloadRedactedImages}>
+                  <Shield className="h-4 w-4 mr-2" />
+                  Download Redacted Images
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
