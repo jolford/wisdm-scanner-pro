@@ -1933,11 +1933,14 @@ export const BatchValidationScreen = ({
                               boundingBoxes={fieldBoundingBoxes[doc.id] || {}}
                               highlightedField={focusedField[doc.id]}
                               piiRegions={(doc as any).detected_pii_regions || []}
-                              ab1466Violations={((doc as any).ab1466_detected_terms || []).map((v: any) => ({
-                                ...v,
-                                // Always highlight violations in yellow so user can verify - they can apply black redaction via Manual Redact
-                                needsManualRedaction: true
-                              }))}
+                              ab1466Violations={
+                                // If server-generated redacted image exists, don't show client-side highlights
+                                (doc as any).redacted_file_url ? [] : 
+                                ((doc as any).ab1466_detected_terms || []).map((v: any) => ({
+                                  ...v,
+                                  needsManualRedaction: true
+                                }))
+                              }
                               showingOriginal={showingOriginal.has(doc.id)}
                               onToggleOriginal={() => {
                                 setShowingOriginal(prev => {

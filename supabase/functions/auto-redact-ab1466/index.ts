@@ -804,25 +804,27 @@ async function generateRedactedImage(
             content: [
               {
                 type: 'text',
-                text: `This is a property document with discriminatory restrictive covenant language that violates California AB 1466.
+                text: `This is a property document containing discriminatory language that must be COMPLETELY REDACTED for California AB 1466 compliance.
 
-YOUR TASK: Find and redact ALL occurrences of these discriminatory words/phrases by covering them with solid black rectangles:
+CRITICAL: You must draw SOLID BLACK OPAQUE RECTANGLES that COMPLETELY HIDE all discriminatory text. The text must be 100% unreadable.
 
-TERMS TO REDACT: ${termsList}
+TERMS TO FIND AND REDACT: ${termsList}
 
-ALSO REDACT any other discriminatory terms you find related to:
-- Race (Caucasian, white, negro, colored, African, Asiatic, etc.)
-- National origin (Mexican, Chinese, Japanese, etc.)
-- References to "domestic servant" exceptions
+ADDITIONAL TERMS TO REDACT (search entire document):
+- "Caucasian", "white race", "white or Caucasian"
+- "negro", "colored", "African", "Asiatic", "Ethiopian", "Mongolian"
+- "Mexican", "Chinese", "Japanese", "Hindu", "Filipino", "Indian"
+- "domestic servant", "servants"
+- Any phrase restricting property based on race/nationality
 
-INSTRUCTIONS:
-1. Locate EACH occurrence of the discriminatory terms in the image
-2. Draw a solid black filled rectangle (#000000) over EACH word/phrase
-3. Make sure the black box completely covers the text
-4. Do NOT modify any other part of the document
-5. Return the edited image with redactions applied
+REDACTION REQUIREMENTS:
+1. Each black rectangle MUST be SOLID #000000 (pure black, 100% opacity)
+2. The rectangle MUST extend BEYOND the text edges by at least 3-5 pixels padding
+3. The rectangle must be TALL ENOUGH to cover descenders (g, y, p) and ascenders (l, h, k)
+4. EVERY SINGLE discriminatory word must be completely hidden - no partial text visible
+5. Redact the ENTIRE phrase, not just individual words when they appear together
 
-The black boxes should tightly fit each word - not too big, not too small.`
+OUTPUT: Return the edited image with all discriminatory text completely blacked out. The redacted areas should show ONLY solid black - absolutely no text visible through them.`
               },
               {
                 type: 'image_url',
