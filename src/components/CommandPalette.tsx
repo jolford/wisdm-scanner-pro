@@ -97,11 +97,6 @@ export function CommandPalette() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  const runCommand = (command: () => void) => {
-    setOpen(false);
-    command();
-  };
-
   const groupedRoutes = adminRoutes.reduce((acc, route) => {
     if (!acc[route.group]) acc[route.group] = [];
     acc[route.group].push(route);
@@ -115,19 +110,39 @@ export function CommandPalette() {
         <CommandEmpty>No results found.</CommandEmpty>
         
         <CommandGroup heading="Quick Actions">
-          <CommandItem onSelect={() => runCommand(() => navigate("/"))}>
+          <CommandItem 
+            onSelect={() => {
+              setOpen(false);
+              navigate("/");
+            }}
+          >
             <Home className="mr-2 h-4 w-4" />
             <span>Go to Scanner</span>
           </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => navigate("/admin/projects/new"))}>
+          <CommandItem 
+            onSelect={() => {
+              setOpen(false);
+              navigate("/admin/projects/new");
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" />
             <span>New Project</span>
           </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => navigate("/admin/batches/new"))}>
+          <CommandItem 
+            onSelect={() => {
+              setOpen(false);
+              navigate("/admin/batches/new");
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" />
             <span>New Batch</span>
           </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => navigate("/admin/users/new"))}>
+          <CommandItem 
+            onSelect={() => {
+              setOpen(false);
+              navigate("/admin/users/new");
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" />
             <span>New User</span>
           </CommandItem>
@@ -138,7 +153,13 @@ export function CommandPalette() {
         {Object.entries(groupedRoutes).map(([group, routes]) => (
           <CommandGroup key={group} heading={group}>
             {routes.map((route) => (
-              <CommandItem key={route.url} onSelect={() => runCommand(() => navigate(route.url))}>
+              <CommandItem 
+                key={route.url} 
+                onSelect={() => {
+                  setOpen(false);
+                  navigate(route.url);
+                }}
+              >
                 <route.icon className="mr-2 h-4 w-4" />
                 <span>{route.title}</span>
               </CommandItem>
@@ -149,19 +170,39 @@ export function CommandPalette() {
         <CommandSeparator />
 
         <CommandGroup heading="Help & Resources">
-          <CommandItem onSelect={() => runCommand(() => navigate("/help"))}>
+          <CommandItem 
+            onSelect={() => {
+              setOpen(false);
+              navigate("/help");
+            }}
+          >
             <BookOpen className="mr-2 h-4 w-4" />
             <span>Help Center</span>
           </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => navigate("/api-docs"))}>
+          <CommandItem 
+            onSelect={() => {
+              setOpen(false);
+              navigate("/api-docs");
+            }}
+          >
             <FileText className="mr-2 h-4 w-4" />
             <span>API Documentation</span>
           </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => navigate("/release-notes"))}>
+          <CommandItem 
+            onSelect={() => {
+              setOpen(false);
+              navigate("/release-notes");
+            }}
+          >
             <FileText className="mr-2 h-4 w-4" />
             <span>Release Notes</span>
           </CommandItem>
-          <CommandItem onSelect={() => runCommand(() => navigate("/security-policy"))}>
+          <CommandItem 
+            onSelect={() => {
+              setOpen(false);
+              navigate("/security-policy");
+            }}
+          >
             <Shield className="mr-2 h-4 w-4" />
             <span>Security Policy</span>
           </CommandItem>
