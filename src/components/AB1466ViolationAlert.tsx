@@ -102,12 +102,18 @@ export function AB1466ViolationAlert({
           per California Assembly Bill 1466 before recording.
         </p>
         
-        {hasViolationsWithoutBoxes && onRescan && (
+        {onRescan && (
           <div className="mb-3 p-3 bg-orange-500/10 rounded-lg border border-orange-500/20">
-            <p className="text-sm mb-2 text-orange-700">
-              <strong>{violationsWithoutBoxes.length}</strong> violation{violationsWithoutBoxes.length !== 1 ? 's' : ''} detected but could not be visually located. 
-              Re-scan to identify exact positions for redaction.
-            </p>
+            {hasViolationsWithoutBoxes ? (
+              <p className="text-sm mb-2 text-orange-700">
+                <strong>{violationsWithoutBoxes.length}</strong> violation{violationsWithoutBoxes.length !== 1 ? 's' : ''} detected but could not be visually located. 
+                Re-scan to identify exact positions for redaction.
+              </p>
+            ) : (
+              <p className="text-sm mb-2 text-orange-700">
+                Re-scan to re-detect violations and update redaction positions.
+              </p>
+            )}
             <Button 
               variant="outline" 
               size="sm" 
@@ -120,7 +126,7 @@ export function AB1466ViolationAlert({
               ) : (
                 <RefreshCw className="h-4 w-4 mr-2" />
               )}
-              {isRescanning ? 'Scanning...' : 'Re-scan for Locations'}
+              {isRescanning ? 'Scanning...' : 'Re-scan Document'}
             </Button>
           </div>
         )}
