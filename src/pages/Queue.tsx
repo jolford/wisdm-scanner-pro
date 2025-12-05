@@ -2300,7 +2300,7 @@ const [isExporting, setIsExporting] = useState(false);
                     </div>
                   )}
 
-                  {(selectedProject as any)?.enable_ab1466_redaction && (
+                  {selectedProject?.name?.toLowerCase().includes('ab1466') || selectedProject?.name?.toLowerCase().includes('ab 1466') ? (
                     <div className="pt-4 border-t">
                       <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">AB1466 Redacted PDF</h4>
                       <Button 
@@ -2316,7 +2316,7 @@ const [isExporting, setIsExporting] = useState(false);
                         Combines all redacted documents into a single PDF
                       </p>
                     </div>
-                  )}
+                  ) : null}
 
                   {(selectedProject?.export_types?.includes('pdf') || getExportConfig().pdf?.enabled) && (
                     <div className="pt-4 border-t">
