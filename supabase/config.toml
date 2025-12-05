@@ -13,7 +13,7 @@ verify_jwt = true
 verify_jwt = false
 
 [functions.disable-user-mfa]
-verify_jwt = false
+verify_jwt = true
 
 [functions.process-scanner-imports]
 verify_jwt = false
