@@ -492,22 +492,7 @@ async function detectViolationsWithAIVision(
     const mimeType = document.file_type || 'image/jpeg';
     const imageDataUrl = `data:${mimeType};base64,${base64}`;
 
-    // Focus on specific discriminatory keywords that are easy to locate
-    const targetKeywords = [
-      'negro', 'colored', 'caucasian', 'white', 'asian', 'oriental',
-      'african', 'chinese', 'japanese', 'mexican', 'hispanic', 'jewish',
-      'hebrew', 'aryan', 'mongolian', 'semitic', 'malay', 'ethiopian'
-    ];
-    
-    // Also include short detected terms
-    const shortTerms = existingViolationTerms
-      .filter(t => t.length < 30)
-      .map(t => t.toLowerCase())
-      .slice(0, 10);
-    
-    const allTargets = [...new Set([...targetKeywords, ...shortTerms])];
-    
-    console.log(`AI Vision searching for terms: ${allTargets.slice(0, 15).join(', ')}`);
+    console.log('AI Vision searching for FULL restrictive covenant clauses (AB1466 compliance)');
     
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -523,33 +508,39 @@ async function detectViolationsWithAIVision(
             content: [
               {
                 type: 'text',
-                text: `You are an expert at finding discriminatory language in historical property documents for California AB 1466 compliance.
+                text: `You are an expert at identifying RACIALLY RESTRICTIVE COVENANTS in historical property documents for California AB 1466 compliance.
 
-TASK: Find ALL occurrences of these discriminatory words and phrases in this document image:
-${allTargets.join(', ')}
+CRITICAL: AB 1466 requires redacting ENTIRE CLAUSES/PARAGRAPHS that contain discriminatory restrictions, NOT just individual words.
 
-IMPORTANT: This is a scanned historical document. Look carefully at ALL text, including:
-- Old typewriter fonts and handwriting
-- Faded or low contrast text
-- Legal language in dense paragraphs
+TASK: Find ALL restrictive covenant clauses that restrict property ownership, occupancy, sale, lease, or conveyance based on:
+- Race (Caucasian, White, Negro, Colored, African, Asian, Oriental, Chinese, Japanese, Mexican, etc.)
+- Religion (Jewish, Hebrew, Catholic, etc.)
+- National origin or ancestry
+- "Blood" or "descent"
 
-For EACH discriminatory word/phrase found, provide its exact bounding box location.
+WHAT TO FIND:
+1. Full sentences/paragraphs like: "No person or persons of African or Asiatic descent shall be permitted to own or purchase..."
+2. Entire numbered clauses like: "4. The owners shall not sell or convey to a person not of the Caucasian race..."
+3. Complete restrictions like: "...shall not be sold, leased, rented, or occupied by any colored person..."
+4. Servant/domestic exceptions: "...except as domestic servants working for the family occupying the residence."
+
+DO NOT just find individual words - find the COMPLETE RESTRICTIVE CLAUSE that needs to be redacted.
 
 OUTPUT FORMAT - Return ONLY a JSON array:
-[{"text":"exact word found","category":"race","boundingBox":{"x":LEFT,"y":TOP,"width":WIDTH,"height":HEIGHT}}]
+[{"text":"First few words...last few words","category":"restrictive_covenant","boundingBox":{"x":LEFT,"y":TOP,"width":WIDTH,"height":HEIGHT}}]
 
 BOUNDING BOX COORDINATES (percentages 0-100 of image dimensions):
-- x = left edge of the word (0=left margin, 100=right margin)
-- y = TOP edge of the text line
-- width = width of the word (typically 5-20% for single words)
-- height = line height (typically 2-5% - must FULLY COVER the text)
+- x = left edge where the clause STARTS (0=left margin)
+- y = TOP of the FIRST line of the clause
+- width = width to cover the text (typically 70-95% for full paragraphs)
+- height = height to cover ALL LINES of the clause (may be 8-25% for multi-line clauses)
 
 EXAMPLES:
-- Word "negro" at 20% from left, 45% from top: {"text":"negro","category":"race","boundingBox":{"x":20,"y":45,"width":8,"height":3}}
-- Phrase "white persons" at center: {"text":"white persons","category":"race","boundingBox":{"x":40,"y":30,"width":18,"height":3}}
-- Word "colored" near bottom: {"text":"colored","category":"race","boundingBox":{"x":55,"y":70,"width":10,"height":3}}
+- Single-line restriction at top: {"text":"No person of the negro race...premises","category":"restrictive_covenant","boundingBox":{"x":5,"y":30,"width":90,"height":4}}
+- Multi-line paragraph #4: {"text":"4. The owners...occupying the residence.","category":"restrictive_covenant","boundingBox":{"x":3,"y":40,"width":94,"height":15}}
+- Two-line clause: {"text":"shall not be sold to...or Caucasian race","category":"restrictive_covenant","boundingBox":{"x":5,"y":55,"width":90,"height":8}}
 
-Return [] if nothing found. Output ONLY the JSON array, no markdown or explanation.`
+Return [] if no restrictive covenants found. Output ONLY the JSON array, no markdown.`
               },
               {
                 type: 'image_url',
@@ -644,6 +635,7 @@ Return [] if nothing found. Output ONLY the JSON array, no markdown or explanati
 
 /**
  * Use AI to detect contextual violations not caught by keyword matching
+ * Focuses on finding FULL RESTRICTIVE COVENANT CLAUSES, not individual words
  */
 async function detectViolationsWithAI(
   text: string,
@@ -661,22 +653,33 @@ async function detectViolationsWithAI(
       messages: [
         {
           role: 'system',
-          content: `You are an expert in California AB 1466 compliance. Analyze property documents for unlawfully restrictive covenant language that discriminates based on race, color, religion, sex, sexual orientation, familial status, marital status, disability, veteran or military status, national origin, source of income, or genetic information.
+          content: `You are an expert in California AB 1466 compliance for racially restrictive covenants.
 
-Return ONLY a JSON array of detected violations. Each violation should have:
-- "text": the exact discriminatory text found
-- "category": one of "race", "religion", "national_origin", "familial_status", "disability", "restrictive_covenant"
-- "reason": brief explanation of why this is a violation
+CRITICAL: AB 1466 requires identifying and redacting ENTIRE CLAUSES/PARAGRAPHS that restrict property ownership, occupancy, sale, lease, or conveyance based on race, religion, or national origin.
 
-If no violations found, return an empty array: []
-DO NOT include any explanatory text, only the JSON array.`
+DO NOT just return individual discriminatory words. Find the COMPLETE restrictive clause/sentence that needs to be redacted.
+
+EXAMPLES OF WHAT TO FIND:
+1. "No lot, nor any part of any lot in said tract, shall ever at any time be used or occupied or be permitted to be used or occupied by any person whose blood is not entirely that of the white or Caucasian race, excepting that a person or persons not of the white or Caucasian race, may be kept thereon strictly in the capacity of a domestic servant"
+
+2. "No person or persons of African or Asiatic descent shall be permitted to own or purchase the above described premises."
+
+3. "The owners, their heirs or assigns, shall not sell or convey any part of said premises to a person not of the Caucasian race and no residence lot shall be used by persons not of the Caucasian race except as domestic servants working for the family occupying the residence."
+
+Return ONLY a JSON array. Each item should have:
+- "text": the COMPLETE restrictive clause/sentence (can be multiple sentences if they form one restriction)
+- "category": "restrictive_covenant"
+- "reason": brief explanation
+
+If no violations found, return: []
+DO NOT include explanatory text, only the JSON array.`
         },
         {
           role: 'user',
-          content: `Analyze this property document text for AB 1466 violations:\n\n${text.substring(0, 8000)}`
+          content: `Find ALL racially restrictive covenant clauses in this property document:\n\n${text.substring(0, 8000)}`
         }
       ],
-      max_tokens: 2000
+      max_tokens: 3000
     })
   });
 
