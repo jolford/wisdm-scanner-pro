@@ -1884,22 +1884,25 @@ export const BatchValidationScreen = ({
                     </CollapsibleTrigger>
                   </div>
                 </div>
+                
+                {/* AB 1466 Compliance Alert - Always visible (not inside collapsible) */}
+                {(doc as any).ab1466_violations_detected && (
+                  <div className="px-2 sm:px-4 pt-2">
+                    <AB1466ViolationAlert
+                      violationsDetected={(doc as any).ab1466_violations_detected}
+                      violationCount={(doc as any).ab1466_violation_count || 0}
+                      detectedTerms={(doc as any).ab1466_detected_terms}
+                      redactionApplied={(doc as any).ab1466_redaction_applied}
+                      onRescan={() => handleRescanAb1466(doc.id)}
+                      onManualRedact={() => setRedactionDialogDocId(doc.id)}
+                      isRescanning={rescanningAb1466.has(doc.id)}
+                    />
+                  </div>
+                )}
 
                 {/* Expanded content: image viewer and editable fields */}
                 <CollapsibleContent>
                   <div className="p-2 sm:p-4 space-y-4 border-t">
-                    {/* AB 1466 Compliance Alert */}
-                    {(doc as any).ab1466_violations_detected && (
-                      <AB1466ViolationAlert
-                        violationsDetected={(doc as any).ab1466_violations_detected}
-                        violationCount={(doc as any).ab1466_violation_count || 0}
-                        detectedTerms={(doc as any).ab1466_detected_terms}
-                        redactionApplied={(doc as any).ab1466_redaction_applied}
-                        onRescan={() => handleRescanAb1466(doc.id)}
-                        onManualRedact={() => setRedactionDialogDocId(doc.id)}
-                        isRescanning={rescanningAb1466.has(doc.id)}
-                      />
-                    )}
                     
                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       {/* Left column: Document Viewer */}
