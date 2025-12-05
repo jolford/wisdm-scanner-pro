@@ -1929,7 +1929,8 @@ export const BatchValidationScreen = ({
                               piiRegions={(doc as any).detected_pii_regions || []}
                               ab1466Violations={((doc as any).ab1466_detected_terms || []).map((v: any) => ({
                                 ...v,
-                                needsManualRedaction: !(doc as any).ab1466_redaction_applied || !v.boundingBox
+                                // Always highlight violations in yellow so user can verify - they can apply black redaction via Manual Redact
+                                needsManualRedaction: true
                               }))}
                               showingOriginal={showingOriginal.has(doc.id)}
                               onToggleOriginal={() => {
