@@ -20,6 +20,49 @@ Deno.serve(async (req) => {
       }
     );
 
+    // Verify authentication - require system admin role
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authorization header required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication token' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Check if user is a system admin via app_metadata or user_roles table
+    const isSystemAdminFromMetadata = user.app_metadata?.role === 'system_admin';
+    
+    let isSystemAdminFromDb = false;
+    if (!isSystemAdminFromMetadata) {
+      const { data: roleData } = await supabaseAdmin
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('role', 'system_admin')
+        .single();
+      
+      isSystemAdminFromDb = !!roleData;
+    }
+
+    if (!isSystemAdminFromMetadata && !isSystemAdminFromDb) {
+      console.error('Unauthorized MFA disable attempt by user:', user.id);
+      return new Response(
+        JSON.stringify({ error: 'System admin privileges required to disable MFA' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { email } = await req.json();
 
     if (!email) {
@@ -28,6 +71,9 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Log the MFA disable attempt for audit
+    console.log(`MFA disable initiated by system admin ${user.id} (${user.email}) for target email: ${email}`);
 
     // Find user by email (iterate through pages if needed)
     let targetUser: any = null;
@@ -86,7 +132,7 @@ Deno.serve(async (req) => {
 
     // Best effort: revoke all refresh tokens if available via HTTP admin endpoint
     try {
-      const revokeUrl = `${Deno.env.get('SUPABASE_URL')}/auth/v1/admin/users/${targetUser.id}/logout`; // revokes all refresh tokens
+      const revokeUrl = `${Deno.env.get('SUPABASE_URL')}/auth/v1/admin/users/${targetUser.id}/logout`;
       await fetch(revokeUrl, {
         method: 'POST',
         headers: {
@@ -95,6 +141,9 @@ Deno.serve(async (req) => {
         }
       });
     } catch (_) {}
+
+    // Log successful MFA disable for audit
+    console.log(`MFA successfully disabled for ${email} (user ${targetUser.id}) by system admin ${user.id}. Deleted factors: ${deletedFactors.length}`);
 
     return new Response(
       JSON.stringify({
