@@ -249,41 +249,36 @@ export const InteractiveDocumentViewer = ({
       });
     }
 
-    // Draw AB1466 violation redaction boxes
+    // Draw AB1466 violation redaction boxes - always solid black
     if (!showingOriginal && ab1466Violations && ab1466Violations.length > 0) {
       ab1466Violations.forEach((violation) => {
         if (!violation.boundingBox) return;
         const bbox = violation.boundingBox;
-        const bx = Number(bbox.x); const by = Number(bbox.y); const bw = Number(bbox.width); let bh = Number(bbox.height);
+        let bx = Number(bbox.x); let by = Number(bbox.y); let bw = Number(bbox.width); let bh = Number(bbox.height);
         if (![bx,by,bw,bh].every((n) => isFinite(n))) return;
         
         // Assume percentage coordinates (0-100)
         const isPercent = bx <= 100 && by <= 100 && bw <= 100 && bh <= 100;
         
-        // Enforce minimum height of 2.5% for text coverage
-        if (isPercent && bh < 2.5) bh = 2.5;
+        // Enforce minimum dimensions for complete text coverage
+        if (isPercent) {
+          if (bh < 3.5) bh = 3.5; // Minimum height 3.5% for text
+          if (bw < 2) bw = 2; // Minimum width
+          // Add padding to ensure full coverage
+          bx = Math.max(0, bx - 0.3);
+          by = Math.max(0, by - 0.5);
+          bw = bw + 0.6;
+          bh = bh + 1.0;
+        }
         
         const x = isPercent ? (bx / 100) * canvas.width : bx;
         const y = isPercent ? (by / 100) * canvas.height : by;
         const width = isPercent ? (bw / 100) * canvas.width : bw;
         const height = isPercent ? (bh / 100) * canvas.height : bh;
 
-        if (violation.needsManualRedaction) {
-          // Draw YELLOW highlight for violations that need manual redaction
-          ctx.fillStyle = 'rgba(250, 204, 21, 0.5)';
-          ctx.fillRect(x, y, width, height);
-          ctx.strokeStyle = '#facc15';
-          ctx.lineWidth = 3;
-          ctx.strokeRect(x, y, width, height);
-          // Draw label
-          ctx.fillStyle = '#000';
-          ctx.font = 'bold 10px sans-serif';
-          ctx.fillText('⚠ REDACT', x + 2, y + height - 3);
-        } else {
-          // Draw solid black redaction box for successfully redacted violations
-          ctx.fillStyle = 'rgba(0, 0, 0, 1)';
-          ctx.fillRect(x, y, width, height);
-        }
+        // Always draw solid black redaction box
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(x, y, width, height);
       });
     }
   }, [boundingBoxes, highlightedField, imageZoom, offensiveHighlights, canvasSize, piiRegions, ab1466Violations, showingOriginal, piiDebug, isPdf]);
