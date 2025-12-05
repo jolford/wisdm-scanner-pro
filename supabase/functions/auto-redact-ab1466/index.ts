@@ -20,9 +20,18 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// AB 1466 Protected Classes per California Civil Code
+// Restrictions based on ANY of these are unlawful:
+const AB1466_PROTECTED_CLASSES = [
+  'race', 'color', 'religion', 'sex', 'gender', 'gender identity', 'gender expression',
+  'sexual orientation', 'familial status', 'marital status', 'national origin', 
+  'ancestry', 'disability', 'veteran status', 'military status', 'genetic information', 
+  'source of income'
+];
+
 // AB 1466 restricted terms - discriminatory language in property documents
 const AB1466_KEYWORDS = [
-  // Race-based restrictions
+  // Race/Color restrictions
   { term: 'caucasian', category: 'race' },
   { term: 'white persons', category: 'race' },
   { term: 'white people', category: 'race' },
@@ -51,12 +60,17 @@ const AB1466_KEYWORDS = [
   { term: 'muslim', category: 'religion' },
   { term: 'protestant', category: 'religion' },
   
-  // National origin
+  // National origin/ancestry
   { term: 'foreign born', category: 'national_origin' },
   { term: 'alien', category: 'national_origin' },
   { term: 'foreigner', category: 'national_origin' },
   
-  // Common restrictive covenant phrases
+  // Gender/Sex/Familial status
+  { term: 'unmarried persons', category: 'marital_status' },
+  { term: 'single persons', category: 'marital_status' },
+  { term: 'families with children', category: 'familial_status' },
+  
+  // Restrictive covenant phrases (trigger words)
   { term: 'shall not be sold to', category: 'restrictive_covenant' },
   { term: 'shall not be occupied by', category: 'restrictive_covenant' },
   { term: 'shall not be leased to', category: 'restrictive_covenant' },
@@ -72,6 +86,8 @@ const AB1466_KEYWORDS = [
   { term: 'race or color', category: 'restrictive_covenant' },
   { term: 'blood or descent', category: 'restrictive_covenant' },
   { term: 'ancestry or national origin', category: 'restrictive_covenant' },
+  { term: 'except domestic servants', category: 'restrictive_covenant' },
+  { term: 'in the capacity of', category: 'restrictive_covenant' },
 ];
 
 interface DetectedViolation {
@@ -508,39 +524,40 @@ async function detectViolationsWithAIVision(
             content: [
               {
                 type: 'text',
-                text: `You are an expert at identifying RACIALLY RESTRICTIVE COVENANTS in historical property documents for California AB 1466 compliance.
+                text: `You are an expert at identifying UNLAWFULLY RESTRICTIVE COVENANTS in property documents for California AB 1466 compliance.
 
-CRITICAL: AB 1466 requires redacting ENTIRE CLAUSES/PARAGRAPHS that contain discriminatory restrictions, NOT just individual words.
+AB 1466 REQUIREMENT: Identify and provide coordinates for ALL text that restricts property ownership, occupancy, sale, lease, or conveyance based on ANY of these protected classes:
+- Race, Color, National origin, Ancestry
+- Religion
+- Sex, Gender, Gender identity, Gender expression, Sexual orientation
+- Familial status, Marital status
+- Disability
+- Veteran or military status
+- Genetic information
+- Source of income
 
-TASK: Find ALL restrictive covenant clauses that restrict property ownership, occupancy, sale, lease, or conveyance based on:
-- Race (Caucasian, White, Negro, Colored, African, Asian, Oriental, Chinese, Japanese, Mexican, etc.)
-- Religion (Jewish, Hebrew, Catholic, etc.)
-- National origin or ancestry
-- "Blood" or "descent"
+WHAT TO REDACT - Find the COMPLETE restrictive language including:
+1. The full sentence/clause containing the restriction (e.g., "No person of African descent shall be permitted to occupy...")
+2. Any "domestic servant" exceptions (e.g., "except as domestic servants...")
+3. References to "blood," "descent," or "race" in property restrictions
 
-WHAT TO FIND:
-1. Full sentences/paragraphs like: "No person or persons of African or Asiatic descent shall be permitted to own or purchase..."
-2. Entire numbered clauses like: "4. The owners shall not sell or convey to a person not of the Caucasian race..."
-3. Complete restrictions like: "...shall not be sold, leased, rented, or occupied by any colored person..."
-4. Servant/domestic exceptions: "...except as domestic servants working for the family occupying the residence."
+CRITICAL ACCURACY REQUIREMENTS:
+- Measure the EXACT position of the discriminatory text
+- x = left edge of where the text STARTS (not the page margin)
+- y = TOP edge of the FIRST LINE of the restrictive text
+- width = exact width of the text block
+- height = exact height covering ALL lines of the restriction
 
-DO NOT just find individual words - find the COMPLETE RESTRICTIVE CLAUSE that needs to be redacted.
+RETURN FORMAT - JSON array only:
+[{"text":"exact text to redact","category":"restrictive_covenant","boundingBox":{"x":X,"y":Y,"width":W,"height":H}}]
 
-OUTPUT FORMAT - Return ONLY a JSON array:
-[{"text":"First few words...last few words","category":"restrictive_covenant","boundingBox":{"x":LEFT,"y":TOP,"width":WIDTH,"height":HEIGHT}}]
+COORDINATES are percentages (0-100) of image dimensions. Be PRECISE:
+- If text starts 10% from left edge, x=10
+- If text is at 40% from top, y=40
+- Measure actual text width, not full page width
+- Height should cover exactly the lines containing the restriction
 
-BOUNDING BOX COORDINATES (percentages 0-100 of image dimensions):
-- x = left edge where the clause STARTS (0=left margin)
-- y = TOP of the FIRST line of the clause
-- width = width to cover the text (typically 70-95% for full paragraphs)
-- height = height to cover ALL LINES of the clause (may be 8-25% for multi-line clauses)
-
-EXAMPLES:
-- Single-line restriction at top: {"text":"No person of the negro race...premises","category":"restrictive_covenant","boundingBox":{"x":5,"y":30,"width":90,"height":4}}
-- Multi-line paragraph #4: {"text":"4. The owners...occupying the residence.","category":"restrictive_covenant","boundingBox":{"x":3,"y":40,"width":94,"height":15}}
-- Two-line clause: {"text":"shall not be sold to...or Caucasian race","category":"restrictive_covenant","boundingBox":{"x":5,"y":55,"width":90,"height":8}}
-
-Return [] if no restrictive covenants found. Output ONLY the JSON array, no markdown.`
+Return [] if no violations. Output ONLY valid JSON, no markdown or explanation.`
               },
               {
                 type: 'image_url',
@@ -653,30 +670,26 @@ async function detectViolationsWithAI(
       messages: [
         {
           role: 'system',
-          content: `You are an expert in California AB 1466 compliance for racially restrictive covenants.
+          content: `You are an expert in California AB 1466 compliance for unlawfully restrictive covenants.
 
-CRITICAL: AB 1466 requires identifying and redacting ENTIRE CLAUSES/PARAGRAPHS that restrict property ownership, occupancy, sale, lease, or conveyance based on race, religion, or national origin.
+AB 1466 requires identifying restrictions based on ANY protected class:
+Race, Color, Religion, Sex, Gender, Gender identity, Gender expression, Sexual orientation, Familial status, Marital status, National origin, Ancestry, Disability, Veteran/military status, Genetic information, Source of income.
 
-DO NOT just return individual discriminatory words. Find the COMPLETE restrictive clause/sentence that needs to be redacted.
+Find COMPLETE restrictive clauses/sentences - the exact text that needs redaction.
 
-EXAMPLES OF WHAT TO FIND:
-1. "No lot, nor any part of any lot in said tract, shall ever at any time be used or occupied or be permitted to be used or occupied by any person whose blood is not entirely that of the white or Caucasian race, excepting that a person or persons not of the white or Caucasian race, may be kept thereon strictly in the capacity of a domestic servant"
+EXAMPLES:
+1. "No lot shall be used or occupied by any person whose blood is not entirely that of the white or Caucasian race, excepting persons kept thereon strictly in the capacity of a domestic servant"
+2. "No person of African or Asiatic descent shall be permitted to own or purchase the above described premises."
+3. "shall not sell or convey to a person not of the Caucasian race except as domestic servants"
 
-2. "No person or persons of African or Asiatic descent shall be permitted to own or purchase the above described premises."
+Return ONLY a JSON array:
+[{"text":"exact restrictive text","category":"restrictive_covenant","reason":"brief reason"}]
 
-3. "The owners, their heirs or assigns, shall not sell or convey any part of said premises to a person not of the Caucasian race and no residence lot shall be used by persons not of the Caucasian race except as domestic servants working for the family occupying the residence."
-
-Return ONLY a JSON array. Each item should have:
-- "text": the COMPLETE restrictive clause/sentence (can be multiple sentences if they form one restriction)
-- "category": "restrictive_covenant"
-- "reason": brief explanation
-
-If no violations found, return: []
-DO NOT include explanatory text, only the JSON array.`
+If no violations, return []. No explanatory text.`
         },
         {
           role: 'user',
-          content: `Find ALL racially restrictive covenant clauses in this property document:\n\n${text.substring(0, 8000)}`
+          content: `Find ALL unlawfully restrictive covenant language in this property document:\n\n${text.substring(0, 8000)}`
         }
       ],
       max_tokens: 3000
