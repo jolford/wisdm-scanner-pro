@@ -325,12 +325,11 @@ serve(async (req) => {
       );
     }
 
-    // Step 3: Generate actual redacted image using AI
-    const violationsWithBoxes = detectedViolations.filter(v => v.boundingBox);
+    // Step 3: Generate actual redacted image using AI (no bounding boxes needed)
     let redactedFilePath: string | null = null;
 
-    if (violationsWithBoxes.length > 0 && LOVABLE_API_KEY) {
-      console.log(`Generating server-side redacted image with ${violationsWithBoxes.length} redaction boxes`);
+    if (detectedViolations.length > 0 && LOVABLE_API_KEY) {
+      console.log(`Generating server-side redacted image for ${detectedViolations.length} violations`);
       try {
         redactedFilePath = await generateRedactedImage(
           supabase,
@@ -346,22 +345,6 @@ serve(async (req) => {
       }
     }
 
-    // Store redaction boxes as metadata for client-side fallback
-    const redactionMetadata = violationsWithBoxes.length > 0 ? {
-      redactionBoxes: violationsWithBoxes.map(v => ({
-        ...v.boundingBox,
-        category: v.category,
-        term: v.term,
-        padding: 5
-      })),
-      createdAt: new Date().toISOString(),
-      violationCount: violationsWithBoxes.length
-    } : null;
-    
-    if (redactionMetadata) {
-      console.log('Generated redaction metadata with', violationsWithBoxes.length, 'boxes');
-    }
-
     // Step 4: Update document with violation info and redacted file path
     const updateData: any = {
       ab1466_violations_detected: true,
@@ -374,7 +357,6 @@ serve(async (req) => {
         confidence: v.confidence,
         boundingBox: v.boundingBox
       })),
-      redaction_metadata: redactionMetadata,
       redacted_file_url: redactedFilePath, // Store path to actual redacted image
       needs_review: true // Flag for manual review
     };
@@ -394,7 +376,7 @@ serve(async (req) => {
         metadata: {
           violations_count: detectedViolations.length,
           categories: [...new Set(detectedViolations.map(v => v.category))],
-          redaction_boxes_count: violationsWithBoxes.length
+          redacted_image_created: !!redactedFilePath
         },
         success: true
       });
@@ -404,7 +386,7 @@ serve(async (req) => {
         success: true,
         violationsFound: detectedViolations.length,
         violations: detectedViolations,
-        redactionMetadata,
+        redactedImagePath: redactedFilePath,
         message: `Detected and processed ${detectedViolations.length} AB 1466 violation(s)`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -755,9 +737,10 @@ async function generateRedactedImage(
   violations: DetectedViolation[],
   apiKey: string
 ): Promise<string | null> {
-  const violationsWithBoxes = violations.filter(v => v.boundingBox);
-  if (violationsWithBoxes.length === 0) {
-    console.log('No violations with bounding boxes to redact');
+  // Get unique terms to redact
+  const termsToRedact = [...new Set(violations.map(v => v.term))];
+  if (termsToRedact.length === 0) {
+    console.log('No violations to redact');
     return null;
   }
 
@@ -774,7 +757,7 @@ async function generateRedactedImage(
 
   if (downloadError || !fileBlob) {
     console.error('Failed to download original file:', downloadError);
-    return generateRedactionMetadata(storagePath, violationsWithBoxes);
+    return null;
   }
 
   // Convert to base64
@@ -794,22 +777,19 @@ async function generateRedactedImage(
                    ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 
                    ext === 'png' ? 'image/png' : 'image/png';
 
-  // For PDFs, store redaction metadata for client-side rendering
+  // For PDFs, we can't use image editing
   if (mimeType === 'application/pdf') {
-    console.log('PDF detected - storing redaction metadata for client rendering');
-    return generateRedactionMetadata(storagePath, violationsWithBoxes);
+    console.log('PDF detected - cannot generate server-side redaction');
+    return null;
   }
 
-  // Build redaction boxes description
-  const boxDescriptions = violationsWithBoxes.map((v, i) => {
-    const b = v.boundingBox!;
-    return `Box ${i + 1}: x=${b.x.toFixed(1)}%, y=${b.y.toFixed(1)}%, width=${b.width.toFixed(1)}%, height=${Math.max(b.height, 2.5).toFixed(1)}%`;
-  }).join('\n');
+  // Build list of terms to redact
+  const termsList = termsToRedact.join(', ');
 
-  console.log(`Requesting AI to redact ${violationsWithBoxes.length} areas`);
+  console.log(`Requesting AI to find and redact these terms: ${termsList}`);
 
   try {
-    // Use the correct image generation model
+    // Use Gemini image editing - tell it to FIND and redact the terms
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -824,15 +804,25 @@ async function generateRedactedImage(
             content: [
               {
                 type: 'text',
-                text: `Edit this image by drawing solid black rectangles (#000000) to cover and redact text at these exact positions:
+                text: `This is a property document with discriminatory restrictive covenant language that violates California AB 1466.
 
-${boxDescriptions}
+YOUR TASK: Find and redact ALL occurrences of these discriminatory words/phrases by covering them with solid black rectangles:
 
-IMPORTANT:
-- Draw SOLID BLACK filled rectangles at each coordinate
-- Coordinates are percentages of image width and height
-- Do NOT modify anything else in the image
-- Return the edited image with the black boxes hiding the text`
+TERMS TO REDACT: ${termsList}
+
+ALSO REDACT any other discriminatory terms you find related to:
+- Race (Caucasian, white, negro, colored, African, Asiatic, etc.)
+- National origin (Mexican, Chinese, Japanese, etc.)
+- References to "domestic servant" exceptions
+
+INSTRUCTIONS:
+1. Locate EACH occurrence of the discriminatory terms in the image
+2. Draw a solid black filled rectangle (#000000) over EACH word/phrase
+3. Make sure the black box completely covers the text
+4. Do NOT modify any other part of the document
+5. Return the edited image with redactions applied
+
+The black boxes should tightly fit each word - not too big, not too small.`
               },
               {
                 type: 'image_url',
@@ -850,7 +840,7 @@ IMPORTANT:
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AI image editing failed:', response.status, errorText);
-      return generateRedactionMetadata(storagePath, violationsWithBoxes);
+      return null;
     }
 
     const data = await response.json();
@@ -859,15 +849,15 @@ IMPORTANT:
     const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
     if (!imageData || !imageData.startsWith('data:image')) {
-      console.log('AI did not return a redacted image, using metadata fallback');
-      return generateRedactionMetadata(storagePath, violationsWithBoxes);
+      console.log('AI did not return a redacted image');
+      return null;
     }
 
     // Extract base64 from data URL
     const base64Match = imageData.match(/^data:image\/(\w+);base64,(.+)$/);
     if (!base64Match) {
       console.error('Invalid image data format');
-      return generateRedactionMetadata(storagePath, violationsWithBoxes);
+      return null;
     }
 
     const outputFormat = base64Match[1];
@@ -896,13 +886,13 @@ IMPORTANT:
 
     if (uploadError) {
       console.error('Failed to upload redacted image:', uploadError);
-      return generateRedactionMetadata(storagePath, violationsWithBoxes);
+      return null;
     }
 
     console.log(`Successfully created redacted image: ${redactedPath}`);
     return redactedPath;
   } catch (error) {
     console.error('Error generating redacted image:', error);
-    return generateRedactionMetadata(storagePath, violationsWithBoxes);
+    return null;
   }
 }
