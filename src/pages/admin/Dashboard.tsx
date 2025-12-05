@@ -105,58 +105,6 @@ const AdminDashboard = () => {
           <DashboardMetrics />
         </div>
 
-        {/* Security Status Badge */}
-        <Card className="relative overflow-hidden border-green-200 dark:border-green-900/50 bg-gradient-to-br from-green-50 via-emerald-50/50 to-teal-50/30 dark:from-green-950/20 dark:via-emerald-950/10 dark:to-teal-950/5 shadow-[var(--shadow-md)]">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwMCIgc3Ryb2tlLW9wYWNpdHk9IjAuMDIiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-40" />
-          <div className="relative p-6">
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex items-start gap-4 flex-1">
-                <div className="h-14 w-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <Shield className="h-7 w-7 text-white" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-3">
-                    <h3 className="text-xl font-bold text-green-900 dark:text-green-100">Security Status: Strong</h3>
-                    <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-400 dark:border-green-700 shadow-sm">
-                      <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                      4 Issues Fixed
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-green-700 dark:text-green-300 mb-3 leading-relaxed max-w-3xl">
-                    All critical security vulnerabilities have been resolved. Your application implements defense-in-depth security with encrypted credentials, RLS policies, and comprehensive input validation.
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="secondary" className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      Credentials Encrypted
-                    </Badge>
-                    <Badge variant="secondary" className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      RLS Policies Active
-                    </Badge>
-                    <Badge variant="secondary" className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      Input Validation
-                    </Badge>
-                    <Badge variant="secondary" className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
-                      <CheckCircle2 className="h-3 w-3 mr-1" />
-                      Secure Logging
-                    </Badge>
-                  </div>
-                </div>
-              </div>
-              <Button
-                variant="outline"
-                size="default"
-                onClick={() => navigate('/security-compliance')}
-                className="border-green-300 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-950/40 text-green-700 dark:text-green-300 shadow-sm flex-shrink-0"
-              >
-                View Details
-              </Button>
-            </div>
-          </div>
-        </Card>
-
         {/* System Stats Section */}
         <div>
           <div className="flex items-center gap-2 mb-4">
@@ -262,6 +210,58 @@ const AdminDashboard = () => {
           <PricingPDFGenerator />
           <RecentActivityFeed />
         </div>
+
+        {/* Security Status Badge - Moved to bottom */}
+        <Card className="relative overflow-hidden border-green-200 dark:border-green-900/50 bg-gradient-to-br from-green-50 via-emerald-50/50 to-teal-50/30 dark:from-green-950/20 dark:via-emerald-950/10 dark:to-teal-950/5 shadow-[var(--shadow-md)]">
+          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGRlZnM+PHBhdHRlcm4gaWQ9ImdyaWQiIHdpZHRoPSI2MCIgaGVpZ2h0PSI2MCIgcGF0dGVyblVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHBhdGggZD0iTSAxMCAwIEwgMCAwIDAgMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwMCIgc3Ryb2tlLW9wYWNpdHk9IjAuMDIiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-40" />
+          <div className="relative p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start gap-4 flex-1">
+                <div className="h-14 w-14 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                  <Shield className="h-7 w-7 text-white" />
+                </div>
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-3">
+                    <h3 className="text-xl font-bold text-green-900 dark:text-green-100">Security Status: Strong</h3>
+                    <Badge variant="outline" className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-400 dark:border-green-700 shadow-sm">
+                      <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                      4 Issues Fixed
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-green-700 dark:text-green-300 mb-3 leading-relaxed max-w-3xl">
+                    All critical security vulnerabilities have been resolved. Your application implements defense-in-depth security with encrypted credentials, RLS policies, and comprehensive input validation.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="secondary" className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Credentials Encrypted
+                    </Badge>
+                    <Badge variant="secondary" className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      RLS Policies Active
+                    </Badge>
+                    <Badge variant="secondary" className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Input Validation
+                    </Badge>
+                    <Badge variant="secondary" className="bg-green-500/10 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800">
+                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                      Secure Logging
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+              <Button
+                variant="outline"
+                size="default"
+                onClick={() => navigate('/security-compliance')}
+                className="border-green-300 dark:border-green-700 hover:bg-green-100 dark:hover:bg-green-950/40 text-green-700 dark:text-green-300 shadow-sm flex-shrink-0"
+              >
+                View Details
+              </Button>
+            </div>
+          </div>
+        </Card>
       </div>
     </AdminLayout>
   );
