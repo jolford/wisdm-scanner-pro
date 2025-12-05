@@ -113,18 +113,18 @@ export function AdminSidebar() {
   const location = useLocation();
   const collapsed = state === 'collapsed';
 
-  // Initialize group states from localStorage or defaults
+  // Initialize group states from localStorage or defaults - ensure all groups have a value
   const [groupStates, setGroupStates] = useState<Record<string, boolean>>(() => {
     const saved = localStorage.getItem('admin-sidebar-groups');
-    if (saved) {
-      return JSON.parse(saved);
-    }
-    // Set defaults
-    const defaults: Record<string, boolean> = {};
+    const parsed = saved ? JSON.parse(saved) : {};
+    // Merge saved state with defaults to ensure all groups have a defined boolean value
+    const merged: Record<string, boolean> = {};
     menuItems.forEach(group => {
-      defaults[group.title] = group.defaultOpen ?? true;
+      merged[group.title] = typeof parsed[group.title] === 'boolean' 
+        ? parsed[group.title] 
+        : (group.defaultOpen ?? false);
     });
-    return defaults;
+    return merged;
   });
 
   // Check if current route is in a group to auto-expand it
