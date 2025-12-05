@@ -80,6 +80,7 @@ const menuItems = [
       { title: 'SLA Monitoring', url: '/admin/sla-monitoring', icon: Gauge },
       { title: 'QA Metrics', url: '/admin/qa-metrics', icon: Activity },
       { title: 'Error Logs', url: '/admin/error-logs', icon: Bug },
+      { title: 'Document Reprocessing', url: '/admin/document-reprocessing', icon: RefreshCw },
     ],
     defaultOpen: false,
   },
@@ -101,13 +102,6 @@ const menuItems = [
       { title: 'SSO/SAML Config', url: '/admin/sso', icon: KeyRound },
       { title: 'SCIM Provisioning', url: '/admin/scim', icon: UserCog },
       { title: 'Custom Scripts', url: '/admin/custom-scripts', icon: Code },
-    ],
-    defaultOpen: false,
-  },
-  {
-    title: 'Advanced',
-    items: [
-      { title: 'Document Reprocessing', url: '/admin/document-reprocessing', icon: RefreshCw },
     ],
     defaultOpen: false,
   },
