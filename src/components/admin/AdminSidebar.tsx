@@ -5,7 +5,7 @@ import {
   Brain, TestTube2, RefreshCw, Database, Palette, Activity,
   BookOpen, Settings, LogOut, HelpCircle, GitBranch, FileType,
   Smartphone, Package, ChevronDown, Search, History, Zap, Bug, Code,
-  KeyRound, UserCog, Archive, Gauge, Eraser
+  KeyRound, UserCog, Archive, Gauge
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -67,7 +67,6 @@ const menuItems = [
     items: [
       { title: 'Exception Queue', url: '/admin/exceptions', icon: AlertTriangle },
       { title: 'Confidence Scoring', url: '/admin/confidence', icon: Target },
-      { title: 'Batch Redaction', url: '/admin/batch-redaction', icon: Eraser },
       { title: 'Validation Analytics', url: '/admin/analytics', icon: BarChart2 },
       { title: 'SLA Monitoring', url: '/admin/sla-monitoring', icon: Gauge },
       { title: 'QA Metrics', url: '/admin/qa-metrics', icon: Activity },

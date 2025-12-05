@@ -90,7 +90,6 @@ import SSOConfig from "./pages/admin/SSOConfig";
 import SCIMConfig from "./pages/admin/SCIMConfig";
 import RetentionPolicies from "./pages/admin/RetentionPolicies";
 import EnhancedSLAMonitoring from "./pages/admin/EnhancedSLAMonitoring";
-import BatchRedaction from "./pages/admin/BatchRedaction";
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -245,9 +244,6 @@ const App = () => {
           <Route path="/admin/custom-scripts" element={<CustomScripts />} />
           <Route path="/admin/integrations" element={<IntegrationMarketplace />} />
           <Route path="/admin/advanced-search" element={<AdvancedSearch />} />
-          
-          {/* Batch Redaction */}
-          <Route path="/admin/batch-redaction" element={<BatchRedaction />} />
           
           {/* Enterprise Features */}
           <Route path="/admin/sso" element={<SSOConfig />} />
