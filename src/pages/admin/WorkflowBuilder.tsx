@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { GitBranch, Plus, Trash2, Save, Play, Settings, ArrowRight, CheckCircle2, FolderKanban, HelpCircle, Info } from 'lucide-react';
+import { GitBranch, Plus, Trash2, Save, Play, Settings, ArrowRight, ArrowDown, CheckCircle2, FolderKanban, HelpCircle, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/use-auth';
@@ -617,7 +617,7 @@ export default function WorkflowBuilder() {
 
                       {index < nodes.length - 1 && (
                         <div className="flex justify-center py-2">
-                          <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                          <ArrowDown className="h-5 w-5 text-muted-foreground" />
                         </div>
                       )}
                     </div>
