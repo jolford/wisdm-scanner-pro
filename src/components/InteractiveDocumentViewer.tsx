@@ -262,9 +262,8 @@ export const InteractiveDocumentViewer = ({
         
         // Enforce minimum dimensions for complete text coverage
         if (isPercent) {
-          if (bh < 3.5) bh = 3.5; // Minimum height 3.5% for text
-          if (bw < 2) bw = 2; // Minimum width
-          // Add padding to ensure full coverage
+          if (bh < 3.5) bh = 3.5;
+          if (bw < 2) bw = 2;
           bx = Math.max(0, bx - 0.3);
           by = Math.max(0, by - 0.5);
           bw = bw + 0.6;
@@ -276,7 +275,6 @@ export const InteractiveDocumentViewer = ({
         const width = isPercent ? (bw / 100) * canvas.width : bw;
         const height = isPercent ? (bh / 100) * canvas.height : bh;
 
-        // Always draw solid black redaction box
         ctx.fillStyle = '#000000';
         ctx.fillRect(x, y, width, height);
       });
