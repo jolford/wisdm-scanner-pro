@@ -172,12 +172,12 @@ const BatchRedaction = () => {
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Project</Label>
-                  <Select value={selectedProject} onValueChange={setSelectedProject}>
+                  <Select value={selectedProject || "all"} onValueChange={(val) => setSelectedProject(val === "all" ? "" : val)}>
                     <SelectTrigger>
                       <SelectValue placeholder="All Projects" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Projects</SelectItem>
+                      <SelectItem value="all">All Projects</SelectItem>
                       {projects.map((project) => (
                         <SelectItem key={project.id} value={project.id}>
                           {project.name}
@@ -189,15 +189,15 @@ const BatchRedaction = () => {
                 <div className="space-y-2">
                   <Label>Batch (Optional)</Label>
                   <Select 
-                    value={selectedBatch} 
-                    onValueChange={setSelectedBatch}
+                    value={selectedBatch || "all"} 
+                    onValueChange={(val) => setSelectedBatch(val === "all" ? "" : val)}
                     disabled={!selectedProject}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="All Batches in Project" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Batches</SelectItem>
+                      <SelectItem value="all">All Batches</SelectItem>
                       {batches.map((batch) => (
                         <SelectItem key={batch.id} value={batch.id}>
                           {batch.batch_name} ({batch.total_documents || 0} docs)
