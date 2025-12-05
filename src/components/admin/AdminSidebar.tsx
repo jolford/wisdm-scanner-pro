@@ -75,7 +75,7 @@ const menuItems: MenuGroup[] = [
   },
   {
     title: 'Automation & Intelligence',
-    icon: GitBranch,
+    icon: Zap,
     items: [
       { title: 'Workflow Builder', url: '/admin/workflow-builder', icon: GitBranch },
       { title: 'Workflow Management', url: '/admin/workflows', icon: History },
