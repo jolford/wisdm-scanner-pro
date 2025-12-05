@@ -942,6 +942,10 @@ Return ONLY the JSON array.`
     // Draw solid black rectangles over each violation
     ctx.fillStyle = "#000000";  // Pure black
     
+    // MINIMUM dimensions to ensure text is completely covered
+    const MIN_HEIGHT = Math.max(40, imgHeight * 0.035); // At least 40px or 3.5% of image
+    const MIN_WIDTH = Math.max(60, imgWidth * 0.04); // At least 60px or 4% of image
+    
     for (const box of boxesToRedact) {
       let x: number, y: number, width: number, height: number;
       
@@ -959,9 +963,21 @@ Return ONLY the JSON array.`
         height = box.height;
       }
       
-      // Add padding (10% extra on each side)
-      const padX = width * 0.1;
-      const padY = height * 0.2;
+      // Enforce MINIMUM dimensions
+      if (width < MIN_WIDTH) {
+        const diff = MIN_WIDTH - width;
+        x -= diff / 2;
+        width = MIN_WIDTH;
+      }
+      if (height < MIN_HEIGHT) {
+        const diff = MIN_HEIGHT - height;
+        y -= diff / 2;
+        height = MIN_HEIGHT;
+      }
+      
+      // Add generous padding (30% extra on each side for width, 50% for height)
+      const padX = Math.max(10, width * 0.3);
+      const padY = Math.max(10, height * 0.5);
       x = Math.max(0, x - padX);
       y = Math.max(0, y - padY);
       width = Math.min(width + padX * 2, imgWidth - x);
