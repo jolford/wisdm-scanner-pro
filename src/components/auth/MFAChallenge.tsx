@@ -200,6 +200,11 @@ export function MFAChallenge({ factorId, onSuccess, onCancel }: MFAChallengeProp
               placeholder="XXXXXXXX"
               value={recoveryCode}
               onChange={(e) => setRecoveryCode(e.target.value.toUpperCase())}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && recoveryCode.trim() && !loading) {
+                  handleRecoveryCode();
+                }
+              }}
               className="text-center font-mono tracking-wider"
             />
           </div>
@@ -245,6 +250,11 @@ export function MFAChallenge({ factorId, onSuccess, onCancel }: MFAChallengeProp
             placeholder="000000"
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && code.length === 6 && !loading && challengeId) {
+                handleVerifyCode();
+              }
+            }}
             maxLength={6}
             className="text-center text-2xl font-mono tracking-widest"
             autoFocus
