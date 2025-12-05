@@ -1449,35 +1449,79 @@ const [isExporting, setIsExporting] = useState(false);
       return;
     }
 
-    toast({ title: 'Downloading...', description: `Downloading ${redactedDocs.length} redacted document(s)` });
+    toast({ title: 'Generating PDF...', description: `Processing ${redactedDocs.length} redacted document(s)` });
 
-    for (const doc of redactedDocs) {
-      try {
-        const { data: urlData } = supabase.storage
-          .from('documents')
-          .getPublicUrl(doc.redacted_file_url!);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      let isFirstPage = true;
 
-        if (urlData?.publicUrl) {
-          const response = await fetch(urlData.publicUrl);
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          const ext = doc.redacted_file_url!.split('.').pop() || 'png';
-          const baseName = doc.file_name.replace(/\.[^/.]+$/, '');
-          a.download = `${baseName}_redacted.${ext}`;
-          a.click();
-          URL.revokeObjectURL(url);
+      for (const doc of redactedDocs) {
+        try {
+          const { data: urlData } = supabase.storage
+            .from('documents')
+            .getPublicUrl(doc.redacted_file_url!);
+
+          if (urlData?.publicUrl) {
+            const response = await fetch(urlData.publicUrl);
+            const blob = await response.blob();
+            
+            // Convert blob to base64
+            const base64 = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.readAsDataURL(blob);
+            });
+
+            if (!isFirstPage) {
+              pdf.addPage();
+            }
+            isFirstPage = false;
+
+            // Add image to PDF, fitting to page
+            const img = new Image();
+            img.src = base64;
+            await new Promise((resolve) => { img.onload = resolve; });
+            
+            const imgRatio = img.width / img.height;
+            const pageRatio = pageWidth / pageHeight;
+            
+            let imgWidth, imgHeight;
+            if (imgRatio > pageRatio) {
+              imgWidth = pageWidth - 20;
+              imgHeight = imgWidth / imgRatio;
+            } else {
+              imgHeight = pageHeight - 20;
+              imgWidth = imgHeight * imgRatio;
+            }
+            
+            const x = (pageWidth - imgWidth) / 2;
+            const y = (pageHeight - imgHeight) / 2;
+            
+            pdf.addImage(base64, 'PNG', x, y, imgWidth, imgHeight);
+          }
+        } catch (error) {
+          console.error(`Failed to add redacted version of ${doc.file_name}:`, error);
         }
-      } catch (error) {
-        console.error(`Failed to download redacted version of ${doc.file_name}:`, error);
       }
-    }
 
-    toast({
-      title: 'Download Complete',
-      description: `Downloaded ${redactedDocs.length} redacted document(s)`,
-    });
+      const batchName = selectedBatch?.batch_name || 'batch';
+      pdf.save(`${batchName}_redacted.pdf`);
+
+      toast({
+        title: 'PDF Downloaded',
+        description: `Downloaded PDF with ${redactedDocs.length} redacted document(s)`,
+      });
+    } catch (error) {
+      console.error('Failed to generate PDF:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to generate PDF',
+        variant: 'destructive',
+      });
+    }
   };
 
   const markBatchComplete = async () => {
