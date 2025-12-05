@@ -524,40 +524,35 @@ async function detectViolationsWithAIVision(
             content: [
               {
                 type: 'text',
-                text: `You are an expert at identifying UNLAWFULLY RESTRICTIVE COVENANTS in property documents for California AB 1466 compliance.
+                text: `You are an expert at identifying discriminatory words/phrases in property documents for California AB 1466 compliance.
 
-AB 1466 REQUIREMENT: Identify and provide coordinates for ALL text that restricts property ownership, occupancy, sale, lease, or conveyance based on ANY of these protected classes:
-- Race, Color, National origin, Ancestry
-- Religion
-- Sex, Gender, Gender identity, Gender expression, Sexual orientation
-- Familial status, Marital status
-- Disability
-- Veteran or military status
-- Genetic information
-- Source of income
+TASK: Find EACH INDIVIDUAL discriminatory word or short phrase and provide PRECISE bounding boxes for EACH ONE SEPARATELY.
 
-WHAT TO REDACT - Find the COMPLETE restrictive language including:
-1. The full sentence/clause containing the restriction (e.g., "No person of African descent shall be permitted to occupy...")
-2. Any "domestic servant" exceptions (e.g., "except as domestic servants...")
-3. References to "blood," "descent," or "race" in property restrictions
+DISCRIMINATORY TERMS TO FIND (provide separate bounding box for EACH occurrence):
+- Racial terms: "Caucasian", "white", "negro", "colored", "African", "Asiatic", "Mongolian", "Ethiopian", "Mexican", "Chinese", "Japanese", "Indian"
+- Phrases: "of the white race", "of African descent", "of the Caucasian race", "persons of color"
+- Restriction phrases: "shall not be sold to", "shall not be occupied by", "shall not be conveyed to", "shall not be leased to"
+- Domestic servant exceptions: "domestic servant", "servants quarters"
+- Religious/origin terms when used restrictively
 
-CRITICAL ACCURACY REQUIREMENTS:
-- Measure the EXACT position of the discriminatory text
-- x = left edge of where the text STARTS (not the page margin)
-- y = TOP edge of the FIRST LINE of the restrictive text
-- width = exact width of the text block
-- height = exact height covering ALL lines of the restriction
+CRITICAL - RETURN SEPARATE BOUNDING BOX FOR EACH WORD/PHRASE:
+- Do NOT try to cover entire paragraphs
+- Each discriminatory word/phrase gets its OWN bounding box
+- Be PRECISE - box should tightly fit the specific word/phrase only
 
-RETURN FORMAT - JSON array only:
-[{"text":"exact text to redact","category":"restrictive_covenant","boundingBox":{"x":X,"y":Y,"width":W,"height":H}}]
+BOUNDING BOX PRECISION:
+- x = exact left edge of THIS specific word (percentage 0-100)
+- y = exact top edge of THIS word's line (percentage 0-100)  
+- width = exact width of THIS word only (not the whole line)
+- height = height of just this single line of text (typically 2-4% of page)
 
-COORDINATES are percentages (0-100) of image dimensions. Be PRECISE:
-- If text starts 10% from left edge, x=10
-- If text is at 40% from top, y=40
-- Measure actual text width, not full page width
-- Height should cover exactly the lines containing the restriction
+EXAMPLE - For "No person of the Caucasian race shall...", return MULTIPLE boxes:
+[
+  {"text":"Caucasian","boundingBox":{"x":45,"y":32,"width":8,"height":2}},
+  {"text":"race","boundingBox":{"x":55,"y":32,"width":4,"height":2}}
+]
 
-Return [] if no violations. Output ONLY valid JSON, no markdown or explanation.`
+Return [] if no violations. Output ONLY valid JSON array, no explanation.`
               },
               {
                 type: 'image_url',
