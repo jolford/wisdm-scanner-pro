@@ -294,8 +294,9 @@ export const ValidationScreen = ({
   const combinedRedactionRegions = useMemo(() => {
     const regions = [...(detectedPiiRegions || [])];
     
-    // Add AB 1466 violations as redaction regions (only if not showing original)
-    if (ab1466ViolationsDetected && ab1466DetectedTerms?.length > 0) {
+    // Add AB 1466 violations as redaction regions ONLY if no server-generated redacted image exists
+    // When redacted_file_url exists, the server has already applied redactions - don't add client-side overlays
+    if (!ab1466RedactedFileUrl && ab1466ViolationsDetected && ab1466DetectedTerms?.length > 0) {
       console.log('[AB1466] Processing detected terms:', ab1466DetectedTerms.length);
       ab1466DetectedTerms.forEach((term: any, idx: number) => {
         if (term.boundingBox) {
@@ -327,7 +328,7 @@ export const ValidationScreen = ({
     
     console.log('[AB1466] Combined redaction regions:', regions.length);
     return regions;
-  }, [detectedPiiRegions, ab1466ViolationsDetected, ab1466DetectedTerms]);
+  }, [detectedPiiRegions, ab1466ViolationsDetected, ab1466DetectedTerms, ab1466RedactedFileUrl]);
 
   // Helper to normalize any metadata value to a displayable string
   const toFieldString = (v: any): string => {
