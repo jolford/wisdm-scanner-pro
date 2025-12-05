@@ -140,3 +140,7 @@ verify_jwt = true
 # Email Password Encryption
 [functions.encrypt-email-password]
 verify_jwt = true
+
+# Batch Document Redaction
+[functions.batch-redact-documents]
+verify_jwt = true

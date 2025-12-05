@@ -7,11 +7,13 @@ export interface RedactionKeyword {
   term: string;
   category: string;
   caseSensitive?: boolean;
+  label?: string; // Human-readable label for UI display
 }
 
 export interface DetectedKeyword {
   term: string;
   category: string;
+  label?: string;
   matches: Array<{
     text: string;
     boundingBox?: {
@@ -24,34 +26,112 @@ export interface DetectedKeyword {
 }
 
 /**
+ * PII category definitions for UI
+ */
+export const PII_CATEGORIES = {
+  ssn: { label: 'Social Security Number', icon: 'id-card', severity: 'critical' },
+  credit_card: { label: 'Credit Card', icon: 'credit-card', severity: 'critical' },
+  bank_account: { label: 'Bank Account', icon: 'landmark', severity: 'critical' },
+  routing_number: { label: 'Routing Number', icon: 'route', severity: 'high' },
+  email: { label: 'Email Address', icon: 'mail', severity: 'medium' },
+  phone: { label: 'Phone Number', icon: 'phone', severity: 'medium' },
+  dob: { label: 'Date of Birth', icon: 'calendar', severity: 'high' },
+  drivers_license: { label: 'Driver\'s License', icon: 'car', severity: 'critical' },
+  passport: { label: 'Passport Number', icon: 'book-open', severity: 'critical' },
+  itin: { label: 'ITIN', icon: 'hash', severity: 'critical' },
+  ein: { label: 'EIN', icon: 'building', severity: 'high' },
+  medical_record: { label: 'Medical Record #', icon: 'heart-pulse', severity: 'critical' },
+  health_insurance: { label: 'Health Insurance ID', icon: 'shield', severity: 'critical' },
+  medicare: { label: 'Medicare/Medicaid ID', icon: 'hospital', severity: 'critical' },
+  ip_address: { label: 'IP Address', icon: 'globe', severity: 'medium' },
+  vin: { label: 'Vehicle ID (VIN)', icon: 'car', severity: 'high' },
+  address: { label: 'Physical Address', icon: 'map-pin', severity: 'medium' },
+  name: { label: 'Person Name', icon: 'user', severity: 'medium' },
+} as const;
+
+/**
  * PII detection patterns for automatic redaction
- * Detects personally identifiable information that should be redacted
+ * Expanded library covering HIPAA, GDPR, CCPA, and other compliance needs
  */
 export const PII_KEYWORDS: RedactionKeyword[] = [
+  // ============ CRITICAL SEVERITY ============
+  
   // Social Security Numbers (SSN) - flexible pattern for various formats
-  { term: '\\b\\d{3}[\\s.-]?\\d{2}[\\s.-]?\\d{4}\\b', category: 'ssn', caseSensitive: false },
-  { term: '\\b\\d{9}\\b', category: 'ssn', caseSensitive: false },
+  { term: '\\b\\d{3}[\\s.-]?\\d{2}[\\s.-]?\\d{4}\\b', category: 'ssn', label: 'SSN' },
+  { term: '\\bSSN[:\\s]*\\d{3}[\\s.-]?\\d{2}[\\s.-]?\\d{4}\\b', category: 'ssn', label: 'SSN (labeled)' },
   
-  // Credit Card Numbers (basic pattern) - flexible separators
-  { term: '\\b\\d{4}[\\s.-]?\\d{4}[\\s.-]?\\d{4}[\\s.-]?\\d{4}\\b', category: 'credit_card', caseSensitive: false },
+  // Individual Taxpayer Identification Number (ITIN) - starts with 9
+  { term: '\\b9\\d{2}[\\s.-]?\\d{2}[\\s.-]?\\d{4}\\b', category: 'itin', label: 'ITIN' },
   
-  // Email addresses
-  { term: '\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b', category: 'email', caseSensitive: false },
+  // Credit Card Numbers (Visa, MC, Amex, Discover)
+  { term: '\\b4\\d{3}[\\s.-]?\\d{4}[\\s.-]?\\d{4}[\\s.-]?\\d{4}\\b', category: 'credit_card', label: 'Visa' },
+  { term: '\\b5[1-5]\\d{2}[\\s.-]?\\d{4}[\\s.-]?\\d{4}[\\s.-]?\\d{4}\\b', category: 'credit_card', label: 'MasterCard' },
+  { term: '\\b3[47]\\d{2}[\\s.-]?\\d{6}[\\s.-]?\\d{5}\\b', category: 'credit_card', label: 'Amex' },
+  { term: '\\b6(?:011|5\\d{2})[\\s.-]?\\d{4}[\\s.-]?\\d{4}[\\s.-]?\\d{4}\\b', category: 'credit_card', label: 'Discover' },
+  { term: '\\b\\d{4}[\\s.-]?\\d{4}[\\s.-]?\\d{4}[\\s.-]?\\d{4}\\b', category: 'credit_card', label: 'Card Number' },
   
-  // Phone numbers (various formats) - more flexible pattern
-  { term: '\\b\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4}\\b', category: 'phone', caseSensitive: false },
-  { term: '\\b\\d{3}[\\s.-]\\d{3}[\\s.-]\\d{4}\\b', category: 'phone', caseSensitive: false },
-  { term: '\\b\\d{10}\\b', category: 'phone', caseSensitive: false }, // 10 digits no separator
+  // Bank Account Numbers (8-17 digits)
+  { term: '\\b(?:account|acct)[#:\\s]*\\d{8,17}\\b', category: 'bank_account', label: 'Account Number' },
+  { term: '\\b\\d{8,17}\\b', category: 'bank_account', label: 'Potential Account' },
   
-  // Driver's License patterns (state-specific can be added)
-  { term: '\\b[A-Z]{1,2}\\d{6,8}\\b', category: 'drivers_license', caseSensitive: false },
+  // ABA Routing Numbers (9 digits, specific checksum)
+  { term: '\\b[0-3]\\d{8}\\b', category: 'routing_number', label: 'Routing Number' },
+  { term: '\\b(?:routing|aba)[#:\\s]*\\d{9}\\b', category: 'routing_number', label: 'ABA Routing' },
   
-  // Passport numbers
-  { term: '\\b[A-Z]{1,2}\\d{6,9}\\b', category: 'passport', caseSensitive: false },
+  // Driver's License patterns (state-specific)
+  { term: '\\b[A-Z]{1,2}\\d{6,8}\\b', category: 'drivers_license', label: 'License #' },
+  { term: '\\b(?:DL|DLN|license)[#:\\s]*[A-Z0-9]{6,12}\\b', category: 'drivers_license', label: 'Driver License' },
+  
+  // Passport numbers (US format)
+  { term: '\\b[A-Z]{1,2}\\d{6,9}\\b', category: 'passport', label: 'Passport #' },
+  { term: '\\b(?:passport)[#:\\s]*[A-Z0-9]{6,9}\\b', category: 'passport', label: 'Passport Number' },
+  
+  // ============ HEALTHCARE / HIPAA ============
+  
+  // Medical Record Numbers (MRN)
+  { term: '\\b(?:MRN|medical record)[#:\\s]*[A-Z0-9]{6,15}\\b', category: 'medical_record', label: 'MRN' },
+  { term: '\\b(?:patient id|patient#)[:\\s]*[A-Z0-9]{6,12}\\b', category: 'medical_record', label: 'Patient ID' },
+  
+  // Health Insurance Policy Numbers
+  { term: '\\b(?:policy|member|subscriber)[#:\\s]*[A-Z0-9]{8,15}\\b', category: 'health_insurance', label: 'Insurance ID' },
+  { term: '\\b(?:group)[#:\\s]*[A-Z0-9]{6,12}\\b', category: 'health_insurance', label: 'Group #' },
+  
+  // Medicare/Medicaid IDs (Medicare Beneficiary Identifier - 11 chars)
+  { term: '\\b[1-9][A-Z][A-Z0-9][0-9][A-Z][A-Z0-9][0-9]{4}[A-Z]{2}\\b', category: 'medicare', label: 'Medicare ID' },
+  { term: '\\b(?:medicare|medicaid)[#:\\s]*[A-Z0-9]{9,12}\\b', category: 'medicare', label: 'Medicare/Medicaid' },
+  
+  // ============ HIGH SEVERITY ============
+  
+  // Employer Identification Number (EIN) - XX-XXXXXXX
+  { term: '\\b\\d{2}[\\s.-]?\\d{7}\\b', category: 'ein', label: 'EIN' },
+  { term: '\\b(?:EIN|TIN|Tax ID)[:\\s]*\\d{2}[\\s.-]?\\d{7}\\b', category: 'ein', label: 'Tax ID' },
   
   // Date of Birth patterns
-  { term: '\\b(0?[1-9]|1[0-2])/(0?[1-9]|[12][0-9]|3[01])/(19|20)\\d{2}\\b', category: 'dob', caseSensitive: false },
-  { term: '\\b(19|20)\\d{2}-(0?[1-9]|1[0-2])-(0?[1-9]|[12][0-9]|3[01])\\b', category: 'dob', caseSensitive: false },
+  { term: '\\b(0?[1-9]|1[0-2])/(0?[1-9]|[12][0-9]|3[01])/(19|20)\\d{2}\\b', category: 'dob', label: 'DOB (MM/DD/YYYY)' },
+  { term: '\\b(19|20)\\d{2}-(0?[1-9]|1[0-2])-(0?[1-9]|[12][0-9]|3[01])\\b', category: 'dob', label: 'DOB (YYYY-MM-DD)' },
+  { term: '\\b(?:DOB|birth date|date of birth)[:\\s]*.{6,12}\\b', category: 'dob', label: 'DOB (labeled)' },
+  
+  // Vehicle Identification Number (VIN) - 17 characters
+  { term: '\\b[A-HJ-NPR-Z0-9]{17}\\b', category: 'vin', label: 'VIN' },
+  { term: '\\b(?:VIN|vehicle)[#:\\s]*[A-HJ-NPR-Z0-9]{17}\\b', category: 'vin', label: 'Vehicle ID' },
+  
+  // ============ MEDIUM SEVERITY ============
+  
+  // Email addresses
+  { term: '\\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Z|a-z]{2,}\\b', category: 'email', label: 'Email' },
+  
+  // Phone numbers (various formats)
+  { term: '\\b\\(?\\d{3}\\)?[\\s.-]?\\d{3}[\\s.-]?\\d{4}\\b', category: 'phone', label: 'Phone' },
+  { term: '\\b\\+1[\\s.-]?\\d{3}[\\s.-]?\\d{3}[\\s.-]?\\d{4}\\b', category: 'phone', label: 'Phone (+1)' },
+  { term: '\\b\\d{10}\\b', category: 'phone', label: '10-digit Phone' },
+  
+  // IP Addresses (IPv4)
+  { term: '\\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\b', category: 'ip_address', label: 'IP Address' },
+  
+  // Physical Address Patterns (US)
+  { term: '\\b\\d{1,5}\\s+[A-Za-z]+\\s+(?:Street|St|Avenue|Ave|Road|Rd|Boulevard|Blvd|Drive|Dr|Lane|Ln|Way|Court|Ct)\\b', category: 'address', label: 'Street Address' },
+  { term: '\\b(?:PO|P\\.O\\.)\\s*Box\\s*\\d+\\b', category: 'address', label: 'PO Box' },
+  { term: '\\b[A-Z]{2}\\s*\\d{5}(?:-\\d{4})?\\b', category: 'address', label: 'State + ZIP' },
 ];
 
 /**
@@ -60,40 +140,93 @@ export const PII_KEYWORDS: RedactionKeyword[] = [
  */
 export const DEFAULT_REDACTION_KEYWORDS: RedactionKeyword[] = [
   // Race-based restrictions
-  { term: 'caucasian', category: 'race' },
-  { term: 'white persons', category: 'race' },
-  { term: 'white people', category: 'race' },
-  { term: 'negro', category: 'race' },
-  { term: 'colored', category: 'race' },
-  { term: 'african', category: 'race' },
-  { term: 'asian', category: 'race' },
-  { term: 'chinese', category: 'race' },
-  { term: 'japanese', category: 'race' },
-  { term: 'mexican', category: 'race' },
-  { term: 'hispanic', category: 'race' },
-  { term: 'semitic', category: 'race' },
-  { term: 'aryan', category: 'race' },
+  { term: 'caucasian', category: 'race', label: 'Race' },
+  { term: 'white persons', category: 'race', label: 'Race' },
+  { term: 'white people', category: 'race', label: 'Race' },
+  { term: 'negro', category: 'race', label: 'Race' },
+  { term: 'colored', category: 'race', label: 'Race' },
+  { term: 'african', category: 'race', label: 'Race' },
+  { term: 'asian', category: 'race', label: 'Race' },
+  { term: 'chinese', category: 'race', label: 'Race' },
+  { term: 'japanese', category: 'race', label: 'Race' },
+  { term: 'mexican', category: 'race', label: 'Race' },
+  { term: 'hispanic', category: 'race', label: 'Race' },
+  { term: 'semitic', category: 'race', label: 'Race' },
+  { term: 'aryan', category: 'race', label: 'Race' },
   
   // Religious restrictions
-  { term: 'jewish', category: 'religion' },
-  { term: 'hebrew', category: 'religion' },
-  { term: 'catholic', category: 'religion' },
-  { term: 'muslim', category: 'religion' },
+  { term: 'jewish', category: 'religion', label: 'Religion' },
+  { term: 'hebrew', category: 'religion', label: 'Religion' },
+  { term: 'catholic', category: 'religion', label: 'Religion' },
+  { term: 'muslim', category: 'religion', label: 'Religion' },
   
   // National origin
-  { term: 'foreign born', category: 'national_origin' },
-  { term: 'alien', category: 'national_origin' },
+  { term: 'foreign born', category: 'national_origin', label: 'National Origin' },
+  { term: 'alien', category: 'national_origin', label: 'National Origin' },
   
   // Common restrictive covenant phrases
-  { term: 'shall not be sold to', category: 'restrictive_covenant' },
-  { term: 'shall not be occupied by', category: 'restrictive_covenant' },
-  { term: 'shall not be leased to', category: 'restrictive_covenant' },
-  { term: 'shall not be rented to', category: 'restrictive_covenant' },
-  { term: 'prohibited from', category: 'restrictive_covenant' },
-  { term: 'restricted to', category: 'restrictive_covenant' },
-  { term: 'no person of', category: 'restrictive_covenant' },
-  { term: 'excepting persons of', category: 'restrictive_covenant' },
+  { term: 'shall not be sold to', category: 'restrictive_covenant', label: 'Restrictive Covenant' },
+  { term: 'shall not be occupied by', category: 'restrictive_covenant', label: 'Restrictive Covenant' },
+  { term: 'shall not be leased to', category: 'restrictive_covenant', label: 'Restrictive Covenant' },
+  { term: 'shall not be rented to', category: 'restrictive_covenant', label: 'Restrictive Covenant' },
+  { term: 'prohibited from', category: 'restrictive_covenant', label: 'Restrictive Covenant' },
+  { term: 'restricted to', category: 'restrictive_covenant', label: 'Restrictive Covenant' },
+  { term: 'no person of', category: 'restrictive_covenant', label: 'Restrictive Covenant' },
+  { term: 'excepting persons of', category: 'restrictive_covenant', label: 'Restrictive Covenant' },
 ];
+
+/**
+ * Preset pattern groups for batch redaction
+ */
+export const PATTERN_PRESETS = {
+  'pii-full': {
+    label: 'All PII (Comprehensive)',
+    description: 'SSN, credit cards, bank accounts, phone, email, DOB, licenses',
+    categories: ['ssn', 'credit_card', 'bank_account', 'routing_number', 'email', 'phone', 'dob', 'drivers_license', 'passport', 'itin', 'ein', 'ip_address', 'vin', 'address']
+  },
+  'pii-financial': {
+    label: 'Financial PII',
+    description: 'SSN, credit cards, bank accounts, routing numbers, EIN',
+    categories: ['ssn', 'credit_card', 'bank_account', 'routing_number', 'ein', 'itin']
+  },
+  'pii-healthcare': {
+    label: 'Healthcare / HIPAA',
+    description: 'Medical records, insurance IDs, Medicare/Medicaid, DOB',
+    categories: ['medical_record', 'health_insurance', 'medicare', 'dob', 'ssn']
+  },
+  'pii-contact': {
+    label: 'Contact Information',
+    description: 'Email, phone, address, IP address',
+    categories: ['email', 'phone', 'address', 'ip_address']
+  },
+  'pii-identity': {
+    label: 'Identity Documents',
+    description: 'SSN, driver\'s license, passport, ITIN',
+    categories: ['ssn', 'drivers_license', 'passport', 'itin']
+  },
+  'ab1466': {
+    label: 'CA AB 1466 (Restrictive Covenants)',
+    description: 'Race, religion, national origin discriminatory terms',
+    categories: ['race', 'religion', 'national_origin', 'restrictive_covenant']
+  }
+} as const;
+
+/**
+ * Get keywords by category filter
+ */
+export const getKeywordsByCategories = (categories: string[]): RedactionKeyword[] => {
+  const piiFiltered = PII_KEYWORDS.filter(k => categories.includes(k.category));
+  const ab1466Filtered = DEFAULT_REDACTION_KEYWORDS.filter(k => categories.includes(k.category));
+  return [...piiFiltered, ...ab1466Filtered];
+};
+
+/**
+ * Get keywords by preset name
+ */
+export const getKeywordsByPreset = (presetKey: keyof typeof PATTERN_PRESETS): RedactionKeyword[] => {
+  const preset = PATTERN_PRESETS[presetKey];
+  return getKeywordsByCategories([...preset.categories]);
+};
 
 /**
  * Detect keywords in OCR text and word-level bounding boxes
@@ -106,11 +239,19 @@ export const detectKeywords = (
   ocrText: string,
   ocrMetadata: any,
   customKeywords: RedactionKeyword[] = [],
-  includePII: boolean = false
+  includePII: boolean = false,
+  piiCategories?: string[] // Optional filter for specific PII categories
 ): DetectedKeyword[] => {
+  let piiKeywords = includePII ? PII_KEYWORDS : [];
+  
+  // Filter PII keywords by category if specified
+  if (includePII && piiCategories && piiCategories.length > 0) {
+    piiKeywords = PII_KEYWORDS.filter(k => piiCategories.includes(k.category));
+  }
+  
   const keywords = [
     ...DEFAULT_REDACTION_KEYWORDS, 
-    ...(includePII ? PII_KEYWORDS : []),
+    ...piiKeywords,
     ...customKeywords
   ];
   const detected: DetectedKeyword[] = [];
@@ -267,7 +408,12 @@ export const detectKeywords = (
     }
 
     if (matches.length > 0) {
-      detected.push({ term: keyword.term, category: keyword.category, matches });
+      detected.push({ 
+        term: keyword.term, 
+        category: keyword.category, 
+        label: keyword.label,
+        matches 
+      });
     }
   }
   
@@ -407,4 +553,24 @@ export const mergeRedactionBoxes = (
   }
   
   return merged;
+};
+
+/**
+ * Summarize detected keywords by category for UI display
+ */
+export const summarizeDetections = (detected: DetectedKeyword[]): Record<string, { count: number; label: string }> => {
+  const summary: Record<string, { count: number; label: string }> = {};
+  
+  for (const d of detected) {
+    if (!summary[d.category]) {
+      const catInfo = PII_CATEGORIES[d.category as keyof typeof PII_CATEGORIES];
+      summary[d.category] = { 
+        count: 0, 
+        label: catInfo?.label || d.label || d.category 
+      };
+    }
+    summary[d.category].count += d.matches.length;
+  }
+  
+  return summary;
 };
