@@ -1896,6 +1896,7 @@ export const BatchValidationScreen = ({
                         detectedTerms={(doc as any).ab1466_detected_terms}
                         redactionApplied={(doc as any).ab1466_redaction_applied}
                         onRescan={() => handleRescanAb1466(doc.id)}
+                        onManualRedact={() => setRedactionDialogDocId(doc.id)}
                         isRescanning={rescanningAb1466.has(doc.id)}
                       />
                     )}

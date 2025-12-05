@@ -1606,6 +1606,7 @@ useEffect(() => {
             detectedTerms={ab1466DetectedTerms}
             redactionApplied={ab1466RedactionApplied}
             onRescan={handleRescanAb1466}
+            onManualRedact={() => setShowRedactionTool(true)}
             isRescanning={isRescanningAb1466}
           />
         )}
@@ -2130,6 +2131,7 @@ useEffect(() => {
                 detectedTerms={ab1466DetectedTerms}
                 redactionApplied={ab1466RedactionApplied}
                 onRescan={handleRescanAb1466}
+                onManualRedact={() => setShowRedactionTool(true)}
                 isRescanning={isRescanningAb1466}
               />
             )}

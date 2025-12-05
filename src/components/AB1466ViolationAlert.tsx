@@ -1,4 +1,4 @@
-import { AlertTriangle, FileWarning, Shield, RefreshCw, Loader2 } from 'lucide-react';
+import { AlertTriangle, FileWarning, Shield, RefreshCw, Loader2, Pencil } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,7 @@ interface AB1466ViolationAlertProps {
   redactionApplied?: boolean;
   onViewRedacted?: () => void;
   onRescan?: () => Promise<void>;
+  onManualRedact?: () => void;
   isRescanning?: boolean;
 }
 
@@ -53,6 +54,7 @@ export function AB1466ViolationAlert({
   redactionApplied,
   onViewRedacted,
   onRescan,
+  onManualRedact,
   isRescanning = false,
 }: AB1466ViolationAlertProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -181,6 +183,24 @@ export function AB1466ViolationAlert({
             >
               <Shield className="h-4 w-4 mr-2" />
               View Redacted Version
+            </Button>
+          </div>
+        )}
+        
+        {/* Manual Redact option for missed violations */}
+        {onManualRedact && (
+          <div className="mt-3 p-3 bg-blue-500/10 rounded-lg border border-blue-500/20">
+            <p className="text-sm mb-2 text-blue-700">
+              If automatic detection missed any terms, you can manually draw redaction boxes.
+            </p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onManualRedact}
+              className="bg-blue-500/10 border-blue-500/30 hover:bg-blue-500/20 text-blue-700"
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Manual Redact
             </Button>
           </div>
         )}
