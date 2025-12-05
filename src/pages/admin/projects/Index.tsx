@@ -300,90 +300,87 @@ const Projects = () => {
     return (
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
         {projectsList.map((project) => (
-          <Card key={project.id} className="group p-5 bg-gradient-to-br from-card to-card/80 shadow-sm hover:shadow-md transition-all border-l-4 border-l-primary/50 hover:border-l-primary">
-            <div className="mb-3">
-              <div className="flex items-start justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <h3 className="text-base font-semibold group-hover:text-primary transition-colors line-clamp-1">
-                    {project.name}
-                  </h3>
-                  {projectsWithBadDocs.has(project.id) && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Documents pending re-processing</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                  <Badge variant={project.is_active ? "default" : "secondary"} className="shrink-0 text-xs">
-                    {project.is_active ? 'Active' : 'Inactive'}
-                  </Badge>
-                </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => navigate(`/admin/projects/${project.id}/edit`)}
-                  className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
+          <Card key={project.id} className="group p-4 bg-gradient-to-br from-card to-card/80 shadow-sm hover:shadow-md transition-all border-l-4 border-l-primary/50 hover:border-l-primary">
+            {/* Header row with name, status, and date */}
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <h3 className="text-base font-semibold group-hover:text-primary transition-colors line-clamp-1">
+                  {project.name}
+                </h3>
+                {projectsWithBadDocs.has(project.id) && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <AlertCircle className="h-4 w-4 text-destructive shrink-0 cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Documents pending re-processing</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+                <Badge variant={project.is_active ? "default" : "secondary"} className="shrink-0 text-xs">
+                  {project.is_active ? 'Active' : 'Inactive'}
+                </Badge>
               </div>
-              {project.customer_id && (
-                <Badge variant="outline" className="mb-2">{getCustomerName(project.customer_id)}</Badge>
-              )}
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {project.description || 'No description'}
-              </p>
+              <span className="text-xs text-muted-foreground shrink-0">
+                {new Date(project.created_at).toLocaleDateString()}
+              </span>
             </div>
             
+            {/* Customer badge and description (only if exists) */}
+            <div className="mb-2">
+              {project.customer_id && (
+                <Badge variant="outline" className="mb-1.5 text-xs">{getCustomerName(project.customer_id)}</Badge>
+              )}
+              {project.description && (
+                <p className="text-sm text-muted-foreground line-clamp-1">
+                  {project.description}
+                </p>
+              )}
+            </div>
+            
+            {/* Extraction fields */}
             <div className="mb-3">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-1.5">
                 <p className="text-xs font-medium text-muted-foreground">Extraction Fields</p>
                 <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-medium">
                   {(project.extraction_fields as any[])?.length || 0}
                 </span>
               </div>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1">
                 {(project.extraction_fields as any[])?.slice(0, 3).map((field, idx) => (
-                  <span key={idx} className="text-xs bg-muted text-foreground px-2 py-1 rounded border">
+                  <span key={idx} className="text-xs bg-muted text-foreground px-2 py-0.5 rounded border">
                     {field.name}
                   </span>
                 ))}
                 {(project.extraction_fields as any[])?.length > 3 && (
-                  <span className="text-xs text-muted-foreground px-2 py-1">
+                  <span className="text-xs text-muted-foreground px-1">
                     +{(project.extraction_fields as any[]).length - 3}
                   </span>
                 )}
               </div>
             </div>
 
-            <div className="pt-3 border-t flex items-center justify-between">
-              <p className="text-xs text-muted-foreground">
-                {new Date(project.created_at).toLocaleDateString()}
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setSelectedProjectForZones(project.id)}
-                  className="h-7 text-xs"
-                >
-                  <LayoutGrid className="h-3 w-3 mr-1" />
-                  Zones
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => navigate(`/admin/projects/${project.id}/edit`)}
-                  className="h-7 text-xs"
-                >
-                  <Edit className="h-3 w-3 mr-1" />
-                  Edit
-                </Button>
-              </div>
+            {/* Actions */}
+            <div className="pt-2 border-t flex justify-end gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setSelectedProjectForZones(project.id)}
+                className="h-7 text-xs"
+              >
+                <LayoutGrid className="h-3 w-3 mr-1" />
+                Zones
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => navigate(`/admin/projects/${project.id}/edit`)}
+                className="h-7 text-xs"
+              >
+                <Edit className="h-3 w-3 mr-1" />
+                Edit
+              </Button>
             </div>
           </Card>
         ))}
