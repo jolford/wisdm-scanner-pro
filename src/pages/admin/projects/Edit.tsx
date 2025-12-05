@@ -677,21 +677,6 @@ const EditProject = () => {
               />
             </div>
 
-            {/* Project Icon Selector */}
-            <ProjectIconSelector
-              selectedIcon={iconPreview}
-              onIconSelect={(url) => {
-                setIconPreview(url);
-                setIconFile(null);
-                // If selecting a preloaded icon, clear the currentIconUrl
-                if (url.includes('/assets/')) {
-                  setCurrentIconUrl('');
-                }
-              }}
-              onCustomUpload={handleIconUpload}
-              uploading={uploading}
-            />
-
             <div className="flex items-center space-x-2 p-4 border border-border rounded-lg bg-muted/30 mb-6">
               <Checkbox
                 id="check-scanning"
