@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   CommandDialog,
   CommandEmpty,
@@ -82,7 +84,36 @@ const adminRoutes = [
 
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const navigate = useNavigate();
+
+  // Fetch batches for search
+  const { data: batches } = useQuery({
+    queryKey: ['command-palette-batches'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('batches')
+        .select('id, batch_name, project:projects(name)')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      return data || [];
+    },
+    enabled: open,
+  });
+
+  // Fetch projects for search
+  const { data: projects } = useQuery({
+    queryKey: ['command-palette-projects'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('projects')
+        .select('id, name')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      return data || [];
+    },
+    enabled: open,
+  });
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -96,17 +127,91 @@ export function CommandPalette() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
+  // Reset search when dialog closes
+  useEffect(() => {
+    if (!open) setSearch("");
+  }, [open]);
+
   const groupedRoutes = adminRoutes.reduce((acc, route) => {
     if (!acc[route.group]) acc[route.group] = [];
     acc[route.group].push(route);
     return acc;
   }, {} as Record<string, typeof adminRoutes>);
 
+  // Filter batches based on search
+  const filteredBatches = batches?.filter(b => 
+    b.batch_name.toLowerCase().includes(search.toLowerCase())
+  ) || [];
+
+  // Filter projects based on search
+  const filteredProjects = projects?.filter(p => 
+    p.name.toLowerCase().includes(search.toLowerCase())
+  ) || [];
+
+  const openBatchInQueue = (batchId: string, projectId: string | null) => {
+    if (projectId) {
+      sessionStorage.setItem('selectedProjectId', projectId);
+    }
+    sessionStorage.setItem('selectedBatchId', batchId);
+    setOpen(false);
+    navigate('/');
+  };
+
   return (
     <CommandDialog open={open} onOpenChange={setOpen}>
-      <CommandInput placeholder="Search commands, pages, actions..." />
+      <CommandInput 
+        placeholder="Search batches, projects, pages..." 
+        value={search}
+        onValueChange={setSearch}
+      />
       <CommandList className="max-h-[400px]">
         <CommandEmpty>No results found.</CommandEmpty>
+        
+        {/* Show batches when searching */}
+        {search.length > 0 && filteredBatches.length > 0 && (
+          <>
+            <CommandGroup heading="Batches">
+              {filteredBatches.slice(0, 5).map((batch) => (
+                <CommandItem 
+                  key={batch.id}
+                  value={`batch-${batch.batch_name}`}
+                  onSelect={() => openBatchInQueue(batch.id, (batch.project as any)?.id)}
+                >
+                  <Boxes className="mr-2 h-4 w-4" />
+                  <span>{batch.batch_name}</span>
+                  {(batch.project as any)?.name && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      ({(batch.project as any).name})
+                    </span>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandSeparator />
+          </>
+        )}
+
+        {/* Show projects when searching */}
+        {search.length > 0 && filteredProjects.length > 0 && (
+          <>
+            <CommandGroup heading="Projects">
+              {filteredProjects.slice(0, 5).map((project) => (
+                <CommandItem 
+                  key={project.id}
+                  value={`project-${project.name}`}
+                  onSelect={() => {
+                    setOpen(false);
+                    navigate(`/admin/projects/${project.id}`);
+                  }}
+                >
+                  <FolderOpen className="mr-2 h-4 w-4" />
+                  <span>{project.name}</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+            <CommandSeparator />
+          </>
+        )}
         
         <CommandGroup heading="Quick Actions">
           <CommandItem 
