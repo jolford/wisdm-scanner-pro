@@ -1627,7 +1627,7 @@ useEffect(() => {
             piiRegions={combinedRedactionRegions}
             ab1466Violations={ab1466DetectedTerms.map((v: any) => ({
               ...v,
-              needsManualRedaction: !ab1466RedactionApplied || !v.boundingBox
+              needsManualRedaction: true
             }))}
             showingOriginal={showingOriginal}
             onToggleOriginal={() => setShowingOriginal(!showingOriginal)}
@@ -1756,7 +1756,7 @@ useEffect(() => {
                 piiRegions={combinedRedactionRegions}
                 ab1466Violations={ab1466DetectedTerms.map((v: any) => ({
                   ...v,
-                  needsManualRedaction: !ab1466RedactionApplied || !v.boundingBox
+                  needsManualRedaction: true
                 }))}
                 showingOriginal={showingOriginal}
                 onToggleOriginal={() => setShowingOriginal(!showingOriginal)}
