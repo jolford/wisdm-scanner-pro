@@ -2300,21 +2300,23 @@ const [isExporting, setIsExporting] = useState(false);
                     </div>
                   )}
 
-                  <div className="pt-4 border-t">
-                    <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">AB1466 Redacted PDF</h4>
-                    <Button 
-                      onClick={downloadRedactedImages} 
-                      disabled={validatedDocs.length === 0} 
-                      variant="outline" 
-                      className="w-full h-16 gap-2 hover:border-primary/50 hover:bg-primary/5"
-                    >
-                      <Shield className="h-5 w-5" />
-                      <span className="font-medium">Download Redacted PDF</span>
-                    </Button>
-                    <p className="text-xs text-muted-foreground mt-2 text-center">
-                      Combines all redacted documents into a single PDF
-                    </p>
-                  </div>
+                  {(selectedProject as any)?.enable_ab1466_redaction && (
+                    <div className="pt-4 border-t">
+                      <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">AB1466 Redacted PDF</h4>
+                      <Button 
+                        onClick={downloadRedactedImages} 
+                        disabled={validatedDocs.length === 0} 
+                        variant="outline" 
+                        className="w-full h-16 gap-2 hover:border-primary/50 hover:bg-primary/5"
+                      >
+                        <Shield className="h-5 w-5" />
+                        <span className="font-medium">Download Redacted PDF</span>
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        Combines all redacted documents into a single PDF
+                      </p>
+                    </div>
+                  )}
 
                   {(selectedProject?.export_types?.includes('pdf') || getExportConfig().pdf?.enabled) && (
                     <div className="pt-4 border-t">
