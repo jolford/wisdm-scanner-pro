@@ -5,7 +5,7 @@ import {
   Brain, RefreshCw, Database, Palette, Activity,
   Settings, LogOut, HelpCircle, GitBranch, FileType,
   Smartphone, Package, ChevronDown, History, Zap, Bug, Code,
-  KeyRound, UserCog, Gauge
+  KeyRound, UserCog, Gauge, LucideIcon
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -27,10 +27,26 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
-const menuItems = [
+interface MenuItem {
+  title: string;
+  url: string;
+  icon: LucideIcon;
+  end?: boolean;
+}
+
+interface MenuGroup {
+  title: string;
+  icon: LucideIcon;
+  items: MenuItem[];
+  defaultOpen: boolean;
+}
+
+const menuItems: MenuGroup[] = [
   {
     title: 'Overview',
+    icon: LayoutDashboard,
     items: [
       { title: 'Dashboard', url: '/admin', icon: LayoutDashboard, end: true },
     ],
@@ -38,6 +54,7 @@ const menuItems = [
   },
   {
     title: 'Batch Management',
+    icon: FolderKanban,
     items: [
       { title: 'Projects', url: '/admin/projects', icon: FolderKanban },
       { title: 'Batches', url: '/admin/batches', icon: FileText },
@@ -47,6 +64,7 @@ const menuItems = [
   },
   {
     title: 'Security Settings',
+    icon: Shield,
     items: [
       { title: 'Users', url: '/admin/users', icon: Users },
       { title: 'Customers', url: '/admin/customers', icon: Building2 },
@@ -57,6 +75,7 @@ const menuItems = [
   },
   {
     title: 'Automation & Intelligence',
+    icon: GitBranch,
     items: [
       { title: 'Workflow Builder', url: '/admin/workflow-builder', icon: GitBranch },
       { title: 'Workflow Management', url: '/admin/workflows', icon: History },
@@ -72,6 +91,7 @@ const menuItems = [
   },
   {
     title: 'Quality & Analytics',
+    icon: BarChart2,
     items: [
       { title: 'Exception Queue', url: '/admin/exceptions', icon: AlertTriangle },
       { title: 'Confidence Scoring', url: '/admin/confidence', icon: Target },
@@ -85,6 +105,7 @@ const menuItems = [
   },
   {
     title: 'Sales Tools',
+    icon: TrendingUp,
     items: [
       { title: 'Business Metrics', url: '/admin/business-metrics', icon: TrendingUp },
       { title: 'Cost Tracking', url: '/admin/cost-tracking', icon: DollarSign },
@@ -95,6 +116,7 @@ const menuItems = [
   },
   {
     title: 'Configuration',
+    icon: Settings,
     items: [
       { title: 'Validation Rules', url: '/admin/validation-rules', icon: Shield },
       { title: 'Validation Lookups', url: '/admin/validation-lookups', icon: Database },
@@ -157,90 +179,160 @@ export function AdminSidebar() {
   return (
     <Sidebar className={collapsed ? 'w-16' : 'w-64'} collapsible="icon">
       <SidebarContent className="overflow-y-auto">
-        {menuItems.map((group) => (
-          <Collapsible
-            key={group.title}
-            open={groupStates[group.title]}
-            onOpenChange={() => toggleGroup(group.title)}
-          >
-            <SidebarGroup>
-              <CollapsibleTrigger asChild>
-                <SidebarGroupLabel className="text-xs uppercase tracking-wider cursor-pointer hover:bg-accent rounded-md flex items-center justify-between">
-                  {!collapsed && (
-                    <>
+        {menuItems.map((group) => {
+          const GroupIcon = group.icon;
+          return (
+            <Collapsible
+              key={group.title}
+              open={collapsed ? true : groupStates[group.title]}
+              onOpenChange={() => !collapsed && toggleGroup(group.title)}
+            >
+              <SidebarGroup>
+                {collapsed ? (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <SidebarGroupLabel className="text-xs uppercase tracking-wider cursor-pointer hover:bg-accent rounded-md flex items-center justify-center py-2">
+                        <GroupIcon className="h-4 w-4" />
+                      </SidebarGroupLabel>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      {group.title}
+                    </TooltipContent>
+                  </Tooltip>
+                ) : (
+                  <CollapsibleTrigger asChild>
+                    <SidebarGroupLabel className="text-xs uppercase tracking-wider cursor-pointer hover:bg-accent rounded-md flex items-center justify-between">
                       <span>{group.title}</span>
                       <ChevronDown 
                         className={`h-4 w-4 transition-transform ${
                           groupStates[group.title] ? '' : '-rotate-90'
                         }`}
                       />
-                    </>
-                  )}
-                </SidebarGroupLabel>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <SidebarGroupContent>
-                  <SidebarMenu>
-                    {group.items.map((item) => {
-                      const Icon = item.icon;
-                      // Add demo markers for specific menu items
-                      const demoClass = 
-                        item.url === '/admin/workflow-builder' ? 'demo-workflows' :
-                        item.url === '/admin/integrations' ? 'demo-integrations' :
-                        item.url === '/admin/analytics' ? 'demo-analytics' :
-                        item.url === '/admin/credential-migration' ? 'demo-security' :
-                        '';
-                      return (
-                        <SidebarMenuItem key={item.title}>
-                          <SidebarMenuButton asChild>
-                            <NavLink
-                              to={item.url}
-                              end={item.end}
-                              className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-accent ${demoClass}`}
-                              activeClassName="bg-primary/10 text-primary font-medium"
-                            >
-                              <Icon className="h-4 w-4 flex-shrink-0" />
-                              {!collapsed && <span>{item.title}</span>}
-                            </NavLink>
-                          </SidebarMenuButton>
-                        </SidebarMenuItem>
-                      );
-                    })}
-                  </SidebarMenu>
-                </SidebarGroupContent>
-              </CollapsibleContent>
-            </SidebarGroup>
-          </Collapsible>
-        ))}
+                    </SidebarGroupLabel>
+                  </CollapsibleTrigger>
+                )}
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {group.items.map((item) => {
+                        const Icon = item.icon;
+                        const demoClass = 
+                          item.url === '/admin/workflow-builder' ? 'demo-workflows' :
+                          item.url === '/admin/integrations' ? 'demo-integrations' :
+                          item.url === '/admin/analytics' ? 'demo-analytics' :
+                          item.url === '/admin/credential-migration' ? 'demo-security' :
+                          '';
+                        
+                        const linkContent = (
+                          <NavLink
+                            to={item.url}
+                            end={item.end}
+                            className={`flex items-center gap-3 rounded-lg px-3 py-2 transition-all hover:bg-accent ${demoClass}`}
+                            activeClassName="bg-primary/10 text-primary font-medium"
+                          >
+                            <Icon className="h-4 w-4 flex-shrink-0" />
+                            {!collapsed && <span>{item.title}</span>}
+                          </NavLink>
+                        );
+                        
+                        return (
+                          <SidebarMenuItem key={item.title}>
+                            <SidebarMenuButton asChild>
+                              {collapsed ? (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    {linkContent}
+                                  </TooltipTrigger>
+                                  <TooltipContent side="right">
+                                    {item.title}
+                                  </TooltipContent>
+                                </Tooltip>
+                              ) : (
+                                linkContent
+                              )}
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
+          );
+        })}
       </SidebarContent>
 
       <SidebarFooter>
         <Separator />
         <div className="p-2 space-y-2">
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => navigate('/help')}
-          >
-            <HelpCircle className="h-4 w-4 mr-2" />
-            {!collapsed && 'Help Center'}
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start"
-            onClick={() => navigate('/')}
-          >
-            <LayoutDashboard className="h-4 w-4 mr-2" />
-            {!collapsed && 'Back to Scanner'}
-          </Button>
-          <Button
-            variant="ghost"
-            className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={handleLogout}
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            {!collapsed && 'Logout'}
-          </Button>
+          {collapsed ? (
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-center"
+                    onClick={() => navigate('/help')}
+                  >
+                    <HelpCircle className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Help Center</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-center"
+                    onClick={() => navigate('/')}
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Back to Scanner</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-center text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right">Logout</TooltipContent>
+              </Tooltip>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => navigate('/help')}
+              >
+                <HelpCircle className="h-4 w-4 mr-2" />
+                Help Center
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => navigate('/')}
+              >
+                <LayoutDashboard className="h-4 w-4 mr-2" />
+                Back to Scanner
+              </Button>
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </>
+          )}
         </div>
       </SidebarFooter>
     </Sidebar>
