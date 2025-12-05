@@ -32,14 +32,14 @@ export const RecentActivityFeed = () => {
               .from('batches')
               .select('batch_name')
               .eq('id', activity.entity_id)
-              .single();
+              .maybeSingle();
             contextName = batch?.batch_name;
           } else if (activity.entity_type === 'document' && activity.entity_id) {
             const { data: doc } = await supabase
               .from('documents')
               .select('file_name')
               .eq('id', activity.entity_id)
-              .single();
+              .maybeSingle();
             contextName = doc?.file_name;
           }
           
@@ -49,7 +49,7 @@ export const RecentActivityFeed = () => {
               .from('profiles')
               .select('full_name, email')
               .eq('id', activity.user_id)
-              .single();
+              .maybeSingle();
             userName = profile?.full_name || profile?.email;
           }
           
