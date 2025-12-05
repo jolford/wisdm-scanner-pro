@@ -780,15 +780,10 @@ async function generateRedactedImage(
     return JSON.stringify(redactionMetadata);
   }
 
-  // Build redaction instruction with all bounding boxes
+  // Build redaction instruction with all bounding boxes - use exact coordinates, no extra padding
   const boxDescriptions = violationsWithBoxes.map((v, i) => {
     const b = v.boundingBox!;
-    // Add padding to coordinates
-    const x = Math.max(0, b.x - 1);
-    const y = Math.max(0, b.y - 0.5);
-    const w = Math.min(100 - x, b.width + 2);
-    const h = Math.min(100 - y, Math.max(b.height + 1, 4));
-    return `Box ${i + 1}: x=${x.toFixed(1)}%, y=${y.toFixed(1)}%, width=${w.toFixed(1)}%, height=${h.toFixed(1)}%`;
+    return `Box ${i + 1}: x=${b.x.toFixed(1)}%, y=${b.y.toFixed(1)}%, width=${b.width.toFixed(1)}%, height=${Math.max(b.height, 2.5).toFixed(1)}%`;
   }).join('\n');
 
   console.log(`Requesting AI to redact ${violationsWithBoxes.length} areas`);
@@ -808,17 +803,17 @@ async function generateRedactedImage(
             content: [
               {
                 type: 'text',
-                text: `REDACTION TASK: Draw solid BLACK rectangles to completely cover and hide the following areas of this document image. The rectangles must be completely opaque black (#000000) to hide the text underneath.
+                text: `Draw small black rectangles ONLY at these EXACT coordinates to redact specific words. Do NOT make the boxes larger than specified.
 
-CRITICAL: The black boxes must be:
-- Completely solid black (not transparent)
-- Large enough to fully cover the text
-- Positioned exactly at the specified percentage coordinates
-
-Areas to redact (coordinates are percentages of image dimensions):
+EXACT coordinates (percentages of image size):
 ${boxDescriptions}
 
-Draw solid black filled rectangles at each location to permanently redact/hide the discriminatory text. Keep everything else in the image exactly the same.`
+RULES:
+- Draw SMALL rectangles ONLY at the exact coordinates above
+- Each box should cover just ONE word or short phrase
+- Do NOT expand boxes beyond the specified dimensions
+- Keep all other parts of the document UNCHANGED
+- Use solid black (#000000) fill`
               },
               {
                 type: 'image_url',

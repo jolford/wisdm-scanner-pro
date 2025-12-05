@@ -260,21 +260,13 @@ export const InteractiveDocumentViewer = ({
         // Assume percentage coordinates (0-100)
         const isPercent = bx <= 100 && by <= 100 && bw <= 100 && bh <= 100;
         
-        // Enforce minimum height of 4% for proper text coverage
-        if (isPercent && bh < 4) bh = 4;
+        // Enforce minimum height of 2.5% for text coverage
+        if (isPercent && bh < 2.5) bh = 2.5;
         
-        let x = isPercent ? (bx / 100) * canvas.width : bx;
-        let y = isPercent ? (by / 100) * canvas.height : by;
-        let width = isPercent ? (bw / 100) * canvas.width : bw;
-        let height = isPercent ? (bh / 100) * canvas.height : bh;
-        
-        // Add padding to ensure full text coverage
-        const paddingX = width * 0.15;
-        const paddingY = height * 0.2;
-        x = Math.max(0, x - paddingX / 2);
-        width = width + paddingX;
-        y = Math.max(0, y - paddingY / 2);
-        height = height + paddingY;
+        const x = isPercent ? (bx / 100) * canvas.width : bx;
+        const y = isPercent ? (by / 100) * canvas.height : by;
+        const width = isPercent ? (bw / 100) * canvas.width : bw;
+        const height = isPercent ? (bh / 100) * canvas.height : bh;
 
         // Draw solid black redaction box for AB1466 violations
         ctx.fillStyle = 'rgba(0, 0, 0, 1)';
