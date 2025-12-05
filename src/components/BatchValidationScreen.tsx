@@ -1220,8 +1220,13 @@ export const BatchValidationScreen = ({
         title: 'AB 1466 Rescan Complete',
         description: violationsWithBoxes > 0 
           ? `Found ${violationsWithBoxes} violations with locations. Redaction boxes are now visible.`
-          : 'Violations detected but could not determine exact locations.',
+          : data?.violationsFound > 0 
+            ? 'Violations detected but could not determine exact locations.'
+            : 'No AB 1466 violations detected.',
       });
+      
+      // Small delay to ensure database write completes before refresh
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Refresh to get updated document data with new bounding boxes
       onValidationComplete();

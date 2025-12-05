@@ -201,6 +201,7 @@ export const ValidationScreen = ({
   const [ab1466DetectedTerms, setAb1466DetectedTerms] = useState<any[]>([]);
   const [ab1466RedactionApplied, setAb1466RedactionApplied] = useState(false);
   const [isRescanningAb1466, setIsRescanningAb1466] = useState(false);
+  const [ab1466NotYetScanned, setAb1466NotYetScanned] = useState(true); // Track if document hasn't been scanned
 
   // Re-scan document for AB 1466 violations with AI vision (to get bounding boxes)
   const handleRescanAb1466 = async () => {
@@ -221,10 +222,12 @@ export const ValidationScreen = ({
         .single();
       
       if (refreshedDoc) {
-        setAb1466ViolationsDetected((refreshedDoc as any).ab1466_violations_detected || false);
+        const ab1466Detected = (refreshedDoc as any).ab1466_violations_detected;
+        setAb1466ViolationsDetected(ab1466Detected || false);
         setAb1466ViolationCount((refreshedDoc as any).ab1466_violation_count || 0);
         setAb1466DetectedTerms((refreshedDoc as any).ab1466_detected_terms || []);
         setAb1466RedactionApplied((refreshedDoc as any).ab1466_redaction_applied || false);
+        setAb1466NotYetScanned(ab1466Detected === null || ab1466Detected === undefined);
       }
       
       toast({
@@ -259,10 +262,13 @@ export const ValidationScreen = ({
           setDetectedPiiRegions(Array.isArray(regions) ? regions : []);
           
           // AB 1466 data
-          setAb1466ViolationsDetected((data as any).ab1466_violations_detected || false);
+          const ab1466Detected = (data as any).ab1466_violations_detected;
+          setAb1466ViolationsDetected(ab1466Detected || false);
           setAb1466ViolationCount((data as any).ab1466_violation_count || 0);
           setAb1466DetectedTerms((data as any).ab1466_detected_terms || []);
           setAb1466RedactionApplied((data as any).ab1466_redaction_applied || false);
+          // Track if not yet scanned (null/undefined means not scanned)
+          setAb1466NotYetScanned(ab1466Detected === null || ab1466Detected === undefined);
         }
       } catch (error) {
         console.error('Failed to load PII/AB1466 data:', error);
@@ -1599,7 +1605,7 @@ useEffect(() => {
         )}
         
         {/* AB 1466 Compliance Alert - Show prominently above document (only on validation page) */}
-        {showAB1466Alert && ab1466ViolationsDetected && (
+        {showAB1466Alert && (ab1466ViolationsDetected || ab1466NotYetScanned) && (
           <AB1466ViolationAlert
             violationsDetected={ab1466ViolationsDetected}
             violationCount={ab1466ViolationCount}
@@ -1608,6 +1614,7 @@ useEffect(() => {
             onRescan={handleRescanAb1466}
             onManualRedact={() => setShowRedactionTool(true)}
             isRescanning={isRescanningAb1466}
+            notYetScanned={ab1466NotYetScanned}
           />
         )}
         
@@ -2132,7 +2139,7 @@ useEffect(() => {
         {documentId && (
           <div className="mb-4">
             {/* AB 1466 Compliance Alert (only on validation page) */}
-            {showAB1466Alert && (
+            {showAB1466Alert && (ab1466ViolationsDetected || ab1466NotYetScanned) && (
               <AB1466ViolationAlert
                 violationsDetected={ab1466ViolationsDetected}
                 violationCount={ab1466ViolationCount}
@@ -2141,6 +2148,7 @@ useEffect(() => {
                 onRescan={handleRescanAb1466}
                 onManualRedact={() => setShowRedactionTool(true)}
                 isRescanning={isRescanningAb1466}
+                notYetScanned={ab1466NotYetScanned}
               />
             )}
             <PetitionValidationWarnings
