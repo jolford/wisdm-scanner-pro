@@ -740,24 +740,27 @@ const EditProject = () => {
               </div>
             </div>
 
-            <div className="flex items-center space-x-2 p-4 border border-amber-500/30 rounded-lg bg-amber-500/10 mb-6">
-              <Checkbox
-                id="enable-ab1466"
-                checked={enableAb1466Redaction}
-                onCheckedChange={(checked) => setEnableAb1466Redaction(checked as boolean)}
-              />
-              <div className="flex-1">
-                <Label htmlFor="enable-ab1466" className="cursor-pointer font-medium flex items-center gap-2">
-                  Enable California AB 1466 Auto-Redaction
-                  <Badge variant="outline" className="text-xs bg-amber-500/20 text-amber-700 border-amber-500/30">
-                    County Compliance
-                  </Badge>
-                </Label>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Automatically detect and redact unlawfully restrictive covenant language in property documents per California Assembly Bill 1466. Required for county recorder compliance.
-                </p>
+            {/* Only show AB 1466 option for projects with AB1466 or AB 1466 in the name */}
+            {/ab\s?1466/i.test(projectName) && (
+              <div className="flex items-center space-x-2 p-4 border border-amber-500/30 rounded-lg bg-amber-500/10 mb-6">
+                <Checkbox
+                  id="enable-ab1466"
+                  checked={enableAb1466Redaction}
+                  onCheckedChange={(checked) => setEnableAb1466Redaction(checked as boolean)}
+                />
+                <div className="flex-1">
+                  <Label htmlFor="enable-ab1466" className="cursor-pointer font-medium flex items-center gap-2">
+                    Enable California AB 1466 Auto-Redaction
+                    <Badge variant="outline" className="text-xs bg-amber-500/20 text-amber-700 border-amber-500/30">
+                      County Compliance
+                    </Badge>
+                  </Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Automatically detect and redact unlawfully restrictive covenant language in property documents per California Assembly Bill 1466. Required for county recorder compliance.
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex items-center space-x-2 p-4 border border-border rounded-lg bg-muted/30 mb-6">
               <Checkbox
