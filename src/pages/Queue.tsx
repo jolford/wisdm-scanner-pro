@@ -12,7 +12,7 @@ import { ProjectSelector } from '@/components/ProjectSelector';
 import { BatchSelector } from '@/components/BatchSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useContextualToast } from '@/lib/toast-helper';
-import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText, FolderOpen, Cloud, Database, HelpCircle, User, Package, AlertCircle } from 'lucide-react';
+import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText, FolderOpen, Cloud, Database, HelpCircle, User, Package, AlertCircle, Shield } from 'lucide-react';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LicenseWarning } from '@/components/LicenseWarning';
@@ -1428,6 +1428,58 @@ const [isExporting, setIsExporting] = useState(false);
     });
   };
 
+  const downloadRedactedImages = async () => {
+    if (!validatedDocs.length) {
+      toast({
+        title: 'No Documents',
+        description: 'No validated documents to export',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const redactedDocs = validatedDocs.filter(doc => doc.redacted_file_url);
+    
+    if (!redactedDocs.length) {
+      toast({
+        title: 'No Redacted Documents',
+        description: 'No documents in this batch have redacted versions. Process documents with AB1466 redaction first.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    toast({ title: 'Downloading...', description: `Downloading ${redactedDocs.length} redacted document(s)` });
+
+    for (const doc of redactedDocs) {
+      try {
+        const { data: urlData } = supabase.storage
+          .from('documents')
+          .getPublicUrl(doc.redacted_file_url!);
+
+        if (urlData?.publicUrl) {
+          const response = await fetch(urlData.publicUrl);
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const ext = doc.redacted_file_url!.split('.').pop() || 'png';
+          const baseName = doc.file_name.replace(/\.[^/.]+$/, '');
+          a.download = `${baseName}_redacted.${ext}`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      } catch (error) {
+        console.error(`Failed to download redacted version of ${doc.file_name}:`, error);
+      }
+    }
+
+    toast({
+      title: 'Download Complete',
+      description: `Downloaded ${redactedDocs.length} redacted document(s)`,
+    });
+  };
+
   const markBatchComplete = async () => {
     if (!selectedBatchId) return;
 
@@ -2179,6 +2231,22 @@ const [isExporting, setIsExporting] = useState(false);
                       </Button>
                     </div>
                   )}
+
+                  <div className="pt-4 border-t">
+                    <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">AB1466 Redacted Images</h4>
+                    <Button 
+                      onClick={downloadRedactedImages} 
+                      disabled={validatedDocs.length === 0} 
+                      variant="outline" 
+                      className="w-full h-16 gap-2 hover:border-primary/50 hover:bg-primary/5"
+                    >
+                      <Shield className="h-5 w-5" />
+                      <span className="font-medium">Download Redacted Images</span>
+                    </Button>
+                    <p className="text-xs text-muted-foreground mt-2 text-center">
+                      Downloads documents with AB1466 violations redacted
+                    </p>
+                  </div>
 
                   {(selectedProject?.export_types?.includes('pdf') || getExportConfig().pdf?.enabled) && (
                     <div className="pt-4 border-t">
