@@ -11,9 +11,9 @@
  * 4. Uploads the redacted version to storage
  * 5. Updates the document record with redaction metadata
  */
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.75.0";
+import { createCanvas, loadImage } from "https://deno.land/x/canvas@v1.4.2/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -728,8 +728,8 @@ function generateRedactionMetadata(storagePath: string, violations: DetectedViol
 }
 
 /**
- * Generate a redacted version of the document image using programmatic pixel manipulation
- * Draws solid black rectangles over discriminatory text using word bounding boxes
+ * Generate a redacted version of the document image using CANVAS (reliable pixel-level drawing)
+ * Draws solid black rectangles over discriminatory text - NO AI IMAGE GENERATION
  */
 async function generateRedactedImage(
   supabase: any,
@@ -778,7 +778,7 @@ async function generateRedactedImage(
   console.log(`Found ${wordBoxes.length} word boxes, searching for ${termsToRedact.length} terms`);
 
   // Find word boxes that match discriminatory terms
-  const boxesToRedact: Array<{x: number, y: number, width: number, height: number}> = [];
+  const boxesToRedact: Array<{x: number, y: number, width: number, height: number, isPercentage: boolean}> = [];
   
   // Build a list of all discriminatory terms including partial matches
   const allTerms = new Set<string>();
@@ -811,7 +811,8 @@ async function generateRedactedImage(
             x: wordBox.bbox.x,
             y: wordBox.bbox.y,
             width: wordBox.bbox.width || wordBox.bbox.w || 10,
-            height: wordBox.bbox.height || wordBox.bbox.h || 3
+            height: wordBox.bbox.height || wordBox.bbox.h || 3,
+            isPercentage: wordBox.bbox.x <= 100 && wordBox.bbox.y <= 100 // Detect if coords are percentages
           });
           console.log(`Matched term "${term}" in word "${wordText}" at bbox:`, wordBox.bbox);
         }
@@ -820,13 +821,30 @@ async function generateRedactedImage(
     }
   }
 
-  console.log(`Found ${boxesToRedact.length} boxes to redact from word_bounding_boxes`);
+  // Also add violations that came with bounding boxes
+  for (const v of violations) {
+    if (v.boundingBox) {
+      const exists = boxesToRedact.some(b => 
+        Math.abs(b.x - v.boundingBox!.x) < 2 && Math.abs(b.y - v.boundingBox!.y) < 2
+      );
+      if (!exists) {
+        boxesToRedact.push({
+          x: v.boundingBox.x,
+          y: v.boundingBox.y,
+          width: v.boundingBox.width,
+          height: v.boundingBox.height,
+          isPercentage: v.boundingBox.x <= 100 && v.boundingBox.y <= 100
+        });
+      }
+    }
+  }
 
-  // If no word boxes matched, fall back to AI-based detection
-  if (boxesToRedact.length === 0) {
+  console.log(`Found ${boxesToRedact.length} boxes to redact`);
+
+  // If no word boxes matched, try AI vision to detect coordinates
+  if (boxesToRedact.length === 0 && apiKey) {
     console.log('No word boxes matched - falling back to AI vision for box detection');
     
-    // Convert to base64 for AI call
     const arrayBuffer = await fileBlob.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
     let binaryString = '';
@@ -837,7 +855,6 @@ async function generateRedactedImage(
     }
     const base64 = btoa(binaryString);
     
-    // Ask AI to identify box coordinates only (not edit the image)
     try {
       const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
@@ -853,15 +870,14 @@ async function generateRedactedImage(
               content: [
                 {
                   type: 'text',
-                  text: `Analyze this property document and find ALL discriminatory text that violates California AB 1466.
+                  text: `Find ALL discriminatory text in this property document that violates California AB 1466.
 
 Return ONLY a JSON array of bounding boxes (as percentages 0-100) for each discriminatory word/phrase:
+[{"x": 10, "y": 20, "width": 15, "height": 3, "text": "discriminatory text"}]
 
-[{"x": 10, "y": 20, "width": 15, "height": 3, "text": "the discriminatory text"}]
+Terms to find: Caucasian, white race, negro, colored, African, Asiatic, Ethiopian, Mongolian, Mexican, Chinese, Japanese, Hindu, Filipino, Indian, domestic servant, race restrictions.
 
-Terms to find: Caucasian, white race, negro, colored, African, Asiatic, Ethiopian, Mongolian, Mexican, Chinese, Japanese, Hindu, Filipino, Indian, domestic servant, any phrase about race restrictions.
-
-Return ONLY the JSON array, no explanation.`
+Return ONLY the JSON array.`
                 },
                 {
                   type: 'image_url',
@@ -886,7 +902,8 @@ Return ONLY the JSON array, no explanation.`
                 x: box.x,
                 y: box.y,
                 width: box.width || 10,
-                height: box.height || 3
+                height: box.height || 3,
+                isPercentage: true
               });
             }
           });
@@ -903,104 +920,73 @@ Return ONLY the JSON array, no explanation.`
     return null;
   }
 
-  // Now use AI to apply solid black redactions at the specific coordinates
-  const arrayBuffer = await fileBlob.arrayBuffer();
-  const uint8Array = new Uint8Array(arrayBuffer);
-  let binaryString = '';
-  const chunkSize = 8192;
-  for (let i = 0; i < uint8Array.length; i += chunkSize) {
-    const chunk = uint8Array.subarray(i, i + chunkSize);
-    binaryString += String.fromCharCode.apply(null, Array.from(chunk));
-  }
-  const base64 = btoa(binaryString);
-
-  // Format box coordinates for the AI
-  const boxDescriptions = boxesToRedact.map((box, i) => 
-    `Box ${i + 1}: x=${box.x.toFixed(1)}%, y=${box.y.toFixed(1)}%, width=${box.width.toFixed(1)}%, height=${box.height.toFixed(1)}%`
-  ).join('\n');
-
+  // === USE CANVAS TO DRAW SOLID BLACK RECTANGLES ===
   try {
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'google/gemini-3-pro-image-preview',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Draw SOLID BLACK RECTANGLES (RGB 0,0,0) at these EXACT positions to redact discriminatory text:
-
-${boxDescriptions}
-
-CRITICAL INSTRUCTIONS:
-- Fill each rectangle with SOLID BLACK (#000000, 100% opacity)
-- Make rectangles 20% LARGER than specified to ensure full coverage
-- The black MUST be completely opaque - NO transparency
-- NO text should be visible through the black boxes
-- Add 5 pixel padding around each box
-- Do NOT modify any other part of the image
-
-Return the image with solid black rectangles at these locations.`
-              },
-              {
-                type: 'image_url',
-                image_url: { url: `data:${mimeType};base64,${base64}` }
-              }
-            ]
-          }
-        ],
-        modalities: ['image', 'text']
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AI image editing failed:', response.status, errorText);
-      return null;
+    const arrayBuffer = await fileBlob.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Load image into canvas
+    const image = await loadImage(uint8Array);
+    const imgWidth = image.width();
+    const imgHeight = image.height();
+    
+    console.log(`Image loaded: ${imgWidth}x${imgHeight}`);
+    
+    // Create canvas with same dimensions
+    const canvas = createCanvas(imgWidth, imgHeight);
+    const ctx = canvas.getContext("2d");
+    
+    // Draw original image onto canvas
+    ctx.drawImage(image, 0, 0);
+    
+    // Draw solid black rectangles over each violation
+    ctx.fillStyle = "#000000";  // Pure black
+    
+    for (const box of boxesToRedact) {
+      let x: number, y: number, width: number, height: number;
+      
+      if (box.isPercentage) {
+        // Convert percentage to pixels
+        x = (box.x / 100) * imgWidth;
+        y = (box.y / 100) * imgHeight;
+        width = (box.width / 100) * imgWidth;
+        height = (box.height / 100) * imgHeight;
+      } else {
+        // Already in pixels
+        x = box.x;
+        y = box.y;
+        width = box.width;
+        height = box.height;
+      }
+      
+      // Add padding (10% extra on each side)
+      const padX = width * 0.1;
+      const padY = height * 0.2;
+      x = Math.max(0, x - padX);
+      y = Math.max(0, y - padY);
+      width = Math.min(width + padX * 2, imgWidth - x);
+      height = Math.min(height + padY * 2, imgHeight - y);
+      
+      console.log(`Drawing black box at (${x.toFixed(0)}, ${y.toFixed(0)}) size ${width.toFixed(0)}x${height.toFixed(0)}`);
+      
+      // Draw solid black rectangle
+      ctx.fillRect(x, y, width, height);
     }
-
-    const data = await response.json();
-    const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-    if (!imageData || !imageData.startsWith('data:image')) {
-      console.log('AI did not return a redacted image');
-      return null;
-    }
-
-    // Extract base64 from data URL
-    const base64Match = imageData.match(/^data:image\/(\w+);base64,(.+)$/);
-    if (!base64Match) {
-      console.error('Invalid image data format');
-      return null;
-    }
-
-    const outputFormat = base64Match[1];
-    const redactedBase64 = base64Match[2];
-
-    // Convert base64 to blob
-    const redactedBinary = atob(redactedBase64);
-    const redactedArray = new Uint8Array(redactedBinary.length);
-    for (let i = 0; i < redactedBinary.length; i++) {
-      redactedArray[i] = redactedBinary.charCodeAt(i);
-    }
-    const redactedBlob = new Blob([redactedArray], { type: `image/${outputFormat}` });
-
+    
+    // Convert canvas to PNG buffer
+    const buffer = canvas.toBuffer("image/png");
+    console.log(`Generated redacted image: ${buffer.length} bytes`);
+    
     // Upload redacted image
-    const redactedFileName = `redacted_ab1466_${fileName.replace(/\.[^.]+$/, '')}_${Date.now()}.${outputFormat}`;
+    const redactedFileName = `redacted_ab1466_${fileName.replace(/\.[^.]+$/, '')}_${Date.now()}.png`;
     const redactedPath = `${batchId}/${redactedFileName}`;
 
     console.log(`Uploading redacted image to: ${redactedPath}`);
 
     const { error: uploadError } = await supabase.storage
       .from('documents')
-      .upload(redactedPath, redactedBlob, {
-        contentType: `image/${outputFormat}`,
+      .upload(redactedPath, buffer, {
+        contentType: 'image/png',
         upsert: true
       });
 
@@ -1009,10 +995,11 @@ Return the image with solid black rectangles at these locations.`
       return null;
     }
 
-    console.log(`Successfully created redacted image: ${redactedPath}`);
+    console.log(`Successfully created redacted image with CANVAS: ${redactedPath}`);
     return redactedPath;
-  } catch (error) {
-    console.error('Error generating redacted image:', error);
+    
+  } catch (canvasError) {
+    console.error('Canvas redaction failed:', canvasError);
     return null;
   }
 }
