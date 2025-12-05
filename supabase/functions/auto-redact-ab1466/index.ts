@@ -716,6 +716,25 @@ DO NOT include any explanatory text, only the JSON array.`
 }
 
 /**
+ * Generate metadata for client-side redaction rendering
+ */
+function generateRedactionMetadata(storagePath: string, violations: DetectedViolation[]): string {
+  const metadata = {
+    originalFile: storagePath,
+    redactionBoxes: violations.map(v => ({
+      ...v.boundingBox,
+      category: v.category,
+      term: v.term
+    })),
+    createdAt: new Date().toISOString(),
+    violationCount: violations.length,
+    renderClientSide: true
+  };
+  console.log(`Generated redaction metadata with ${violations.length} boxes`);
+  return JSON.stringify(metadata);
+}
+
+/**
  * Generate a redacted version of the document image using AI image editing
  * Draws solid black rectangles over discriminatory text
  */
@@ -744,7 +763,7 @@ async function generateRedactedImage(
 
   if (downloadError || !fileBlob) {
     console.error('Failed to download original file:', downloadError);
-    return null;
+    return generateRedactionMetadata(storagePath, violationsWithBoxes);
   }
 
   // Convert to base64
@@ -764,23 +783,13 @@ async function generateRedactedImage(
                    ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 
                    ext === 'png' ? 'image/png' : 'image/png';
 
-  // For PDFs, we can't directly edit - return metadata only
+  // For PDFs, store redaction metadata for client-side rendering
   if (mimeType === 'application/pdf') {
-    console.log('PDF detected - storing redaction metadata only');
-    const redactionMetadata = {
-      originalFile: storagePath,
-      redactionBoxes: violationsWithBoxes.map(v => ({
-        ...v.boundingBox,
-        category: v.category,
-        term: v.term
-      })),
-      createdAt: new Date().toISOString(),
-      violationCount: violationsWithBoxes.length
-    };
-    return JSON.stringify(redactionMetadata);
+    console.log('PDF detected - storing redaction metadata for client rendering');
+    return generateRedactionMetadata(storagePath, violationsWithBoxes);
   }
 
-  // Build redaction instruction with all bounding boxes - use exact coordinates, no extra padding
+  // Build redaction boxes description
   const boxDescriptions = violationsWithBoxes.map((v, i) => {
     const b = v.boundingBox!;
     return `Box ${i + 1}: x=${b.x.toFixed(1)}%, y=${b.y.toFixed(1)}%, width=${b.width.toFixed(1)}%, height=${Math.max(b.height, 2.5).toFixed(1)}%`;
@@ -789,6 +798,7 @@ async function generateRedactedImage(
   console.log(`Requesting AI to redact ${violationsWithBoxes.length} areas`);
 
   try {
+    // Use the correct image generation model
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -796,24 +806,22 @@ async function generateRedactedImage(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.5-flash-image-preview',
+        model: 'google/gemini-3-pro-image-preview',
         messages: [
           {
             role: 'user',
             content: [
               {
                 type: 'text',
-                text: `Draw small black rectangles ONLY at these EXACT coordinates to redact specific words. Do NOT make the boxes larger than specified.
+                text: `Edit this image by drawing solid black rectangles (#000000) to cover and redact text at these exact positions:
 
-EXACT coordinates (percentages of image size):
 ${boxDescriptions}
 
-RULES:
-- Draw SMALL rectangles ONLY at the exact coordinates above
-- Each box should cover just ONE word or short phrase
-- Do NOT expand boxes beyond the specified dimensions
-- Keep all other parts of the document UNCHANGED
-- Use solid black (#000000) fill`
+IMPORTANT:
+- Draw SOLID BLACK filled rectangles at each coordinate
+- Coordinates are percentages of image width and height
+- Do NOT modify anything else in the image
+- Return the edited image with the black boxes hiding the text`
               },
               {
                 type: 'image_url',
@@ -831,22 +839,24 @@ RULES:
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AI image editing failed:', response.status, errorText);
-      return null;
+      return generateRedactionMetadata(storagePath, violationsWithBoxes);
     }
 
     const data = await response.json();
+    console.log('AI response received, checking for image...');
+    
     const imageData = data.choices?.[0]?.message?.images?.[0]?.image_url?.url;
 
     if (!imageData || !imageData.startsWith('data:image')) {
-      console.log('AI did not return a redacted image');
-      return null;
+      console.log('AI did not return a redacted image, using metadata fallback');
+      return generateRedactionMetadata(storagePath, violationsWithBoxes);
     }
 
     // Extract base64 from data URL
     const base64Match = imageData.match(/^data:image\/(\w+);base64,(.+)$/);
     if (!base64Match) {
       console.error('Invalid image data format');
-      return null;
+      return generateRedactionMetadata(storagePath, violationsWithBoxes);
     }
 
     const outputFormat = base64Match[1];
@@ -861,7 +871,7 @@ RULES:
     const redactedBlob = new Blob([redactedArray], { type: `image/${outputFormat}` });
 
     // Upload redacted image
-    const redactedFileName = `redacted_${fileName.replace(/\.[^.]+$/, '')}.${outputFormat}`;
+    const redactedFileName = `redacted_ab1466_${fileName.replace(/\.[^.]+$/, '')}_${Date.now()}.${outputFormat}`;
     const redactedPath = `${batchId}/${redactedFileName}`;
 
     console.log(`Uploading redacted image to: ${redactedPath}`);
@@ -875,13 +885,13 @@ RULES:
 
     if (uploadError) {
       console.error('Failed to upload redacted image:', uploadError);
-      return null;
+      return generateRedactionMetadata(storagePath, violationsWithBoxes);
     }
 
     console.log(`Successfully created redacted image: ${redactedPath}`);
     return redactedPath;
   } catch (error) {
     console.error('Error generating redacted image:', error);
-    return null;
+    return generateRedactionMetadata(storagePath, violationsWithBoxes);
   }
 }
