@@ -20,7 +20,6 @@ import { projectSchema } from '@/lib/validation-schemas';
 import { safeErrorMessage } from '@/lib/error-handler';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { ECMExportConfig } from '@/components/admin/ECMExportConfig';
-import { ProjectIconSelector } from '@/components/ProjectIconSelector';
 import { DocumentSeparationConfig, SeparationConfig } from '@/components/admin/DocumentSeparationConfig';
 import { FolderPicker } from '@/components/admin/FolderPicker';
 import { ScheduledExportConfig } from '@/components/admin/ScheduledExportConfig';
@@ -66,10 +65,6 @@ const EditProject = () => {
   const [saving, setSaving] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [iconFile, setIconFile] = useState<File | null>(null);
-  const [iconPreview, setIconPreview] = useState<string>('');
-  const [currentIconUrl, setCurrentIconUrl] = useState<string>('');
   
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
@@ -202,8 +197,6 @@ const EditProject = () => {
         
         setProjectName(projectData.name);
         setProjectDescription(projectData.description || '');
-        setCurrentIconUrl(projectData.icon_url || '');
-        setIconPreview(projectData.icon_url || '');
         setIsActive(projectData.is_active ?? true);
         setEnableCheckScanning(projectData.enable_check_scanning || false);
         setEnableSignatureVerification(projectData.enable_signature_verification || false);
@@ -331,36 +324,6 @@ const EditProject = () => {
     setFields(updated);
   };
 
-  const handleIconUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: 'Invalid File',
-        description: 'Please select an image file (PNG, JPG, GIF, or WEBP)',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast({
-        title: 'File Too Large',
-        description: 'Image must be under 2MB',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIconFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setIconPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -386,40 +349,6 @@ const EditProject = () => {
 
     setSaving(true);
     try {
-      let iconUrl = iconPreview; // Use preview which could be preloaded or custom
-
-      // Upload new custom icon if provided
-      if (iconFile) {
-        setUploading(true);
-        
-        // Delete old custom icon if exists (not preloaded)
-        if (currentIconUrl && !currentIconUrl.includes('/assets/')) {
-          const oldPath = currentIconUrl.split('/project-icons/')[1];
-          if (oldPath) {
-            await supabase.storage
-              .from('project-icons')
-              .remove([oldPath]);
-          }
-        }
-
-        const fileExt = iconFile.name.split('.').pop();
-        const fileName = `${crypto.randomUUID()}.${fileExt}`;
-        const filePath = `${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('project-icons')
-          .upload(filePath, iconFile);
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('project-icons')
-          .getPublicUrl(filePath);
-
-        iconUrl = publicUrl;
-        setUploading(false);
-      }
-
       const selectedExportTypes = Object.entries(exportConfig)
         .filter(([_, config]) => config.enabled)
         .map(([type]) => type);
@@ -429,7 +358,6 @@ const EditProject = () => {
         .update({
           name: projectName,
           description: projectDescription,
-          icon_url: iconUrl || null,
           is_active: isActive,
           enable_check_scanning: enableCheckScanning,
           enable_signature_verification: enableSignatureVerification,

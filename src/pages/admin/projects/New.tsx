@@ -16,7 +16,6 @@ import { projectSchema } from '@/lib/validation-schemas';
 import { safeErrorMessage } from '@/lib/error-handler';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { ECMExportConfig } from '@/components/admin/ECMExportConfig';
-import { ProjectIconSelector } from '@/components/ProjectIconSelector';
 import { DocumentSeparationConfig, SeparationConfig } from '@/components/admin/DocumentSeparationConfig';
 import { FolderPicker } from '@/components/admin/FolderPicker';
 import { TableExtractionConfig, TableExtractionConfig as TableConfig } from '@/components/admin/TableExtractionConfig';
@@ -50,9 +49,6 @@ const NewProject = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [iconFile, setIconFile] = useState<File | null>(null);
-  const [iconPreview, setIconPreview] = useState<string>('');
   
   const [projectName, setProjectName] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
@@ -111,36 +107,6 @@ const NewProject = () => {
     lookupFields: [],
   });
 
-  const handleIconUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast({
-        title: 'Invalid File',
-        description: 'Please select an image file (PNG, JPG, GIF, or WEBP)',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (file.size > 2 * 1024 * 1024) {
-      toast({
-        title: 'File Too Large',
-        description: 'Image must be under 2MB',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setIconFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setIconPreview(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
   const addField = () => {
     setFields([...fields, { name: '', description: '' }]);
   };
@@ -195,29 +161,6 @@ const NewProject = () => {
 
     setSaving(true);
     try {
-      let iconUrl = iconPreview; // Use the preview URL which could be a preloaded icon
-
-      // Upload custom icon if provided
-      if (iconFile) {
-        setUploading(true);
-        const fileExt = iconFile.name.split('.').pop();
-        const fileName = `${crypto.randomUUID()}.${fileExt}`;
-        const filePath = `${fileName}`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('project-icons')
-          .upload(filePath, iconFile);
-
-        if (uploadError) throw uploadError;
-
-        const { data: { publicUrl } } = supabase.storage
-          .from('project-icons')
-          .getPublicUrl(filePath);
-
-        iconUrl = publicUrl;
-        setUploading(false);
-      }
-
       const selectedExportTypes = Object.entries(exportConfig)
         .filter(([_, config]) => config.enabled)
         .map(([type]) => type);
@@ -225,7 +168,6 @@ const NewProject = () => {
       const { error } = await supabase.from('projects').insert([{
         name: projectName,
         description: projectDescription,
-        icon_url: iconUrl || null,
         enable_check_scanning: enableCheckScanning,
         enable_signature_verification: enableSignatureVerification,
         display_fields_above: displayFieldsAbove,
@@ -303,17 +245,6 @@ const NewProject = () => {
                 required
               />
             </div>
-
-            {/* Project Icon Selector */}
-            <ProjectIconSelector
-              selectedIcon={iconPreview}
-              onIconSelect={(url) => {
-                setIconPreview(url);
-                setIconFile(null);
-              }}
-              onCustomUpload={handleIconUpload}
-              uploading={uploading}
-            />
 
             <div>
               <Label htmlFor="description">Description</Label>
