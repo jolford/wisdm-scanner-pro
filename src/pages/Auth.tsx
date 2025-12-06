@@ -8,9 +8,10 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
-import { Check, X, Sparkles } from 'lucide-react';
+import { Check, X, Sparkles, AlertTriangle } from 'lucide-react';
 import { MFAChallenge } from '@/components/auth/MFAChallenge';
 import wisdmLogo from '@/assets/wisdm-logo.png';
+import { checkPasswordSecurity } from '@/lib/password-security';
 
 // Helper function to get user's preferred starting page
 const getUserStartingPage = async (): Promise<string> => {
@@ -62,14 +63,20 @@ const AuthPage = () => {
     hasNumber: /[0-9]/.test(password),
     hasSpecial: /[^A-Za-z0-9]/.test(password)
   };
+  
+  // Check for compromised/common passwords
+  const passwordSecurityCheck = password.length > 0 ? checkPasswordSecurity(password) : { isCompromised: false };
+  
   const passwordStrength = Object.values(passwordChecks).filter(Boolean).length;
   const getStrengthColor = () => {
+    if (passwordSecurityCheck.isCompromised) return 'bg-red-500';
     if (passwordStrength <= 2) return 'bg-red-500';
     if (passwordStrength <= 3) return 'bg-orange-500';
     if (passwordStrength <= 4) return 'bg-yellow-500';
     return 'bg-green-500';
   };
   const getStrengthText = () => {
+    if (passwordSecurityCheck.isCompromised) return 'Compromised';
     if (passwordStrength <= 2) return 'Weak';
     if (passwordStrength <= 3) return 'Fair';
     if (passwordStrength <= 4) return 'Good';
@@ -239,6 +246,18 @@ const AuthPage = () => {
       });
       return;
     }
+    
+    // Check for compromised/common passwords
+    const securityCheck = checkPasswordSecurity(password);
+    if (securityCheck.isCompromised) {
+      toast({
+        title: 'Weak Password Detected',
+        description: securityCheck.reason || 'Please choose a stronger, more unique password',
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     if (!tosAccepted) {
       toast({
         title: 'Terms Required',
@@ -605,6 +624,12 @@ const AuthPage = () => {
                     {passwordChecks.hasSpecial ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
                     <span>One special character (!@#$%^&*)</span>
                   </div>
+                  {passwordSecurityCheck.isCompromised && (
+                    <div className="flex items-start gap-2 mt-2 p-2 bg-destructive/10 rounded border border-destructive/30 text-destructive">
+                      <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                      <span>{passwordSecurityCheck.reason}</span>
+                    </div>
+                  )}
                 </div>
               </div>}
             </div>}
