@@ -44,6 +44,7 @@ import ErrorLogs from "./pages/admin/ErrorLogs";
 import AdvancedReports from "./pages/admin/AdvancedReports";
 import DocumentReprocessing from "./pages/admin/DocumentReprocessing";
 import BusinessMetrics from "./pages/admin/BusinessMetrics";
+import MetricsBenchmark from "./pages/admin/MetricsBenchmark";
 import WhiteLabel from "./pages/admin/WhiteLabel";
 import CustomerSuccess from "./pages/admin/CustomerSuccess";
 import BatchTemplates from "./pages/admin/BatchTemplates";
@@ -219,6 +220,7 @@ const App = () => {
             <Route path="/admin/reprocess" element={<DocumentReprocessing />} />
             <Route path="/admin/document-reprocessing" element={<DocumentReprocessing />} />
             <Route path="/admin/business-metrics" element={<BusinessMetrics />} />
+            <Route path="/admin/metrics-benchmark" element={<MetricsBenchmark />} />
             <Route path="/admin/white-label" element={<WhiteLabel />} />
             <Route path="/admin/customer-success" element={<CustomerSuccess />} />
             <Route path="/admin/batch-templates" element={<BatchTemplates />} />
