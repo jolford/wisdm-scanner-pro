@@ -19,16 +19,6 @@ import { ProjectSelector } from '@/components/ProjectSelector';
 const SCRIPT_TEMPLATES: Record<string, ScriptTemplate[]> = {
   javascript: [
     {
-      name: 'Hello World',
-      code: `// Basic script template
-// Available context: supabase, user, executionContext, console
-
-console.log("Hello from custom script!");
-console.log("Current user:", user.email);
-
-return { success: true, message: "Script executed successfully" };`,
-    },
-    {
       name: 'Query Documents',
       code: `// Query documents from the database
 // The supabase client respects RLS policies
