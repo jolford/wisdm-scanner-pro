@@ -188,10 +188,10 @@ export const MarketingPDFGenerator = () => {
       const intCol2 = integrations.slice(3);
 
       intCol1.forEach((int, i) => {
-        doc.text(`✓ ${int}`, margin + 5, y + (i * 6));
+        doc.text(`[+] ${int}`, margin + 5, y + (i * 6));
       });
       intCol2.forEach((int, i) => {
-        doc.text(`✓ ${int}`, margin + 80, y + (i * 6));
+        doc.text(`[+] ${int}`, margin + 80, y + (i * 6));
       });
 
       y += 25;
@@ -222,10 +222,10 @@ export const MarketingPDFGenerator = () => {
       const secCol2 = security.slice(3);
 
       secCol1.forEach((sec, i) => {
-        doc.text(`🔒 ${sec}`, margin + 5, y + (i * 6));
+        doc.text(`[*] ${sec}`, margin + 5, y + (i * 6));
       });
       secCol2.forEach((sec, i) => {
-        doc.text(`🔒 ${sec}`, margin + 80, y + (i * 6));
+        doc.text(`[*] ${sec}`, margin + 80, y + (i * 6));
       });
 
       // New Page - Use Cases & Pricing
