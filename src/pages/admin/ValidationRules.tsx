@@ -13,14 +13,146 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { AlertCircle, Plus, Trash2, ArrowLeft } from "lucide-react";
+import { AlertCircle, Plus, Trash2, ArrowLeft, FileText } from "lucide-react";
 import { toast } from "sonner";
+
+interface ValidationRuleTemplate {
+  name: string;
+  description: string;
+  field_name: string;
+  rule_type: string;
+  rule_config: string;
+  regex_pattern?: string;
+  error_message: string;
+  severity: string;
+}
+
+const VALIDATION_TEMPLATES: ValidationRuleTemplate[] = [
+  {
+    name: "Email Address",
+    description: "Validate email format",
+    field_name: "email",
+    rule_type: "regex",
+    rule_config: "{}",
+    regex_pattern: "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$",
+    error_message: "Invalid email address format",
+    severity: "error",
+  },
+  {
+    name: "US Phone Number",
+    description: "Validate US phone format (XXX) XXX-XXXX",
+    field_name: "phone",
+    rule_type: "regex",
+    rule_config: "{}",
+    regex_pattern: "^\\(?\\d{3}\\)?[-.\\s]?\\d{3}[-.\\s]?\\d{4}$",
+    error_message: "Invalid US phone number format",
+    severity: "error",
+  },
+  {
+    name: "Social Security Number",
+    description: "Validate SSN format XXX-XX-XXXX",
+    field_name: "ssn",
+    rule_type: "regex",
+    rule_config: "{}",
+    regex_pattern: "^\\d{3}-\\d{2}-\\d{4}$",
+    error_message: "Invalid SSN format (expected XXX-XX-XXXX)",
+    severity: "error",
+  },
+  {
+    name: "ZIP Code (US)",
+    description: "Validate 5 or 9 digit ZIP code",
+    field_name: "zip_code",
+    rule_type: "regex",
+    rule_config: "{}",
+    regex_pattern: "^\\d{5}(-\\d{4})?$",
+    error_message: "Invalid ZIP code format",
+    severity: "error",
+  },
+  {
+    name: "Invoice Number",
+    description: "Alphanumeric invoice number",
+    field_name: "invoice_number",
+    rule_type: "regex",
+    rule_config: "{}",
+    regex_pattern: "^[A-Z0-9-]{3,20}$",
+    error_message: "Invoice number must be 3-20 alphanumeric characters",
+    severity: "error",
+  },
+  {
+    name: "Currency Amount",
+    description: "Validate dollar amount format",
+    field_name: "amount",
+    rule_type: "regex",
+    rule_config: "{}",
+    regex_pattern: "^\\$?[0-9]{1,3}(,?[0-9]{3})*(\\.\\d{2})?$",
+    error_message: "Invalid currency format",
+    severity: "error",
+  },
+  {
+    name: "Date (MM/DD/YYYY)",
+    description: "US date format validation",
+    field_name: "date",
+    rule_type: "regex",
+    rule_config: "{}",
+    regex_pattern: "^(0[1-9]|1[0-2])/(0[1-9]|[12]\\d|3[01])/(19|20)\\d{2}$",
+    error_message: "Invalid date format (expected MM/DD/YYYY)",
+    severity: "error",
+  },
+  {
+    name: "Required Field",
+    description: "Ensure field is not empty",
+    field_name: "required_field",
+    rule_type: "required",
+    rule_config: "{}",
+    error_message: "This field is required",
+    severity: "error",
+  },
+  {
+    name: "Numeric Range (0-100)",
+    description: "Value must be between 0 and 100",
+    field_name: "percentage",
+    rule_type: "range",
+    rule_config: '{"min": 0, "max": 100}',
+    error_message: "Value must be between 0 and 100",
+    severity: "error",
+  },
+  {
+    name: "Positive Amount",
+    description: "Amount must be greater than zero",
+    field_name: "amount",
+    rule_type: "range",
+    rule_config: '{"min": 0.01}',
+    error_message: "Amount must be greater than zero",
+    severity: "error",
+  },
+  {
+    name: "Credit Card Number",
+    description: "Basic credit card format (16 digits)",
+    field_name: "card_number",
+    rule_type: "regex",
+    rule_config: "{}",
+    regex_pattern: "^\\d{4}[- ]?\\d{4}[- ]?\\d{4}[- ]?\\d{4}$",
+    error_message: "Invalid credit card number format",
+    severity: "error",
+  },
+  {
+    name: "State Code (US)",
+    description: "Two-letter US state code",
+    field_name: "state",
+    rule_type: "regex",
+    rule_config: "{}",
+    regex_pattern: "^(A[KLRZ]|C[AOT]|D[CE]|FL|GA|HI|I[ADLN]|K[SY]|LA|M[ADEINOST]|N[CDEHJMVY]|O[HKR]|P[AR]|RI|S[CD]|T[NX]|UT|V[AIT]|W[AIVY])$",
+    error_message: "Invalid US state code",
+    severity: "error",
+  },
+];
 
 export default function ValidationRules() {
   useRequireAuth(true);
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [formData, setFormData] = useState({
     field_name: "",
@@ -31,6 +163,21 @@ export default function ValidationRules() {
     is_active: true,
   });
   const [regexPattern, setRegexPattern] = useState("");
+
+  const loadTemplate = (template: ValidationRuleTemplate) => {
+    setFormData({
+      field_name: template.field_name,
+      rule_type: template.rule_type,
+      rule_config: template.rule_config,
+      error_message: template.error_message,
+      severity: template.severity,
+      is_active: true,
+    });
+    setRegexPattern(template.regex_pattern || "");
+    setTemplateDialogOpen(false);
+    setOpen(true);
+    toast.success(`Template "${template.name}" loaded`);
+  };
 
   const { data: projects } = useQuery({
     queryKey: ["projects-for-rules"],
@@ -175,14 +322,63 @@ export default function ValidationRules() {
               Define custom validation rules to ensure data quality and consistency across your documents. Create regex patterns, required field checks, format validations, and cross-field rules that automatically flag documents that don't meet your business requirements. Rules can be set to error (blocking) or warning (advisory) levels.
             </p>
           </div>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Rule
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+          <div className="flex gap-2">
+            <Dialog open={templateDialogOpen} onOpenChange={setTemplateDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline">
+                  <FileText className="h-4 w-4 mr-2" />
+                  Templates
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-3xl max-h-[80vh]">
+                <DialogHeader>
+                  <DialogTitle>Validation Rule Templates</DialogTitle>
+                  <DialogDescription>
+                    Choose a pre-built template to quickly create common validation rules
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid grid-cols-2 gap-3 py-4 overflow-y-auto max-h-[50vh]">
+                  {VALIDATION_TEMPLATES.map((template, index) => (
+                    <Card
+                      key={index}
+                      className="cursor-pointer hover:border-primary transition-colors"
+                      onClick={() => loadTemplate(template)}
+                    >
+                      <CardContent className="pt-4 pb-3">
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <h4 className="font-medium text-sm">{template.name}</h4>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {template.description}
+                            </p>
+                          </div>
+                          <Badge variant="outline" className="text-xs">
+                            {template.rule_type}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2 font-mono truncate">
+                          Field: {template.field_name}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setTemplateDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Rule
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
               <form onSubmit={handleSubmit}>
                 <DialogHeader>
                   <DialogTitle>Create Validation Rule</DialogTitle>
