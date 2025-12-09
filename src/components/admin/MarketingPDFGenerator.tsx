@@ -381,27 +381,30 @@ export const MarketingPDFGenerator = () => {
         doc.text(r, margin + 10, y + 8 + (i * 6));
       });
 
-      y += 50;
+      y += 45;
 
-      // Call to Action
+      // Call to Action - position it above the footer with proper spacing
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const ctaY = pageHeight - 55; // Position CTA box 55px from bottom
+      
       doc.setFillColor(30, 58, 138);
-      doc.rect(margin, y, contentWidth, 30, 'F');
+      doc.rect(margin, ctaY, contentWidth, 30, 'F');
       
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
-      doc.text('Ready to Transform Your Document Processing?', pageWidth / 2, y + 12, { align: 'center' });
+      doc.text('Ready to Transform Your Document Processing?', pageWidth / 2, ctaY + 12, { align: 'center' });
       
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      doc.text('Contact us for a personalized demo and pricing quote', pageWidth / 2, y + 22, { align: 'center' });
+      doc.text('Contact us for a personalized demo and pricing quote', pageWidth / 2, ctaY + 22, { align: 'center' });
 
-      // Footer
-      y = doc.internal.pageSize.getHeight() - 15;
+      // Footer - positioned at very bottom
+      const footerY = pageHeight - 10;
       doc.setTextColor(128, 128, 128);
       doc.setFontSize(8);
-      doc.text('© 2025 WISDM Capture Pro. All rights reserved.', margin, y);
-      doc.text('www.wisdmcapture.pro | sales@wisdmcapture.pro', pageWidth - margin, y, { align: 'right' });
+      doc.text('© 2025 WISDM Capture Pro. All rights reserved.', margin, footerY);
+      doc.text('www.wisdmcapture.pro | sales@wisdmcapture.pro', pageWidth - margin, footerY, { align: 'right' });
 
       // Save PDF
       doc.save('WISDM-Capture-Pro-Marketing-Brochure.pdf');
