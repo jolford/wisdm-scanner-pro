@@ -294,11 +294,11 @@ export const MarketingPDFGenerator = () => {
         { name: 'Enterprise', price: 'Custom', period: '', docs: 'Unlimited', features: ['Dedicated support', 'Custom SLA', 'White-label'], highlight: false }
       ];
 
-      const tierWidth = (contentWidth - 15) / 4;
+      const tierWidth = (contentWidth - 12) / 4;
       
       tiers.forEach((tier, i) => {
-        const x = margin + (tierWidth + 5) * i;
-        const boxHeight = 55;
+        const x = margin + (tierWidth + 4) * i;
+        const boxHeight = 58;
         
         if (tier.highlight) {
           // Highlighted tier
@@ -330,18 +330,14 @@ export const MarketingPDFGenerator = () => {
         doc.setFont('helvetica', 'bold');
         doc.text(tier.name, x + tierWidth / 2, y + 12 + yOffset, { align: 'center' });
         
-        // Price
-        doc.setFontSize(16);
-        doc.text(tier.price, x + tierWidth / 2, y + 24 + yOffset, { align: 'center' });
-        
-        if (tier.period) {
-          doc.setFontSize(8);
-          doc.setFont('helvetica', 'normal');
-          doc.text(tier.period, x + tierWidth / 2 + 18, y + 24 + yOffset, { align: 'center' });
-        }
+        // Price with period combined
+        const priceText = tier.period ? tier.price + tier.period : tier.price;
+        doc.setFontSize(14);
+        doc.text(priceText, x + tierWidth / 2, y + 24 + yOffset, { align: 'center' });
         
         // Docs
         doc.setFontSize(7);
+        doc.setFont('helvetica', 'normal');
         doc.text(tier.docs, x + tierWidth / 2, y + 32 + yOffset, { align: 'center' });
         
         // Features
