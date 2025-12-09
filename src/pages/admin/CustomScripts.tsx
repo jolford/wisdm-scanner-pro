@@ -382,7 +382,7 @@ export default function CustomScripts() {
       const { data, error } = await supabase
         .from('script_execution_logs')
         .select('*')
-        .order('created_at', { ascending: false })
+        .order('executed_at', { ascending: false })
         .limit(50);
 
       if (error) throw error;
