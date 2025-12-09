@@ -4,6 +4,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Download, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
+import wisdmLogo from '@/assets/wisdm-logo.png';
+
+// Helper to load image as base64
+const loadImageAsBase64 = (src: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } else {
+        reject(new Error('Could not get canvas context'));
+      }
+    };
+    img.onerror = reject;
+    img.src = src;
+  });
+};
 
 export const MarketingPDFGenerator = () => {
   const [generating, setGenerating] = useState(false);
@@ -18,20 +41,39 @@ export const MarketingPDFGenerator = () => {
       const contentWidth = pageWidth - margin * 2;
       let y = 20;
 
-      // Header
-      doc.setFillColor(30, 58, 138); // Primary blue
-      doc.rect(0, 0, pageWidth, 45, 'F');
-      
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(28);
-      doc.setFont('helvetica', 'bold');
-      doc.text('WISDM Capture Pro', margin, 28);
-      
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Enterprise Document Capture & AI Processing Platform', margin, 38);
+      // Load logo
+      let logoBase64: string | null = null;
+      try {
+        logoBase64 = await loadImageAsBase64(wisdmLogo);
+      } catch (e) {
+        console.warn('Could not load logo:', e);
+      }
 
-      y = 60;
+      // Header with white background for logo visibility
+      doc.setFillColor(255, 255, 255);
+      doc.rect(0, 0, pageWidth, 50, 'F');
+      
+      // Add logo if loaded
+      if (logoBase64) {
+        doc.addImage(logoBase64, 'PNG', margin, 8, 50, 18);
+      }
+      
+      // Header text next to logo
+      doc.setTextColor(30, 58, 138);
+      doc.setFontSize(22);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Capture Pro', margin + 55, 20);
+      
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 100, 100);
+      doc.text('Enterprise Document Capture & AI Processing Platform', margin + 55, 28);
+      
+      // Blue accent bar under header
+      doc.setFillColor(30, 58, 138);
+      doc.rect(0, 48, pageWidth, 4, 'F');
+
+      y = 65;
 
       // Tagline
       doc.setTextColor(30, 58, 138);
