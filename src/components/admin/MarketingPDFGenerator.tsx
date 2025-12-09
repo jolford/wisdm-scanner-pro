@@ -403,8 +403,8 @@ export const MarketingPDFGenerator = () => {
       const footerY = pageHeight - 10;
       doc.setTextColor(128, 128, 128);
       doc.setFontSize(8);
-      doc.text('© 2025 WISDM Capture Pro. All rights reserved.', margin, footerY);
-      doc.text('www.wisdmcapture.pro | sales@wisdmcapture.pro', pageWidth - margin, footerY, { align: 'right' });
+      doc.text('© 2025 Western Integrated Systems. All rights reserved.', margin, footerY);
+      doc.text('www.westint.com | sales@westint.com', pageWidth - margin, footerY, { align: 'right' });
 
       // Save PDF
       doc.save('WISDM-Capture-Pro-Marketing-Brochure.pdf');
