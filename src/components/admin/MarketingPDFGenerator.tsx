@@ -28,6 +28,11 @@ const loadImageAsBase64 = (src: string): Promise<string> => {
   });
 };
 
+// Helper for rounded rectangles
+const roundedRect = (doc: jsPDF, x: number, y: number, w: number, h: number, r: number, style: 'F' | 'S' | 'FD' = 'F') => {
+  doc.roundedRect(x, y, w, h, r, r, style);
+};
+
 export const MarketingPDFGenerator = () => {
   const [generating, setGenerating] = useState(false);
 
@@ -37,9 +42,10 @@ export const MarketingPDFGenerator = () => {
     try {
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
-      const margin = 20;
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 15;
       const contentWidth = pageWidth - margin * 2;
-      let y = 20;
+      let y = 0;
 
       // Load logo
       let logoBase64: string | null = null;
@@ -49,362 +55,363 @@ export const MarketingPDFGenerator = () => {
         console.warn('Could not load logo:', e);
       }
 
-      // Header with white background for logo visibility
-      doc.setFillColor(255, 255, 255);
-      doc.rect(0, 0, pageWidth, 50, 'F');
+      // === PAGE 1: Hero & Features ===
       
-      // Add logo if loaded
+      // Gradient-style header background (simulate with layered rectangles)
+      doc.setFillColor(15, 23, 42); // slate-900
+      doc.rect(0, 0, pageWidth, 70, 'F');
+      doc.setFillColor(30, 41, 59); // slate-800 accent
+      doc.rect(0, 60, pageWidth, 12, 'F');
+      
+      // Add decorative accent line
+      doc.setFillColor(59, 130, 246); // blue-500
+      doc.rect(0, 68, pageWidth, 4, 'F');
+
+      // Logo and branding
       if (logoBase64) {
-        doc.addImage(logoBase64, 'PNG', margin, 8, 50, 18);
+        doc.addImage(logoBase64, 'PNG', margin, 12, 45, 16);
       }
       
-      // Header text next to logo
-      doc.setTextColor(30, 58, 138);
-      doc.setFontSize(22);
+      // Main title
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(28);
       doc.setFont('helvetica', 'bold');
-      doc.text('Capture Pro', margin + 55, 20);
+      doc.text('Capture Pro', margin + 50, 22);
       
+      // Subtitle with accent color
+      doc.setTextColor(147, 197, 253); // blue-300
       doc.setFontSize(11);
       doc.setFont('helvetica', 'normal');
-      doc.setTextColor(100, 100, 100);
-      doc.text('Enterprise Document Capture & AI Processing Platform', margin + 55, 28);
-      
-      // Blue accent bar under header
-      doc.setFillColor(30, 58, 138);
-      doc.rect(0, 48, pageWidth, 4, 'F');
+      doc.text('Enterprise Document Capture & AI Processing Platform', margin + 50, 30);
 
-      y = 65;
-
-      // Tagline
-      doc.setTextColor(30, 58, 138);
+      // Hero tagline
+      doc.setTextColor(255, 255, 255);
       doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
-      doc.text('Transform Your Document Processing with AI', margin, y);
-      y += 15;
+      doc.text('Transform Your Document Processing with AI', margin, 52);
 
-      // Key Stats Banner
-      doc.setFillColor(241, 245, 249);
-      doc.rect(margin, y, contentWidth, 25, 'F');
-      
-      doc.setTextColor(30, 58, 138);
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      
+      y = 85;
+
+      // Stats Cards Row
       const stats = [
-        { value: '40%', label: 'Faster Processing' },
-        { value: '99.5%', label: 'Accuracy Rate' },
-        { value: '60%', label: 'Cost Reduction' },
-        { value: '24/7', label: 'Automation' }
+        { value: '40%', label: 'Faster Processing', icon: '>' },
+        { value: '99.5%', label: 'Accuracy Rate', icon: '*' },
+        { value: '60%', label: 'Cost Reduction', icon: '$' },
+        { value: '24/7', label: 'Automation', icon: '@' }
       ];
       
-      const statWidth = contentWidth / 4;
+      const cardWidth = (contentWidth - 12) / 4;
       stats.forEach((stat, i) => {
-        const x = margin + (statWidth * i) + (statWidth / 2);
-        doc.setFontSize(14);
-        doc.text(stat.value, x, y + 10, { align: 'center' });
+        const x = margin + (cardWidth + 4) * i;
+        
+        // Card background
+        doc.setFillColor(248, 250, 252); // slate-50
+        roundedRect(doc, x, y, cardWidth, 32, 3, 'F');
+        
+        // Card border
+        doc.setDrawColor(226, 232, 240); // slate-200
+        doc.setLineWidth(0.3);
+        roundedRect(doc, x, y, cardWidth, 32, 3, 'S');
+        
+        // Value
+        doc.setTextColor(30, 64, 175); // blue-800
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text(stat.value, x + cardWidth / 2, y + 14, { align: 'center' });
+        
+        // Label
+        doc.setTextColor(100, 116, 139); // slate-500
         doc.setFontSize(8);
         doc.setFont('helvetica', 'normal');
-        doc.text(stat.label, x, y + 18, { align: 'center' });
-        doc.setFont('helvetica', 'bold');
-      });
-      
-      y += 35;
-
-      // Core Features Section
-      doc.setTextColor(30, 58, 138);
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Core Capabilities', margin, y);
-      y += 8;
-
-      doc.setDrawColor(30, 58, 138);
-      doc.setLineWidth(0.5);
-      doc.line(margin, y, margin + 40, y);
-      y += 10;
-
-      const features = [
-        {
-          title: 'AI-Powered OCR',
-          desc: 'Google Gemini & OpenAI GPT-5 for industry-leading extraction accuracy'
-        },
-        {
-          title: 'Smart Document Routing',
-          desc: 'Automatic classification and routing based on confidence thresholds'
-        },
-        {
-          title: 'Multi-Language Support',
-          desc: 'Process documents in 50+ languages with native accuracy'
-        },
-        {
-          title: 'Batch Processing',
-          desc: 'Process thousands of documents with parallel OCR optimization'
-        },
-        {
-          title: 'Zonal Extraction',
-          desc: 'Template-based extraction for structured document types'
-        },
-        {
-          title: 'Validation Workflows',
-          desc: 'Configurable validation rules with exception handling'
-        }
-      ];
-
-      doc.setTextColor(51, 51, 51);
-      doc.setFontSize(10);
-      
-      features.forEach(feature => {
-        doc.setFont('helvetica', 'bold');
-        doc.text(`• ${feature.title}`, margin + 5, y);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`  ${feature.desc}`, margin + 8, y + 5);
-        y += 14;
-      });
-
-      y += 5;
-
-      // Integration Section
-      doc.setTextColor(30, 58, 138);
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Enterprise Integrations', margin, y);
-      y += 8;
-      doc.line(margin, y, margin + 50, y);
-      y += 10;
-
-      doc.setTextColor(51, 51, 51);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-
-      const integrations = [
-        'SharePoint & OneDrive',
-        'FileBound ECM',
-        'Resware (Mortgage)',
-        'Documentum',
-        'Custom Webhooks',
-        'REST API Access'
-      ];
-
-      const intCol1 = integrations.slice(0, 3);
-      const intCol2 = integrations.slice(3);
-
-      intCol1.forEach((int, i) => {
-        doc.text(`[+] ${int}`, margin + 5, y + (i * 6));
-      });
-      intCol2.forEach((int, i) => {
-        doc.text(`[+] ${int}`, margin + 80, y + (i * 6));
-      });
-
-      y += 25;
-
-      // Security Section
-      doc.setTextColor(30, 58, 138);
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Enterprise Security', margin, y);
-      y += 8;
-      doc.line(margin, y, margin + 45, y);
-      y += 10;
-
-      doc.setTextColor(51, 51, 51);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-
-      const security = [
-        'SOC 2 Ready Infrastructure',
-        'AES-256-GCM Encryption',
-        'Row-Level Security (RLS)',
-        'Multi-Factor Authentication',
-        'Complete Audit Trail',
-        'HIPAA Compliant Design'
-      ];
-
-      const secCol1 = security.slice(0, 3);
-      const secCol2 = security.slice(3);
-
-      secCol1.forEach((sec, i) => {
-        doc.text(`[*] ${sec}`, margin + 5, y + (i * 6));
-      });
-      secCol2.forEach((sec, i) => {
-        doc.text(`[*] ${sec}`, margin + 80, y + (i * 6));
-      });
-
-      // New Page - Use Cases & Pricing
-      doc.addPage();
-      y = 20;
-
-      // Header on second page
-      doc.setFillColor(30, 58, 138);
-      doc.rect(0, 0, pageWidth, 30, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(18);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Industry Solutions & Pricing', margin, 20);
-
-      y = 45;
-
-      // Use Cases
-      doc.setTextColor(30, 58, 138);
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Industry Solutions', margin, y);
-      y += 8;
-      doc.line(margin, y, margin + 45, y);
-      y += 12;
-
-      const useCases = [
-        {
-          industry: 'Title & Escrow',
-          benefits: 'AB 1466 compliance, deed processing, automated redaction'
-        },
-        {
-          industry: 'Mortgage & Lending',
-          benefits: 'Loan document extraction, Resware integration, compliance checks'
-        },
-        {
-          industry: 'Healthcare',
-          benefits: 'HIPAA-compliant processing, medical records, PII redaction'
-        },
-        {
-          industry: 'Legal Services',
-          benefits: 'Contract analysis, discovery processing, signature validation'
-        },
-        {
-          industry: 'Accounts Payable',
-          benefits: 'Invoice processing, PO matching, vendor management'
-        }
-      ];
-
-      doc.setTextColor(51, 51, 51);
-      doc.setFontSize(10);
-
-      useCases.forEach(uc => {
-        doc.setFont('helvetica', 'bold');
-        doc.text(`${uc.industry}:`, margin + 5, y);
-        doc.setFont('helvetica', 'normal');
-        doc.text(uc.benefits, margin + 45, y);
-        y += 8;
-      });
-
-      y += 15;
-
-      // Pricing Tiers
-      doc.setTextColor(30, 58, 138);
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Pricing Plans', margin, y);
-      y += 8;
-      doc.line(margin, y, margin + 35, y);
-      y += 12;
-
-      const tiers = [
-        {
-          name: 'Starter',
-          price: '$499/mo',
-          docs: '5,000 docs/mo',
-          features: '3 projects, Email support'
-        },
-        {
-          name: 'Professional',
-          price: '$999/mo',
-          docs: '25,000 docs/mo',
-          features: '10 projects, Priority support, API access'
-        },
-        {
-          name: 'Business',
-          price: '$2,499/mo',
-          docs: '100,000 docs/mo',
-          features: 'Unlimited projects, SSO, Custom integrations'
-        },
-        {
-          name: 'Enterprise',
-          price: 'Custom',
-          docs: 'Unlimited',
-          features: 'Dedicated support, SLA, White-label option'
-        }
-      ];
-
-      const tierWidth = contentWidth / 4;
-      
-      tiers.forEach((tier, i) => {
-        const x = margin + (tierWidth * i);
-        
-        // Tier box
-        doc.setFillColor(i === 2 ? 30 : 241, i === 2 ? 58 : 245, i === 2 ? 138 : 249);
-        doc.rect(x, y, tierWidth - 5, 45, 'F');
-        
-        doc.setTextColor(i === 2 ? 255 : 30, i === 2 ? 255 : 58, i === 2 ? 255 : 138);
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'bold');
-        doc.text(tier.name, x + (tierWidth - 5) / 2, y + 10, { align: 'center' });
-        
-        doc.setFontSize(14);
-        doc.text(tier.price, x + (tierWidth - 5) / 2, y + 20, { align: 'center' });
-        
-        doc.setFontSize(8);
-        doc.setFont('helvetica', 'normal');
-        doc.text(tier.docs, x + (tierWidth - 5) / 2, y + 28, { align: 'center' });
-        
-        doc.setFontSize(7);
-        const features = tier.features.split(', ');
-        features.forEach((f, fi) => {
-          doc.text(f, x + (tierWidth - 5) / 2, y + 35 + (fi * 4), { align: 'center' });
-        });
-      });
-
-      y += 60;
-
-      // ROI Section
-      doc.setTextColor(30, 58, 138);
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Return on Investment', margin, y);
-      y += 8;
-      doc.line(margin, y, margin + 50, y);
-      y += 12;
-
-      doc.setFillColor(241, 245, 249);
-      doc.rect(margin, y, contentWidth, 35, 'F');
-
-      doc.setTextColor(51, 51, 51);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-
-      const roi = [
-        '• Reduce manual data entry by up to 80%',
-        '• Cut document processing time by 40%',
-        '• Eliminate paper handling costs',
-        '• Reduce error rates by 95%',
-        '• Achieve ROI within 3-6 months'
-      ];
-
-      roi.forEach((r, i) => {
-        doc.text(r, margin + 10, y + 8 + (i * 6));
+        doc.text(stat.label, x + cardWidth / 2, y + 24, { align: 'center' });
       });
 
       y += 45;
 
-      // Call to Action - position it above the footer with proper spacing
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const ctaY = pageHeight - 55; // Position CTA box 55px from bottom
+      // Core Capabilities Section
+      doc.setTextColor(15, 23, 42); // slate-900
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Core Capabilities', margin, y);
       
-      doc.setFillColor(30, 58, 138);
-      doc.rect(margin, ctaY, contentWidth, 30, 'F');
+      // Accent underline
+      doc.setFillColor(59, 130, 246); // blue-500
+      doc.rect(margin, y + 3, 35, 2, 'F');
+      y += 15;
+
+      const features = [
+        { title: 'AI-Powered OCR', desc: 'Google Gemini & OpenAI GPT-5 for industry-leading extraction accuracy' },
+        { title: 'Smart Document Routing', desc: 'Automatic classification and routing based on confidence thresholds' },
+        { title: 'Multi-Language Support', desc: 'Process documents in 50+ languages with native accuracy' },
+        { title: 'Batch Processing', desc: 'Process thousands of documents with parallel OCR optimization' },
+        { title: 'Zonal Extraction', desc: 'Template-based extraction for structured document types' },
+        { title: 'Validation Workflows', desc: 'Configurable validation rules with exception handling' }
+      ];
+
+      features.forEach((feature, i) => {
+        // Alternating background
+        if (i % 2 === 0) {
+          doc.setFillColor(248, 250, 252);
+          doc.rect(margin, y - 4, contentWidth, 12, 'F');
+        }
+        
+        // Bullet
+        doc.setFillColor(59, 130, 246);
+        doc.circle(margin + 3, y, 1.5, 'F');
+        
+        doc.setTextColor(15, 23, 42);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text(feature.title, margin + 8, y + 1);
+        
+        doc.setTextColor(71, 85, 105); // slate-600
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(feature.desc, margin + 50, y + 1);
+        y += 12;
+      });
+
+      y += 8;
+
+      // Two-column section: Integrations & Security
+      const colWidth = (contentWidth - 10) / 2;
+
+      // Integrations Box
+      doc.setFillColor(239, 246, 255); // blue-50
+      roundedRect(doc, margin, y, colWidth, 55, 4, 'F');
+      doc.setDrawColor(191, 219, 254); // blue-200
+      doc.setLineWidth(0.5);
+      roundedRect(doc, margin, y, colWidth, 55, 4, 'S');
       
+      doc.setTextColor(30, 64, 175); // blue-800
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Enterprise Integrations', margin + 5, y + 10);
+      
+      const integrations = ['SharePoint & OneDrive', 'FileBound ECM', 'Resware (Mortgage)', 'Documentum', 'Custom Webhooks', 'REST API Access'];
+      doc.setTextColor(51, 65, 85);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      integrations.forEach((int, i) => {
+        doc.text('+ ' + int, margin + 8, y + 20 + (i * 6));
+      });
+
+      // Security Box
+      const secX = margin + colWidth + 10;
+      doc.setFillColor(240, 253, 244); // green-50
+      roundedRect(doc, secX, y, colWidth, 55, 4, 'F');
+      doc.setDrawColor(187, 247, 208); // green-200
+      roundedRect(doc, secX, y, colWidth, 55, 4, 'S');
+      
+      doc.setTextColor(22, 101, 52); // green-800
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Enterprise Security', secX + 5, y + 10);
+      
+      const security = ['SOC 2 Ready Infrastructure', 'AES-256-GCM Encryption', 'Row-Level Security (RLS)', 'Multi-Factor Authentication', 'Complete Audit Trail', 'HIPAA Compliant Design'];
+      doc.setTextColor(51, 65, 85);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      security.forEach((sec, i) => {
+        doc.text('* ' + sec, secX + 8, y + 20 + (i * 6));
+      });
+
+      // Footer for page 1
+      doc.setFillColor(241, 245, 249);
+      doc.rect(0, pageHeight - 12, pageWidth, 12, 'F');
+      doc.setTextColor(100, 116, 139);
+      doc.setFontSize(8);
+      doc.text('Western Integrated Systems', margin, pageHeight - 5);
+      doc.text('Page 1 of 2', pageWidth - margin, pageHeight - 5, { align: 'right' });
+
+      // === PAGE 2: Solutions & Pricing ===
+      doc.addPage();
+      y = 0;
+
+      // Page 2 header
+      doc.setFillColor(15, 23, 42);
+      doc.rect(0, 0, pageWidth, 35, 'F');
+      doc.setFillColor(59, 130, 246);
+      doc.rect(0, 33, pageWidth, 3, 'F');
+
       doc.setTextColor(255, 255, 255);
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Industry Solutions & Pricing', margin, 22);
+
+      y = 50;
+
+      // Industry Solutions
+      doc.setTextColor(15, 23, 42);
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
-      doc.text('Ready to Transform Your Document Processing?', pageWidth / 2, ctaY + 12, { align: 'center' });
-      
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Contact us for a personalized demo and pricing quote', pageWidth / 2, ctaY + 22, { align: 'center' });
+      doc.text('Industry Solutions', margin, y);
+      doc.setFillColor(59, 130, 246);
+      doc.rect(margin, y + 3, 30, 2, 'F');
+      y += 15;
 
-      // Footer - positioned at very bottom
-      const footerY = pageHeight - 10;
-      doc.setTextColor(128, 128, 128);
+      const useCases = [
+        { industry: 'Title & Escrow', benefits: 'AB 1466 compliance, deed processing, automated redaction', color: [254, 243, 199] },
+        { industry: 'Mortgage & Lending', benefits: 'Loan document extraction, Resware integration, compliance checks', color: [254, 226, 226] },
+        { industry: 'Healthcare', benefits: 'HIPAA-compliant processing, medical records, PII redaction', color: [220, 252, 231] },
+        { industry: 'Legal Services', benefits: 'Contract analysis, discovery processing, signature validation', color: [224, 231, 255] },
+        { industry: 'Accounts Payable', benefits: 'Invoice processing, PO matching, vendor management', color: [243, 232, 255] }
+      ];
+
+      useCases.forEach((uc, i) => {
+        doc.setFillColor(uc.color[0], uc.color[1], uc.color[2]);
+        roundedRect(doc, margin, y - 3, contentWidth, 12, 2, 'F');
+        
+        doc.setTextColor(15, 23, 42);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text(uc.industry, margin + 5, y + 4);
+        
+        doc.setTextColor(71, 85, 105);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.text(uc.benefits, margin + 45, y + 4);
+        y += 14;
+      });
+
+      y += 10;
+
+      // Pricing Tiers
+      doc.setTextColor(15, 23, 42);
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Pricing Plans', margin, y);
+      doc.setFillColor(59, 130, 246);
+      doc.rect(margin, y + 3, 25, 2, 'F');
+      y += 15;
+
+      const tiers = [
+        { name: 'Starter', price: '$499', period: '/mo', docs: '5,000 docs/mo', features: ['3 projects', 'Email support', 'Standard OCR'], highlight: false },
+        { name: 'Professional', price: '$999', period: '/mo', docs: '25,000 docs/mo', features: ['10 projects', 'Priority support', 'API access'], highlight: false },
+        { name: 'Business', price: '$2,499', period: '/mo', docs: '100,000 docs/mo', features: ['Unlimited projects', 'SSO included', 'Custom integrations'], highlight: true },
+        { name: 'Enterprise', price: 'Custom', period: '', docs: 'Unlimited', features: ['Dedicated support', 'Custom SLA', 'White-label'], highlight: false }
+      ];
+
+      const tierWidth = (contentWidth - 15) / 4;
+      
+      tiers.forEach((tier, i) => {
+        const x = margin + (tierWidth + 5) * i;
+        const boxHeight = 55;
+        
+        if (tier.highlight) {
+          // Highlighted tier
+          doc.setFillColor(30, 64, 175); // blue-800
+          roundedRect(doc, x, y - 3, tierWidth, boxHeight + 6, 4, 'F');
+          
+          // "Popular" badge
+          doc.setFillColor(251, 191, 36); // amber-400
+          doc.rect(x, y - 3, tierWidth, 8, 'F');
+          doc.setTextColor(0, 0, 0);
+          doc.setFontSize(6);
+          doc.setFont('helvetica', 'bold');
+          doc.text('MOST POPULAR', x + tierWidth / 2, y + 2, { align: 'center' });
+          
+          doc.setTextColor(255, 255, 255);
+        } else {
+          doc.setFillColor(248, 250, 252);
+          roundedRect(doc, x, y, tierWidth, boxHeight, 4, 'F');
+          doc.setDrawColor(226, 232, 240);
+          doc.setLineWidth(0.3);
+          roundedRect(doc, x, y, tierWidth, boxHeight, 4, 'S');
+          doc.setTextColor(15, 23, 42);
+        }
+        
+        const yOffset = tier.highlight ? 8 : 0;
+        
+        // Tier name
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'bold');
+        doc.text(tier.name, x + tierWidth / 2, y + 12 + yOffset, { align: 'center' });
+        
+        // Price
+        doc.setFontSize(16);
+        doc.text(tier.price, x + tierWidth / 2, y + 24 + yOffset, { align: 'center' });
+        
+        if (tier.period) {
+          doc.setFontSize(8);
+          doc.setFont('helvetica', 'normal');
+          doc.text(tier.period, x + tierWidth / 2 + 18, y + 24 + yOffset, { align: 'center' });
+        }
+        
+        // Docs
+        doc.setFontSize(7);
+        doc.text(tier.docs, x + tierWidth / 2, y + 32 + yOffset, { align: 'center' });
+        
+        // Features
+        doc.setFontSize(6);
+        tier.features.forEach((f, fi) => {
+          doc.text(f, x + tierWidth / 2, y + 40 + (fi * 5) + yOffset, { align: 'center' });
+        });
+      });
+
+      y += 75;
+
+      // ROI Section
+      doc.setFillColor(239, 246, 255);
+      roundedRect(doc, margin, y, contentWidth, 40, 4, 'F');
+      
+      doc.setTextColor(30, 64, 175);
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Return on Investment', margin + 10, y + 10);
+
+      const roi = [
+        'Reduce manual data entry by up to 80%',
+        'Cut document processing time by 40%',
+        'Eliminate paper handling costs',
+        'Reduce error rates by 95%',
+        'Achieve ROI within 3-6 months'
+      ];
+
+      doc.setTextColor(51, 65, 85);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      
+      const roiCol1 = roi.slice(0, 3);
+      const roiCol2 = roi.slice(3);
+      
+      roiCol1.forEach((r, i) => {
+        doc.text('> ' + r, margin + 10, y + 20 + (i * 6));
+      });
+      roiCol2.forEach((r, i) => {
+        doc.text('> ' + r, margin + contentWidth / 2, y + 20 + (i * 6));
+      });
+
+      // CTA Box
+      const ctaY = pageHeight - 55;
+      doc.setFillColor(15, 23, 42);
+      roundedRect(doc, margin, ctaY, contentWidth, 35, 5, 'F');
+      
+      // Decorative accent
+      doc.setFillColor(59, 130, 246);
+      doc.rect(margin + 10, ctaY + 5, 3, 25, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Ready to Transform Your Document Processing?', margin + 20, ctaY + 15);
+      
+      doc.setTextColor(148, 163, 184); // slate-400
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Contact us today for a personalized demo and pricing quote', margin + 20, ctaY + 26);
+
+      // Footer
+      doc.setFillColor(241, 245, 249);
+      doc.rect(0, pageHeight - 14, pageWidth, 14, 'F');
+      doc.setTextColor(71, 85, 105);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Western Integrated Systems', margin, pageHeight - 5);
+      doc.setFont('helvetica', 'normal');
       doc.setFontSize(8);
-      doc.text('© 2025 Western Integrated Systems. All rights reserved.', margin, footerY);
-      doc.text('www.westint.com | sales@westint.com', pageWidth - margin, footerY, { align: 'right' });
+      doc.text('www.westint.com | sales@westint.com', pageWidth / 2, pageHeight - 5, { align: 'center' });
+      doc.text('Page 2 of 2', pageWidth - margin, pageHeight - 5, { align: 'right' });
 
       // Save PDF
       doc.save('WISDM-Capture-Pro-Marketing-Brochure.pdf');
