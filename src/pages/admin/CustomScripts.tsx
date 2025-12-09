@@ -20,51 +20,273 @@ const SCRIPT_TEMPLATES: Record<string, ScriptTemplate[]> = {
   javascript: [
     {
       name: 'Hello World',
-      code: `// This is a simple JavaScript template
-console.log("Hello, world!");`,
+      code: `// Basic script template
+// Available context: supabase, user, executionContext, console
+
+console.log("Hello from custom script!");
+console.log("Current user:", user.email);
+
+return { success: true, message: "Script executed successfully" };`,
     },
     {
-      name: 'Fetch Data from API',
-      code: `// Fetch data from a public API
-fetch('https://jsonplaceholder.typicode.com/todos/1')
-  .then(response => response.json())
-  .then(data => console.log(data))
-  .catch(error => console.error('Error:', error));`,
+      name: 'Query Documents',
+      code: `// Query documents from the database
+// The supabase client respects RLS policies
+
+const { data: documents, error } = await supabase
+  .from('documents')
+  .select('id, file_name, validation_status, confidence_score')
+  .eq('validation_status', 'pending')
+  .order('created_at', { ascending: false })
+  .limit(10);
+
+if (error) {
+  console.error("Query error:", error.message);
+  return { success: false, error: error.message };
+}
+
+console.log(\`Found \${documents.length} pending documents\`);
+return { success: true, documents };`,
+    },
+    {
+      name: 'Batch Statistics',
+      code: `// Get batch processing statistics
+
+const { data: batches, error } = await supabase
+  .from('batches')
+  .select(\`
+    id,
+    batch_name,
+    status,
+    total_documents,
+    processed_documents,
+    validated_documents,
+    error_count,
+    created_at
+  \`)
+  .order('created_at', { ascending: false })
+  .limit(20);
+
+if (error) {
+  console.error("Query error:", error.message);
+  return { success: false, error: error.message };
+}
+
+const stats = {
+  total: batches.length,
+  pending: batches.filter(b => b.status === 'pending').length,
+  processing: batches.filter(b => b.status === 'processing').length,
+  completed: batches.filter(b => b.status === 'completed').length,
+  withErrors: batches.filter(b => b.error_count > 0).length,
+};
+
+console.log("Batch Statistics:", JSON.stringify(stats, null, 2));
+return { success: true, stats, batches };`,
+    },
+    {
+      name: 'Update Document Metadata',
+      code: `// Update document metadata based on conditions
+// IMPORTANT: Modify the document IDs and metadata as needed
+
+const documentId = executionContext.documentId; // Pass via execution context
+if (!documentId) {
+  return { success: false, error: "No documentId provided in execution context" };
+}
+
+const { data: doc, error: fetchError } = await supabase
+  .from('documents')
+  .select('id, extracted_metadata')
+  .eq('id', documentId)
+  .single();
+
+if (fetchError) {
+  console.error("Fetch error:", fetchError.message);
+  return { success: false, error: fetchError.message };
+}
+
+// Merge new metadata
+const updatedMetadata = {
+  ...doc.extracted_metadata,
+  custom_processed: true,
+  processed_at: new Date().toISOString(),
+  processed_by_script: true
+};
+
+const { error: updateError } = await supabase
+  .from('documents')
+  .update({ extracted_metadata: updatedMetadata })
+  .eq('id', documentId);
+
+if (updateError) {
+  console.error("Update error:", updateError.message);
+  return { success: false, error: updateError.message };
+}
+
+console.log(\`Updated document \${documentId}\`);
+return { success: true, documentId, metadata: updatedMetadata };`,
+    },
+    {
+      name: 'External API Integration',
+      code: `// Call an external API and process response
+// Replace with your actual API endpoint
+
+const apiUrl = "https://api.example.com/data";
+
+try {
+  const response = await fetch(apiUrl, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      // Add your API key if needed
+      // "Authorization": "Bearer YOUR_API_KEY"
+    }
+  });
+
+  if (!response.ok) {
+    throw new Error(\`HTTP \${response.status}: \${response.statusText}\`);
+  }
+
+  const data = await response.json();
+  console.log("API Response:", JSON.stringify(data, null, 2));
+  
+  return { success: true, data };
+} catch (error) {
+  console.error("API Error:", error.message);
+  return { success: false, error: error.message };
+}`,
+    },
+    {
+      name: 'Validation Report',
+      code: `// Generate a validation report for a project
+
+const projectId = executionContext.projectId;
+if (!projectId) {
+  return { success: false, error: "No projectId provided" };
+}
+
+const { data: documents, error } = await supabase
+  .from('documents')
+  .select('id, file_name, validation_status, confidence_score, validated_at')
+  .eq('project_id', projectId);
+
+if (error) {
+  console.error("Query error:", error.message);
+  return { success: false, error: error.message };
+}
+
+const report = {
+  projectId,
+  totalDocuments: documents.length,
+  validated: documents.filter(d => d.validation_status === 'validated').length,
+  pending: documents.filter(d => d.validation_status === 'pending').length,
+  rejected: documents.filter(d => d.validation_status === 'rejected').length,
+  averageConfidence: documents.length > 0 
+    ? (documents.reduce((sum, d) => sum + (d.confidence_score || 0), 0) / documents.length).toFixed(2)
+    : 0,
+  lowConfidenceCount: documents.filter(d => (d.confidence_score || 0) < 0.7).length,
+  generatedAt: new Date().toISOString()
+};
+
+console.log("Validation Report:", JSON.stringify(report, null, 2));
+return { success: true, report };`,
+    },
+    {
+      name: 'Cleanup Old Documents',
+      code: `// Find documents older than a specified number of days
+// NOTE: This only queries - modify to delete if needed
+
+const daysOld = executionContext.daysOld || 90;
+const cutoffDate = new Date();
+cutoffDate.setDate(cutoffDate.getDate() - daysOld);
+
+const { data: oldDocs, error } = await supabase
+  .from('documents')
+  .select('id, file_name, created_at, validation_status')
+  .lt('created_at', cutoffDate.toISOString())
+  .eq('validation_status', 'validated'); // Only completed docs
+
+if (error) {
+  console.error("Query error:", error.message);
+  return { success: false, error: error.message };
+}
+
+console.log(\`Found \${oldDocs.length} documents older than \${daysOld} days\`);
+
+// To actually delete, uncomment:
+// for (const doc of oldDocs) {
+//   await supabase.from('documents').delete().eq('id', doc.id);
+// }
+
+return { 
+  success: true, 
+  daysOld,
+  cutoffDate: cutoffDate.toISOString(),
+  documentsFound: oldDocs.length,
+  documents: oldDocs.slice(0, 10) // Return first 10 for preview
+};`,
+    },
+    {
+      name: 'Send Webhook Notification',
+      code: `// Send a custom webhook notification
+// Replace webhookUrl with your endpoint
+
+const webhookUrl = executionContext.webhookUrl || "https://your-webhook.example.com/notify";
+const payload = {
+  event: "custom_script_executed",
+  timestamp: new Date().toISOString(),
+  user: user.email,
+  data: executionContext.customData || {},
+};
+
+try {
+  const response = await fetch(webhookUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error(\`Webhook failed: HTTP \${response.status}\`);
+  }
+
+  console.log("Webhook sent successfully");
+  return { success: true, webhookUrl, payload };
+} catch (error) {
+  console.error("Webhook error:", error.message);
+  return { success: false, error: error.message };
+}`,
     },
   ],
-  python: [
+  typescript: [
     {
-      name: 'Hello World',
-      code: `# This is a simple Python template
-print("Hello, world!")`,
-    },
-    {
-      name: 'Fetch Data from API',
-      code: `# Import the 'requests' library
-import requests
+      name: 'Typed Document Query',
+      code: `// TypeScript template with type annotations
+// Note: Types are for documentation - runtime is JavaScript
 
-# Make an HTTP request to a remote service
-response = requests.get('https://jsonplaceholder.typicode.com/todos/1')
+interface Document {
+  id: string;
+  file_name: string;
+  validation_status: string;
+  confidence_score: number;
+}
 
-# Check the HTTP response status code
-if response.status_code == 200:
-    # Parse the JSON response body
-    data = response.json()
-    print(data)
-else:
-    print('Request failed with status code: {}'.format(response.status_code))`,
-    },
-  ],
-  powershell: [
-    {
-      name: 'Hello World',
-      code: `# This is a simple PowerShell template
-Write-Host "Hello, world!"`,
-    },
-    {
-      name: 'Get System Info',
-      code: `# Get system information
-Get-ComputerInfo`,
+const { data, error } = await supabase
+  .from('documents')
+  .select('id, file_name, validation_status, confidence_score')
+  .limit(5);
+
+if (error) {
+  return { success: false, error: error.message };
+}
+
+const documents = data as Document[];
+const summary = documents.map(d => ({
+  name: d.file_name,
+  status: d.validation_status,
+  confidence: \`\${(d.confidence_score * 100).toFixed(1)}%\`
+}));
+
+return { success: true, summary };`,
     },
   ],
 };
@@ -292,7 +514,7 @@ export default function CustomScripts() {
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-2xl font-bold">Custom Scripts</h2>
-            <p className="text-muted-foreground">Create custom scripts in JavaScript, Python, PowerShell, and more</p>
+            <p className="text-muted-foreground">Create JavaScript/TypeScript automation scripts with database and API access</p>
           </div>
           <Dialog open={isDialogOpen} onOpenChange={(open) => { setIsDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
@@ -363,10 +585,12 @@ export default function CustomScripts() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="javascript">JavaScript</SelectItem>
-                      <SelectItem value="python">Python</SelectItem>
-                      <SelectItem value="powershell">PowerShell</SelectItem>
+                      <SelectItem value="typescript">TypeScript</SelectItem>
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Scripts run in a secure sandbox with access to Supabase client and fetch API
+                  </p>
                 </div>
                 <div>
                   <Label htmlFor="trigger_type">Trigger Type *</Label>
