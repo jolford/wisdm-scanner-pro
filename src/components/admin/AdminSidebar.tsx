@@ -108,6 +108,7 @@ const menuItems: MenuGroup[] = [
     icon: TrendingUp,
     items: [
       { title: 'Business Metrics', url: '/admin/business-metrics', icon: TrendingUp },
+      { title: 'Metrics Benchmark', url: '/admin/metrics-benchmark', icon: Target },
       { title: 'Cost Tracking', url: '/admin/cost-tracking', icon: DollarSign },
       { title: 'System Viability', url: '/admin/system-viability', icon: Settings },
       { title: 'White Label', url: '/admin/white-label', icon: Palette },
