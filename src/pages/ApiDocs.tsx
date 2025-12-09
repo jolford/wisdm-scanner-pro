@@ -158,6 +158,36 @@ const ApiDocs = () => {
 }`}</pre>
               </div>
             </div>
+
+            <div>
+              <h3 className="text-xl font-semibold mb-2">List Projects</h3>
+              <p className="font-mono text-sm bg-muted print:bg-gray-100 p-2 rounded print:rounded-none mb-2">
+                GET /api-v1-projects
+              </p>
+              <p className="font-mono text-sm bg-muted print:bg-gray-100 p-2 rounded print:rounded-none mb-2">
+                GET /api-v1-projects?project_id=UUID
+              </p>
+              <p className="text-sm text-muted-foreground print:text-gray-800 mb-2">
+                List all projects accessible to your API key, or get a specific project's details.
+                Returns only projects belonging to your customer account.
+              </p>
+              <div className="bg-muted print:bg-gray-100 p-3 rounded print:rounded-none text-xs">
+                <p className="font-semibold mb-2">Response:</p>
+                <pre className="whitespace-pre-wrap">{`{
+  "projects": [
+    {
+      "id": "uuid",
+      "name": "Invoice Processing",
+      "description": "Extract data from invoices",
+      "extraction_fields": [...],
+      "detect_pii": false,
+      "created_at": "2025-01-01T00:00:00Z"
+    }
+  ],
+  "count": 1
+}`}</pre>
+              </div>
+            </div>
           </div>
         </section>
 
