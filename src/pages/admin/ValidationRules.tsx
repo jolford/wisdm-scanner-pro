@@ -507,6 +507,7 @@ export default function ValidationRules() {
               </form>
             </DialogContent>
           </Dialog>
+          </div>
         </div>
 
         <Card>
