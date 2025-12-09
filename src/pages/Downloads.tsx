@@ -1,9 +1,9 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, Package } from 'lucide-react';
+import { Download, FileText, Package, Workflow } from 'lucide-react';
 import { useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-
+import { generateN8nDatasheetPDF } from '@/lib/n8n-datasheet-pdf';
 const Downloads = () => {
   const { toast } = useToast();
 
@@ -86,6 +86,30 @@ const Downloads = () => {
                 {f.label}
               </button>
             ))}
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-start gap-4">
+            <Workflow className="h-8 w-8 text-primary mt-1" />
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold mb-2">n8n Integration Datasheet</h2>
+              <p className="text-muted-foreground mb-4">
+                Technical documentation for integrating n8n workflow automation with WISDMCapture. 
+                Includes architecture diagrams, API reference, implementation checklist, and security considerations.
+              </p>
+              
+              <div className="flex gap-3">
+                <Button onClick={() => generateN8nDatasheetPDF()}>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download PDF
+                </Button>
+                <Button variant="outline" onClick={() => window.open('/docs/N8N_INTEGRATION_DATASHEET.md', '_blank')}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  View Markdown
+                </Button>
+              </div>
+            </div>
           </div>
         </Card>
       </div>
