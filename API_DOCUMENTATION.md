@@ -18,6 +18,88 @@ To get your JWT token, authenticate through the web application and retrieve the
 
 ---
 
+## Projects API
+
+### List Projects
+**GET** `/api-projects`
+
+Retrieve a list of projects you have access to.
+
+**Query Parameters:**
+- `customer_id` (optional): Filter by customer ID
+- `limit` (optional, default: 50): Number of results per page
+- `offset` (optional, default: 0): Pagination offset
+
+**Example:**
+```bash
+curl -X GET \
+  "https://pbyerakkryuflamlmpvm.supabase.co/functions/v1/api-projects?limit=10" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Response:**
+```json
+{
+  "projects": [
+    {
+      "id": "uuid",
+      "name": "Invoice Processing",
+      "description": "Extract data from invoices",
+      "customer_id": "uuid",
+      "extraction_fields": [
+        {"name": "Invoice Number", "type": "string"},
+        {"name": "Total Amount", "type": "currency"}
+      ],
+      "detect_pii": false,
+      "created_at": "2025-01-01T00:00:00Z",
+      "updated_at": "2025-01-01T00:00:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 5,
+    "limit": 10,
+    "offset": 0,
+    "hasMore": false
+  }
+}
+```
+
+---
+
+### Get Project
+**GET** `/api-projects/{id}`
+
+Get details of a specific project including extraction field configuration.
+
+**Example:**
+```bash
+curl -X GET \
+  "https://pbyerakkryuflamlmpvm.supabase.co/functions/v1/api-projects/123e4567-e89b-12d3-a456-426614174000" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN"
+```
+
+**Response:**
+```json
+{
+  "project": {
+    "id": "uuid",
+    "name": "Invoice Processing",
+    "description": "Extract data from invoices",
+    "customer_id": "uuid",
+    "extraction_fields": [
+      {"name": "Invoice Number", "type": "string"},
+      {"name": "Vendor Name", "type": "string"},
+      {"name": "Total Amount", "type": "currency"}
+    ],
+    "detect_pii": false,
+    "created_at": "2025-01-01T00:00:00Z",
+    "updated_at": "2025-01-01T00:00:00Z"
+  }
+}
+```
+
+---
+
 ## Documents API
 
 ### List Documents
