@@ -1,9 +1,11 @@
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, Package, Workflow } from 'lucide-react';
-import { useCallback } from 'react';
+import { Download, FileText, Package, Workflow, Megaphone } from 'lucide-react';
+import { useCallback, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { generateN8nDatasheetPDF } from '@/lib/n8n-datasheet-pdf';
+import { MarketingPDFGenerator } from '@/components/admin/MarketingPDFGenerator';
+
 const Downloads = () => {
   const { toast } = useToast();
 
@@ -109,6 +111,19 @@ const Downloads = () => {
                   View Markdown
                 </Button>
               </div>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <div className="flex items-start gap-4">
+            <Megaphone className="h-8 w-8 text-primary mt-1" />
+            <div className="flex-1">
+              <h2 className="text-xl font-semibold mb-2">Marketing Materials</h2>
+              <p className="text-muted-foreground mb-4">
+                Professional marketing brochure for WISDM Capture Pro. Includes features, pricing, security info, and ROI highlights.
+              </p>
+              <MarketingPDFGenerator />
             </div>
           </div>
         </Card>
