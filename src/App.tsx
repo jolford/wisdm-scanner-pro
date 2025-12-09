@@ -86,6 +86,7 @@ import Workflows from "./pages/admin/Workflows";
 import IntegrationMarketplace from "./pages/admin/IntegrationMarketplace";
 import SSOConfig from "./pages/admin/SSOConfig";
 import SCIMConfig from "./pages/admin/SCIMConfig";
+import ScriptAgents from "./pages/admin/ScriptAgents";
 import RetentionPolicies from "./pages/admin/RetentionPolicies";
 import EnhancedSLAMonitoring from "./pages/admin/EnhancedSLAMonitoring";
 import { Footer } from "./components/Footer";
@@ -241,6 +242,7 @@ const App = () => {
           <Route path="/admin/workflow-builder" element={<WorkflowBuilder />} />
           
           <Route path="/admin/integrations" element={<IntegrationMarketplace />} />
+          <Route path="/admin/script-agents" element={<ScriptAgents />} />
           
           {/* Enterprise Features */}
           <Route path="/admin/sso" element={<SSOConfig />} />

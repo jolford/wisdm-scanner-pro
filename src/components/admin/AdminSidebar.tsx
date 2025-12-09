@@ -122,6 +122,7 @@ const menuItems: MenuGroup[] = [
       { title: 'Validation Lookups', url: '/admin/validation-lookups', icon: Database },
       { title: 'SSO/SAML Config', url: '/admin/sso', icon: KeyRound },
       { title: 'SCIM Provisioning', url: '/admin/scim', icon: UserCog },
+      { title: 'Script Agents', url: '/admin/script-agents', icon: Terminal },
       
     ],
     defaultOpen: false,

@@ -2753,6 +2753,62 @@ export type Database = {
           },
         ]
       }
+      script_agents: {
+        Row: {
+          api_key_hash: string
+          api_key_prefix: string
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          id: string
+          is_active: boolean | null
+          last_heartbeat_at: string | null
+          last_ip_address: string | null
+          machine_name: string | null
+          name: string
+          supported_languages: string[] | null
+          updated_at: string
+        }
+        Insert: {
+          api_key_hash: string
+          api_key_prefix: string
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          id?: string
+          is_active?: boolean | null
+          last_heartbeat_at?: string | null
+          last_ip_address?: string | null
+          machine_name?: string | null
+          name: string
+          supported_languages?: string[] | null
+          updated_at?: string
+        }
+        Update: {
+          api_key_hash?: string
+          api_key_prefix?: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          id?: string
+          is_active?: boolean | null
+          last_heartbeat_at?: string | null
+          last_ip_address?: string | null
+          machine_name?: string | null
+          name?: string
+          supported_languages?: string[] | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_agents_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       script_execution_logs: {
         Row: {
           error_message: string | null
@@ -2793,6 +2849,213 @@ export type Database = {
             columns: ["script_id"]
             isOneToOne: false
             referencedRelation: "custom_scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      script_jobs: {
+        Row: {
+          agent_id: string | null
+          assigned_at: string | null
+          batch_id: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          document_id: string | null
+          error_message: string | null
+          exit_code: number | null
+          id: string
+          max_retries: number | null
+          priority: number | null
+          project_id: string | null
+          result_data: Json | null
+          retry_count: number | null
+          script_content: string
+          script_language: string
+          script_name: string
+          script_parameters: Json | null
+          started_at: string | null
+          status: string
+          stderr: string | null
+          stdout: string | null
+          timeout_seconds: number | null
+          trigger_event: string | null
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          agent_id?: string | null
+          assigned_at?: string | null
+          batch_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          document_id?: string | null
+          error_message?: string | null
+          exit_code?: number | null
+          id?: string
+          max_retries?: number | null
+          priority?: number | null
+          project_id?: string | null
+          result_data?: Json | null
+          retry_count?: number | null
+          script_content: string
+          script_language: string
+          script_name: string
+          script_parameters?: Json | null
+          started_at?: string | null
+          status?: string
+          stderr?: string | null
+          stdout?: string | null
+          timeout_seconds?: number | null
+          trigger_event?: string | null
+          trigger_type: string
+          updated_at?: string
+        }
+        Update: {
+          agent_id?: string | null
+          assigned_at?: string | null
+          batch_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          document_id?: string | null
+          error_message?: string | null
+          exit_code?: number | null
+          id?: string
+          max_retries?: number | null
+          priority?: number | null
+          project_id?: string | null
+          result_data?: Json | null
+          retry_count?: number | null
+          script_content?: string
+          script_language?: string
+          script_name?: string
+          script_parameters?: Json | null
+          started_at?: string | null
+          status?: string
+          stderr?: string | null
+          stdout?: string | null
+          timeout_seconds?: number | null
+          trigger_event?: string | null
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_jobs_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "script_agents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "script_jobs_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "script_jobs_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "script_jobs_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "documents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "script_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      script_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          default_parameters: Json | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          project_id: string | null
+          schedule_cron: string | null
+          schedule_enabled: boolean | null
+          script_content: string
+          script_language: string
+          trigger_on_batch_complete: boolean | null
+          trigger_on_batch_export: boolean | null
+          trigger_on_document_upload: boolean | null
+          trigger_on_validation_complete: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          default_parameters?: Json | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          project_id?: string | null
+          schedule_cron?: string | null
+          schedule_enabled?: boolean | null
+          script_content: string
+          script_language: string
+          trigger_on_batch_complete?: boolean | null
+          trigger_on_batch_export?: boolean | null
+          trigger_on_document_upload?: boolean | null
+          trigger_on_validation_complete?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          default_parameters?: Json | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          project_id?: string | null
+          schedule_cron?: string | null
+          schedule_enabled?: boolean | null
+          script_content?: string
+          script_language?: string
+          trigger_on_batch_complete?: boolean | null
+          trigger_on_batch_export?: boolean | null
+          trigger_on_document_upload?: boolean | null
+          trigger_on_validation_complete?: boolean | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "script_templates_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "script_templates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]

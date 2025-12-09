@@ -1,0 +1,16 @@
+{
+  "name": "wisdm-script-agent",
+  "version": "1.0.0",
+  "description": "WISDM Script Agent for Windows - Executes PowerShell, VBScript, Python, and Batch scripts",
+  "main": "agent.js",
+  "scripts": {
+    "start": "node agent.js",
+    "install-service": "node install-service.js",
+    "uninstall-service": "node uninstall-service.js"
+  },
+  "author": "WISDM",
+  "license": "Proprietary",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
