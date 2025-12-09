@@ -223,7 +223,7 @@ export default function ScriptAgents() {
   };
 
   return (
-    <AdminLayout>
+    <AdminLayout title="Script Agents">
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>

@@ -5,7 +5,7 @@ import {
   Brain, RefreshCw, Database, Palette, Activity,
   Settings, LogOut, HelpCircle, GitBranch, FileType,
   Smartphone, Package, ChevronDown, History, Zap, Bug, Code,
-  KeyRound, UserCog, Gauge, LucideIcon
+  KeyRound, UserCog, Gauge, LucideIcon, Terminal
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useNavigate, useLocation } from 'react-router-dom';
