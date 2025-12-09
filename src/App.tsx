@@ -82,7 +82,7 @@ import SmartRouting from "./pages/admin/SmartRouting";
 import MobileValidation from "./pages/admin/MobileValidation";
 import WorkflowBuilder from "./pages/admin/WorkflowBuilder";
 import Workflows from "./pages/admin/Workflows";
-import CustomScripts from "./pages/admin/CustomScripts";
+
 import IntegrationMarketplace from "./pages/admin/IntegrationMarketplace";
 import SSOConfig from "./pages/admin/SSOConfig";
 import SCIMConfig from "./pages/admin/SCIMConfig";
@@ -239,7 +239,7 @@ const App = () => {
           <Route path="/admin/mobile-validation" element={<MobileValidation />} />
           <Route path="/admin/workflows" element={<Workflows />} />
           <Route path="/admin/workflow-builder" element={<WorkflowBuilder />} />
-          <Route path="/admin/custom-scripts" element={<CustomScripts />} />
+          
           <Route path="/admin/integrations" element={<IntegrationMarketplace />} />
           
           {/* Enterprise Features */}

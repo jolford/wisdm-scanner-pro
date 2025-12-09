@@ -76,7 +76,7 @@ const adminRoutes = [
   { title: "Validation Rules", url: "/admin/validation-rules", icon: Shield, group: "Config" },
   { title: "SSO/SAML Config", url: "/admin/sso", icon: KeyRound, group: "Config" },
   { title: "SCIM Provisioning", url: "/admin/scim", icon: UserCog, group: "Config" },
-  { title: "Custom Scripts", url: "/admin/custom-scripts", icon: Code, group: "Config" },
+  
   { title: "Scheduled Batches", url: "/admin/scheduled-batches", icon: Clock, group: "Config" },
   { title: "Bulk Edit", url: "/admin/bulk-edit", icon: Edit3, group: "Advanced" },
   { title: "Document Reprocessing", url: "/admin/document-reprocessing", icon: RefreshCw, group: "Advanced" },
