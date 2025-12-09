@@ -10,11 +10,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Plus, Play, Edit, Trash2, Clock, Code, CheckCircle, XCircle, FileCode } from 'lucide-react';
 import { ProjectSelector } from '@/components/ProjectSelector';
+
+interface Project {
+  id: string;
+  name: string;
+}
 
 const SCRIPT_TEMPLATES: Record<string, ScriptTemplate[]> = {
   javascript: [
@@ -293,6 +298,7 @@ export default function CustomScripts() {
   const [executionLogs, setExecutionLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [customerId, setCustomerId] = useState<string | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   // Form state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -307,6 +313,16 @@ export default function CustomScripts() {
     schedule_cron: '',
     project_id: null as string | null,
     is_active: true,
+  });
+
+  // Execute dialog state
+  const [isExecuteDialogOpen, setIsExecuteDialogOpen] = useState(false);
+  const [executeScriptId, setExecuteScriptId] = useState<string | null>(null);
+  const [executeScriptName, setExecuteScriptName] = useState<string>('');
+  const [executionContext, setExecutionContext] = useState({
+    projectId: '',
+    batchId: '',
+    documentId: '',
   });
 
   const loadTemplate = (templateKey: string) => {
@@ -327,6 +343,7 @@ export default function CustomScripts() {
 
   useEffect(() => {
     fetchCustomerId();
+    fetchProjects();
   }, []);
 
   useEffect(() => {
@@ -335,6 +352,19 @@ export default function CustomScripts() {
       fetchExecutionLogs();
     }
   }, [customerId]);
+
+  const fetchProjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select('id, name')
+        .order('name');
+      if (error) throw error;
+      setProjects(data || []);
+    } catch (error: any) {
+      console.error('Error fetching projects:', error.message);
+    }
+  };
 
   const fetchCustomerId = async () => {
     try {
@@ -471,12 +501,31 @@ export default function CustomScripts() {
     }
   };
 
-  const handleExecute = async (scriptId: string) => {
+  const openExecuteDialog = (script: any) => {
+    setExecuteScriptId(script.id);
+    setExecuteScriptName(script.name);
+    setExecutionContext({ projectId: '', batchId: '', documentId: '' });
+    setIsExecuteDialogOpen(true);
+  };
+
+  const handleExecute = async () => {
+    if (!executeScriptId) return;
+    
     setLoading(true);
+    setIsExecuteDialogOpen(false);
+    
+    // Build execution context, filtering out empty values
+    const context: Record<string, string> = {};
+    if (executionContext.projectId) context.projectId = executionContext.projectId;
+    if (executionContext.batchId) context.batchId = executionContext.batchId;
+    if (executionContext.documentId) context.documentId = executionContext.documentId;
+    
     try {
-      // Call the Supabase function to execute the script
       const { data, error } = await supabase.functions.invoke('execute-custom-script', {
-        body: { scriptId },
+        body: { 
+          scriptId: executeScriptId,
+          executionContext: context,
+        },
       });
 
       if (error) {
@@ -491,7 +540,7 @@ export default function CustomScripts() {
         toast.error(`Script failed: ${data?.error || 'Unknown error'}`);
       }
       
-      fetchExecutionLogs(); // Refresh execution logs
+      fetchExecutionLogs();
     } catch (error: any) {
       console.error('Error executing script:', error.message);
       toast.error(`Error executing script: ${error.message}`);
@@ -663,6 +712,65 @@ export default function CustomScripts() {
               </div>
             </DialogContent>
           </Dialog>
+
+          {/* Execute Script Dialog */}
+          <Dialog open={isExecuteDialogOpen} onOpenChange={setIsExecuteDialogOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Execute Script</DialogTitle>
+                <DialogDescription>
+                  Provide optional parameters for "{executeScriptName}"
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div>
+                  <Label htmlFor="exec-project">Project (optional)</Label>
+                  <Select
+                    value={executionContext.projectId}
+                    onValueChange={(value) => setExecutionContext(prev => ({ ...prev, projectId: value }))}
+                  >
+                    <SelectTrigger id="exec-project">
+                      <SelectValue placeholder="Select a project..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {projects.map((project) => (
+                        <SelectItem key={project.id} value={project.id}>
+                          {project.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label htmlFor="exec-batch">Batch ID (optional)</Label>
+                  <Input
+                    id="exec-batch"
+                    placeholder="Enter batch ID..."
+                    value={executionContext.batchId}
+                    onChange={(e) => setExecutionContext(prev => ({ ...prev, batchId: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="exec-document">Document ID (optional)</Label>
+                  <Input
+                    id="exec-document"
+                    placeholder="Enter document ID..."
+                    value={executionContext.documentId}
+                    onChange={(e) => setExecutionContext(prev => ({ ...prev, documentId: e.target.value }))}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsExecuteDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleExecute} disabled={loading}>
+                  <Play className="h-4 w-4 mr-2" />
+                  {loading ? 'Executing...' : 'Execute'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
         <Tabs defaultValue="scripts" className="space-y-4">
           <TabsList>
@@ -715,7 +823,7 @@ export default function CustomScripts() {
                           <Trash2 className="h-4 w-4 mr-2" />
                           Delete
                         </Button>
-                        <Button size="sm" onClick={() => handleExecute(script.id)} disabled={loading}>
+                        <Button size="sm" onClick={() => openExecuteDialog(script)} disabled={loading}>
                           <Play className="h-4 w-4 mr-2" />
                           Execute
                         </Button>
