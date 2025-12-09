@@ -161,6 +161,62 @@ const ApiDocs = () => {
           </div>
         </section>
 
+        {/* Projects API */}
+        <section className="break-before-auto">
+          <h2 className="text-2xl font-bold mb-4 text-primary print:text-black border-t pt-6 print:border-black">
+            Projects API (Internal - JWT Required)
+          </h2>
+          
+          <div className="space-y-6">
+            <div>
+              <h3 className="text-xl font-semibold mb-2">List Projects</h3>
+              <p className="font-mono text-sm bg-muted print:bg-gray-100 p-2 rounded print:rounded-none mb-2">
+                GET /api-projects
+              </p>
+              <div className="space-y-2 text-sm">
+                <p className="font-semibold">Query Parameters:</p>
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground print:text-gray-800">
+                  <li>customer_id (optional): Filter by customer ID</li>
+                  <li>limit (optional, default: 50): Results per page</li>
+                  <li>offset (optional, default: 0): Pagination offset</li>
+                </ul>
+              </div>
+              <div className="bg-muted print:bg-gray-100 p-3 rounded print:rounded-none text-xs mt-3">
+                <p className="font-semibold mb-2">Response:</p>
+                <pre className="whitespace-pre-wrap">{`{
+  "projects": [
+    {
+      "id": "uuid",
+      "name": "Invoice Processing",
+      "description": "Extract data from invoices",
+      "customer_id": "uuid",
+      "extraction_fields": [...],
+      "detect_pii": false,
+      "created_at": "2025-01-01T00:00:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 5,
+    "limit": 50,
+    "offset": 0,
+    "hasMore": false
+  }
+}`}</pre>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Get Project</h3>
+              <p className="font-mono text-sm bg-muted print:bg-gray-100 p-2 rounded print:rounded-none mb-2">
+                GET /api-projects/{'{id}'}
+              </p>
+              <p className="text-sm text-muted-foreground print:text-gray-800">
+                Returns project details including extraction field configuration.
+              </p>
+            </div>
+          </div>
+        </section>
+
         {/* Documents API */}
         <section className="break-before-auto">
           <h2 className="text-2xl font-bold mb-4 text-primary print:text-black border-t pt-6 print:border-black">
