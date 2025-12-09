@@ -378,8 +378,18 @@ export default function CustomScripts() {
   };
 
   const fetchExecutionLogs = async () => {
-    // Temporarily disabled due to type inference issues
-    setExecutionLogs([]);
+    try {
+      const { data, error } = await supabase
+        .from('script_execution_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setExecutionLogs(data || []);
+    } catch (error: any) {
+      console.error('Error fetching execution logs:', error.message);
+    }
   };
 
   const handleSave = async () => {
@@ -473,7 +483,14 @@ export default function CustomScripts() {
         throw error;
       }
 
-      toast.success('Script execution started!');
+      if (data?.success) {
+        toast.success(`Script completed in ${data.executionDuration}ms`, {
+          description: data.output ? `Output: ${JSON.stringify(data.output).slice(0, 100)}...` : undefined,
+        });
+      } else {
+        toast.error(`Script failed: ${data?.error || 'Unknown error'}`);
+      }
+      
       fetchExecutionLogs(); // Refresh execution logs
     } catch (error: any) {
       console.error('Error executing script:', error.message);
