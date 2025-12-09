@@ -67,9 +67,11 @@ export const MarketingPDFGenerator = () => {
       doc.setFillColor(59, 130, 246); // blue-500
       doc.rect(0, 68, pageWidth, 4, 'F');
 
-      // Logo and branding
+      // Logo with white background for visibility
       if (logoBase64) {
-        doc.addImage(logoBase64, 'PNG', margin, 12, 45, 16);
+        doc.setFillColor(255, 255, 255);
+        roundedRect(doc, margin - 2, 8, 50, 22, 3, 'F');
+        doc.addImage(logoBase64, 'PNG', margin, 10, 46, 18);
       }
       
       // Main title
