@@ -144,7 +144,7 @@ export const MarketingPDFGenerator = () => {
       const features = [
         { title: 'AI-Powered OCR', desc: 'Google Gemini & OpenAI GPT-5 for industry-leading extraction accuracy' },
         { title: 'Smart Document Routing', desc: 'Automatic classification and routing based on confidence thresholds' },
-        { title: 'Multi-Language Support', desc: 'Process documents in 50+ languages with native accuracy' },
+        { title: 'Multi-Language UI', desc: 'Interface available in English, Spanish, French, and German' },
         { title: 'Batch Processing', desc: 'Process thousands of documents with parallel OCR optimization' },
         { title: 'Zonal Extraction', desc: 'Template-based extraction for structured document types' },
         { title: 'Validation Workflows', desc: 'Configurable validation rules with exception handling' }
