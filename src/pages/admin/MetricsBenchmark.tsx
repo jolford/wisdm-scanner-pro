@@ -70,8 +70,8 @@ export default function MetricsBenchmark() {
           const created = new Date(job.created_at).getTime();
           const updated = new Date(job.updated_at).getTime();
           const duration = updated - created;
-          // Only count reasonable durations (< 5 minutes per job)
-          if (duration > 0 && duration < 300000) {
+          // Only count reasonable durations (< 30 minutes per job for batch processing)
+          if (duration > 0 && duration < 1800000) {
             totalProcessingTimeMs += duration;
             validJobCount++;
           }
