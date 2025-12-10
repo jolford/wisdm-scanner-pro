@@ -32,7 +32,7 @@ import { BulkActionsToolbar } from './BulkActionsToolbar';
 import { SearchFilterBar, DocumentFilters } from './SearchFilterBar';
 import { ProgressTrackingDashboard } from './ProgressTrackingDashboard';
 import { SmartSuggestionsPanel } from './SmartSuggestionsPanel';
-import { PetitionValidationWarnings } from './PetitionValidationWarnings';
+
 import { AB1466ViolationAlert } from './AB1466ViolationAlert';
 import { LineItemValidation } from './LineItemValidation';
 import { InteractiveDocumentViewer } from './InteractiveDocumentViewer';
@@ -2173,27 +2173,7 @@ export const BatchValidationScreen = ({
                               </DialogContent>
                             </Dialog>
 
-                            {/* Petition Validation Warnings - Only show for petition projects */}
-                            {isPetitionProject && doc.line_items && doc.line_items.length > 0 && (
-                              <div className="mb-6">
-                                <PetitionValidationWarnings
-                                  documentId={doc.id}
-                                  batchId={batchId}
-                                  metadata={getMetadataForDoc(doc)}
-                                />
-                              </div>
-                            )}
-
                             {/* Voter Registry Validation - Show when document has lookup validation results */}
-                            {(() => {
-                              console.log('📋 BatchValidation doc:', doc.file_name, {
-                                hasValidationSuggestions: !!doc.validation_suggestions,
-                                hasLookupValidation: !!doc.validation_suggestions?.lookupValidation,
-                                resultsLength: doc.validation_suggestions?.lookupValidation?.results?.length,
-                                fullSuggestions: doc.validation_suggestions
-                              });
-                              return null;
-                            })()}
                             {doc.validation_suggestions?.lookupValidation?.results?.length > 0 && (
                               <div className="mb-6">
                                 <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
