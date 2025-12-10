@@ -68,6 +68,7 @@ export const InteractiveDocumentViewer = ({
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [imageLoading, setImageLoading] = useState(true);
   const [thumbnailsCollapsed, setThumbnailsCollapsed] = useState(false);
+  const [convertedImageUrl, setConvertedImageUrl] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imageRef = useRef<HTMLImageElement>(null);
   const pdfCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -102,7 +103,7 @@ export const InteractiveDocumentViewer = ({
     
     // Skip if we've already loaded this URL
     const baseUrl = displayImageUrl.split('?')[0];
-    if (loadedUrlRef.current === baseUrl) return;
+    if (loadedUrlRef.current === baseUrl && convertedImageUrl) return;
     
     setImageLoading(true);
     loadedUrlRef.current = baseUrl;
@@ -110,10 +111,14 @@ export const InteractiveDocumentViewer = ({
     preloadImage(displayImageUrl)
       .then((img) => {
         setImageDimensions({ width: img.width, height: img.height });
+        // Use the image's src which may be a converted data URL for TIFF
+        setConvertedImageUrl(img.src);
         setImageLoading(false);
       })
       .catch((err) => {
         console.error('Error preloading image:', err);
+        // Fallback to original URL
+        setConvertedImageUrl(displayImageUrl);
         setImageLoading(false);
         loadedUrlRef.current = null; // Allow retry on error
       });
@@ -767,7 +772,7 @@ export const InteractiveDocumentViewer = ({
               <>
                 <img
                   ref={imageRef}
-                  src={displayImageUrl}
+                  src={convertedImageUrl || displayImageUrl}
                   alt="Document"
                   className="max-w-none select-none shadow-2xl rounded-lg border-2 border-primary/10 hover:border-primary/30 hover:shadow-primary/20"
                   style={{

@@ -2042,7 +2042,7 @@ Review the image and provide corrected text with any OCR errors fixed.`;
         try {
           const { data: doc } = await supabaseAdmin
             .from('documents')
-            .select('batch_id')
+            .select('batch_id, uploaded_by')
             .eq('id', documentId)
             .single();
             
@@ -2066,6 +2066,64 @@ Review the image and provide corrected text with any OCR errors fixed.`;
                 .eq('id', doc.batch_id);
                 
               console.log(`Updated batch ${doc.batch_id} counters: processed=${processedCount}, validated=${validatedCount}`);
+            }
+          }
+          
+          // Consume license document after successful OCR processing
+          if (doc?.uploaded_by) {
+            try {
+              // Get user's customer and active license
+              const { data: userCustomer } = await supabaseAdmin
+                .from('user_customers')
+                .select('customer_id')
+                .eq('user_id', doc.uploaded_by)
+                .single();
+                
+              if (userCustomer?.customer_id) {
+                const { data: license } = await supabaseAdmin
+                  .from('licenses')
+                  .select('id, remaining_documents')
+                  .eq('customer_id', userCustomer.customer_id)
+                  .eq('status', 'active')
+                  .order('end_date', { ascending: false })
+                  .limit(1)
+                  .single();
+                  
+                if (license && license.remaining_documents > 0) {
+                  // Decrement license document count
+                  await supabaseAdmin
+                    .from('licenses')
+                    .update({
+                      remaining_documents: license.remaining_documents - 1,
+                      updated_at: new Date().toISOString()
+                    })
+                    .eq('id', license.id);
+                    
+                  // Log license usage
+                  await supabaseAdmin
+                    .from('license_usage')
+                    .insert({
+                      license_id: license.id,
+                      document_id: documentId,
+                      documents_used: 1,
+                      user_id: doc.uploaded_by
+                    });
+                    
+                  console.log(`License consumed: 1 document for license ${license.id}, remaining: ${license.remaining_documents - 1}`);
+                  
+                  // Check if license exhausted
+                  if (license.remaining_documents - 1 === 0) {
+                    await supabaseAdmin
+                      .from('licenses')
+                      .update({ status: 'exhausted' })
+                      .eq('id', license.id);
+                    console.log(`License ${license.id} is now exhausted`);
+                  }
+                }
+              }
+            } catch (licenseError) {
+              console.error('Failed to consume license document:', licenseError);
+              // Non-blocking - don't fail OCR if license consumption fails
             }
           }
         } catch (counterError) {
