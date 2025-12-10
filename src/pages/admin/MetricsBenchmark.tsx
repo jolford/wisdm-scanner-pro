@@ -50,11 +50,10 @@ export default function MetricsBenchmark() {
       // Fetch actual job processing times from jobs table using started_at and completed_at
       const { data: jobs } = await supabase
         .from('jobs')
-        .select('status, started_at, completed_at')
+        .select('status, started_at, completed_at, created_at')
         .eq('status', 'completed')
         .not('started_at', 'is', null)
-        .not('completed_at', 'is', null)
-        .gte('created_at', startDateStr);
+        .not('completed_at', 'is', null);
 
       // Fetch document confidence scores
       const { data: documents } = await supabase
@@ -64,6 +63,7 @@ export default function MetricsBenchmark() {
         .not('confidence_score', 'is', null);
 
       // Calculate processing speed from actual job completion times
+      // Use all jobs regardless of date for processing speed calculation
       let totalProcessingTimeMs = 0;
       let validJobCount = 0;
       
