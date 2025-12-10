@@ -2180,7 +2180,8 @@ export const BatchValidationScreen = ({
                               </div>
                             )}
 
-                            {projectFields.map((field) => {
+                            {/* Hide individual index fields when document has line items (petition multi-signer data) */}
+                            {!doc.validation_suggestions?.lookupValidation?.results?.length && projectFields.map((field) => {
                                const rawFieldValue = getMetadataValue(metadata, field.name);
                                const formattedFieldValue = rawFieldValue ? autoFormatField(field.name, rawFieldValue, (field as any).type) : '';
                               const fieldKey = `${doc.id}-${field.name}`;
