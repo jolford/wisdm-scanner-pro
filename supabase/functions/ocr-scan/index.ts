@@ -2143,7 +2143,10 @@ Review the image and provide corrected text with any OCR errors fixed.`;
           }
         }
 
-        await supabaseAdmin
+        // Log what we're about to save
+        console.log(`Saving OCR results - line_items count: ${lineItems?.length || 0}`);
+        
+        const { error: updateError } = await supabaseAdmin
           .from('documents')
           .update({
             document_type: documentType,
@@ -2158,9 +2161,12 @@ Review the image and provide corrected text with any OCR errors fixed.`;
             word_bounding_boxes: wordBoundingBoxes && wordBoundingBoxes.length > 0 ? wordBoundingBoxes : null
           })
           .eq('id', documentId);
-          
-        console.log(`Saved OCR results to database for document ${documentId}`);
         
+        if (updateError) {
+          console.error(`Failed to save OCR results for document ${documentId}:`, updateError);
+        } else {
+          console.log(`Saved OCR results to database for document ${documentId}`);
+        }
         // Update batch counters after successful OCR
         try {
           const { data: doc } = await supabaseAdmin

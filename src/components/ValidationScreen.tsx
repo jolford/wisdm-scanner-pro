@@ -368,8 +368,17 @@ export const ValidationScreen = ({
       
       if (!error && data) {
         setFieldConfidence((data.field_confidence as Record<string, number>) || {});
-        setValidationSuggestions((data.validation_suggestions as Record<string, any>) || {});
-        setLineItems((data.line_items as Array<Record<string, any>>) || []);
+        const suggestions = (data.validation_suggestions as Record<string, any>) || {};
+        setValidationSuggestions(suggestions);
+        
+        // Use line_items if available, otherwise extract from validation results
+        let items = (data.line_items as Array<Record<string, any>>) || [];
+        if (items.length === 0 && suggestions?.lookupValidation?.results) {
+          // Extract line items from precomputed validation results
+          items = suggestions.lookupValidation.results.map((r: any) => r.lineItem).filter(Boolean);
+          console.log('Extracted line items from validation results:', items.length);
+        }
+        setLineItems(items);
       }
     };
 
