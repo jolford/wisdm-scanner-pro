@@ -14,6 +14,7 @@ import { DemoModeProvider } from "@/contexts/DemoModeContext";
 import { DemoModeToggle } from "@/components/demo/DemoModeToggle";
 import { DemoGuidedTour } from "@/components/demo/DemoGuidedTour";
 import { DemoBanner } from "@/components/demo/DemoBanner";
+import { PresentationMode } from "@/components/demo/PresentationMode";
 import Index from "./pages/Index";
 import Queue from "./pages/Queue";
 import Auth from "./pages/Auth";
@@ -299,11 +300,8 @@ const App = () => {
             </SheetContent>
           </Sheet>
           
-          {/* Demo Mode Components - Disabled for now
-          <DemoModeToggle />
-          <DemoGuidedTour />
-          <DemoBanner />
-          */}
+          {/* Demo Mode Components */}
+          <PresentationMode />
           </div>
         </ThemeProvider>
       </QueryClientProvider>
