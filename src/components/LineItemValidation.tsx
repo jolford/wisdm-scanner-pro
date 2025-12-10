@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, XCircle, AlertCircle, Loader2 } from 'lucide-react';
+import { CheckCircle2, XCircle, AlertCircle, Loader2, RefreshCw, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getSignedUrl } from '@/hooks/use-signed-url';
@@ -17,9 +17,32 @@ interface LineItemValidationProps {
       wisdmField: string;
       ecmField: string;
       enabled?: boolean;
+      lookupEnabled?: boolean;
     }>;
   };
   keyField: string; // Which field to use as the lookup key (e.g., "Printed_Name")
+  precomputedResults?: {
+    validated: boolean;
+    validatedAt?: string;
+    totalItems: number;
+    validCount: number;
+    invalidCount: number;
+    results: Array<{
+      lineIndex: number;
+      lineItem: Record<string, any>;
+      found: boolean;
+      matchScore: number;
+      fieldResults: Array<{
+        field: string;
+        extractedValue: string;
+        lookupValue: string | null;
+        matches: boolean;
+        score: number;
+        suggestion: string | null;
+      }>;
+      bestMatch: Record<string, any> | null;
+    }>;
+  };
 }
 
 interface ValidationResult {
@@ -27,26 +50,56 @@ interface ValidationResult {
   keyValue: string;
   found: boolean;
   allMatch: boolean;
+  matchScore?: number;
   validationResults?: Array<{
     field: string;
     excelValue: string;
     wisdmValue: string;
     matches: boolean;
     suggestion: string | null;
+    score?: number;
   }>;
   message?: string;
 }
 
-export const LineItemValidation = ({ lineItems, lookupConfig, keyField }: LineItemValidationProps) => {
+export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precomputedResults }: LineItemValidationProps) => {
   const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
   const [isValidating, setIsValidating] = useState(false);
+  const [autoValidatedAt, setAutoValidatedAt] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Load precomputed results if available
+  useEffect(() => {
+    if (precomputedResults?.validated && precomputedResults.results?.length > 0) {
+      const converted: ValidationResult[] = precomputedResults.results.map((r) => ({
+        index: r.lineIndex,
+        keyValue: r.lineItem[keyField] || r.lineItem[keyField.toLowerCase()] || `Row ${r.lineIndex + 1}`,
+        found: r.found,
+        allMatch: r.found && r.matchScore >= 0.9,
+        matchScore: r.matchScore,
+        validationResults: r.fieldResults.map((fr) => ({
+          field: fr.field,
+          excelValue: fr.lookupValue || '',
+          wisdmValue: fr.extractedValue || '',
+          matches: fr.matches,
+          suggestion: fr.suggestion,
+          score: fr.score,
+        })),
+        message: r.found 
+          ? `Match score: ${Math.round(r.matchScore * 100)}%` 
+          : 'Not found in voter registry',
+      }));
+      
+      setValidationResults(converted);
+      setAutoValidatedAt(precomputedResults.validatedAt || null);
+    }
+  }, [precomputedResults, keyField]);
+
   const validateAllLineItems = async () => {
-    if (!lookupConfig.excelFileUrl || !lookupConfig.excelKeyColumn) {
+    if (!lookupConfig.excelFileUrl) {
       toast({
         title: 'Configuration incomplete',
-        description: 'Please configure Excel/CSV validation in project settings',
+        description: 'Please configure CSV/Excel validation in project settings',
         variant: 'destructive',
       });
       return;
@@ -56,6 +109,12 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField }: LineIt
     const results: ValidationResult[] = [];
 
     try {
+      // Find the key column from lookupFields
+      const keyColumn = lookupConfig.excelKeyColumn || 
+        lookupConfig.lookupFields?.find(f => 
+          f.wisdmField.toLowerCase() === keyField.toLowerCase()
+        )?.ecmField;
+
       for (let i = 0; i < lineItems.length; i++) {
         const lineItem = lineItems[i];
         const keyValue = lineItem[keyField] || lineItem[keyField.toLowerCase()] || '';
@@ -73,7 +132,7 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField }: LineIt
 
         // Build lookup fields with values from this line item
         const lookupFields = (lookupConfig.lookupFields || [])
-          .filter(f => f.enabled !== false)
+          .filter(f => f.enabled !== false && f.lookupEnabled !== false)
           .map(f => ({
             ...f,
             wisdmValue: lineItem[f.wisdmField] || lineItem[f.wisdmField.toLowerCase()] || '',
@@ -84,7 +143,7 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField }: LineIt
         const { data, error } = await supabase.functions.invoke('validate-excel-lookup', {
           body: {
             fileUrl: signedUrl,
-            keyColumn: lookupConfig.excelKeyColumn,
+            keyColumn: keyColumn || keyField,
             keyValue: keyValue,
             lookupFields: lookupFields,
           },
@@ -113,6 +172,7 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField }: LineIt
       }
 
       setValidationResults(results);
+      setAutoValidatedAt(null); // Clear auto-validation timestamp since this is manual
 
       const foundCount = results.filter(r => r.found).length;
       const matchCount = results.filter(r => r.allMatch).length;
@@ -153,29 +213,72 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField }: LineIt
     return <Badge variant="secondary" className="bg-warning">Mismatch</Badge>;
   };
 
+  const foundCount = validationResults.filter(r => r.found).length;
+  const matchCount = validationResults.filter(r => r.allMatch).length;
+
   return (
     <Card className="p-4">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="text-lg font-semibold">Line Item Validation</h3>
+          <h3 className="text-lg font-semibold">Voter Registry Validation</h3>
           <p className="text-sm text-muted-foreground">
-            Validate {lineItems.length} signer(s) against {lookupConfig.system === 'csv' ? 'CSV' : 'Excel'} registry
+            {validationResults.length > 0 ? (
+              <>
+                {foundCount}/{lineItems.length} found, {matchCount} fully matched
+                {autoValidatedAt && (
+                  <span className="ml-2 text-xs text-muted-foreground inline-flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    Auto-validated
+                  </span>
+                )}
+              </>
+            ) : (
+              `Validate ${lineItems.length} signer(s) against ${lookupConfig.system === 'csv' ? 'CSV' : 'Excel'} registry`
+            )}
           </p>
         </div>
         <Button
           onClick={validateAllLineItems}
           disabled={isValidating || !lookupConfig.excelFileUrl}
+          variant={validationResults.length > 0 ? 'outline' : 'default'}
         >
           {isValidating ? (
             <>
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
               Validating...
             </>
+          ) : validationResults.length > 0 ? (
+            <>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Re-validate
+            </>
           ) : (
             `Validate All ${lineItems.length} Items`
           )}
         </Button>
       </div>
+
+      {/* Summary badges */}
+      {validationResults.length > 0 && (
+        <div className="flex gap-2 mb-4">
+          <Badge variant="outline" className="bg-success/10 text-success border-success/20">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            {matchCount} Valid
+          </Badge>
+          {foundCount - matchCount > 0 && (
+            <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
+              <AlertCircle className="h-3 w-3 mr-1" />
+              {foundCount - matchCount} Mismatch
+            </Badge>
+          )}
+          {lineItems.length - foundCount > 0 && (
+            <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
+              <XCircle className="h-3 w-3 mr-1" />
+              {lineItems.length - foundCount} Not Found
+            </Badge>
+          )}
+        </div>
+      )}
 
       {validationResults.length > 0 && (
         <div className="space-y-4">
@@ -189,6 +292,11 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField }: LineIt
                       Row {result.index + 1}: {result.keyValue}
                     </span>
                     {getStatusBadge(result)}
+                    {result.matchScore !== undefined && result.found && (
+                      <span className="text-xs text-muted-foreground">
+                        {Math.round(result.matchScore * 100)}% match
+                      </span>
+                    )}
                   </div>
 
                   {result.message && (
@@ -206,7 +314,14 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField }: LineIt
                               : 'bg-warning/10 border-warning/20'
                           }`}
                         >
-                          <div className="font-semibold mb-3 text-foreground">{fieldResult.field}</div>
+                          <div className="font-semibold mb-3 text-foreground flex items-center justify-between">
+                            <span>{fieldResult.field}</span>
+                            {fieldResult.score !== undefined && (
+                              <span className="text-xs text-muted-foreground">
+                                {Math.round(fieldResult.score * 100)}%
+                              </span>
+                            )}
+                          </div>
                           <div className="space-y-2">
                             <div className="flex flex-col gap-1">
                               <span className="text-xs font-medium uppercase tracking-wide opacity-60">Document Value</span>

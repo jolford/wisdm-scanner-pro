@@ -144,3 +144,7 @@ verify_jwt = true
 # Batch Document Redaction
 [functions.batch-redact-documents]
 verify_jwt = true
+
+# Line Item Validation (Petition/Voter Registry)
+[functions.validate-line-items]
+verify_jwt = true
