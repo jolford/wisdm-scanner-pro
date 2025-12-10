@@ -2030,6 +2030,8 @@ const [isExporting, setIsExporting] = useState(false);
                   onSwitchToExport={() => handleTabChange('export')}
                   enableSignatureVerification={selectedProject?.enable_signature_verification || false}
                   detectPii={selectedProject?.detect_pii || false}
+                  ocrProcessed={selectedBatch?.processed_documents || 0}
+                  ocrTotal={selectedBatch?.total_documents || 0}
                 />
               )}
             </TabsContent>

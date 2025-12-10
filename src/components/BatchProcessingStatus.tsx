@@ -57,7 +57,20 @@ export const BatchProcessingStatus = ({
     ? Math.round((processedDocuments / totalDocuments) * 100) 
     : 0;
 
+  // Check if batch is actually complete based on document counts
+  const isActuallyComplete = totalDocuments > 0 && processedDocuments >= totalDocuments;
+
   const getStatusConfig = () => {
+    // Override processing status if all documents are already processed
+    if (isActuallyComplete && ['scanning', 'indexing'].includes(status)) {
+      return {
+        icon: CheckCircle2,
+        label: 'Ready',
+        color: 'bg-green-500',
+        showProgress: false
+      };
+    }
+    
     switch (status) {
       case 'new':
         return {
