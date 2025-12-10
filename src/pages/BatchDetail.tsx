@@ -123,36 +123,135 @@ const BatchDetail = () => {
     return String(value || '');
   };
 
+  const getValidationReasons = (result: any): string => {
+    const reasons: string[] = [];
+    
+    if (!result.found) {
+      reasons.push('Not found in voter database');
+      return reasons.join('; ');
+    }
+    
+    const fieldResults = result.fieldResults || [];
+    for (const field of fieldResults) {
+      if (!field.matches) {
+        const fieldName = field.field?.replace(/_/g, ' ') || 'Unknown field';
+        if (field.suggestion) {
+          reasons.push(`${fieldName} doesn't match (expected: ${field.suggestion})`);
+        } else if (field.lookupValue) {
+          reasons.push(`${fieldName} doesn't match database (expected: ${field.lookupValue})`);
+        } else {
+          reasons.push(`${fieldName} doesn't match database`);
+        }
+      }
+    }
+    
+    const signatureStatus = result.signatureStatus;
+    if (signatureStatus && !signatureStatus.present) {
+      reasons.push('Signature missing');
+    }
+    
+    return reasons.length > 0 ? reasons.join('; ') : 'Valid';
+  };
+
   const exportToCSV = () => {
     if (!documents || documents.length === 0) {
       toast({ title: 'No documents to export', variant: 'destructive' });
       return;
     }
 
-    const headers = ['File Name', 'Status', 'Page', 'Confidence', 'Type', ...Object.keys(documents[0].extracted_metadata || {})];
-    const rows = documents.map(doc => [
-      doc.file_name,
-      doc.validation_status,
-      doc.page_number,
-      doc.confidence_score || '',
-      doc.file_type,
-      ...Object.values(doc.extracted_metadata || {}).map(extractMetadataValue)
-    ]);
-
-    const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
-    const blob = new Blob([csv], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    const destination = getExportDestination('csv');
-    a.download = `${batch?.batch_name || 'batch'}-export.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-
-    toast({ 
-      title: 'Exported successfully', 
-      description: `CSV file downloaded (configured destination: ${destination})` 
+    // Check if any document has line items (petition processing)
+    const hasLineItems = documents.some(doc => {
+      const lineItems = doc.line_items as any[] || [];
+      return lineItems.length > 0;
     });
+
+    if (hasLineItems) {
+      const headers = [
+        'Batch Name',
+        'Document',
+        'Page',
+        'Row Number',
+        'Printed Name',
+        'Address',
+        'City',
+        'Zip',
+        'Signature Present',
+        'Validation Status',
+        'Validation Reasons'
+      ];
+      
+      const rows: any[][] = [];
+      
+      for (const doc of documents) {
+        const lineItems = doc.line_items as any[] || [];
+        const validationSuggestions = doc.validation_suggestions as any;
+        const lookupResults = validationSuggestions?.lookupValidation?.results || [];
+        
+        for (let i = 0; i < lineItems.length; i++) {
+          const item = lineItems[i];
+          const validationResult = lookupResults[i];
+          
+          const isValid = validationResult?.found && 
+            validationResult?.matchScore >= 0.8 && 
+            validationResult?.signatureStatus?.present !== false;
+          
+          const reasons = validationResult ? getValidationReasons(validationResult) : 'Not validated';
+          
+          rows.push([
+            batch?.batch_name || '',
+            doc.file_name,
+            doc.page_number || 1,
+            item.Row_Number || i + 1,
+            item.Printed_Name || item.printed_name || '',
+            item.Address || item.address || '',
+            item.City || item.city || '',
+            item.Zip || item.zip || '',
+            item.Signature_Present || item.signature_present || '',
+            isValid ? 'Valid' : 'Invalid',
+            reasons
+          ]);
+        }
+      }
+
+      const csv = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${batch?.batch_name || 'batch'}-signers.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({ 
+        title: 'Exported successfully', 
+        description: `CSV file with ${rows.length} signer records and validation reasons downloaded` 
+      });
+    } else {
+      const headers = ['File Name', 'Status', 'Page', 'Confidence', 'Type', ...Object.keys(documents[0].extracted_metadata || {})];
+      const rows = documents.map(doc => [
+        doc.file_name,
+        doc.validation_status,
+        doc.page_number,
+        doc.confidence_score || '',
+        doc.file_type,
+        ...Object.values(doc.extracted_metadata || {}).map(extractMetadataValue)
+      ]);
+
+      const csv = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const destination = getExportDestination('csv');
+      a.download = `${batch?.batch_name || 'batch'}-export.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({ 
+        title: 'Exported successfully', 
+        description: `CSV file downloaded (configured destination: ${destination})` 
+      });
+    }
   };
 
   const exportToJSON = () => {
