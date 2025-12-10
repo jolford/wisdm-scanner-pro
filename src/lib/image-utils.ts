@@ -46,6 +46,46 @@ export async function convertTiffToPngDataUrl(file: File): Promise<string> {
   imageData.data.set(rgba);
   ctx.putImageData(imageData, 0, 0);
 
-  // Export as PNG to preserve quality, reduce size if very large
+// Export as PNG to preserve quality, reduce size if very large
+  return canvas.toDataURL('image/png');
+}
+
+// Check if a URL points to a TIFF file
+export function isTiffUrl(url: string): boolean {
+  const lowerUrl = url.toLowerCase().split('?')[0]; // Remove query params
+  return lowerUrl.endsWith('.tif') || lowerUrl.endsWith('.tiff');
+}
+
+// Convert a TIFF from URL into a PNG data URL
+export async function convertTiffUrlToDataUrl(url: string): Promise<string> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to fetch TIFF: ${response.statusText}`);
+  }
+  
+  const arrayBuffer = await response.arrayBuffer();
+  const UTIF = await getUTIF();
+
+  const ifds = UTIF.decode(arrayBuffer);
+  if (!ifds || ifds.length === 0) {
+    throw new Error('Failed to decode TIFF image.');
+  }
+
+  // Decode first page
+  UTIF.decodeImage(arrayBuffer, ifds[0]);
+  const rgba: Uint8Array = UTIF.toRGBA8(ifds[0]);
+  const width: number = ifds[0].width;
+  const height: number = ifds[0].height;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Failed to create canvas context.');
+
+  const imageData = ctx.createImageData(width, height);
+  imageData.data.set(rgba);
+  ctx.putImageData(imageData, 0, 0);
+
   return canvas.toDataURL('image/png');
 }
