@@ -2020,6 +2020,57 @@ Review the image and provide corrected text with any OCR errors fixed.`;
           }
         }
 
+        // Invoice fallback extraction: if metadata is empty but text contains invoice keywords
+        const looksLikeInvoice = documentType === 'invoice' && typeof extractedText === 'string';
+        if (looksLikeInvoice && Object.keys(sanitizedMetadata).length === 0) {
+          console.log('Applying invoice fallback metadata extraction for document', documentId);
+          const text = String(extractedText);
+          const invoiceMeta: Record<string, string> = {};
+
+          // Invoice Number - look for "Invoice #:" or "Invoice Number:" followed by alphanumeric
+          const invoiceNumMatch = text.match(/Invoice\s*(?:#|Number|No\.?)\s*:?\s*([A-Z0-9\-]+)/i);
+          if (invoiceNumMatch?.[1]) {
+            invoiceMeta['Invoice Number'] = invoiceNumMatch[1].trim();
+            console.log('Invoice fallback - Number:', invoiceMeta['Invoice Number']);
+          }
+
+          // Invoice Date - look for "Invoice Date:" followed by date pattern
+          const invoiceDateMatch = text.match(/Invoice\s*Date\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i);
+          if (invoiceDateMatch?.[1]) {
+            invoiceMeta['Invoice Date'] = invoiceDateMatch[1].trim();
+            console.log('Invoice fallback - Date:', invoiceMeta['Invoice Date']);
+          }
+
+          // Invoice Total - look for "Invoice Total" or "Total" with USD amount
+          const totalMatch = text.match(/(?:Invoice\s+)?Total\s*(?:\(USD\))?\s*:?\s*\$?\s?([\d,]+\.\d{2})/i);
+          if (totalMatch?.[1]) {
+            invoiceMeta['Invoice Total'] = '$' + totalMatch[1].trim();
+            console.log('Invoice fallback - Total:', invoiceMeta['Invoice Total']);
+          }
+
+          // PO Number - look for "PO #" or "Customer PO"
+          const poMatch = text.match(/(?:Customer\s+)?(?:PO|P\.O\.)\s*(?:#|Number)?\s*:?\s*([A-Z0-9\-]+)/i);
+          if (poMatch?.[1]) {
+            invoiceMeta['PO Number'] = poMatch[1].trim();
+            console.log('Invoice fallback - PO:', invoiceMeta['PO Number']);
+          }
+
+          // Vendor Name - look for company name at start of document or in header
+          const vendorMatch = text.match(/^([A-Z][A-Za-z\s]+(?:LLC|Inc|Corp|Co\.?)?)/m);
+          if (vendorMatch?.[1] && vendorMatch[1].length > 3 && vendorMatch[1].length < 50) {
+            invoiceMeta['Vendor Name'] = vendorMatch[1].trim();
+            console.log('Invoice fallback - Vendor:', invoiceMeta['Vendor Name']);
+          }
+
+          if (Object.keys(invoiceMeta).length > 0) {
+            sanitizedMetadata = invoiceMeta;
+            // Set field confidence for fallback extracted fields
+            Object.keys(invoiceMeta).forEach(key => {
+              if (fieldConfidence) fieldConfidence[key] = 0.90;
+            });
+          }
+        }
+
         await supabaseAdmin
           .from('documents')
           .update({
