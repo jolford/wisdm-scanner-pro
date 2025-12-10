@@ -2274,6 +2274,7 @@ useEffect(() => {
                 lineItems={lineItems}
                 lookupConfig={validationLookupConfig}
                 keyField="Printed_Name"
+                precomputedResults={validationSuggestions?.lookupValidation}
               />
             </div>
           )}

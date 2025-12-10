@@ -2215,6 +2215,45 @@ Review the image and provide corrected text with any OCR errors fixed.`;
             }
           })()
         );
+        
+        // --- LINE ITEM VALIDATION LOOKUP (ASYNC - NON-BLOCKING) ---
+        // Automatically validate extracted line items against configured lookup database
+        if (lineItems && lineItems.length > 0 && projectId) {
+          EdgeRuntime.waitUntil(
+            (async () => {
+              try {
+                // Check if project has validation lookup enabled
+                const { data: projectSettings } = await supabaseAdmin
+                  .from('projects')
+                  .select('metadata')
+                  .eq('id', projectId)
+                  .single();
+                
+                const lookupConfig = (projectSettings?.metadata as any)?.validation_lookup_config;
+                
+                if (lookupConfig?.enabled && lookupConfig.excelFileUrl) {
+                  console.log(`Line Item Validation: Triggering validation for document ${documentId} with ${lineItems.length} items`);
+                  
+                  const validationResult = await supabaseAdmin.functions.invoke('validate-line-items', {
+                    body: {
+                      documentId: documentId,
+                      projectId: projectId,
+                      lineItems: lineItems
+                    }
+                  });
+                  
+                  if (validationResult.error) {
+                    console.error('Line item validation error:', validationResult.error);
+                  } else {
+                    console.log(`Line Item Validation: Complete - ${validationResult.data?.validCount || 0}/${validationResult.data?.totalItems || 0} items validated`);
+                  }
+                }
+              } catch (validationError) {
+                console.error('Line item validation background task failed:', validationError);
+              }
+            })()
+          );
+        }
       } catch (dbError) {
         console.error('Failed to save OCR results to database:', dbError);
         // Continue even if save fails - we'll still return the data
