@@ -2097,31 +2097,21 @@ export const BatchValidationScreen = ({
                           </TabsList>
                           
                           <TabsContent value="fields" className="space-y-4 mt-4">
-                            {/* AI Smart Validation Banner */}
-                            <div className="p-2 sm:p-3 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg mb-4">
-                              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                                <div className="flex items-start gap-2 flex-1">
-                                  <span className="text-xl sm:text-2xl animate-pulse">✨</span>
-                                  <div className="flex-1">
-                                    <div className="text-xs sm:text-sm font-medium mb-1">AI Smart Validation</div>
-                                    <div className="text-[10px] sm:text-xs text-muted-foreground space-y-0.5 sm:space-y-1">
-                                      <div className="flex items-center gap-1">
-                                        <span className="text-amber-500">💡</span>
-                                        <span>Click 💡 next to any field or use Validate All</span>
-                                      </div>
-                                      <div className="hidden sm:block">1. Fill in field values (e.g., Invoice Total)</div>
-                                      <div className="hidden sm:block">2. Click the 💡 lightbulb icon next to the field</div>
-                                      <div className="hidden sm:block">3. AI will validate and suggest corrections if needed</div>
-                                    </div>
-                                  </div>
+                            {/* AI Smart Validation Banner - Compact */}
+                            <div className="p-2 bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20 rounded-lg mb-4">
+                              <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-lg">✨</span>
+                                  <span className="text-xs font-medium">AI Smart Validation</span>
+                                  <span className="text-[10px] text-muted-foreground hidden sm:inline">— Click 💡 next to fields or use Validate All</span>
                                 </div>
-                                <div className="flex items-center gap-2 w-full sm:w-auto">
+                                <div className="flex items-center gap-2">
                                   <Button
                                     size="sm"
                                     onClick={() => validateAllFieldsForDoc(doc.id)}
-                                    className="bg-primary hover:bg-primary/90 flex-1 sm:flex-none h-8 text-xs sm:text-sm"
+                                    className="bg-primary hover:bg-primary/90 h-7 text-xs px-3"
                                   >
-                                    <Sparkles className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
+                                    <Sparkles className="h-3 w-3 mr-1" />
                                     Validate All
                                   </Button>
                                   {enableSignatureVerification && (
@@ -2129,15 +2119,14 @@ export const BatchValidationScreen = ({
                                       size="sm"
                                       variant="outline"
                                       onClick={() => setSignatureDialogDocId(doc.id)}
-                                      className="flex-1 sm:flex-none h-8 text-xs sm:text-sm"
+                                      className="h-7 text-xs px-3"
                                     >
-                                      <span className="hidden sm:inline">✍️ Signature</span>
-                                      <span className="sm:hidden">✍️</span>
+                                      ✍️ Signature
                                     </Button>
                                   )}
                                 </div>
                               </div>
-</div>
+                            </div>
 
                             <Dialog open={signatureDialogDocId === doc.id} onOpenChange={(o) => setSignatureDialogDocId(o ? doc.id : null)}>
                               <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
