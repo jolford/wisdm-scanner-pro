@@ -2185,8 +2185,23 @@ export const BatchValidationScreen = ({
                             )}
 
                             {/* Voter Registry Validation - Show when document has lookup validation results */}
+                            {(() => {
+                              console.log('📋 BatchValidation doc:', doc.file_name, {
+                                hasValidationSuggestions: !!doc.validation_suggestions,
+                                hasLookupValidation: !!doc.validation_suggestions?.lookupValidation,
+                                resultsLength: doc.validation_suggestions?.lookupValidation?.results?.length,
+                                fullSuggestions: doc.validation_suggestions
+                              });
+                              return null;
+                            })()}
                             {doc.validation_suggestions?.lookupValidation?.results?.length > 0 && (
                               <div className="mb-6">
+                                <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                                  📋 Voter Registry Validation
+                                  <Badge variant="secondary">
+                                    {doc.validation_suggestions.lookupValidation.results.length} signer(s)
+                                  </Badge>
+                                </h3>
                                 <LineItemValidation
                                   lineItems={doc.validation_suggestions.lookupValidation.results.map((r: any) => r.lineItem).filter(Boolean)}
                                   lookupConfig={{ system: 'csv' }}
