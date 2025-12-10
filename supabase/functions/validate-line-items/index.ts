@@ -128,10 +128,35 @@ serve(async (req) => {
       fieldsCount: lookupConfig.lookupFields?.length 
     });
 
+    // Get signed URL for private bucket access
+    let fileUrl = lookupConfig.excelFileUrl;
+    
+    // If it's a Supabase storage URL, generate a signed URL
+    if (fileUrl.includes('supabase.co/storage/v1/object')) {
+      // Extract bucket and path from URL
+      const urlParts = fileUrl.match(/\/storage\/v1\/object\/(?:public\/)?([^/]+)\/(.+)/);
+      if (urlParts) {
+        const bucket = urlParts[1];
+        const path = urlParts[2];
+        console.log(`Generating signed URL for bucket: ${bucket}, path: ${path}`);
+        
+        const { data: signedData, error: signedError } = await supabaseAdmin.storage
+          .from(bucket)
+          .createSignedUrl(path, 300); // 5 minute expiry
+        
+        if (signedError) {
+          console.error('Failed to create signed URL:', signedError);
+        } else if (signedData?.signedUrl) {
+          fileUrl = signedData.signedUrl;
+          console.log('Using signed URL for file access');
+        }
+      }
+    }
+
     // Fetch the lookup file
-    const fileResponse = await fetch(lookupConfig.excelFileUrl);
+    const fileResponse = await fetch(fileUrl);
     if (!fileResponse.ok) {
-      console.error('Failed to fetch lookup file:', fileResponse.statusText);
+      console.error('Failed to fetch lookup file:', fileResponse.statusText, fileUrl);
       return new Response(
         JSON.stringify({ validated: false, reason: 'Could not fetch lookup file' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -140,9 +165,9 @@ serve(async (req) => {
 
     // Parse the lookup data
     let lookupData: any[];
-    const fileUrl = lookupConfig.excelFileUrl.toLowerCase();
+    const fileExtension = lookupConfig.excelFileUrl.toLowerCase();
     
-    if (fileUrl.endsWith('.csv')) {
+    if (fileExtension.endsWith('.csv')) {
       const csvText = await fileResponse.text();
       lookupData = parseCSV(csvText);
     } else {
