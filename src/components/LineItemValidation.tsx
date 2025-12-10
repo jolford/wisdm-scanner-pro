@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
   CheckCircle2, XCircle, AlertCircle, Loader2, RefreshCw, Clock, 
-  Users, FileCheck, FileX, ChevronDown, ChevronUp, PenTool
+  Users, FileCheck, FileX, ChevronDown, ChevronUp, PenTool, Download
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -246,6 +246,48 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
   const [showValidList, setShowValidList] = useState(false);
   const [showInvalidList, setShowInvalidList] = useState(true); // Default open for follow-up
 
+  // Export to CSV function
+  const exportToCSV = () => {
+    if (validationResults.length === 0) {
+      toast({ title: 'No data to export', variant: 'destructive' });
+      return;
+    }
+
+    const headers = ['#', 'Name', 'Address', 'City', 'Zip', 'Signature', 'Registry Status', 'Match Score', 'Reason'];
+    const rows = validationResults.map((result) => {
+      const lineItem = lineItems[result.index] || {};
+      const signatureStatus = result.signatureStatus?.present ? 'Signed' : 'Missing';
+      const registryStatus = result.allMatch ? 'Valid' : result.found ? 'Mismatch' : 'Not Found';
+      const reason = result.allMatch ? 'Verified in registry' : 
+                     result.found ? 'Data mismatch with registry' : 'Not found in voter registry';
+      
+      return [
+        result.index + 1,
+        `"${(result.keyValue || '').replace(/"/g, '""')}"`,
+        `"${(lineItem.Address || lineItem.address || '').replace(/"/g, '""')}"`,
+        `"${(lineItem.City || lineItem.city || '').replace(/"/g, '""')}"`,
+        `"${(lineItem.Zip || lineItem.zip || '').replace(/"/g, '""')}"`,
+        signatureStatus,
+        registryStatus,
+        result.matchScore ? `${Math.round(result.matchScore * 100)}%` : 'N/A',
+        `"${reason}"`
+      ].join(',');
+    });
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `signature-validation-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    toast({ title: 'Exported successfully', description: `${validationResults.length} signatures exported to CSV` });
+  };
+
   return (
     <Card className="p-0 overflow-hidden">
       {/* Summary Header */}
@@ -274,28 +316,40 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
               </p>
             </div>
           </div>
-          <Button
-            onClick={validateAllLineItems}
-            disabled={isValidating || !lookupConfig.excelFileUrl}
-            size="lg"
-          >
-            {isValidating ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Validating...
-              </>
-            ) : validationResults.length > 0 ? (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Re-validate
-              </>
-            ) : (
-              <>
-                <FileCheck className="h-4 w-4 mr-2" />
-                Validate All
-              </>
+          <div className="flex items-center gap-2">
+            {validationResults.length > 0 && (
+              <Button
+                onClick={exportToCSV}
+                variant="outline"
+                size="lg"
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
             )}
-          </Button>
+            <Button
+              onClick={validateAllLineItems}
+              disabled={isValidating || !lookupConfig.excelFileUrl}
+              size="lg"
+            >
+              {isValidating ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Validating...
+                </>
+              ) : validationResults.length > 0 ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Re-validate
+                </>
+              ) : (
+                <>
+                  <FileCheck className="h-4 w-4 mr-2" />
+                  Validate All
+                </>
+              )}
+            </Button>
+          </div>
         </div>
 
         {/* Statistics Cards */}
