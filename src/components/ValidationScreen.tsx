@@ -369,6 +369,11 @@ export const ValidationScreen = ({
       if (!error && data) {
         setFieldConfidence((data.field_confidence as Record<string, number>) || {});
         const suggestions = (data.validation_suggestions as Record<string, any>) || {};
+        console.log('📋 Document validation_suggestions loaded:', {
+          documentId,
+          hasLookupValidation: !!suggestions?.lookupValidation,
+          resultsCount: suggestions?.lookupValidation?.results?.length || 0
+        });
         setValidationSuggestions(suggestions);
         
         // Use line_items if available, otherwise extract from validation results
@@ -2265,39 +2270,17 @@ useEffect(() => {
             </div>
           )}
           
-          {/* Line Item Validation for Petitions */}
-          {(() => {
-            const hasPrecomputedResults = validationSuggestions?.lookupValidation?.results?.length > 0;
-            const hasLineItemsData = lineItems && lineItems.length > 0;
-            console.log('LineItemValidation check:', {
-              hasLineItems: hasLineItemsData,
-              lineItemsCount: lineItems?.length,
-              hasPrecomputedResults,
-              precomputedCount: validationSuggestions?.lookupValidation?.results?.length,
-              hasValidationConfig: !!validationLookupConfig,
-              validationSystem: validationLookupConfig?.system
-            });
-            
-            // Show if we have precomputed results OR line items with lookup config
-            if (hasPrecomputedResults || (hasLineItemsData && validationLookupConfig)) {
-              // Extract line items from precomputed results if needed
-              const displayLineItems = hasLineItemsData 
-                ? lineItems 
-                : (validationSuggestions?.lookupValidation?.results?.map((r: any) => r.lineItem).filter(Boolean) || []);
-              
-              return (
-                <div className="mb-6">
-                  <LineItemValidation
-                    lineItems={displayLineItems}
-                    lookupConfig={validationLookupConfig || { system: 'csv', enabled: true }}
-                    keyField="Printed_Name"
-                    precomputedResults={validationSuggestions?.lookupValidation}
-                  />
-                </div>
-              );
-            }
-            return null;
-          })()}
+          {/* Line Item Validation for Petitions - Always show when we have validation results */}
+          {validationSuggestions?.lookupValidation?.results?.length > 0 && (
+            <div className="mb-6">
+              <LineItemValidation
+                lineItems={validationSuggestions.lookupValidation.results.map((r: any) => r.lineItem).filter(Boolean)}
+                lookupConfig={validationLookupConfig || { system: 'csv', enabled: true }}
+                keyField="Printed_Name"
+                precomputedResults={validationSuggestions.lookupValidation}
+              />
+            </div>
+          )}
           
           <div className="space-y-4">
             {projectFields.map((field) => {
