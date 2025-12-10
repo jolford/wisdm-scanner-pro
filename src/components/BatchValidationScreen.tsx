@@ -1577,16 +1577,73 @@ export const BatchValidationScreen = ({
 
   /**
    * Validate all documents in the queue at once
-   * Processes documents sequentially and then switches to export view
+   * Uses bulk database update for performance instead of sequential validation
    */
   const handleValidateAll = async () => {
-    // Validate each document sequentially
-    for (const doc of documents) {
-      await handleValidate(doc, 'validated');
-    }
-    // After all documents validated, switch to export view
-    if (onSwitchToExport) {
-      setTimeout(() => onSwitchToExport(), 100);
+    const docIds = documents.map(doc => doc.id);
+    if (docIds.length === 0) return;
+
+    // Show loading state for all documents
+    setValidatingDocs(new Set(docIds));
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const now = new Date().toISOString();
+
+      // Bulk update all documents in a single query
+      const { error } = await supabase
+        .from('documents')
+        .update({
+          validation_status: 'validated',
+          validated_at: now,
+          validated_by: user?.id,
+        })
+        .in('id', docIds);
+
+      if (error) throw error;
+
+      // Update batch validated count once
+      await supabase
+        .from('batches')
+        .update({ validated_documents: documents.length })
+        .eq('id', batchId);
+
+      toast({
+        title: 'All Documents Validated',
+        description: `${documents.length} documents moved to QA/Export`,
+      });
+
+      // Trigger webhooks asynchronously (don't wait)
+      if (user) {
+        const projectCustomerId = documents[0]?.project_id;
+        supabase.functions.invoke('send-webhook', {
+          body: {
+            customer_id: projectCustomerId,
+            event_type: 'batch.validated',
+            payload: {
+              batch_id: batchId,
+              document_count: documents.length,
+              validated_by: user.id,
+              validated_at: now,
+            }
+          }
+        }).catch(console.error);
+      }
+
+      onValidationComplete();
+
+      // Switch to export view
+      if (onSwitchToExport) {
+        setTimeout(() => onSwitchToExport(), 100);
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Bulk Validation Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setValidatingDocs(new Set());
     }
   };
 
