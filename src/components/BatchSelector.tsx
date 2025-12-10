@@ -37,11 +37,12 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { FolderOpen, Plus, Zap } from 'lucide-react';
+import { FolderOpen, Plus, Zap, RefreshCw, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/hooks/use-auth';
 import { Badge } from '@/components/ui/badge';
 import { auditLog } from '@/lib/audit-logger';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Component props interface
 interface BatchSelectorProps {
@@ -58,6 +59,7 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
   const [batchName, setBatchName] = useState('');
   const [priority, setPriority] = useState(5);
   const [isCreating, setIsCreating] = useState(false);
+  const [isResuming, setIsResuming] = useState(false);
 
   const { data: batches, isLoading, refetch } = useQuery({
     queryKey: ['batches', projectId],
@@ -77,6 +79,39 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
     },
     enabled: !!projectId,
   });
+
+  // Get the selected batch details
+  const selectedBatch = batches?.find(b => b.id === selectedBatchId);
+  const canResume = selectedBatch?.status === 'scanning' && !isResuming;
+
+  const handleResumeProcessing = async () => {
+    if (!selectedBatchId) return;
+    
+    setIsResuming(true);
+    try {
+      const { error } = await supabase.functions.invoke('resume-batch', {
+        body: { batchId: selectedBatchId }
+      });
+      
+      if (error) throw error;
+      
+      toast({
+        title: 'Processing Resumed',
+        description: 'OCR processing has been resumed in the background.',
+      });
+      
+      await refetch();
+    } catch (error: any) {
+      console.error('Error resuming batch:', error);
+      toast({
+        title: 'Resume Failed',
+        description: error.message || 'Failed to resume batch processing.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResuming(false);
+    }
+  };
 
   const handleCreateBatch = async () => {
     if (!batchName.trim()) {
@@ -140,13 +175,38 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
           <FolderOpen className="h-4 w-4" />
           {t('batch.selectBatch')}
         </Label>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm" variant="outline">
-              <Plus className="h-4 w-4 mr-1" />
-              {t('batch.newBatch')}
-            </Button>
-          </DialogTrigger>
+        <div className="flex items-center gap-2">
+          {canResume && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={handleResumeProcessing}
+                    disabled={isResuming}
+                  >
+                    {isResuming ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-4 w-4" />
+                    )}
+                    <span className="ml-1">Resume</span>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Resume OCR processing for this batch</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm" variant="outline">
+                <Plus className="h-4 w-4 mr-1" />
+                {t('batch.newBatch')}
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{t('batch.createNew')}</DialogTitle>
@@ -207,6 +267,7 @@ export const BatchSelector = ({ selectedBatchId, onBatchSelect, projectId }: Bat
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
       <Select
         value={selectedBatchId || ''}
