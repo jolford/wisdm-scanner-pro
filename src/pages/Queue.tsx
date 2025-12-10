@@ -636,6 +636,21 @@ const [isExporting, setIsExporting] = useState(false);
 
       // Show all pending documents in Validation, even if OCR failed (so users can manually index them)
       const validationDocs = docsData?.filter(d => d.validation_status === 'pending') || [];
+      
+      // Debug log to verify validation_suggestions is loaded
+      console.log('📋 Queue - Documents loaded:', {
+        total: docsData?.length,
+        pending: validationDocs.length,
+        withValidationSuggestions: validationDocs.filter(d => d.validation_suggestions).length,
+        sampleDoc: validationDocs[0] ? {
+          id: validationDocs[0].id,
+          file_name: validationDocs[0].file_name,
+          hasValidationSuggestions: !!validationDocs[0].validation_suggestions,
+          hasLookupValidation: !!validationDocs[0].validation_suggestions?.lookupValidation,
+          lookupResultsCount: validationDocs[0].validation_suggestions?.lookupValidation?.results?.length
+        } : null
+      });
+      
       setValidationQueue(validationDocs);
 
       // Show validated docs for export even when batch is complete
