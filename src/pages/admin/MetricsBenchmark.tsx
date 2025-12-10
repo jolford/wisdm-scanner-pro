@@ -38,36 +38,87 @@ interface BenchmarkMetrics {
 export default function MetricsBenchmark() {
   const [period, setPeriod] = useState("30");
   const [laborRatePerHour, setLaborRatePerHour] = useState(25); // configurable
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
+
+  // Fetch projects for filter
+  const { data: projects } = useQuery({
+    queryKey: ['benchmark-projects'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('projects')
+        .select('id, name')
+        .order('name');
+      return data || [];
+    }
+  });
 
   const { data: metrics, isLoading, refetch } = useQuery({
-    queryKey: ['benchmark-metrics', period],
-    queryFn: async (): Promise<BenchmarkMetrics> => {
+    queryKey: ['benchmark-metrics', period, selectedProjectId],
+    queryFn: async (): Promise<BenchmarkMetrics & { projectName?: string }> => {
       const periodDays = parseInt(period);
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - periodDays);
       const startDateStr = startDate.toISOString();
 
-      // Fetch actual job processing times from jobs table using started_at and completed_at
-      const { data: jobs } = await supabase
+      // Get selected project info
+      let projectName: string | undefined;
+      let manualEstimateMinutes = 4; // default industry standard
+
+      if (selectedProjectId !== 'all') {
+        const project = projects?.find(p => p.id === selectedProjectId);
+        if (project) {
+          projectName = project.name;
+          const nameLower = project.name.toLowerCase();
+          // Adjust manual estimate based on project name/type complexity
+          if (nameLower.includes('petition')) {
+            manualEstimateMinutes = 15; // Petitions with multi-signer validation are much more complex
+          } else if (nameLower.includes('contract')) {
+            manualEstimateMinutes = 10; // Contracts require careful review
+          } else if (nameLower.includes('invoice')) {
+            manualEstimateMinutes = 3; // Invoices are relatively straightforward
+          } else if (nameLower.includes('receipt')) {
+            manualEstimateMinutes = 2; // Receipts are simple
+          }
+        }
+      }
+
+      // Fetch actual job processing times - filter by project if selected
+      let jobsQuery = supabase
         .from('jobs')
-        .select('status, started_at, completed_at, created_at')
+        .select('status, started_at, completed_at, created_at, payload')
         .eq('status', 'completed')
         .not('started_at', 'is', null)
         .not('completed_at', 'is', null);
 
-      // Fetch document confidence scores
-      const { data: documents } = await supabase
+      const { data: jobs } = await jobsQuery;
+
+      // Fetch document confidence scores - filter by project if selected
+      let documentsQuery = supabase
         .from('documents')
-        .select('confidence_score, validation_status, field_confidence, created_at')
+        .select('confidence_score, validation_status, field_confidence, created_at, project_id, line_items')
         .gte('created_at', startDateStr)
         .not('confidence_score', 'is', null);
 
+      if (selectedProjectId !== 'all') {
+        documentsQuery = documentsQuery.eq('project_id', selectedProjectId);
+      }
+
+      const { data: documents } = await documentsQuery;
+
+      // Filter jobs by project if needed (check payload for project_id)
+      let filteredJobs = jobs || [];
+      if (selectedProjectId !== 'all') {
+        filteredJobs = (jobs || []).filter(job => {
+          const payload = job.payload as Record<string, unknown> | null;
+          return payload?.project_id === selectedProjectId || payload?.projectId === selectedProjectId;
+        });
+      }
+
       // Calculate processing speed from actual job completion times
-      // Use all jobs regardless of date for processing speed calculation
       let totalProcessingTimeMs = 0;
       let validJobCount = 0;
       
-      jobs?.forEach(job => {
+      filteredJobs.forEach(job => {
         if (job.started_at && job.completed_at) {
           const started = new Date(job.started_at).getTime();
           const completed = new Date(job.completed_at).getTime();
@@ -82,8 +133,6 @@ export default function MetricsBenchmark() {
 
       const avgProcessingTimeMs = validJobCount > 0 ? totalProcessingTimeMs / validJobCount : 0;
       
-      // Industry standard: 3-5 minutes per document for manual data entry
-      const manualEstimateMinutes = 4;
       const documentsPerHour = avgProcessingTimeMs > 0 ? Math.round(3600000 / avgProcessingTimeMs) : 0;
       const speedMultiplier = avgProcessingTimeMs > 0 ? Math.round((manualEstimateMinutes * 60000) / avgProcessingTimeMs) : 0;
 
@@ -100,9 +149,11 @@ export default function MetricsBenchmark() {
       const validationPassRate = docCount > 0 ? (validatedDocs / docCount) * 100 : 0;
 
       // Calculate field-level accuracy from field_confidence JSON in documents
+      // Also count line items for petition-style documents
       let totalFieldConfidence = 0;
       let fieldCount = 0;
       let accurateFields = 0;
+      let totalLineItems = 0;
       
       documents?.forEach(doc => {
         const fieldConf = doc.field_confidence as Record<string, number> | null;
@@ -115,14 +166,20 @@ export default function MetricsBenchmark() {
             }
           });
         }
+        // Count line items (signers for petitions)
+        const lineItems = doc.line_items as unknown[] | null;
+        if (Array.isArray(lineItems)) {
+          totalLineItems += lineItems.length;
+        }
       });
       
       const avgFieldConfidence = fieldCount > 0 ? totalFieldConfidence / fieldCount : avgConfidence;
       const fieldAccuracyRate = fieldCount > 0 ? (accurateFields / fieldCount) * 100 : (avgConfidence * 100);
 
-      // Cost/ROI calculations
+      // Cost/ROI calculations - for petitions, account for line items processed
       const totalDocumentsProcessed = docCount;
-      const estimatedManualHours = (totalDocumentsProcessed * manualEstimateMinutes) / 60;
+      const effectiveUnits = totalLineItems > docCount ? totalLineItems : docCount; // Use line items if more than docs
+      const estimatedManualHours = (effectiveUnits * manualEstimateMinutes) / 60;
       const estimatedLaborCostSaved = estimatedManualHours * laborRatePerHour;
       
       // Estimate cost per document (based on AI processing costs)
@@ -143,7 +200,8 @@ export default function MetricsBenchmark() {
         costPerDocument,
         documentsSampled: docCount,
         fieldsSampled: fieldCount || docCount,
-        periodDays: periodDays
+        periodDays: periodDays,
+        projectName
       };
     }
   });
@@ -243,6 +301,19 @@ METHODOLOGY NOTES
             </p>
           </div>
           <div className="flex items-center gap-4">
+            <Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Filter by project" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Projects</SelectItem>
+                {projects?.map(project => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={period} onValueChange={setPeriod}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Select period" />
@@ -276,6 +347,7 @@ METHODOLOGY NOTES
                 </CardTitle>
                 <CardDescription>
                   Based on {metrics.documentsSampled.toLocaleString()} documents over {metrics.periodDays} days
+                  {metrics.projectName && <span className="ml-2">• Project: <strong>{metrics.projectName}</strong></span>}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -333,7 +405,7 @@ METHODOLOGY NOTES
                   </div>
                   <div>
                     <div className="flex justify-between mb-1">
-                      <span className="text-sm">vs Manual (4 min/doc)</span>
+                      <span className="text-sm">vs Manual ({metrics.manualEstimateMinutes} min/doc)</span>
                       <span className={`font-bold ${getScoreColor(metrics.speedMultiplier, { good: 30, medium: 10 })}`}>
                         {metrics.speedMultiplier}x faster
                       </span>
