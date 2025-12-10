@@ -1,0 +1,91 @@
+PetitionNumber,PetitionTitle,SheetNumber,SheetId,LineNumber,SignerId,FirstName,MiddleInitial,LastName,StreetAddress,City,State,ZipCode,County,Precinct,SignatureDate,IsValid,RejectionReason
+PET-2026-001,Shoshone County Library Expansion Initiative,1,1,1,1,Elijah,C,Bryant,4749 Elm Ter,Silver Ridge,WA,99650,Silver Ridge County,P-06,11/4/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,1,1,2,2,Jackson,M,West,9372 Main St,Truckee,CA,97831,Western City County,P-07,12/4/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,1,1,3,3,Victoria,S,Bryant,3684 Summit Pass,Silver Ridge,NV,84107,Silver Ridge County,P-03,10/22/2025,0,Address mismatch
+PET-2026-001,Shoshone County Library Expansion Initiative,1,1,4,4,Liam,E,Morris,5635 Summit Pass,Truckee,CA,98326,Western City County,P-04,11/14/2025,0,Illegible
+PET-2026-001,Shoshone County Library Expansion Initiative,1,1,5,5,Victoria,A,West,9329 Aspen Cir,Western City,NV,88703,Western City County,P-02,11/28/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,1,1,6,6,Amelia,,Henderson,7697 Orchard St,Truckee,WA,87608,Cedar Falls County,P-05,11/7/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,1,1,7,7,Sofia,B,Price,8116 Creekside Dr,Truckee,OR,85767,Silver Ridge County,P-04,11/18/2025,0,Address mismatch
+PET-2026-001,Shoshone County Library Expansion Initiative,1,1,8,8,Isabella,R,Wright,222 River Rd,Shoshone,OR,95556,Cedar Falls County,P-05,10/15/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,1,1,9,9,Ava,L,Gray,8026 Oak St,Granite Point,NV,84680,Truckee County,P-06,11/14/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,1,1,10,10,Victoria,L,Garcia,9298 Summit Pass,Silver Ridge,CA,87267,Granite Point County,P-06,11/3/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,2,2,1,11,Emily,C,Nguyen,4949 Evergreen Ct,Western City,NV,85267,Truckee County,P-01,10/22/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,2,2,2,12,Michael,A,Brooks,2696 Ridgeway Blvd,Silver Ridge,WA,85173,Truckee County,P-04,10/30/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,2,2,3,13,Ava,R,Lopez,8839 Platform Blvd,Western City,OR,97520,Western City County,P-05,10/22/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,2,2,4,14,Zara,R,Khan,9246 Pine Ridge Rd,Granite Point,OR,91340,Cedar Falls County,P-03,10/25/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,2,2,5,15,Michael,A,Henderson,6174 Oak St,Shoshone,ID,86728,Shoshone County,P-04,11/21/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,2,2,6,16,Ava,L,Baker,69 Ridgeway Blvd,Truckee,NV,99011,Granite Point County,P-06,10/24/2025,0,Duplicate signature
+PET-2026-001,Shoshone County Library Expansion Initiative,2,2,7,17,Lucas,M,Stevens,8464 Valley View Dr,Truckee,OR,91262,Shoshone County,P-04,12/7/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,2,2,8,18,Noah,,Howard,2619 Cedar Dr,Silver Ridge,NV,91795,Granite Point County,P-02,11/11/2025,0,Not registered
+PET-2026-001,Shoshone County Library Expansion Initiative,2,2,9,19,Liam,L,Howard,1117 Valley View Dr,Silver Ridge,ID,90553,Western City County,P-09,12/3/2025,0,Out of jurisdiction
+PET-2026-001,Shoshone County Library Expansion Initiative,2,2,10,20,Harper,,Wright,109 Oak St,Silver Ridge,NV,90253,Shoshone County,P-05,12/4/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,3,3,1,21,Zara,K,Long,3911 Main St,Granite Point,CA,95296,Silver Ridge County,P-02,11/3/2025,0,Not registered
+PET-2026-001,Shoshone County Library Expansion Initiative,3,3,2,22,Emily,E,Hughes,8674 Rail Yard Rd,Silver Ridge,CA,90695,Cedar Falls County,P-01,10/31/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,3,3,3,23,Ethan,S,Wright,1375 Pine Ridge Rd,Truckee,NV,89471,Cedar Falls County,P-01,11/30/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,3,3,4,24,Zoey,R,Simmons,5808 Valley View Dr,Truckee,WA,89008,Truckee County,P-02,11/4/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,3,3,5,25,Daniel,,Reed,2999 Birch Ct,Granite Point,NV,80946,Silver Ridge County,P-07,10/16/2025,0,Duplicate signature
+PET-2026-001,Shoshone County Library Expansion Initiative,3,3,6,26,Sofia,D,Cole,1381 Aspen Cir,Western City,CA,83955,Silver Ridge County,P-09,11/19/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,3,3,7,27,Amelia,J,Douglas,1880 Pine Ave,Cedar Falls,NV,86139,Shoshone County,P-06,11/22/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,3,3,8,28,Victoria,S,Peterson,3950 Forest Glen Rd,Cedar Falls,NV,89444,Truckee County,P-06,11/22/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,3,3,9,29,Natalie,K,Reed,617 Harbor View Ln,Shoshone,ID,95326,Shoshone County,P-07,11/20/2025,1,
+PET-2026-001,Shoshone County Library Expansion Initiative,3,3,10,30,Oliver,R,Hughes,6614 Summit Pass,Truckee,CA,93633,Granite Point County,P-06,11/25/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,1,4,1,31,Ava,K,Morris,1671 Forest Glen Rd,Shoshone,OR,86733,Shoshone County,P-02,12/10/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,1,4,2,32,Emily,E,Reed,7478 Harbor View Ln,Silver Ridge,WA,90669,Western City County,P-03,10/29/2025,0,Out of jurisdiction
+PET-2026-002,Truckee Gaming Responsible Play Measure,1,4,3,33,Victoria,,Nguyen,4757 Aspen Cir,Western City,CA,92658,Shoshone County,P-09,11/6/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,1,4,4,34,Michael,,Long,6348 Evergreen Ct,Silver Ridge,NV,99104,Granite Point County,P-08,11/10/2025,0,Out of jurisdiction
+PET-2026-002,Truckee Gaming Responsible Play Measure,1,4,5,35,Oliver,R,Diaz,9955 Forest Glen Rd,Shoshone,WA,94685,Truckee County,P-01,11/9/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,1,4,6,36,Oliver,C,Owens,3696 Evergreen Ct,Cedar Falls,CA,98167,Silver Ridge County,P-02,10/11/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,1,4,7,37,Elijah,C,Gray,3246 River Rd,Truckee,CA,81403,Silver Ridge County,P-06,10/16/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,1,4,8,38,Ava,J,West,2467 River Rd,Silver Ridge,OR,97193,Cedar Falls County,P-08,11/20/2025,0,Duplicate signature
+PET-2026-002,Truckee Gaming Responsible Play Measure,1,4,9,39,Layla,K,West,2847 Canyon Rd,Western City,OR,83025,Silver Ridge County,P-02,11/29/2025,0,Illegible
+PET-2026-002,Truckee Gaming Responsible Play Measure,1,4,10,40,Zara,D,Morris,3892 Pine Ridge Rd,Silver Ridge,CA,95702,Silver Ridge County,P-05,12/9/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,2,5,1,41,Isabella,S,Garcia,8313 Depot St,Shoshone,CA,93382,Granite Point County,P-01,11/4/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,2,5,2,42,Zoey,J,Price,4149 Birch Ct,Shoshone,CA,82407,Shoshone County,P-06,11/28/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,2,5,3,43,Isabella,M,Brooks,3066 Forest Glen Rd,Shoshone,WA,85899,Silver Ridge County,P-06,11/3/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,2,5,4,44,Henry,L,Diaz,7287 River Rd,Granite Point,ID,84136,Shoshone County,P-09,11/9/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,2,5,5,45,Owen,E,Young,7384 Evergreen Ct,Western City,CA,98781,Shoshone County,P-07,11/7/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,2,5,6,46,Jackson,D,Nguyen,6355 River Rd,Silver Ridge,ID,93795,Shoshone County,P-03,12/2/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,2,5,7,47,Sofia,R,Baker,6713 Summit Pass,Truckee,OR,82369,Truckee County,P-06,10/26/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,2,5,8,48,Benjamin,E,Hughes,6296 Harbor View Ln,Cedar Falls,OR,80315,Cedar Falls County,P-01,12/3/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,2,5,9,49,Noah,M,Nguyen,2613 Orchard St,Granite Point,NV,80790,Cedar Falls County,P-07,11/4/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,2,5,10,50,Benjamin,D,Nguyen,4189 Oak St,Shoshone,WA,95649,Cedar Falls County,P-07,10/30/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,3,6,1,51,Caleb,L,Diaz,9372 Ridgeway Blvd,Shoshone,CA,80592,Western City County,P-09,11/30/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,3,6,2,52,Owen,N,Douglas,3283 Oak St,Silver Ridge,CA,87972,Truckee County,P-01,11/15/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,3,6,3,53,Riley,J,Morris,6977 Lakefront Way,Silver Ridge,NV,85745,Granite Point County,P-06,11/16/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,3,6,4,54,Liam,N,Gray,4565 Canyon Rd,Silver Ridge,WA,96830,Western City County,P-04,11/20/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,3,6,5,55,Owen,,Campbell,6518 Main St,Shoshone,ID,93063,Cedar Falls County,P-03,10/11/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,3,6,6,56,Natalie,K,Campbell,2230 Elm Ter,Granite Point,CA,80307,Silver Ridge County,P-09,10/30/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,3,6,7,57,Natalie,R,Price,2950 Conductor Ct,Cedar Falls,NV,99578,Granite Point County,P-06,11/26/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,3,6,8,58,Grace,A,Henderson,3409 Summit Pass,Western City,ID,83880,Shoshone County,P-02,11/29/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,3,6,9,59,Emily,L,Lopez,5075 Depot St,Western City,NV,93775,Shoshone County,P-05,10/19/2025,1,
+PET-2026-002,Truckee Gaming Responsible Play Measure,3,6,10,60,Emily,J,Douglas,8211 Creekside Dr,Shoshone,WA,86624,Truckee County,P-05,12/1/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,1,7,1,61,Ava,,Diaz,2904 Ridgeway Blvd,Truckee,NV,80641,Granite Point County,P-03,10/18/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,1,7,2,62,Oliver,R,Young,2998 Evergreen Ct,Truckee,WA,93901,Granite Point County,P-01,12/2/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,1,7,3,63,Madison,B,Khan,3767 Aspen Cir,Shoshone,OR,88909,Truckee County,P-02,11/21/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,1,7,4,64,Victoria,L,Reed,3088 Meadow Ln,Western City,OR,82671,Truckee County,P-01,11/8/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,1,7,5,65,Layla,E,Douglas,109 Oak St,Truckee,NV,93365,Cedar Falls County,P-09,11/6/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,1,7,6,66,Jackson,R,Simmons,1362 Summit St,Shoshone,CA,80024,Shoshone County,P-03,12/9/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,1,7,7,67,Elijah,A,Henderson,3461 Canyon Rd,Cedar Falls,CA,91809,Granite Point County,P-07,11/21/2025,0,Illegible
+PET-2026-003,Western Transit Green Fleet Upgrade,1,7,8,68,Ethan,D,Garcia,7999 Conductor Ct,Silver Ridge,OR,88741,Granite Point County,P-08,11/24/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,1,7,9,69,Lucas,M,West,7174 Summit St,Shoshone,CA,89251,Silver Ridge County,P-04,11/25/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,1,7,10,70,Layla,R,Gray,262 Maple Ln,Western City,CA,93644,Silver Ridge County,P-01,11/26/2025,0,Illegible
+PET-2026-003,Western Transit Green Fleet Upgrade,2,8,1,71,Benjamin,R,Peterson,2070 Transit Way,Cedar Falls,WA,98329,Silver Ridge County,P-09,10/22/2025,0,Illegible
+PET-2026-003,Western Transit Green Fleet Upgrade,2,8,2,72,Chloe,L,Nguyen,6980 Main St,Truckee,ID,99053,Truckee County,P-04,10/14/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,2,8,3,73,Benjamin,S,Peterson,6340 Pine Ave,Cedar Falls,WA,93718,Cedar Falls County,P-01,10/29/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,2,8,4,74,Hannah,N,Morris,7326 Forest Glen Rd,Truckee,ID,89594,Silver Ridge County,P-09,11/20/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,2,8,5,75,Harper,E,Campbell,6135 Platform Blvd,Western City,NV,87952,Shoshone County,P-07,11/29/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,2,8,6,76,Madison,N,Hughes,7397 Cedar Dr,Truckee,NV,82666,Cedar Falls County,P-01,12/2/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,2,8,7,77,Hannah,K,Simmons,9944 Cedar Dr,Cedar Falls,ID,84566,Cedar Falls County,P-03,10/11/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,2,8,8,78,Hannah,M,Hughes,3023 Sunset Blvd,Granite Point,OR,87677,Shoshone County,P-09,12/1/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,2,8,9,79,Owen,B,Gray,7338 Depot St,Granite Point,OR,91412,Silver Ridge County,P-09,10/11/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,2,8,10,80,Jackson,J,Peterson,4219 River Rd,Truckee,OR,99008,Western City County,P-04,12/1/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,3,9,1,81,Hannah,R,Brooks,4877 Meadow Ln,Shoshone,OR,90092,Shoshone County,P-07,10/31/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,3,9,2,82,Jackson,J,West,3187 Platform Blvd,Truckee,NV,85645,Shoshone County,P-09,11/5/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,3,9,3,83,Victoria,B,Henderson,8850 Forest Glen Rd,Shoshone,CA,91477,Silver Ridge County,P-03,12/1/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,3,9,4,84,Mason,K,Garcia,792 Forest Glen Rd,Granite Point,ID,99172,Shoshone County,P-03,12/3/2025,0,Address mismatch
+PET-2026-003,Western Transit Green Fleet Upgrade,3,9,5,85,Owen,L,Owens,6661 Transit Way,Granite Point,CA,90665,Silver Ridge County,P-02,11/4/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,3,9,6,86,Zara,C,Henderson,7629 Elm Ter,Cedar Falls,WA,85882,Truckee County,P-01,11/12/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,3,9,7,87,Emily,K,Morris,2611 Ridgeway Blvd,Granite Point,OR,88748,Granite Point County,P-08,11/25/2025,0,Out of jurisdiction
+PET-2026-003,Western Transit Green Fleet Upgrade,3,9,8,88,Noah,,Cole,6512 Conductor Ct,Granite Point,ID,81084,Cedar Falls County,P-02,10/28/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,3,9,9,89,Victoria,E,Ramirez,7574 Ridgeway Blvd,Truckee,OR,93218,Truckee County,P-02,11/25/2025,1,
+PET-2026-003,Western Transit Green Fleet Upgrade,3,9,10,90,Emily,C,Cole,5014 Aspen Cir,Silver Ridge,ID,84729,Silver Ridge County,P-02,10/21/2025,1,
