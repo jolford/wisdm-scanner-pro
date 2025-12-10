@@ -2316,9 +2316,13 @@ const [isExporting, setIsExporting] = useState(false);
                             const results = doc.validation_suggestions?.lookupValidation?.results || [];
                             results.forEach((result: any, idx: number) => {
                               const lineItem = result.lineItem || {};
-                              const signatureStatus = result.signatureStatus?.present ? 'Signed' : 'Missing';
-                              const registryStatus = result.allMatch ? 'Valid' : result.found ? 'Mismatch' : 'Not Found';
-                              const reason = result.allMatch ? 'Verified in registry' : 
+                              const signaturePresent = result.signatureStatus?.present ?? 
+                                (lineItem.Signature_Present || lineItem.signature_present || '').toString().toLowerCase() === 'yes';
+                              const signatureStatus = signaturePresent ? 'Signed' : 'Missing';
+                              // Match the same logic as LineItemValidation: valid if found AND matchScore >= 90%
+                              const isValid = result.found && result.matchScore >= 0.9;
+                              const registryStatus = isValid ? 'Valid' : result.found ? 'Mismatch' : 'Not Found';
+                              const reason = isValid ? 'Verified in registry' : 
                                              result.found ? 'Data mismatch with registry' : 'Not found in voter registry';
                               
                               rows.push([
