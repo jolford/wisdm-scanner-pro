@@ -277,6 +277,8 @@ const App = () => {
           </Routes>
           </div>
           <Footer />
+          {/* Demo Mode Components - must be inside Router for useNavigate */}
+          <PresentationMode />
           </BrowserRouter>
           
           {/* AI Copilot Floating Button */}
@@ -299,9 +301,6 @@ const App = () => {
               </div>
             </SheetContent>
           </Sheet>
-          
-          {/* Demo Mode Components */}
-          <PresentationMode />
           </div>
         </ThemeProvider>
       </QueryClientProvider>
