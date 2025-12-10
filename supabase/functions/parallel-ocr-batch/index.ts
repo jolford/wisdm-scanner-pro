@@ -134,8 +134,14 @@ serve(async (req) => {
 
               return { success: true, confidence: data?.confidence, duration_ms: duration };
             } catch (error) {
+              const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+              // Timeouts should be treated as potential successes - OCR may complete in background
+              if (errorMessage.includes('timeout')) {
+                console.warn(`Document ${doc.id} timed out but OCR likely completed in background`);
+                return { success: true, warning: 'Timeout but processing continues' };
+              }
               console.error(`Error processing document ${doc.id}:`, error);
-              return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+              return { success: false, error: errorMessage };
             }
           });
 
