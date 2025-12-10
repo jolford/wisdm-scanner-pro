@@ -47,11 +47,13 @@ export default function MetricsBenchmark() {
       startDate.setDate(startDate.getDate() - periodDays);
       const startDateStr = startDate.toISOString();
 
-      // Fetch actual job processing times from jobs table
+      // Fetch actual job processing times from jobs table using started_at and completed_at
       const { data: jobs } = await supabase
         .from('jobs')
-        .select('status, created_at, updated_at')
+        .select('status, started_at, completed_at')
         .eq('status', 'completed')
+        .not('started_at', 'is', null)
+        .not('completed_at', 'is', null)
         .gte('created_at', startDateStr);
 
       // Fetch document confidence scores
@@ -66,12 +68,12 @@ export default function MetricsBenchmark() {
       let validJobCount = 0;
       
       jobs?.forEach(job => {
-        if (job.created_at && job.updated_at) {
-          const created = new Date(job.created_at).getTime();
-          const updated = new Date(job.updated_at).getTime();
-          const duration = updated - created;
-          // Only count reasonable durations (< 30 minutes per job for batch processing)
-          if (duration > 0 && duration < 1800000) {
+        if (job.started_at && job.completed_at) {
+          const started = new Date(job.started_at).getTime();
+          const completed = new Date(job.completed_at).getTime();
+          const duration = completed - started;
+          // Only count reasonable durations (< 10 minutes per job)
+          if (duration > 0 && duration < 600000) {
             totalProcessingTimeMs += duration;
             validJobCount++;
           }
