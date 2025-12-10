@@ -34,6 +34,7 @@ import { ProgressTrackingDashboard } from './ProgressTrackingDashboard';
 import { SmartSuggestionsPanel } from './SmartSuggestionsPanel';
 import { PetitionValidationWarnings } from './PetitionValidationWarnings';
 import { AB1466ViolationAlert } from './AB1466ViolationAlert';
+import { LineItemValidation } from './LineItemValidation';
 import { InteractiveDocumentViewer } from './InteractiveDocumentViewer';
 import { useKeyboardShortcuts } from '@/hooks/use-keyboard-shortcuts';
 import { useBulkSelection } from '@/hooks/use-bulk-selection';
@@ -75,6 +76,7 @@ interface Document {
   extracted_metadata: Record<string, string>;
   validation_status: string;
   line_items?: Array<Record<string, any>>;
+  validation_suggestions?: Record<string, any>;
   document_type?: string;
   classification_confidence?: number;
   classification_metadata?: {
@@ -2178,6 +2180,18 @@ export const BatchValidationScreen = ({
                                   documentId={doc.id}
                                   batchId={batchId}
                                   metadata={getMetadataForDoc(doc)}
+                                />
+                              </div>
+                            )}
+
+                            {/* Voter Registry Validation - Show when document has lookup validation results */}
+                            {doc.validation_suggestions?.lookupValidation?.results?.length > 0 && (
+                              <div className="mb-6">
+                                <LineItemValidation
+                                  lineItems={doc.validation_suggestions.lookupValidation.results.map((r: any) => r.lineItem).filter(Boolean)}
+                                  lookupConfig={{ system: 'csv' }}
+                                  keyField="Printed_Name"
+                                  precomputedResults={doc.validation_suggestions.lookupValidation}
                                 />
                               </div>
                             )}
