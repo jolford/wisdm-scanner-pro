@@ -2,10 +2,27 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle2, XCircle, AlertCircle, Loader2, RefreshCw, Clock } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { 
+  CheckCircle2, XCircle, AlertCircle, Loader2, RefreshCw, Clock, 
+  Users, FileCheck, FileX, ChevronDown, ChevronUp 
+} from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getSignedUrl } from '@/hooks/use-signed-url';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 
 interface LineItemValidationProps {
   lineItems: Array<Record<string, any>>;
@@ -20,7 +37,7 @@ interface LineItemValidationProps {
       lookupEnabled?: boolean;
     }>;
   };
-  keyField: string; // Which field to use as the lookup key (e.g., "Printed_Name")
+  keyField: string;
   precomputedResults?: {
     validated: boolean;
     validatedAt?: string;
@@ -66,6 +83,7 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
   const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
   const [isValidating, setIsValidating] = useState(false);
   const [autoValidatedAt, setAutoValidatedAt] = useState<string | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const { toast } = useToast();
 
   // Load precomputed results if available
@@ -109,7 +127,6 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
     const results: ValidationResult[] = [];
 
     try {
-      // Find the key column from lookupFields
       const keyColumn = lookupConfig.excelKeyColumn || 
         lookupConfig.lookupFields?.find(f => 
           f.wisdmField.toLowerCase() === keyField.toLowerCase()
@@ -130,7 +147,6 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
           continue;
         }
 
-        // Build lookup fields with values from this line item
         const lookupFields = (lookupConfig.lookupFields || [])
           .filter(f => f.enabled !== false && f.lookupEnabled !== false)
           .map(f => ({
@@ -138,7 +154,6 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
             wisdmValue: lineItem[f.wisdmField] || lineItem[f.wisdmField.toLowerCase()] || '',
           }));
 
-        // Call validate-excel-lookup with a signed URL (works for private buckets)
         const signedUrl = await getSignedUrl(lookupConfig.excelFileUrl);
         const { data, error } = await supabase.functions.invoke('validate-excel-lookup', {
           body: {
@@ -172,7 +187,7 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
       }
 
       setValidationResults(results);
-      setAutoValidatedAt(null); // Clear auto-validation timestamp since this is manual
+      setAutoValidatedAt(null);
 
       const foundCount = results.filter(r => r.found).length;
       const matchCount = results.filter(r => r.allMatch).length;
@@ -193,167 +208,261 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
     }
   };
 
-  const getStatusIcon = (result: ValidationResult) => {
-    if (!result.found) {
-      return <XCircle className="h-5 w-5 text-destructive" />;
+  const toggleRow = (index: number) => {
+    const newExpanded = new Set(expandedRows);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
     }
-    if (result.allMatch) {
-      return <CheckCircle2 className="h-5 w-5 text-success" />;
-    }
-    return <AlertCircle className="h-5 w-5 text-warning" />;
+    setExpandedRows(newExpanded);
   };
 
-  const getStatusBadge = (result: ValidationResult) => {
-    if (!result.found) {
-      return <Badge variant="destructive">Not Found</Badge>;
-    }
-    if (result.allMatch) {
-      return <Badge variant="default" className="bg-success">Valid</Badge>;
-    }
-    return <Badge variant="secondary" className="bg-warning">Mismatch</Badge>;
-  };
-
-  const foundCount = validationResults.filter(r => r.found).length;
-  const matchCount = validationResults.filter(r => r.allMatch).length;
+  // Calculate statistics
+  const totalSignatures = lineItems.length;
+  const validCount = validationResults.filter(r => r.allMatch).length;
+  const mismatchCount = validationResults.filter(r => r.found && !r.allMatch).length;
+  const notFoundCount = validationResults.filter(r => !r.found).length;
+  const validPercentage = validationResults.length > 0 
+    ? Math.round((validCount / totalSignatures) * 100) 
+    : 0;
 
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-lg font-semibold">Voter Registry Validation</h3>
-          <p className="text-sm text-muted-foreground">
-            {validationResults.length > 0 ? (
-              <>
-                {foundCount}/{lineItems.length} found, {matchCount} fully matched
-                {autoValidatedAt && (
-                  <span className="ml-2 text-xs text-muted-foreground inline-flex items-center gap-1">
-                    <Clock className="h-3 w-3" />
-                    Auto-validated
-                  </span>
-                )}
-              </>
-            ) : (
-              `Validate ${lineItems.length} signer(s) against ${lookupConfig.system === 'csv' ? 'CSV' : 'Excel'} registry`
-            )}
-          </p>
-        </div>
-        <Button
-          onClick={validateAllLineItems}
-          disabled={isValidating || !lookupConfig.excelFileUrl}
-          variant={validationResults.length > 0 ? 'outline' : 'default'}
-        >
-          {isValidating ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Validating...
-            </>
-          ) : validationResults.length > 0 ? (
-            <>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Re-validate
-            </>
-          ) : (
-            `Validate All ${lineItems.length} Items`
-          )}
-        </Button>
-      </div>
-
-      {/* Summary badges */}
-      {validationResults.length > 0 && (
-        <div className="flex gap-2 mb-4">
-          <Badge variant="outline" className="bg-success/10 text-success border-success/20">
-            <CheckCircle2 className="h-3 w-3 mr-1" />
-            {matchCount} Valid
-          </Badge>
-          {foundCount - matchCount > 0 && (
-            <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20">
-              <AlertCircle className="h-3 w-3 mr-1" />
-              {foundCount - matchCount} Mismatch
-            </Badge>
-          )}
-          {lineItems.length - foundCount > 0 && (
-            <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/20">
-              <XCircle className="h-3 w-3 mr-1" />
-              {lineItems.length - foundCount} Not Found
-            </Badge>
-          )}
-        </div>
-      )}
-
-      {validationResults.length > 0 && (
-        <div className="space-y-4">
-          {validationResults.map((result, idx) => (
-            <Card key={idx} className="p-4 bg-muted/30">
-              <div className="flex items-start gap-4">
-                <div className="mt-1">{getStatusIcon(result)}</div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="font-semibold text-base">
-                      Row {result.index + 1}: {result.keyValue}
-                    </span>
-                    {getStatusBadge(result)}
-                    {result.matchScore !== undefined && result.found && (
-                      <span className="text-xs text-muted-foreground">
-                        {Math.round(result.matchScore * 100)}% match
+    <Card className="p-0 overflow-hidden">
+      {/* Summary Header */}
+      <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-6 border-b">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-primary/20 rounded-lg">
+              <Users className="h-6 w-6 text-primary" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold">Petition Signature Validation</h3>
+              <p className="text-sm text-muted-foreground">
+                {validationResults.length > 0 ? (
+                  <>
+                    Compared against voter registry
+                    {autoValidatedAt && (
+                      <span className="ml-2 inline-flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Auto-validated
                       </span>
                     )}
-                  </div>
+                  </>
+                ) : (
+                  `${totalSignatures} signature(s) extracted from document`
+                )}
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={validateAllLineItems}
+            disabled={isValidating || !lookupConfig.excelFileUrl}
+            size="lg"
+          >
+            {isValidating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Validating...
+              </>
+            ) : validationResults.length > 0 ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Re-validate
+              </>
+            ) : (
+              <>
+                <FileCheck className="h-4 w-4 mr-2" />
+                Validate All
+              </>
+            )}
+          </Button>
+        </div>
 
-                  {result.message && (
-                    <p className="text-sm text-muted-foreground mb-3">{result.message}</p>
-                  )}
+        {/* Statistics Cards */}
+        <div className="grid grid-cols-4 gap-4">
+          <div className="bg-background/80 backdrop-blur rounded-lg p-4 text-center border">
+            <div className="text-3xl font-bold text-foreground">{totalSignatures}</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wide mt-1">Total Signatures</div>
+          </div>
+          <div className="bg-success/10 rounded-lg p-4 text-center border border-success/20">
+            <div className="text-3xl font-bold text-success">{validCount}</div>
+            <div className="text-xs text-success uppercase tracking-wide mt-1">Valid</div>
+          </div>
+          <div className="bg-warning/10 rounded-lg p-4 text-center border border-warning/20">
+            <div className="text-3xl font-bold text-warning">{mismatchCount}</div>
+            <div className="text-xs text-warning uppercase tracking-wide mt-1">Mismatch</div>
+          </div>
+          <div className="bg-destructive/10 rounded-lg p-4 text-center border border-destructive/20">
+            <div className="text-3xl font-bold text-destructive">{notFoundCount}</div>
+            <div className="text-xs text-destructive uppercase tracking-wide mt-1">Not Found</div>
+          </div>
+        </div>
 
-                  {result.validationResults && result.validationResults.length > 0 && (
-                    <div className="space-y-3 mt-3">
-                      {result.validationResults.map((fieldResult, fieldIdx) => (
-                        <div
-                          key={fieldIdx}
-                          className={`text-sm p-4 rounded-md border ${
-                            fieldResult.matches
-                              ? 'bg-success/10 border-success/20'
-                              : 'bg-warning/10 border-warning/20'
-                          }`}
-                        >
-                          <div className="font-semibold mb-3 text-foreground flex items-center justify-between">
-                            <span>{fieldResult.field}</span>
-                            {fieldResult.score !== undefined && (
-                              <span className="text-xs text-muted-foreground">
-                                {Math.round(fieldResult.score * 100)}%
-                              </span>
-                            )}
-                          </div>
-                          <div className="space-y-2">
-                            <div className="flex flex-col gap-1">
-                              <span className="text-xs font-medium uppercase tracking-wide opacity-60">Document Value</span>
-                              <span className="font-medium">{fieldResult.wisdmValue || '(empty)'}</span>
-                            </div>
-                            <div className="flex flex-col gap-1">
-                              <span className="text-xs font-medium uppercase tracking-wide opacity-60">Registry Value</span>
-                              <span className="font-medium">{fieldResult.excelValue || '(empty)'}</span>
-                            </div>
-                          </div>
-                          {!fieldResult.matches && fieldResult.suggestion && (
-                            <div className="mt-3 pt-3 border-t border-border/30">
-                              <span className="text-xs font-medium uppercase tracking-wide opacity-60">Suggestion: </span>
-                              <span className="font-semibold text-foreground">{fieldResult.suggestion}</span>
-                            </div>
+        {/* Progress Bar */}
+        {validationResults.length > 0 && (
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-sm mb-2">
+              <span className="text-muted-foreground">Validation Rate</span>
+              <span className="font-semibold">{validPercentage}% Valid</span>
+            </div>
+            <div className="h-3 bg-muted rounded-full overflow-hidden flex">
+              <div 
+                className="bg-success transition-all duration-500"
+                style={{ width: `${(validCount / totalSignatures) * 100}%` }}
+              />
+              <div 
+                className="bg-warning transition-all duration-500"
+                style={{ width: `${(mismatchCount / totalSignatures) * 100}%` }}
+              />
+              <div 
+                className="bg-destructive transition-all duration-500"
+                style={{ width: `${(notFoundCount / totalSignatures) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Signatures Table */}
+      {validationResults.length > 0 ? (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-12">#</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Address</TableHead>
+                <TableHead>City</TableHead>
+                <TableHead>Zip</TableHead>
+                <TableHead className="w-24 text-center">Status</TableHead>
+                <TableHead className="w-20 text-center">Match</TableHead>
+                <TableHead className="w-12"></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {validationResults.map((result, idx) => {
+                const lineItem = lineItems[result.index] || {};
+                const isExpanded = expandedRows.has(idx);
+                
+                return (
+                  <Collapsible key={idx} open={isExpanded} onOpenChange={() => toggleRow(idx)} asChild>
+                    <>
+                      <TableRow 
+                        className={`cursor-pointer hover:bg-muted/50 ${
+                          result.allMatch ? 'bg-success/5' : 
+                          result.found ? 'bg-warning/5' : 'bg-destructive/5'
+                        }`}
+                        onClick={() => toggleRow(idx)}
+                      >
+                        <TableCell className="font-mono text-muted-foreground">{result.index + 1}</TableCell>
+                        <TableCell className="font-medium">{result.keyValue}</TableCell>
+                        <TableCell className="text-sm">{lineItem.Address || lineItem.address || '-'}</TableCell>
+                        <TableCell className="text-sm">{lineItem.City || lineItem.city || '-'}</TableCell>
+                        <TableCell className="text-sm font-mono">{lineItem.Zip || lineItem.zip || '-'}</TableCell>
+                        <TableCell className="text-center">
+                          {result.allMatch ? (
+                            <Badge className="bg-success text-success-foreground">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Valid
+                            </Badge>
+                          ) : result.found ? (
+                            <Badge variant="secondary" className="bg-warning text-warning-foreground">
+                              <AlertCircle className="h-3 w-3 mr-1" />
+                              Mismatch
+                            </Badge>
+                          ) : (
+                            <Badge variant="destructive">
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Not Found
+                            </Badge>
                           )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </Card>
-          ))}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {result.matchScore !== undefined && result.found ? (
+                            <span className={`font-mono text-sm ${
+                              result.matchScore >= 0.9 ? 'text-success' :
+                              result.matchScore >= 0.7 ? 'text-warning' : 'text-destructive'
+                            }`}>
+                              {Math.round(result.matchScore * 100)}%
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </CollapsibleTrigger>
+                        </TableCell>
+                      </TableRow>
+                      <CollapsibleContent asChild>
+                        <TableRow className="bg-muted/30">
+                          <TableCell colSpan={8} className="p-4">
+                            {result.validationResults && result.validationResults.length > 0 ? (
+                              <div className="grid grid-cols-2 gap-3">
+                                {result.validationResults.map((fieldResult, fieldIdx) => (
+                                  <div
+                                    key={fieldIdx}
+                                    className={`p-3 rounded-lg border ${
+                                      fieldResult.matches
+                                        ? 'bg-success/10 border-success/20'
+                                        : 'bg-warning/10 border-warning/20'
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="font-semibold text-sm">{fieldResult.field}</span>
+                                      {fieldResult.matches ? (
+                                        <CheckCircle2 className="h-4 w-4 text-success" />
+                                      ) : (
+                                        <AlertCircle className="h-4 w-4 text-warning" />
+                                      )}
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                      <div>
+                                        <span className="text-muted-foreground">Document:</span>
+                                        <div className="font-medium">{fieldResult.wisdmValue || '(empty)'}</div>
+                                      </div>
+                                      <div>
+                                        <span className="text-muted-foreground">Registry:</span>
+                                        <div className="font-medium">{fieldResult.excelValue || '(empty)'}</div>
+                                      </div>
+                                    </div>
+                                    {!fieldResult.matches && fieldResult.suggestion && (
+                                      <div className="mt-2 pt-2 border-t border-border/30 text-xs">
+                                        <span className="text-muted-foreground">Suggestion: </span>
+                                        <span className="font-medium">{fieldResult.suggestion}</span>
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-sm text-muted-foreground">{result.message || 'No detailed results available'}</p>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      </CollapsibleContent>
+                    </>
+                  </Collapsible>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
-      )}
-
-      {validationResults.length === 0 && !isValidating && (
-        <div className="text-center py-8 text-muted-foreground">
-          <p>Click "Validate All" to check each signer against the registry</p>
+      ) : !isValidating ? (
+        <div className="text-center py-12 text-muted-foreground">
+          <FileX className="h-12 w-12 mx-auto mb-4 opacity-50" />
+          <p className="text-lg font-medium mb-1">Not yet validated</p>
+          <p className="text-sm">Click "Validate All" to check signatures against the voter registry</p>
         </div>
-      )}
+      ) : null}
     </Card>
   );
 };
