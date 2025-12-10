@@ -1164,9 +1164,12 @@ RESPONSE REQUIREMENTS:
             console.warn('Invoice label-based correction failed:', fixErr);
           }
 
-          // Extract line items if table extraction was requested
-          if (hasTableExtraction && parsed.lineItems) {
+          // Extract line items if table extraction was requested OR this is a petition
+          if ((hasTableExtraction || isPetition) && parsed.lineItems) {
             lineItems = Array.isArray(parsed.lineItems) ? parsed.lineItems : [];
+            if (isPetition) {
+              console.log(`Petition extraction: Found ${lineItems.length} signers in lineItems`);
+            }
           }
         }
       } else {
