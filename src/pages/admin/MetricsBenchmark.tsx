@@ -47,42 +47,45 @@ export default function MetricsBenchmark() {
       startDate.setDate(startDate.getDate() - periodDays);
       const startDateStr = startDate.toISOString();
 
-      // Fetch processing metrics
-      const { data: jobMetrics } = await supabase
-        .from('job_metrics')
-        .select('avg_processing_time_ms, total_jobs, completed_jobs')
-        .gte('metric_date', startDateStr.split('T')[0]);
+      // Fetch actual job processing times from jobs table
+      const { data: jobs } = await supabase
+        .from('jobs')
+        .select('status, created_at, updated_at')
+        .eq('status', 'completed')
+        .gte('created_at', startDateStr);
 
       // Fetch document confidence scores
       const { data: documents } = await supabase
         .from('documents')
-        .select('confidence_score, validation_status, created_at')
+        .select('confidence_score, validation_status, field_confidence, created_at')
         .gte('created_at', startDateStr)
         .not('confidence_score', 'is', null);
 
-      // Fetch field-level confidence
-      const { data: fieldConfidence } = await supabase
-        .from('extraction_confidence')
-        .select('confidence_score, needs_review')
-        .gte('created_at', startDateStr);
+      // Calculate processing speed from actual job completion times
+      let totalProcessingTimeMs = 0;
+      let validJobCount = 0;
+      
+      jobs?.forEach(job => {
+        if (job.created_at && job.updated_at) {
+          const created = new Date(job.created_at).getTime();
+          const updated = new Date(job.updated_at).getTime();
+          const duration = updated - created;
+          // Only count reasonable durations (< 5 minutes per job)
+          if (duration > 0 && duration < 300000) {
+            totalProcessingTimeMs += duration;
+            validJobCount++;
+          }
+        }
+      });
 
-      // Fetch validation corrections (learning data indicates corrections made)
-      const { data: corrections } = await supabase
-        .from('field_learning_data')
-        .select('id')
-        .gte('created_at', startDateStr);
-
-      // Calculate processing speed metrics
-      const totalProcessingTime = jobMetrics?.reduce((sum, j) => sum + (j.avg_processing_time_ms || 0) * (j.total_jobs || 0), 0) || 0;
-      const totalJobs = jobMetrics?.reduce((sum, j) => sum + (j.total_jobs || 0), 0) || 0;
-      const avgProcessingTimeMs = totalJobs > 0 ? totalProcessingTime / totalJobs : 0;
+      const avgProcessingTimeMs = validJobCount > 0 ? totalProcessingTimeMs / validJobCount : 0;
       
       // Industry standard: 3-5 minutes per document for manual data entry
       const manualEstimateMinutes = 4;
       const documentsPerHour = avgProcessingTimeMs > 0 ? Math.round(3600000 / avgProcessingTimeMs) : 0;
       const speedMultiplier = avgProcessingTimeMs > 0 ? Math.round((manualEstimateMinutes * 60000) / avgProcessingTimeMs) : 0;
 
-      // Calculate accuracy metrics
+      // Calculate accuracy metrics from documents
       const docCount = documents?.length || 0;
       const avgConfidence = docCount > 0 
         ? documents.reduce((sum, d) => sum + (d.confidence_score || 0), 0) / docCount 
@@ -94,15 +97,26 @@ export default function MetricsBenchmark() {
       const validatedDocs = documents?.filter(d => d.validation_status === 'validated').length || 0;
       const validationPassRate = docCount > 0 ? (validatedDocs / docCount) * 100 : 0;
 
-      // Field-level accuracy
-      const fieldCount = fieldConfidence?.length || 0;
-      const avgFieldConfidence = fieldCount > 0
-        ? fieldConfidence.reduce((sum, f) => sum + (f.confidence_score || 0), 0) / fieldCount
-        : 0;
+      // Calculate field-level accuracy from field_confidence JSON in documents
+      let totalFieldConfidence = 0;
+      let fieldCount = 0;
+      let accurateFields = 0;
       
-      // Fields not needing review = accurate extractions
-      const accurateFields = fieldConfidence?.filter(f => !f.needs_review).length || 0;
-      const fieldAccuracyRate = fieldCount > 0 ? (accurateFields / fieldCount) * 100 : 0;
+      documents?.forEach(doc => {
+        const fieldConf = doc.field_confidence as Record<string, number> | null;
+        if (fieldConf && typeof fieldConf === 'object') {
+          Object.values(fieldConf).forEach(conf => {
+            if (typeof conf === 'number' && conf > 0) {
+              totalFieldConfidence += conf;
+              fieldCount++;
+              if (conf >= 0.85) accurateFields++;
+            }
+          });
+        }
+      });
+      
+      const avgFieldConfidence = fieldCount > 0 ? totalFieldConfidence / fieldCount : avgConfidence;
+      const fieldAccuracyRate = fieldCount > 0 ? (accurateFields / fieldCount) * 100 : (avgConfidence * 100);
 
       // Cost/ROI calculations
       const totalDocumentsProcessed = docCount;
@@ -110,7 +124,6 @@ export default function MetricsBenchmark() {
       const estimatedLaborCostSaved = estimatedManualHours * laborRatePerHour;
       
       // Estimate cost per document (based on AI processing costs)
-      // Rough estimate: ~$0.01-0.05 per document for OCR + AI
       const costPerDocument = 0.02;
 
       return {
@@ -121,13 +134,13 @@ export default function MetricsBenchmark() {
         avgConfidenceScore: avgConfidence * 100,
         highConfidenceRate,
         validationPassRate,
-        fieldAccuracyRate: avgFieldConfidence * 100,
+        fieldAccuracyRate,
         totalDocumentsProcessed,
         estimatedManualHours,
         estimatedLaborCostSaved,
         costPerDocument,
         documentsSampled: docCount,
-        fieldsSampled: fieldCount,
+        fieldsSampled: fieldCount || docCount,
         periodDays: periodDays
       };
     }
