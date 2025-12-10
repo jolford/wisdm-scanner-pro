@@ -2302,6 +2302,66 @@ const [isExporting, setIsExporting] = useState(false);
                     </div>
                   )}
 
+                  {/* Signature Validation CSV Export - Show when any docs have line items */}
+                  {validatedDocs.some((doc: any) => doc.validation_suggestions?.lookupValidation?.results?.length > 0) && (
+                    <div className="pt-4 border-t">
+                      <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Signature Validation Report</h4>
+                      <Button 
+                        onClick={() => {
+                          // Compile all signature validation results from all documents
+                          const headers = ['Document', 'Row #', 'Name', 'Address', 'City', 'Zip', 'Signature', 'Registry Status', 'Match Score', 'Reason'];
+                          const rows: string[] = [];
+                          
+                          validatedDocs.forEach((doc: any) => {
+                            const results = doc.validation_suggestions?.lookupValidation?.results || [];
+                            results.forEach((result: any, idx: number) => {
+                              const lineItem = result.lineItem || {};
+                              const signatureStatus = result.signatureStatus?.present ? 'Signed' : 'Missing';
+                              const registryStatus = result.allMatch ? 'Valid' : result.found ? 'Mismatch' : 'Not Found';
+                              const reason = result.allMatch ? 'Verified in registry' : 
+                                             result.found ? 'Data mismatch with registry' : 'Not found in voter registry';
+                              
+                              rows.push([
+                                `"${(doc.file_name || '').replace(/"/g, '""')}"`,
+                                idx + 1,
+                                `"${(result.keyValue || lineItem.Printed_Name || lineItem.printed_name || '').replace(/"/g, '""')}"`,
+                                `"${(lineItem.Address || lineItem.address || '').replace(/"/g, '""')}"`,
+                                `"${(lineItem.City || lineItem.city || '').replace(/"/g, '""')}"`,
+                                `"${(lineItem.Zip || lineItem.zip || '').replace(/"/g, '""')}"`,
+                                signatureStatus,
+                                registryStatus,
+                                result.matchScore ? `${Math.round(result.matchScore * 100)}%` : 'N/A',
+                                `"${reason}"`
+                              ].join(','));
+                            });
+                          });
+                          
+                          const csvContent = [headers.join(','), ...rows].join('\n');
+                          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                          const url = URL.createObjectURL(blob);
+                          const link = document.createElement('a');
+                          link.href = url;
+                          link.download = `${selectedBatch?.batch_name || 'batch'}-signature-validation-${new Date().toISOString().split('T')[0]}.csv`;
+                          document.body.appendChild(link);
+                          link.click();
+                          document.body.removeChild(link);
+                          URL.revokeObjectURL(url);
+                          
+                          toast({ title: 'Exported successfully', description: `${rows.length} signatures exported to CSV` });
+                        }} 
+                        disabled={validatedDocs.length === 0} 
+                        variant="outline" 
+                        className="w-full h-16 gap-2 hover:border-primary/50 hover:bg-primary/5"
+                      >
+                        <Download className="h-5 w-5" />
+                        <span className="font-medium">Export All Signatures to CSV</span>
+                      </Button>
+                      <p className="text-xs text-muted-foreground mt-2 text-center">
+                        Compiles validation results from all petition documents into one file
+                      </p>
+                    </div>
+                  )}
+
                   {selectedProject?.name?.toLowerCase().includes('ab1466') || selectedProject?.name?.toLowerCase().includes('ab 1466') ? (
                     <div className="pt-4 border-t">
                       <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">AB1466 Redacted PDF</h4>
