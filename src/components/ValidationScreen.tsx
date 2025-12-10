@@ -2267,26 +2267,37 @@ useEffect(() => {
           
           {/* Line Item Validation for Petitions */}
           {(() => {
+            const hasPrecomputedResults = validationSuggestions?.lookupValidation?.results?.length > 0;
+            const hasLineItemsData = lineItems && lineItems.length > 0;
             console.log('LineItemValidation check:', {
-              hasLineItems: lineItems && lineItems.length > 0,
+              hasLineItems: hasLineItemsData,
               lineItemsCount: lineItems?.length,
+              hasPrecomputedResults,
+              precomputedCount: validationSuggestions?.lookupValidation?.results?.length,
               hasValidationConfig: !!validationLookupConfig,
-              validationSystem: validationLookupConfig?.system,
-              validationEnabled: validationLookupConfig?.enabled
+              validationSystem: validationLookupConfig?.system
             });
+            
+            // Show if we have precomputed results OR line items with lookup config
+            if (hasPrecomputedResults || (hasLineItemsData && validationLookupConfig)) {
+              // Extract line items from precomputed results if needed
+              const displayLineItems = hasLineItemsData 
+                ? lineItems 
+                : (validationSuggestions?.lookupValidation?.results?.map((r: any) => r.lineItem).filter(Boolean) || []);
+              
+              return (
+                <div className="mb-6">
+                  <LineItemValidation
+                    lineItems={displayLineItems}
+                    lookupConfig={validationLookupConfig || { system: 'csv', enabled: true }}
+                    keyField="Printed_Name"
+                    precomputedResults={validationSuggestions?.lookupValidation}
+                  />
+                </div>
+              );
+            }
             return null;
           })()}
-          {lineItems && lineItems.length > 0 && validationLookupConfig && 
-           (validationLookupConfig.system === 'excel' || validationLookupConfig.system === 'csv') && (
-            <div className="mb-6">
-              <LineItemValidation
-                lineItems={lineItems}
-                lookupConfig={validationLookupConfig}
-                keyField="Printed_Name"
-                precomputedResults={validationSuggestions?.lookupValidation}
-              />
-            </div>
-          )}
           
           <div className="space-y-4">
             {projectFields.map((field) => {

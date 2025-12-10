@@ -92,32 +92,34 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
 
   // Load precomputed results if available
   useEffect(() => {
-    if (precomputedResults?.validated && precomputedResults.results?.length > 0) {
+    // Check if we have results - don't require 'validated' flag
+    if (precomputedResults?.results?.length > 0) {
+      console.log('Loading precomputed validation results:', precomputedResults.results.length, 'items');
       const converted: ValidationResult[] = precomputedResults.results.map((r: any) => ({
         index: r.lineIndex,
         keyValue: r.lineItem[keyField] || r.lineItem[keyField.toLowerCase()] || r.lineItem.Printed_Name || r.lineItem.printed_name || `Row ${r.lineIndex + 1}`,
         found: r.found,
         allMatch: r.found && r.matchScore >= 0.9,
         matchScore: r.matchScore,
-        validationResults: r.fieldResults.map((fr: any) => ({
+        validationResults: r.fieldResults?.map((fr: any) => ({
           field: fr.field,
           excelValue: fr.lookupValue || '',
           wisdmValue: fr.extractedValue || '',
           matches: fr.matches,
           suggestion: fr.suggestion,
           score: fr.score,
-        })),
+        })) || [],
         message: r.found 
           ? `Match score: ${Math.round(r.matchScore * 100)}%` 
           : 'Not found in voter registry',
         signatureStatus: r.signatureStatus || {
-          present: (r.lineItem.Signature_Present || r.lineItem.signature_present || '').toString().toLowerCase() === 'yes',
-          value: r.lineItem.Signature_Present || r.lineItem.signature_present || 'unknown'
+          present: (r.lineItem?.Signature_Present || r.lineItem?.signature_present || '').toString().toLowerCase() === 'yes',
+          value: r.lineItem?.Signature_Present || r.lineItem?.signature_present || 'unknown'
         }
       }));
       
       setValidationResults(converted);
-      setAutoValidatedAt(precomputedResults.validatedAt || null);
+      setAutoValidatedAt(precomputedResults.validatedAt || new Date().toISOString());
     }
   }, [precomputedResults, keyField]);
 
