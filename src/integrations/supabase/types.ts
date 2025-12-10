@@ -4328,6 +4328,7 @@ export type Database = {
         | "form"
         | "letter"
         | "other"
+        | "petition"
       job_priority: "low" | "normal" | "high" | "urgent"
       job_status: "pending" | "processing" | "completed" | "failed" | "retrying"
       license_status: "active" | "expired" | "suspended" | "exhausted"
@@ -4491,6 +4492,7 @@ export const Constants = {
         "form",
         "letter",
         "other",
+        "petition",
       ],
       job_priority: ["low", "normal", "high", "urgent"],
       job_status: ["pending", "processing", "completed", "failed", "retrying"],
