@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
   CheckCircle2, XCircle, AlertCircle, Loader2, RefreshCw, Clock, 
-  Users, FileCheck, FileX, ChevronDown, ChevronUp 
+  Users, FileCheck, FileX, ChevronDown, ChevronUp, PenTool
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -77,6 +77,10 @@ interface ValidationResult {
     score?: number;
   }>;
   message?: string;
+  signatureStatus?: {
+    present: boolean;
+    value: string;
+  };
 }
 
 export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precomputedResults }: LineItemValidationProps) => {
@@ -89,13 +93,13 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
   // Load precomputed results if available
   useEffect(() => {
     if (precomputedResults?.validated && precomputedResults.results?.length > 0) {
-      const converted: ValidationResult[] = precomputedResults.results.map((r) => ({
+      const converted: ValidationResult[] = precomputedResults.results.map((r: any) => ({
         index: r.lineIndex,
-        keyValue: r.lineItem[keyField] || r.lineItem[keyField.toLowerCase()] || `Row ${r.lineIndex + 1}`,
+        keyValue: r.lineItem[keyField] || r.lineItem[keyField.toLowerCase()] || r.lineItem.Printed_Name || r.lineItem.printed_name || `Row ${r.lineIndex + 1}`,
         found: r.found,
         allMatch: r.found && r.matchScore >= 0.9,
         matchScore: r.matchScore,
-        validationResults: r.fieldResults.map((fr) => ({
+        validationResults: r.fieldResults.map((fr: any) => ({
           field: fr.field,
           excelValue: fr.lookupValue || '',
           wisdmValue: fr.extractedValue || '',
@@ -106,6 +110,10 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
         message: r.found 
           ? `Match score: ${Math.round(r.matchScore * 100)}%` 
           : 'Not found in voter registry',
+        signatureStatus: r.signatureStatus || {
+          present: (r.lineItem.Signature_Present || r.lineItem.signature_present || '').toString().toLowerCase() === 'yes',
+          value: r.lineItem.Signature_Present || r.lineItem.signature_present || 'unknown'
+        }
       }));
       
       setValidationResults(converted);
@@ -223,6 +231,8 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
   const validCount = validationResults.filter(r => r.allMatch).length;
   const mismatchCount = validationResults.filter(r => r.found && !r.allMatch).length;
   const notFoundCount = validationResults.filter(r => !r.found).length;
+  const signaturesPresent = validationResults.filter(r => r.signatureStatus?.present).length;
+  const signaturesMissing = validationResults.filter(r => r.signatureStatus && !r.signatureStatus.present).length;
   const validPercentage = validationResults.length > 0 
     ? Math.round((validCount / totalSignatures) * 100) 
     : 0;
@@ -280,21 +290,25 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-4 gap-4">
-          <div className="bg-background/80 backdrop-blur rounded-lg p-4 text-center border">
-            <div className="text-3xl font-bold text-foreground">{totalSignatures}</div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wide mt-1">Total Signatures</div>
+        <div className="grid grid-cols-5 gap-3">
+          <div className="bg-background/80 backdrop-blur rounded-lg p-3 text-center border">
+            <div className="text-2xl font-bold text-foreground">{totalSignatures}</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wide mt-1">Total</div>
           </div>
-          <div className="bg-success/10 rounded-lg p-4 text-center border border-success/20">
-            <div className="text-3xl font-bold text-success">{validCount}</div>
-            <div className="text-xs text-success uppercase tracking-wide mt-1">Valid</div>
+          <div className="bg-primary/10 rounded-lg p-3 text-center border border-primary/20">
+            <div className="text-2xl font-bold text-primary">{signaturesPresent}</div>
+            <div className="text-xs text-primary uppercase tracking-wide mt-1">Signed</div>
           </div>
-          <div className="bg-warning/10 rounded-lg p-4 text-center border border-warning/20">
-            <div className="text-3xl font-bold text-warning">{mismatchCount}</div>
+          <div className="bg-success/10 rounded-lg p-3 text-center border border-success/20">
+            <div className="text-2xl font-bold text-success">{validCount}</div>
+            <div className="text-xs text-success uppercase tracking-wide mt-1">Registry Match</div>
+          </div>
+          <div className="bg-warning/10 rounded-lg p-3 text-center border border-warning/20">
+            <div className="text-2xl font-bold text-warning">{mismatchCount}</div>
             <div className="text-xs text-warning uppercase tracking-wide mt-1">Mismatch</div>
           </div>
-          <div className="bg-destructive/10 rounded-lg p-4 text-center border border-destructive/20">
-            <div className="text-3xl font-bold text-destructive">{notFoundCount}</div>
+          <div className="bg-destructive/10 rounded-lg p-3 text-center border border-destructive/20">
+            <div className="text-2xl font-bold text-destructive">{notFoundCount}</div>
             <div className="text-xs text-destructive uppercase tracking-wide mt-1">Not Found</div>
           </div>
         </div>
@@ -335,7 +349,8 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
                 <TableHead>Address</TableHead>
                 <TableHead>City</TableHead>
                 <TableHead>Zip</TableHead>
-                <TableHead className="w-24 text-center">Status</TableHead>
+                <TableHead className="w-24 text-center">Signature</TableHead>
+                <TableHead className="w-24 text-center">Registry</TableHead>
                 <TableHead className="w-20 text-center">Match</TableHead>
                 <TableHead className="w-12"></TableHead>
               </TableRow>
@@ -360,6 +375,19 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
                         <TableCell className="text-sm">{lineItem.Address || lineItem.address || '-'}</TableCell>
                         <TableCell className="text-sm">{lineItem.City || lineItem.city || '-'}</TableCell>
                         <TableCell className="text-sm font-mono">{lineItem.Zip || lineItem.zip || '-'}</TableCell>
+                        <TableCell className="text-center">
+                          {result.signatureStatus?.present ? (
+                            <Badge className="bg-success text-success-foreground">
+                              <PenTool className="h-3 w-3 mr-1" />
+                              Signed
+                            </Badge>
+                          ) : (
+                            <Badge variant="destructive">
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Missing
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell className="text-center">
                           {result.allMatch ? (
                             <Badge className="bg-success text-success-foreground">
@@ -404,7 +432,7 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
                       </TableRow>
                       <CollapsibleContent asChild>
                         <TableRow className="bg-muted/30">
-                          <TableCell colSpan={8} className="p-4">
+                          <TableCell colSpan={9} className="p-4">
                             {result.validationResults && result.validationResults.length > 0 ? (
                               <div className="grid grid-cols-2 gap-3">
                                 {result.validationResults.map((fieldResult, fieldIdx) => (

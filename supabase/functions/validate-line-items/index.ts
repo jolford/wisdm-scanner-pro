@@ -288,6 +288,13 @@ serve(async (req) => {
         }
       }
 
+      // Add signature status from extracted line item (for petitions)
+      const signaturePresent = lineItem.Signature_Present || lineItem.signature_present || '';
+      itemResult.signatureStatus = {
+        present: signaturePresent.toLowerCase() === 'yes' || signaturePresent === true,
+        value: signaturePresent
+      };
+
       validationResults.push(itemResult);
     }
 

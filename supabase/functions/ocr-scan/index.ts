@@ -279,6 +279,16 @@ serve(async (req) => {
              lowerName.includes('hipaa');
     });
     
+    // Check if this is a petition document (multiple signers)
+    const isPetition = extractionFields && extractionFields.some((f: any) => {
+      const lowerName = f.name.toLowerCase();
+      return lowerName.includes('printed_name') || 
+             lowerName.includes('printed name') ||
+             lowerName.includes('signer') ||
+             lowerName.includes('petition') ||
+             lowerName.includes('signature');
+    });
+    
     // --- BUILD SPECIALIZED PROMPTS BASED ON EXTRACTION REQUIREMENTS ---
     if (extractionFields && extractionFields.length > 0) {
       const fieldNames = extractionFields.map((f: any) => f.name);
@@ -341,6 +351,65 @@ RESPONSE REQUIREMENTS:
 CRITICAL: Look carefully at each field label and extract ANY handwritten or typed text you see in or near that field. If "Name of Patient" has "Jim Hughes" written on it, extract "Jim Hughes". If checkboxes are marked, list all checked items. DO NOT just return the field labels - extract the ACTUAL VALUES written in the form.
 
 RESPOND WITH ONLY THE JSON OBJECT containing the extracted values.`;
+      } else if (isPetition) {
+        // SPECIALIZED PROMPT FOR PETITION/SIGNATURE SHEETS
+        // Extract ALL signers as line items with name, signature status, city, zip
+        const baseJson = `{"fullText": "complete extracted text", "documentType": "petition", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "first signer value only", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}, "lineItems": []}`;
+        
+        systemPrompt = `CRITICAL: You MUST return ONLY valid JSON with no additional text, explanations, or markdown formatting.
+
+You are an advanced OCR system specialized in extracting petition signatures. This document contains MULTIPLE SIGNERS in a table/list format.
+
+Return this EXACT JSON structure: ${baseJson}
+
+PETITION EXTRACTION RULES:
+1. This is a PETITION or SIGNATURE SHEET with multiple rows of signers
+2. EXTRACT EVERY SINGLE ROW as a separate line item in the "lineItems" array
+3. Each row typically contains: printed name, signature, city/address, zip code
+4. Look for numbered rows (1, 2, 3...) or repeated row patterns
+5. READ CAREFULLY - handwritten names may be cursive or hard to read
+
+LINE ITEM EXTRACTION:
+For EACH signer row, extract into lineItems array:
+- "Printed_Name": The printed/written name (e.g., "Michael Lory", "Owen Doyles")
+- "Signature_Present": "yes" if signature exists in that row, "no" if blank
+- "Address": Full address if present, or partial address/street
+- "City": City name (e.g., "Roseville", "Silver Springs")
+- "Zip": ZIP code (e.g., "95678", "91234")
+- "Row_Number": The row number if visible (1, 2, 3, etc.)
+
+CRITICAL:
+- Extract ALL rows, not just the first one
+- Even if some fields are hard to read, include the row with your best guess
+- If a signature row is empty/blank, still include it with Signature_Present: "no"
+- Count the total signatures at the end
+
+For the "fields" object, extract only the FIRST signer's data.
+
+RESPONSE REQUIREMENTS:
+- Return ONLY the JSON object
+- NO markdown code blocks
+- NO explanatory text
+- lineItems MUST contain ALL signer rows`;
+
+        userPrompt = `This is a PETITION SIGNATURE SHEET with MULTIPLE SIGNERS. 
+
+CRITICAL TASK: Extract EVERY SINGLE SIGNER ROW into the lineItems array.
+
+For each row on the petition, extract:
+- Printed_Name (handwritten or printed name)
+- Signature_Present (yes/no)
+- Address (if visible)
+- City 
+- Zip code
+- Row_Number
+
+I can see there are multiple rows with names like "Michael Lory", "Owen Doyles", "Emily Cole", etc. 
+Extract ALL of them - do not stop at the first row.
+
+Count every visible signature row and include it in lineItems.
+
+RESPOND WITH ONLY THE JSON OBJECT - NO OTHER TEXT.`;
       } else if (isCasinoVoucher) {
         // SPECIALIZED PROMPT FOR CASINO VOUCHER/JACKPOT SLIP EXTRACTION
         const baseJson = `{"fullText": "complete extracted text", "documentType": "casino_voucher", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "extracted value", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}}`;
