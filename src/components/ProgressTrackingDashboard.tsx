@@ -11,6 +11,8 @@ interface ProgressMetrics {
   avgTimePerDoc: number; // in seconds
   topVendor?: string;
   accuracy: number; // percentage
+  ocrProcessed?: number; // OCR processed count
+  ocrTotal?: number; // Total documents for OCR
 }
 
 interface ProgressTrackingDashboardProps {
@@ -22,6 +24,10 @@ export const ProgressTrackingDashboard = ({ metrics, batchName }: ProgressTracki
   const completionPercentage = metrics.totalDocuments > 0 
     ? Math.round((metrics.validated / metrics.totalDocuments) * 100) 
     : 0;
+  
+  const ocrPercentage = (metrics.ocrTotal && metrics.ocrTotal > 0)
+    ? Math.round(((metrics.ocrProcessed || 0) / metrics.ocrTotal) * 100) 
+    : null;
   
   const formatTime = (seconds: number) => {
     if (seconds < 60) return `${Math.round(seconds)}s`;
@@ -39,12 +45,31 @@ export const ProgressTrackingDashboard = ({ metrics, batchName }: ProgressTracki
         </p>
       </div>
 
-      {/* Progress Bar */}
+      {/* Progress Bars */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 space-y-4">
+          {/* OCR Progress - Show if we have OCR metrics and processing isn't complete */}
+          {ocrPercentage !== null && ocrPercentage < 100 && (
+            <div className="space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="font-medium flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-purple-500" />
+                  OCR Processing
+                </span>
+                <span className="text-muted-foreground">{ocrPercentage}%</span>
+              </div>
+              <Progress value={ocrPercentage} className="h-2" />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>{metrics.ocrProcessed || 0} processed</span>
+                <span>{(metrics.ocrTotal || 0) - (metrics.ocrProcessed || 0)} remaining</span>
+              </div>
+            </div>
+          )}
+          
+          {/* Validation Progress */}
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="font-medium">Overall Progress</span>
+              <span className="font-medium">Validation Progress</span>
               <span className="text-muted-foreground">{completionPercentage}%</span>
             </div>
             <Progress value={completionPercentage} className="h-3" />

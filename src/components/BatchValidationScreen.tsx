@@ -107,6 +107,8 @@ interface BatchValidationScreenProps {
   onSwitchToExport?: () => void;
   enableSignatureVerification?: boolean;
   detectPii?: boolean; // Whether PII detection is enabled for this project
+  ocrProcessed?: number; // OCR processed count from batch
+  ocrTotal?: number; // Total documents for OCR from batch
 }
 
 interface DocumentViewerWithSignedUrlProps {
@@ -187,6 +189,8 @@ export const BatchValidationScreen = ({
   onSwitchToExport,
   enableSignatureVerification = false,
   detectPii = false,
+  ocrProcessed,
+  ocrTotal,
 }: BatchValidationScreenProps) => {
   // Check if this is an AB1466 project (by project name, not batch name)
   const isAB1466Project = projectName?.toLowerCase().includes('ab1466') || projectName?.toLowerCase().includes('ab 1466');
@@ -525,6 +529,8 @@ export const BatchValidationScreen = ({
       ? Math.round((docsForMetrics.filter(d => d.validation_status === 'validated').length / docsForMetrics.length) * 100)
       : 0,
     topVendor: undefined, // Could be calculated from metadata
+    ocrProcessed,
+    ocrTotal,
   };
 
   // Keyboard shortcuts
