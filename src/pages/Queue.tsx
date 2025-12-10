@@ -2324,8 +2324,33 @@ const [isExporting, setIsExporting] = useState(false);
                               // Match the same logic as LineItemValidation: valid if found AND matchScore >= 90%
                               const isValid = result.found && result.matchScore >= 0.9;
                               const registryStatus = isValid ? 'Valid' : result.found ? 'Mismatch' : 'Not Found';
-                              const reason = isValid ? 'Verified in registry' : 
-                                             result.found ? 'Data mismatch with registry' : 'Not found in voter registry';
+                              
+                              // Generate detailed reason with specific field mismatches
+                              let reason = 'Verified in registry';
+                              if (!isValid) {
+                                if (!result.found) {
+                                  reason = 'Not found in voter registry';
+                                } else {
+                                  // Get specific field mismatches
+                                  const fieldMismatches: string[] = [];
+                                  const fieldResults = result.fieldResults || [];
+                                  for (const field of fieldResults) {
+                                    if (!field.matches) {
+                                      const fieldName = field.field?.replace(/_/g, ' ') || 'Unknown';
+                                      if (field.suggestion) {
+                                        fieldMismatches.push(`${fieldName}: expected "${field.suggestion}"`);
+                                      } else if (field.lookupValue) {
+                                        fieldMismatches.push(`${fieldName}: expected "${field.lookupValue}"`);
+                                      } else {
+                                        fieldMismatches.push(`${fieldName} mismatch`);
+                                      }
+                                    }
+                                  }
+                                  reason = fieldMismatches.length > 0 
+                                    ? fieldMismatches.join('; ') 
+                                    : 'Data mismatch with registry';
+                                }
+                              }
                               
                               rows.push([
                                 `"${(doc.file_name || '').replace(/"/g, '""')}"`,
