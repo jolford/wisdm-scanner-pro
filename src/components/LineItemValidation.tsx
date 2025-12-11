@@ -89,12 +89,60 @@ interface ValidationResult {
   };
 }
 
+interface ReferenceSignature {
+  name: string;
+  imageUrl: string;
+  signedUrl?: string;
+}
+
 export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precomputedResults }: LineItemValidationProps) => {
   const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
   const [isValidating, setIsValidating] = useState(false);
   const [autoValidatedAt, setAutoValidatedAt] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [referenceSignatures, setReferenceSignatures] = useState<Map<string, ReferenceSignature>>(new Map());
+  const [loadingSignatures, setLoadingSignatures] = useState(false);
   const { toast } = useToast();
+
+  // Fetch reference signatures for valid entries
+  const fetchReferenceSignatures = async (names: string[]) => {
+    if (names.length === 0) return;
+    
+    setLoadingSignatures(true);
+    try {
+      // Fetch matching signatures from signature_references table
+      const { data, error } = await supabase
+        .from('signature_references')
+        .select('entity_name, signature_image_url')
+        .in('entity_name', names)
+        .eq('is_active', true);
+
+      if (error) {
+        console.error('Error fetching reference signatures:', error);
+        return;
+      }
+
+      if (data && data.length > 0) {
+        const sigMap = new Map<string, ReferenceSignature>();
+        
+        // Get signed URLs for each signature image
+        for (const sig of data) {
+          const signedUrl = await getSignedUrl(sig.signature_image_url);
+          sigMap.set(sig.entity_name.toLowerCase(), {
+            name: sig.entity_name,
+            imageUrl: sig.signature_image_url,
+            signedUrl: signedUrl
+          });
+        }
+        
+        setReferenceSignatures(sigMap);
+      }
+    } catch (error) {
+      console.error('Error fetching reference signatures:', error);
+    } finally {
+      setLoadingSignatures(false);
+    }
+  };
 
   // Load precomputed results if available
   useEffect(() => {
@@ -126,6 +174,16 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
       
       setValidationResults(converted);
       setAutoValidatedAt(precomputedResults.validatedAt || new Date().toISOString());
+      
+      // Fetch reference signatures for valid entries
+      const validNames = converted
+        .filter(r => r.allMatch)
+        .map(r => r.keyValue)
+        .filter(name => name && name !== '(empty)');
+      
+      if (validNames.length > 0) {
+        fetchReferenceSignatures(validNames);
+      }
     }
   }, [precomputedResults, keyField]);
 
@@ -598,47 +656,93 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
                       <CollapsibleContent asChild>
                         <TableRow className="bg-muted/30">
                           <TableCell colSpan={9} className="p-4">
-                            {result.validationResults && result.validationResults.length > 0 ? (
-                              <div className="grid grid-cols-2 gap-3">
-                                {result.validationResults.map((fieldResult, fieldIdx) => (
-                                  <div
-                                    key={fieldIdx}
-                                    className={`p-3 rounded-lg border ${
-                                      fieldResult.matches
-                                        ? 'bg-success/10 border-success/20'
-                                        : 'bg-warning/10 border-warning/20'
-                                    }`}
-                                  >
-                                    <div className="flex items-center justify-between mb-2">
-                                      <span className="font-semibold text-sm">{fieldResult.field}</span>
-                                      {fieldResult.matches ? (
-                                        <CheckCircle2 className="h-4 w-4 text-success" />
-                                      ) : (
-                                        <AlertCircle className="h-4 w-4 text-warning" />
-                                      )}
+                            <div className="flex gap-4">
+                              {/* Reference Signature for valid entries */}
+                              {result.allMatch && (() => {
+                                const refSig = referenceSignatures.get(result.keyValue.toLowerCase());
+                                return refSig?.signedUrl ? (
+                                  <div className="flex-shrink-0 w-48">
+                                    <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                                      <PenTool className="h-3 w-3" />
+                                      Reference Signature
                                     </div>
-                                    <div className="grid grid-cols-2 gap-2 text-xs">
-                                      <div>
-                                        <span className="text-muted-foreground">Document:</span>
-                                        <div className="font-medium">{fieldResult.wisdmValue || '(empty)'}</div>
-                                      </div>
-                                      <div>
-                                        <span className="text-muted-foreground">Registry:</span>
-                                        <div className="font-medium">{fieldResult.excelValue || '(empty)'}</div>
-                                      </div>
+                                    <div className="border rounded-lg p-2 bg-background">
+                                      <img 
+                                        src={refSig.signedUrl} 
+                                        alt={`Reference signature for ${result.keyValue}`}
+                                        className="w-full h-auto max-h-24 object-contain"
+                                      />
                                     </div>
-                                    {!fieldResult.matches && fieldResult.suggestion && (
-                                      <div className="mt-2 pt-2 border-t border-border/30 text-xs">
-                                        <span className="text-muted-foreground">Suggestion: </span>
-                                        <span className="font-medium">{fieldResult.suggestion}</span>
-                                      </div>
-                                    )}
+                                    <p className="text-xs text-muted-foreground mt-1 text-center">{refSig.name}</p>
                                   </div>
-                                ))}
+                                ) : result.allMatch && !loadingSignatures ? (
+                                  <div className="flex-shrink-0 w-48">
+                                    <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                                      <PenTool className="h-3 w-3" />
+                                      Reference Signature
+                                    </div>
+                                    <div className="border rounded-lg p-4 bg-muted/50 text-center">
+                                      <p className="text-xs text-muted-foreground">No reference on file</p>
+                                    </div>
+                                  </div>
+                                ) : loadingSignatures ? (
+                                  <div className="flex-shrink-0 w-48">
+                                    <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                                      <PenTool className="h-3 w-3" />
+                                      Reference Signature
+                                    </div>
+                                    <div className="border rounded-lg p-4 bg-muted/50 text-center">
+                                      <Loader2 className="h-4 w-4 animate-spin mx-auto" />
+                                    </div>
+                                  </div>
+                                ) : null;
+                              })()}
+                              
+                              {/* Field validation results */}
+                              <div className="flex-1">
+                                {result.validationResults && result.validationResults.length > 0 ? (
+                                  <div className="grid grid-cols-2 gap-3">
+                                    {result.validationResults.map((fieldResult, fieldIdx) => (
+                                      <div
+                                        key={fieldIdx}
+                                        className={`p-3 rounded-lg border ${
+                                          fieldResult.matches
+                                            ? 'bg-success/10 border-success/20'
+                                            : 'bg-warning/10 border-warning/20'
+                                        }`}
+                                      >
+                                        <div className="flex items-center justify-between mb-2">
+                                          <span className="font-semibold text-sm">{fieldResult.field}</span>
+                                          {fieldResult.matches ? (
+                                            <CheckCircle2 className="h-4 w-4 text-success" />
+                                          ) : (
+                                            <AlertCircle className="h-4 w-4 text-warning" />
+                                          )}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-2 text-xs">
+                                          <div>
+                                            <span className="text-muted-foreground">Document:</span>
+                                            <div className="font-medium">{fieldResult.wisdmValue || '(empty)'}</div>
+                                          </div>
+                                          <div>
+                                            <span className="text-muted-foreground">Registry:</span>
+                                            <div className="font-medium">{fieldResult.excelValue || '(empty)'}</div>
+                                          </div>
+                                        </div>
+                                        {!fieldResult.matches && fieldResult.suggestion && (
+                                          <div className="mt-2 pt-2 border-t border-border/30 text-xs">
+                                            <span className="text-muted-foreground">Suggestion: </span>
+                                            <span className="font-medium">{fieldResult.suggestion}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-muted-foreground">{result.message || 'No detailed results available'}</p>
+                                )}
                               </div>
-                            ) : (
-                              <p className="text-sm text-muted-foreground">{result.message || 'No detailed results available'}</p>
-                            )}
+                            </div>
                           </TableCell>
                         </TableRow>
                       </CollapsibleContent>
