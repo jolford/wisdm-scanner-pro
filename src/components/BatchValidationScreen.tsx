@@ -1873,22 +1873,54 @@ export const BatchValidationScreen = ({
                         </div>
                       )}
                       
-                      {/* Show only first 5 extracted fields as badges to keep header compact */}
+                      {/* Show only document-level fields as badges - filter out line item fields for petitions */}
                       <div className="flex flex-wrap gap-2 mt-1">
-                        {projectFields.slice(0, 5).map((field) => {
-                          const rawValue = getMetadataValue(metadata, field.name);
-                          const formattedValue = rawValue ? autoFormatField(field.name, rawValue, (field as any).type) : 'N/A';
+                        {(() => {
+                          // For petition documents, only show document-level metadata (not signer fields)
+                          const isPetition = projectName?.toLowerCase().includes('petition') || 
+                                           doc.document_type?.toLowerCase().includes('petition');
+                          
+                          // Fields that are line-item data for petitions (should not show in header)
+                          const lineItemFields = ['Printed_Name', 'printed_name', 'Name', 'name', 
+                            'Address', 'address', 'City', 'city', 'Zip', 'zip', 
+                            'Signature', 'signature', 'Signature_Present', 'signature_present'];
+                          
+                          // Filter fields for petitions to exclude line item fields
+                          const displayFields = isPetition 
+                            ? projectFields.filter(f => !lineItemFields.some(lf => 
+                                f.name.toLowerCase() === lf.toLowerCase() || 
+                                f.name.toLowerCase().includes('signer') ||
+                                f.name.toLowerCase().includes('voter')
+                              ))
+                            : projectFields;
+                          
+                          const fieldsToShow = displayFields.slice(0, 5);
+                          
                           return (
-                            <Badge key={field.name} variant="outline" className="text-xs">
-                              {field.name}: {formattedValue}
-                            </Badge>
+                            <>
+                              {fieldsToShow.map((field) => {
+                                const rawValue = getMetadataValue(metadata, field.name);
+                                const formattedValue = rawValue ? autoFormatField(field.name, rawValue, (field as any).type) : 'N/A';
+                                return (
+                                  <Badge key={field.name} variant="outline" className="text-xs">
+                                    {field.name}: {formattedValue}
+                                  </Badge>
+                                );
+                              })}
+                              {displayFields.length > 5 && (
+                                <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                                  +{displayFields.length - 5} more fields
+                                </Badge>
+                              )}
+                              {/* For petitions, show signer count instead */}
+                              {isPetition && doc.line_items && doc.line_items.length > 0 && (
+                                <Badge variant="secondary" className="text-xs">
+                                  {doc.line_items.length} Signer{doc.line_items.length !== 1 ? 's' : ''}
+                                </Badge>
+                              )}
+                            </>
                           );
-                        })}
-                        {projectFields.length > 5 && (
-                          <Badge variant="outline" className="text-[10px] text-muted-foreground">
-                            +{projectFields.length - 5} more fields
-                          </Badge>
-                        )}
+                        })()}
                       </div>
                     </div>
                   </div>
