@@ -2298,7 +2298,13 @@ export const BatchValidationScreen = ({
                             </div>
 
                             {/* Line Items Table - Only show if table extraction is configured or line items exist */}
+                            {/* Skip if LineItemValidation component is already shown (voter registry validation) */}
                             {(() => {
+                          // If we already show LineItemValidation component, skip this editable table
+                          if (doc.validation_suggestions?.lookupValidation?.results?.length > 0) {
+                            return null;
+                          }
+                          
                           const hasLineItems = (doc.line_items && doc.line_items.length > 0) || editedLineItems[doc.id];
                           const tableConfig = (documents[0] as any)?.table_extraction_config;
                           const hasTableConfig = tableConfig?.fields && Array.isArray(tableConfig.fields) && tableConfig.fields.length > 0;
