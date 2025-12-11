@@ -5,8 +5,14 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
   CheckCircle2, XCircle, AlertCircle, Loader2, RefreshCw, Clock, 
-  Users, FileCheck, FileX, ChevronDown, ChevronUp, PenTool
+  Users, FileCheck, FileX, ChevronDown, ChevronUp, PenTool, Info
 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getSignedUrl } from '@/hooks/use-signed-url';
@@ -464,73 +470,131 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
                 return (
                   <Collapsible key={idx} open={isExpanded} onOpenChange={() => toggleRow(idx)} asChild>
                     <>
-                      <TableRow 
-                        className={`cursor-pointer hover:bg-muted/50 ${
-                          result.allMatch ? 'bg-success/5' : 
-                          result.found ? 'bg-warning/5' : 'bg-destructive/5'
-                        }`}
-                        onClick={() => toggleRow(idx)}
-                      >
-                        <TableCell className="font-mono text-muted-foreground">{result.index + 1}</TableCell>
-                        <TableCell className="font-medium">{result.keyValue}</TableCell>
-                        <TableCell className="text-sm">{lineItem.Address || lineItem.address || '-'}</TableCell>
-                        <TableCell className="text-sm">{lineItem.City || lineItem.city || '-'}</TableCell>
-                        <TableCell className="text-sm font-mono">{lineItem.Zip || lineItem.zip || '-'}</TableCell>
-                        <TableCell className="text-center">
-                          {result.signatureStatus?.present ? (
-                            <Badge className="bg-success text-success-foreground">
-                              <PenTool className="h-3 w-3 mr-1" />
-                              Signed
-                            </Badge>
-                          ) : (
-                            <Badge variant="destructive">
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Missing
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {result.allMatch ? (
-                            <Badge className="bg-success text-success-foreground">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Valid
-                            </Badge>
-                          ) : result.found ? (
-                            <Badge variant="secondary" className="bg-warning text-warning-foreground">
-                              <AlertCircle className="h-3 w-3 mr-1" />
-                              Mismatch
-                            </Badge>
-                          ) : (
-                            <Badge variant="destructive">
-                              <XCircle className="h-3 w-3 mr-1" />
-                              Not Found
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {result.matchScore !== undefined && result.found ? (
-                            <span className={`font-mono text-sm ${
-                              result.matchScore >= 0.9 ? 'text-success' :
-                              result.matchScore >= 0.7 ? 'text-warning' : 'text-destructive'
-                            }`}>
-                              {Math.round(result.matchScore * 100)}%
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">-</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <CollapsibleTrigger asChild>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              {isExpanded ? (
-                                <ChevronUp className="h-4 w-4" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4" />
-                              )}
-                            </Button>
-                          </CollapsibleTrigger>
-                        </TableCell>
-                      </TableRow>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <TableRow 
+                              className={`cursor-pointer hover:bg-muted/50 ${
+                                result.allMatch ? 'bg-success/5' : 
+                                result.found ? 'bg-warning/5' : 'bg-destructive/5'
+                              }`}
+                              onClick={() => toggleRow(idx)}
+                            >
+                              <TableCell className="font-mono text-muted-foreground">{result.index + 1}</TableCell>
+                              <TableCell className="font-medium">{result.keyValue}</TableCell>
+                              <TableCell className="text-sm">{lineItem.Address || lineItem.address || '-'}</TableCell>
+                              <TableCell className="text-sm">{lineItem.City || lineItem.city || '-'}</TableCell>
+                              <TableCell className="text-sm font-mono">{lineItem.Zip || lineItem.zip || '-'}</TableCell>
+                              <TableCell className="text-center">
+                                {result.signatureStatus?.present ? (
+                                  <Badge className="bg-success text-success-foreground">
+                                    <PenTool className="h-3 w-3 mr-1" />
+                                    Signed
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="destructive">
+                                    <XCircle className="h-3 w-3 mr-1" />
+                                    Missing
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {result.allMatch ? (
+                                  <Badge className="bg-success text-success-foreground">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Valid
+                                  </Badge>
+                                ) : result.found ? (
+                                  <Badge variant="secondary" className="bg-warning text-warning-foreground">
+                                    <AlertCircle className="h-3 w-3 mr-1" />
+                                    Mismatch
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="destructive">
+                                    <XCircle className="h-3 w-3 mr-1" />
+                                    Not Found
+                                  </Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {result.matchScore !== undefined && result.found ? (
+                                  <span className={`font-mono text-sm ${
+                                    result.matchScore >= 0.9 ? 'text-success' :
+                                    result.matchScore >= 0.7 ? 'text-warning' : 'text-destructive'
+                                  }`}>
+                                    {Math.round(result.matchScore * 100)}%
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <CollapsibleTrigger asChild>
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                    {isExpanded ? (
+                                      <ChevronUp className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronDown className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </CollapsibleTrigger>
+                              </TableCell>
+                            </TableRow>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-sm p-3">
+                            {(() => {
+                              // Build rejection reason tooltip
+                              if (result.allMatch) {
+                                return (
+                                  <div className="flex items-center gap-2 text-success">
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    <span>All fields match voter registry</span>
+                                  </div>
+                                );
+                              }
+                              
+                              if (!result.found) {
+                                return (
+                                  <div className="space-y-2">
+                                    <div className="flex items-center gap-2 text-destructive font-medium">
+                                      <XCircle className="h-4 w-4" />
+                                      <span>Not found in voter registry</span>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                      No matching record found for "{result.keyValue}"
+                                    </p>
+                                  </div>
+                                );
+                              }
+                              
+                              // Found but mismatch - show which fields don't match
+                              const mismatches = (result.validationResults || []).filter(fr => !fr.matches);
+                              return (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2 text-warning font-medium">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <span>Field mismatch detected</span>
+                                  </div>
+                                  {mismatches.length > 0 ? (
+                                    <ul className="text-xs space-y-1">
+                                      {mismatches.map((m, i) => (
+                                        <li key={i} className="flex flex-col">
+                                          <span className="font-medium text-foreground">{m.field}:</span>
+                                          <span className="text-muted-foreground">
+                                            Document: "{m.wisdmValue || '(empty)'}" → Registry: "{m.excelValue || '(empty)'}"
+                                          </span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : (
+                                    <p className="text-xs text-muted-foreground">Click to see details</p>
+                                  )}
+                                </div>
+                              );
+                            })()}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                       <CollapsibleContent asChild>
                         <TableRow className="bg-muted/30">
                           <TableCell colSpan={9} className="p-4">
