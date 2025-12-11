@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
   CheckCircle2, XCircle, AlertCircle, Loader2, RefreshCw, Clock, 
-  Users, FileCheck, FileX, ChevronDown, ChevronUp, PenTool, Info
+  Users, FileCheck, FileX, ChevronDown, ChevronUp, PenTool, Info, GripHorizontal
 } from 'lucide-react';
 import {
   Tooltip,
@@ -29,6 +29,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from '@/components/ui/resizable';
 
 interface LineItemValidationProps {
   lineItems: Array<Record<string, any>>;
@@ -413,99 +418,108 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
         )}
       </div>
 
-      {/* Follow-up Summary Lists */}
+      {/* Resizable Summary and Table Sections */}
       {validationResults.length > 0 && (
-        <div className="p-4 border-b bg-muted/30">
-          <h4 className="font-semibold mb-3 flex items-center gap-2">
-            📋 Signature Verification Summary
-          </h4>
+        <ResizablePanelGroup direction="vertical" className="min-h-[400px]">
+          {/* Follow-up Summary Lists - Resizable */}
+          <ResizablePanel defaultSize={35} minSize={15} maxSize={60}>
+            <div className="p-4 bg-muted/30 h-full overflow-y-auto">
+              <h4 className="font-semibold mb-3 flex items-center gap-2">
+                📋 Signature Verification Summary
+                <span className="text-xs text-muted-foreground font-normal ml-auto flex items-center gap-1">
+                  <GripHorizontal className="h-3 w-3" />
+                  Drag to resize
+                </span>
+              </h4>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Valid Signatures */}
+                <Collapsible open={showValidList} onOpenChange={setShowValidList}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between bg-success/10 border-success/30 hover:bg-success/20">
+                      <span className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-success" />
+                        <span className="font-semibold text-success">Valid Signatures</span>
+                        <Badge className="bg-success text-success-foreground ml-2">{validCount}</Badge>
+                      </span>
+                      {showValidList ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2">
+                    <div className="bg-success/5 border border-success/20 rounded-lg p-3 max-h-full overflow-y-auto">
+                      {validSignatures.length > 0 ? (
+                        <ul className="space-y-1">
+                          {validSignatures.map((sig, idx) => {
+                            const lineItem = lineItems[sig.index] || {};
+                            return (
+                              <li key={idx} className="flex items-center gap-2 text-sm">
+                                <CheckCircle2 className="h-3 w-3 text-success flex-shrink-0" />
+                                <span className="font-medium">{sig.keyValue}</span>
+                                <span className="text-muted-foreground">
+                                  - {lineItem.City || lineItem.city || ''} {lineItem.Zip || lineItem.zip || ''}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-muted-foreground italic">No valid signatures found</p>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Invalid Signatures - For Follow-up */}
+                <Collapsible open={showInvalidList} onOpenChange={setShowInvalidList}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="outline" className="w-full justify-between bg-destructive/10 border-destructive/30 hover:bg-destructive/20">
+                      <span className="flex items-center gap-2">
+                        <XCircle className="h-4 w-4 text-destructive" />
+                        <span className="font-semibold text-destructive">Invalid - Follow Up Required</span>
+                        <Badge variant="destructive" className="ml-2">{invalidCount}</Badge>
+                      </span>
+                      {showInvalidList ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-2">
+                    <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 max-h-full overflow-y-auto">
+                      {invalidSignatures.length > 0 ? (
+                        <ul className="space-y-2">
+                          {invalidSignatures.map((sig, idx) => {
+                            const lineItem = lineItems[sig.index] || {};
+                            const reason = !sig.found ? 'Not in registry' : 'Mismatch';
+                            return (
+                              <li key={idx} className="flex items-start gap-2 text-sm border-b border-destructive/10 pb-2 last:border-0 last:pb-0">
+                                <XCircle className="h-3 w-3 text-destructive flex-shrink-0 mt-0.5" />
+                                <div>
+                                  <span className="font-medium">{sig.keyValue}</span>
+                                  <div className="text-muted-foreground text-xs">
+                                    {lineItem.Address || lineItem.address || ''}, {lineItem.City || lineItem.city || ''} {lineItem.Zip || lineItem.zip || ''}
+                                  </div>
+                                  <Badge variant="outline" className="mt-1 text-xs">{reason}</Badge>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-success italic flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3" />
+                          All signatures are valid!
+                        </p>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            </div>
+          </ResizablePanel>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Valid Signatures */}
-            <Collapsible open={showValidList} onOpenChange={setShowValidList}>
-              <CollapsibleTrigger asChild>
-                <Button variant="outline" className="w-full justify-between bg-success/10 border-success/30 hover:bg-success/20">
-                  <span className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-success" />
-                    <span className="font-semibold text-success">Valid Signatures</span>
-                    <Badge className="bg-success text-success-foreground ml-2">{validCount}</Badge>
-                  </span>
-                  {showValidList ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2">
-                <div className="bg-success/5 border border-success/20 rounded-lg p-3 max-h-48 overflow-y-auto">
-                  {validSignatures.length > 0 ? (
-                    <ul className="space-y-1">
-                      {validSignatures.map((sig, idx) => {
-                        const lineItem = lineItems[sig.index] || {};
-                        return (
-                          <li key={idx} className="flex items-center gap-2 text-sm">
-                            <CheckCircle2 className="h-3 w-3 text-success flex-shrink-0" />
-                            <span className="font-medium">{sig.keyValue}</span>
-                            <span className="text-muted-foreground">
-                              - {lineItem.City || lineItem.city || ''} {lineItem.Zip || lineItem.zip || ''}
-                            </span>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-muted-foreground italic">No valid signatures found</p>
-                  )}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-
-            {/* Invalid Signatures - For Follow-up */}
-            <Collapsible open={showInvalidList} onOpenChange={setShowInvalidList}>
-              <CollapsibleTrigger asChild>
-                <Button variant="outline" className="w-full justify-between bg-destructive/10 border-destructive/30 hover:bg-destructive/20">
-                  <span className="flex items-center gap-2">
-                    <XCircle className="h-4 w-4 text-destructive" />
-                    <span className="font-semibold text-destructive">Invalid - Follow Up Required</span>
-                    <Badge variant="destructive" className="ml-2">{invalidCount}</Badge>
-                  </span>
-                  {showInvalidList ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                </Button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2">
-                <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 max-h-48 overflow-y-auto">
-                  {invalidSignatures.length > 0 ? (
-                    <ul className="space-y-2">
-                      {invalidSignatures.map((sig, idx) => {
-                        const lineItem = lineItems[sig.index] || {};
-                        const reason = !sig.found ? 'Not in registry' : 'Mismatch';
-                        return (
-                          <li key={idx} className="flex items-start gap-2 text-sm border-b border-destructive/10 pb-2 last:border-0 last:pb-0">
-                            <XCircle className="h-3 w-3 text-destructive flex-shrink-0 mt-0.5" />
-                            <div>
-                              <span className="font-medium">{sig.keyValue}</span>
-                              <div className="text-muted-foreground text-xs">
-                                {lineItem.Address || lineItem.address || ''}, {lineItem.City || lineItem.city || ''} {lineItem.Zip || lineItem.zip || ''}
-                              </div>
-                              <Badge variant="outline" className="mt-1 text-xs">{reason}</Badge>
-                            </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  ) : (
-                    <p className="text-sm text-success italic flex items-center gap-1">
-                      <CheckCircle2 className="h-3 w-3" />
-                      All signatures are valid!
-                    </p>
-                  )}
-                </div>
-              </CollapsibleContent>
-            </Collapsible>
-          </div>
-        </div>
-      )}
-
-      {/* Signatures Table */}
-      {validationResults.length > 0 ? (
-        <div className="overflow-x-auto">
+          <ResizableHandle withHandle className="bg-border hover:bg-primary/20 transition-colors" />
+          
+          {/* Signatures Table - Resizable */}
+          <ResizablePanel defaultSize={65} minSize={30}>
+            <div className="overflow-auto h-full">
           <Table>
             <TableHeader>
               <TableRow>
@@ -752,14 +766,19 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
               })}
             </TableBody>
           </Table>
-        </div>
-      ) : !isValidating ? (
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      )}
+      
+      {/* Empty State */}
+      {validationResults.length === 0 && !isValidating && (
         <div className="text-center py-12 text-muted-foreground">
           <FileX className="h-12 w-12 mx-auto mb-4 opacity-50" />
           <p className="text-lg font-medium mb-1">Not yet validated</p>
           <p className="text-sm">Click "Validate All" to check signatures against the voter registry</p>
         </div>
-      ) : null}
+      )}
     </Card>
   );
 };
