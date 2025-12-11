@@ -77,6 +77,8 @@ interface ValidationResult {
   index: number;
   keyValue: string;
   found: boolean;
+  partialMatch?: boolean;
+  mismatchReason?: string;
   allMatch: boolean;
   matchScore?: number;
   validationResults?: Array<{
@@ -154,28 +156,43 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
     // Check if we have results - don't require 'validated' flag
     if (precomputedResults?.results?.length > 0) {
       console.log('Loading precomputed validation results:', precomputedResults.results.length, 'items');
-      const converted: ValidationResult[] = precomputedResults.results.map((r: any) => ({
-        index: r.lineIndex,
-        keyValue: r.lineItem[keyField] || r.lineItem[keyField.toLowerCase()] || r.lineItem.Printed_Name || r.lineItem.printed_name || `Row ${r.lineIndex + 1}`,
-        found: r.found,
-        allMatch: r.found && r.matchScore >= 0.9,
-        matchScore: r.matchScore,
-        validationResults: r.fieldResults?.map((fr: any) => ({
-          field: fr.field,
-          excelValue: fr.lookupValue || '',
-          wisdmValue: fr.extractedValue || '',
-          matches: fr.matches,
-          suggestion: fr.suggestion,
-          score: fr.score,
-        })) || [],
-        message: r.found 
-          ? `Match score: ${Math.round(r.matchScore * 100)}%` 
-          : 'Not found in voter registry',
-        signatureStatus: r.signatureStatus || {
-          present: (r.lineItem?.Signature_Present || r.lineItem?.signature_present || '').toString().toLowerCase() === 'yes',
-          value: r.lineItem?.Signature_Present || r.lineItem?.signature_present || 'unknown'
+      const converted: ValidationResult[] = precomputedResults.results.map((r: any) => {
+        // Handle partial match (name found but address mismatch)
+        const isPartialMatch = r.partialMatch === true;
+        const isFullMatch = r.found && r.matchScore >= 0.9;
+        
+        let message = 'Not found in voter registry';
+        if (r.found) {
+          message = `Match score: ${Math.round(r.matchScore * 100)}%`;
+        } else if (isPartialMatch) {
+          message = r.mismatchReason === 'address_mismatch' 
+            ? 'Name found - Address mismatch' 
+            : 'Partial match found';
         }
-      }));
+        
+        return {
+          index: r.lineIndex,
+          keyValue: r.lineItem[keyField] || r.lineItem[keyField.toLowerCase()] || r.lineItem.Printed_Name || r.lineItem.printed_name || `Row ${r.lineIndex + 1}`,
+          found: r.found,
+          partialMatch: isPartialMatch,
+          mismatchReason: r.mismatchReason,
+          allMatch: isFullMatch,
+          matchScore: r.matchScore,
+          validationResults: r.fieldResults?.map((fr: any) => ({
+            field: fr.field,
+            excelValue: fr.lookupValue || '',
+            wisdmValue: fr.extractedValue || '',
+            matches: fr.matches,
+            suggestion: fr.suggestion,
+            score: fr.score,
+          })) || [],
+          message,
+          signatureStatus: r.signatureStatus || {
+            present: (r.lineItem?.Signature_Present || r.lineItem?.signature_present || '').toString().toLowerCase() === 'yes',
+            value: r.lineItem?.Signature_Present || r.lineItem?.signature_present || 'unknown'
+          }
+        };
+      });
       
       setValidationResults(converted);
       setAutoValidatedAt(precomputedResults.validatedAt || new Date().toISOString());
@@ -303,7 +320,8 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
   const invalidSignatures = validationResults.filter(r => !r.allMatch);
   const validCount = validSignatures.length;
   const mismatchCount = validationResults.filter(r => r.found && !r.allMatch).length;
-  const notFoundCount = validationResults.filter(r => !r.found).length;
+  const partialMatchCount = validationResults.filter(r => r.partialMatch).length;
+  const notFoundCount = validationResults.filter(r => !r.found && !r.partialMatch).length;
   const signaturesPresent = validationResults.filter(r => r.signatureStatus?.present).length;
   const signaturesMissing = validationResults.filter(r => r.signatureStatus && !r.signatureStatus.present).length;
   const validPercentage = validationResults.length > 0 
@@ -384,8 +402,8 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
             <div className="text-xs text-success uppercase tracking-wide mt-1">Registry Match</div>
           </div>
           <div className="bg-warning/10 rounded-lg p-3 text-center border border-warning/20">
-            <div className="text-2xl font-bold text-warning">{mismatchCount}</div>
-            <div className="text-xs text-warning uppercase tracking-wide mt-1">Mismatch</div>
+            <div className="text-2xl font-bold text-warning">{partialMatchCount}</div>
+            <div className="text-xs text-warning uppercase tracking-wide mt-1">Addr. Mismatch</div>
           </div>
           <div className="bg-destructive/10 rounded-lg p-3 text-center border border-destructive/20">
             <div className="text-2xl font-bold text-destructive">{notFoundCount}</div>
@@ -487,16 +505,26 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
                         <ul className="space-y-2">
                           {invalidSignatures.map((sig, idx) => {
                             const lineItem = lineItems[sig.index] || {};
-                            const reason = !sig.found ? 'Not in registry' : 'Mismatch';
+                            const isPartialMatch = sig.partialMatch;
+                            const reason = isPartialMatch 
+                              ? (sig.mismatchReason === 'address_mismatch' ? 'Address mismatch' : 'Partial match')
+                              : (sig.found ? 'Mismatch' : 'Not in registry');
+                            const iconColor = isPartialMatch ? 'text-warning' : 'text-destructive';
+                            const badgeVariant = isPartialMatch ? 'secondary' : 'outline';
+                            const badgeClass = isPartialMatch ? 'bg-warning/20 text-warning border-warning/30' : '';
                             return (
                               <li key={idx} className="flex items-start gap-2 text-sm border-b border-destructive/10 pb-2 last:border-0 last:pb-0">
-                                <XCircle className="h-3 w-3 text-destructive flex-shrink-0 mt-0.5" />
+                                {isPartialMatch ? (
+                                  <AlertCircle className={`h-3 w-3 ${iconColor} flex-shrink-0 mt-0.5`} />
+                                ) : (
+                                  <XCircle className={`h-3 w-3 ${iconColor} flex-shrink-0 mt-0.5`} />
+                                )}
                                 <div>
                                   <span className="font-medium">{sig.keyValue}</span>
                                   <div className="text-muted-foreground text-xs">
                                     {lineItem.Address || lineItem.address || ''}, {lineItem.City || lineItem.city || ''} {lineItem.Zip || lineItem.zip || ''}
                                   </div>
-                                  <Badge variant="outline" className="mt-1 text-xs">{reason}</Badge>
+                                  <Badge variant={badgeVariant} className={`mt-1 text-xs ${badgeClass}`}>{reason}</Badge>
                                 </div>
                               </li>
                             );
@@ -575,6 +603,11 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
                                   <Badge className="bg-success text-success-foreground">
                                     <CheckCircle2 className="h-3 w-3 mr-1" />
                                     Valid
+                                  </Badge>
+                                ) : result.partialMatch ? (
+                                  <Badge variant="secondary" className="bg-warning text-warning-foreground">
+                                    <AlertCircle className="h-3 w-3 mr-1" />
+                                    Addr. Mismatch
                                   </Badge>
                                 ) : result.found ? (
                                   <Badge variant="secondary" className="bg-warning text-warning-foreground">

@@ -209,6 +209,21 @@ serve(async (req) => {
     const validationResults: any[] = [];
     let validCount = 0;
     let invalidCount = 0;
+    let partialMatchCount = 0;
+
+    // Identify name fields for primary matching
+    const nameFields = lookupFields.filter((f: any) => 
+      f.wisdmField.toLowerCase().includes('name') || 
+      f.ecmField.toLowerCase().includes('name')
+    );
+    const addressFields = lookupFields.filter((f: any) => 
+      f.wisdmField.toLowerCase().includes('address') || 
+      f.wisdmField.toLowerCase().includes('city') || 
+      f.wisdmField.toLowerCase().includes('zip') ||
+      f.ecmField.toLowerCase().includes('address') || 
+      f.ecmField.toLowerCase().includes('city') || 
+      f.ecmField.toLowerCase().includes('zip')
+    );
 
     for (let i = 0; i < itemsToValidate.length; i++) {
       const lineItem = itemsToValidate[i];
@@ -216,18 +231,26 @@ serve(async (req) => {
         lineIndex: i,
         lineItem,
         found: false,
+        partialMatch: false,
         matchScore: 0,
         fieldResults: [],
-        bestMatch: null
+        bestMatch: null,
+        mismatchReason: null
       };
 
       // Try to find a matching record in the lookup data
       let bestMatch: any = null;
       let bestScore = 0;
+      let bestNameScore = 0;
+      let bestAddressScore = 0;
 
       for (const lookupRecord of lookupData) {
         let totalScore = 0;
         let fieldsChecked = 0;
+        let nameScore = 0;
+        let nameFieldsChecked = 0;
+        let addressScore = 0;
+        let addressFieldsChecked = 0;
 
         for (const fieldMapping of lookupFields) {
           const extractedValue = lineItem[fieldMapping.wisdmField] || '';
@@ -237,25 +260,62 @@ serve(async (req) => {
             const fieldScore = similarity(extractedValue, lookupValue);
             totalScore += fieldScore;
             fieldsChecked++;
+            
+            // Track name vs address scores separately
+            const isNameField = nameFields.some((nf: any) => nf.wisdmField === fieldMapping.wisdmField);
+            const isAddressField = addressFields.some((af: any) => af.wisdmField === fieldMapping.wisdmField);
+            
+            if (isNameField) {
+              nameScore += fieldScore;
+              nameFieldsChecked++;
+            }
+            if (isAddressField) {
+              addressScore += fieldScore;
+              addressFieldsChecked++;
+            }
           }
         }
 
         if (fieldsChecked > 0) {
           const avgScore = totalScore / fieldsChecked;
-          if (avgScore > bestScore) {
+          const avgNameScore = nameFieldsChecked > 0 ? nameScore / nameFieldsChecked : 0;
+          const avgAddressScore = addressFieldsChecked > 0 ? addressScore / addressFieldsChecked : 0;
+          
+          // Prioritize name match over address match
+          if (avgNameScore > bestNameScore || (avgNameScore === bestNameScore && avgScore > bestScore)) {
             bestScore = avgScore;
+            bestNameScore = avgNameScore;
+            bestAddressScore = avgAddressScore;
             bestMatch = lookupRecord;
           }
         }
       }
 
-      // If we found a good match (>70% similarity), record it
-      if (bestMatch && bestScore >= 0.7) {
-        itemResult.found = true;
-        itemResult.matchScore = bestScore;
-        itemResult.bestMatch = bestMatch;
+      // Evaluate match quality
+      if (bestMatch) {
+        // Full match: name matches well (≥70%) AND address matches well (≥70%)
+        if (bestNameScore >= 0.7 && bestAddressScore >= 0.7) {
+          itemResult.found = true;
+          itemResult.matchScore = bestScore;
+          itemResult.bestMatch = bestMatch;
+          validCount++;
+        }
+        // Partial match: name matches (≥70%) but address doesn't match well (<70%)
+        else if (bestNameScore >= 0.7) {
+          itemResult.found = false;
+          itemResult.partialMatch = true;
+          itemResult.matchScore = bestNameScore;
+          itemResult.bestMatch = bestMatch;
+          itemResult.mismatchReason = 'address_mismatch';
+          partialMatchCount++;
+          invalidCount++;
+        }
+        // No match: name doesn't match well
+        else {
+          invalidCount++;
+        }
 
-        // Compare each field
+        // Compare each field for the best match
         for (const fieldMapping of lookupFields) {
           const extractedValue = lineItem[fieldMapping.wisdmField] || '';
           const lookupValue = bestMatch[fieldMapping.ecmField] || '';
@@ -270,8 +330,6 @@ serve(async (req) => {
             suggestion: fieldScore < 0.9 ? lookupValue : null
           });
         }
-
-        validCount++;
       } else {
         invalidCount++;
         
@@ -298,7 +356,7 @@ serve(async (req) => {
       validationResults.push(itemResult);
     }
 
-    console.log(`Validation complete: ${validCount} valid, ${invalidCount} not found in registry`);
+    console.log(`Validation complete: ${validCount} valid, ${partialMatchCount} partial matches, ${invalidCount - partialMatchCount} not found`);
 
     // Store validation results in document metadata
     const { error: updateError } = await supabaseAdmin
@@ -311,6 +369,7 @@ serve(async (req) => {
             totalItems: itemsToValidate.length,
             validCount,
             invalidCount,
+            partialMatchCount,
             results: validationResults
           }
         },
@@ -328,6 +387,7 @@ serve(async (req) => {
         totalItems: itemsToValidate.length,
         validCount,
         invalidCount,
+        partialMatchCount,
         results: validationResults
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
