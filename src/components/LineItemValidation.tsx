@@ -31,6 +31,7 @@ interface LineItemValidationProps {
     }>;
   };
   keyField: string;
+  documentId?: string;
   precomputedResults?: {
     validated: boolean;
     validatedAt?: string;
@@ -42,6 +43,9 @@ interface LineItemValidationProps {
       lineItem: Record<string, any>;
       found: boolean;
       matchScore: number;
+      overrideApproved?: boolean;
+      rejected?: boolean;
+      overrideAt?: string;
       fieldResults: Array<{
         field: string;
         extractedValue: string;
@@ -88,7 +92,7 @@ interface ReferenceSignature {
   signedUrl?: string;
 }
 
-export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precomputedResults }: LineItemValidationProps) => {
+export const LineItemValidation = ({ lineItems, lookupConfig, keyField, documentId, precomputedResults }: LineItemValidationProps) => {
   const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
   const [isValidating, setIsValidating] = useState(false);
   const [autoValidatedAt, setAutoValidatedAt] = useState<string | null>(null);
@@ -177,7 +181,11 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
           signatureStatus: r.signatureStatus || {
             present: (r.lineItem?.Signature_Present || r.lineItem?.signature_present || '').toString().toLowerCase() === 'yes',
             value: r.lineItem?.Signature_Present || r.lineItem?.signature_present || 'unknown'
-          }
+          },
+          // Load operator action flags from precomputed results
+          overrideApproved: r.overrideApproved || false,
+          rejected: r.rejected || false,
+          overrideAt: r.overrideAt
         };
       });
       
@@ -301,29 +309,79 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
     setExpandedRows(newExpanded);
   };
 
+  // Persist operator action to database
+  const persistOperatorAction = async (updatedResults: ValidationResult[]) => {
+    if (!documentId || !precomputedResults) return;
+
+    try {
+      // Merge operator actions back into precomputed results
+      const updatedPrecomputed = {
+        ...precomputedResults,
+        results: precomputedResults.results.map((r: any) => {
+          const updatedResult = updatedResults.find(ur => ur.index === r.lineIndex);
+          if (updatedResult) {
+            return {
+              ...r,
+              overrideApproved: updatedResult.overrideApproved || false,
+              rejected: updatedResult.rejected || false,
+              overrideAt: updatedResult.overrideAt
+            };
+          }
+          return r;
+        })
+      };
+
+      // Update document validation_suggestions with operator actions
+      const { error } = await supabase
+        .from('documents')
+        .update({
+          validation_suggestions: {
+            lookupValidation: updatedPrecomputed
+          }
+        })
+        .eq('id', documentId);
+
+      if (error) {
+        console.error('Failed to persist operator action:', error);
+      }
+    } catch (err) {
+      console.error('Error persisting operator action:', err);
+    }
+  };
+
   // Override/Approve a flagged item
-  const handleOverrideApprove = (index: number) => {
-    setValidationResults(prev => prev.map(r => 
+  const handleOverrideApprove = async (index: number) => {
+    const updatedResults = validationResults.map(r => 
       r.index === index 
         ? { ...r, overrideApproved: true, rejected: false, overrideAt: new Date().toISOString() }
         : r
-    ));
+    );
+    setValidationResults(updatedResults);
+    
+    // Persist to database
+    await persistOperatorAction(updatedResults);
+    
     toast({
       title: 'Signature Approved',
-      description: 'Item has been manually approved and moved to valid signatures.',
+      description: 'Item has been manually approved and saved.',
     });
   };
 
   // Reject a signature - removes from counts/exports
-  const handleReject = (index: number) => {
-    setValidationResults(prev => prev.map(r => 
+  const handleReject = async (index: number) => {
+    const updatedResults = validationResults.map(r => 
       r.index === index 
         ? { ...r, rejected: true, overrideApproved: false }
         : r
-    ));
+    );
+    setValidationResults(updatedResults);
+    
+    // Persist to database
+    await persistOperatorAction(updatedResults);
+    
     toast({
       title: 'Signature Rejected',
-      description: 'Item has been rejected and will not be included in exports.',
+      description: 'Item has been rejected and saved.',
     });
   };
 

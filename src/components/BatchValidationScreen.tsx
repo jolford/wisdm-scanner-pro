@@ -2213,6 +2213,7 @@ export const BatchValidationScreen = ({
                                   lineItems={doc.validation_suggestions.lookupValidation.results.map((r: any) => r.lineItem).filter(Boolean)}
                                   lookupConfig={{ system: 'csv' }}
                                   keyField="Printed_Name"
+                                  documentId={doc.id}
                                   precomputedResults={doc.validation_suggestions.lookupValidation}
                                 />
                               </div>
