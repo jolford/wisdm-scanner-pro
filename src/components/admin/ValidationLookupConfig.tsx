@@ -55,6 +55,7 @@ interface ValidationLookupConfigProps {
   disabled?: boolean;
   projectId?: string;
   customerId?: string;
+  projectName?: string;
 }
 
 export function ValidationLookupConfig({ 
@@ -63,8 +64,11 @@ export function ValidationLookupConfig({
   onConfigChange,
   disabled = false,
   projectId,
-  customerId
+  customerId,
+  projectName
 }: ValidationLookupConfigProps) {
+  // Check if this is a petition project
+  const isPetitionProject = projectName?.toLowerCase().includes('petition') ?? false;
   const [testing, setTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [availableProjects, setAvailableProjects] = useState<ECMProject[]>([]);
@@ -345,8 +349,8 @@ export function ValidationLookupConfig({
 
       toast.success(`${fileType} file uploaded successfully`);
 
-      // For CSV files with voter registry columns, import into database for fast lookups
-      if (isCSV && customerId && csvText) {
+      // For petition projects with CSV files containing voter registry columns, import into database for fast lookups
+      if (isCSV && isPetitionProject && customerId && csvText) {
         const lowerColumns = columns.map(c => c.toLowerCase());
         const hasNameColumn = lowerColumns.some(c => c.includes('name'));
         const hasAddressColumn = lowerColumns.some(c => c.includes('address') || c.includes('city') || c.includes('zip'));
@@ -597,7 +601,7 @@ export function ValidationLookupConfig({
                   Current file: <a href={config.excelFileUrl} target="_blank" rel="noreferrer" className="underline">{config.excelFileName}</a>
                 </p>
               )}
-              {voterRegistryCount !== null && voterRegistryCount > 0 && (
+              {isPetitionProject && voterRegistryCount !== null && voterRegistryCount > 0 && (
                 <Badge variant="secondary" className="w-fit">
                   {voterRegistryCount.toLocaleString()} voter records indexed for fast lookups
                 </Badge>
