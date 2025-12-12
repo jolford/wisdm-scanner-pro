@@ -65,7 +65,7 @@ export const SignatureCardList = ({
   }
 
   return (
-    <div className="space-y-2 p-4">
+    <div className="space-y-1.5 p-2">
       {results.map((result) => {
         const lineItem = lineItems[result.index] || {};
         const refSig = referenceSignatures.get(result.keyValue.toLowerCase());

@@ -507,7 +507,7 @@ export const InteractiveDocumentViewer = ({
 
   return (
     <TooltipProvider>
-      <Card ref={cardRef} className="p-0 flex flex-row min-h-[280px] overflow-hidden border-2 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-background via-background to-primary/5">
+      <Card ref={cardRef} className="p-0 flex flex-row min-h-[400px] h-full overflow-hidden border-2 shadow-lg hover:shadow-2xl transition-all duration-300 bg-gradient-to-br from-background via-background to-primary/5">
         {/* Thumbnail Navigation for PDFs */}
         {isPdf && totalPages > 1 && (
           <DocumentThumbnailNav

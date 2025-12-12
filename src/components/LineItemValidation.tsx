@@ -410,30 +410,18 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, document
   const forReviewCount = forReviewItems.length;
 
   return (
-    <Card className="p-0 overflow-hidden">
-      {/* Summary Header */}
-      <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-4 border-b">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/20 rounded-lg">
-              <Users className="h-5 w-5 text-primary" />
+    <Card className="p-0 overflow-hidden h-full flex flex-col">
+      {/* Compact Summary Header */}
+      <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-3 border-b flex-shrink-0">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-primary/20 rounded-lg">
+              <Users className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <h3 className="text-lg font-bold">Petition Signature Validation</h3>
+              <h3 className="text-sm font-bold">Signature Validation</h3>
               <p className="text-xs text-muted-foreground">
-                {validationResults.length > 0 ? (
-                  <>
-                    Compared against voter registry
-                    {autoValidatedAt && (
-                      <span className="ml-2 inline-flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        Auto-validated
-                      </span>
-                    )}
-                  </>
-                ) : (
-                  `${totalSignatures} signature(s) extracted`
-                )}
+                {validationResults.length > 0 ? 'Voter registry comparison' : `${totalSignatures} signatures`}
               </p>
             </div>
           </div>
@@ -441,69 +429,67 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, document
             onClick={validateAllLineItems}
             disabled={isValidating || !lookupConfig.excelFileUrl}
             size="sm"
+            variant="outline"
+            className="h-7 text-xs"
           >
             {isValidating ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
                 Validating...
               </>
             ) : validationResults.length > 0 ? (
               <>
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className="h-3 w-3 mr-1" />
                 Re-validate
               </>
             ) : (
               <>
-                <FileCheck className="h-4 w-4 mr-2" />
-                Validate All
+                <FileCheck className="h-3 w-3 mr-1" />
+                Validate
               </>
             )}
           </Button>
         </div>
 
         {/* Compact Statistics */}
-        <div className="flex flex-wrap gap-2">
-          <Badge variant="outline" className="bg-background">
+        <div className="flex flex-wrap gap-1.5">
+          <Badge variant="outline" className="bg-background text-xs h-5">
             {totalSignatures} Total
           </Badge>
-          <Badge variant="outline" className="bg-success/10 text-success border-success/30">
-            <CheckCircle2 className="h-3 w-3 mr-1" />
-            {validCount} Valid
+          <Badge variant="outline" className="bg-success/10 text-success border-success/30 text-xs h-5">
+            <CheckCircle2 className="h-3 w-3 mr-0.5" />
+            {validCount}
           </Badge>
-          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
-            <AlertCircle className="h-3 w-3 mr-1" />
-            {forReviewCount} Review
+          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 text-xs h-5">
+            <AlertCircle className="h-3 w-3 mr-0.5" />
+            {forReviewCount}
           </Badge>
           {rejectedCount > 0 && (
-            <Badge variant="outline" className="bg-muted text-muted-foreground">
-              <Ban className="h-3 w-3 mr-1" />
-              {rejectedCount} Rejected
+            <Badge variant="outline" className="bg-muted text-muted-foreground text-xs h-5">
+              <Ban className="h-3 w-3 mr-0.5" />
+              {rejectedCount}
             </Badge>
           )}
-          <Badge variant="outline" className="ml-auto">
-            {validPercentage}% Valid Rate
-          </Badge>
         </div>
       </div>
 
-      {/* Tabbed Card List */}
       {validationResults.length > 0 && (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col">
-          <div className="border-b px-4 pt-2 bg-muted/30">
-            <TabsList className="grid w-full max-w-lg grid-cols-4">
-              <TabsTrigger value="valid" className="text-xs">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0">
+          <div className="border-b px-2 pt-1 bg-muted/30 flex-shrink-0">
+            <TabsList className="grid w-full grid-cols-4 h-8">
+              <TabsTrigger value="valid" className="text-xs h-7 px-2">
                 <CheckCircle2 className="h-3 w-3 mr-1" />
                 Valid ({validCount})
               </TabsTrigger>
-              <TabsTrigger value="review" className="text-xs">
+              <TabsTrigger value="review" className="text-xs h-7 px-2">
                 <ClipboardCheck className="h-3 w-3 mr-1" />
                 Review ({forReviewCount})
               </TabsTrigger>
-              <TabsTrigger value="rejected" className="text-xs">
+              <TabsTrigger value="rejected" className="text-xs h-7 px-2">
                 <Ban className="h-3 w-3 mr-1" />
                 Rejected ({rejectedCount})
               </TabsTrigger>
-              <TabsTrigger value="all" className="text-xs">
+              <TabsTrigger value="all" className="text-xs h-7 px-2">
                 <Users className="h-3 w-3 mr-1" />
                 All ({validationResults.length})
               </TabsTrigger>
@@ -511,7 +497,7 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, document
           </div>
           
           {/* Valid Signatures Tab */}
-          <TabsContent value="valid" className="flex-1 overflow-auto m-0 max-h-[400px]">
+          <TabsContent value="valid" className="flex-1 overflow-auto m-0">
             {validCount > 0 ? (
               <SignatureCardList 
                 results={validSignatures}
@@ -534,7 +520,7 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, document
           </TabsContent>
           
           {/* For Review Tab */}
-          <TabsContent value="review" className="flex-1 overflow-auto m-0 max-h-[400px]">
+          <TabsContent value="review" className="flex-1 overflow-auto m-0">
             {forReviewCount > 0 ? (
               <SignatureCardList 
                 results={forReviewItems}
@@ -557,7 +543,7 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, document
           </TabsContent>
           
           {/* Rejected Tab */}
-          <TabsContent value="rejected" className="flex-1 overflow-auto m-0 max-h-[400px]">
+          <TabsContent value="rejected" className="flex-1 overflow-auto m-0">
             {rejectedCount > 0 ? (
               <SignatureCardList 
                 results={validationResults.filter(r => r.rejected)}
@@ -580,7 +566,7 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, document
           </TabsContent>
           
           {/* All Signatures Tab */}
-          <TabsContent value="all" className="flex-1 overflow-auto m-0 max-h-[400px]">
+          <TabsContent value="all" className="flex-1 overflow-auto m-0">
             <SignatureCardList 
               results={validationResults}
               lineItems={lineItems}

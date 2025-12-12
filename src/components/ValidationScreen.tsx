@@ -1459,7 +1459,7 @@ useEffect(() => {
 
   return (
     <TooltipProvider>
-      <div className={displayFieldsAbove ? "flex flex-col gap-6 min-h-[calc(100vh-12rem)] pb-40" : "grid grid-cols-[2fr_1fr_2fr] gap-6 min-h-[calc(100vh-12rem)] pb-40"}>
+      <div className={displayFieldsAbove ? "flex flex-col gap-6 min-h-[calc(100vh-12rem)] pb-40" : "grid grid-cols-[3fr_1fr_2fr] gap-4 min-h-[calc(100vh-12rem)] pb-40"}>
         {/* Fields Above Document (when enabled) */}
         {displayFieldsAbove && (
           <Card className="p-6 flex flex-col overflow-hidden">
@@ -1648,7 +1648,7 @@ useEffect(() => {
         )}
         
         {/* Document and Text Grid (always visible) */}
-        <div className={displayFieldsAbove ? "grid grid-cols-[3fr_2fr] gap-6" : "contents"}>
+        <div className={displayFieldsAbove ? "grid grid-cols-[3fr_2fr] gap-4" : "contents"}>
         {/* Left: Document Viewer */}
         {useInteractiveViewer ? (
           <InteractiveDocumentViewer
