@@ -252,33 +252,56 @@ serve(async (req) => {
       console.log(`Loaded ${lookupData.length} voters from project registry`);
     } else {
       // Fallback: use customer-level registry if available (shared across petition projects)
-      const { data: customerRegistry, error: customerRegistryError } = await supabaseAdmin
-        .from('voter_registry')
-        .select('*')
-        .eq('customer_id', project.customer_id)
-        .limit(1);
-
-      if (customerRegistryError) {
-        console.error('Error checking customer voter registry:', customerRegistryError);
-      }
-
-      if (customerRegistry && customerRegistry.length > 0) {
-        useIndexedRegistry = true;
-        console.log('Using customer-scoped indexed voter registry');
-        const { data: allCustomerVoters } = await supabaseAdmin
+      if (project.customer_id) {
+        const { data: customerRegistry, error: customerRegistryError } = await supabaseAdmin
           .from('voter_registry')
           .select('*')
-          .eq('customer_id', project.customer_id);
+          .eq('customer_id', project.customer_id)
+          .limit(1);
 
-        lookupData = (allCustomerVoters || []).map(v => ({
-          Name: v.name,
-          name_normalized: v.name_normalized,
-          Address: v.address,
-          City: v.city,
-          Zip: v.zip,
-          signature_reference_url: v.signature_reference_url
-        }));
-        console.log(`Loaded ${lookupData.length} voters from customer registry`);
+        if (customerRegistryError) {
+          console.error('Error checking customer voter registry:', customerRegistryError);
+        }
+
+        if (customerRegistry && customerRegistry.length > 0) {
+          useIndexedRegistry = true;
+          console.log('Using customer-scoped indexed voter registry');
+          const { data: allCustomerVoters } = await supabaseAdmin
+            .from('voter_registry')
+            .select('*')
+            .eq('customer_id', project.customer_id);
+
+          lookupData = (allCustomerVoters || []).map(v => ({
+            Name: v.name,
+            name_normalized: v.name_normalized,
+            Address: v.address,
+            City: v.city,
+            Zip: v.zip,
+            signature_reference_url: v.signature_reference_url
+          }));
+          console.log(`Loaded ${lookupData.length} voters from customer registry`);
+        }
+      } else {
+        // No customer assigned to project (demo / sandbox project) – use all registry records
+        const { data: allVoters, error: allVotersError } = await supabaseAdmin
+          .from('voter_registry')
+          .select('*');
+
+        if (allVotersError) {
+          console.error('Error loading global voter registry:', allVotersError);
+        } else if (allVoters && allVoters.length > 0) {
+          useIndexedRegistry = true;
+          console.log('Using global indexed voter registry (no customer_id on project)');
+          lookupData = allVoters.map(v => ({
+            Name: v.name,
+            name_normalized: v.name_normalized,
+            Address: v.address,
+            City: v.city,
+            Zip: v.zip,
+            signature_reference_url: v.signature_reference_url
+          }));
+          console.log(`Loaded ${lookupData.length} voters from global registry`);
+        }
       }
     }
 
