@@ -1455,6 +1455,7 @@ const EditProject = () => {
                         disabled={!validationLookupConfig.enabled}
                         projectId={id}
                         customerId={customerId}
+                        projectName={projectName}
                       />
                     )}
                   </Card>
