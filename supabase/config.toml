@@ -148,3 +148,10 @@ verify_jwt = true
 # Line Item Validation (Petition/Voter Registry)
 [functions.validate-line-items]
 verify_jwt = false
+
+# Voter Registry Import and Fast Lookup
+[functions.import-voter-registry]
+verify_jwt = true
+
+[functions.validate-voter-registry]
+verify_jwt = true

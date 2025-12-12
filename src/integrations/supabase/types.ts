@@ -3813,6 +3813,84 @@ export type Database = {
           },
         ]
       }
+      voter_registry: {
+        Row: {
+          address: string | null
+          city: string | null
+          county: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          name: string
+          name_normalized: string
+          party_affiliation: string | null
+          precinct: string | null
+          project_id: string | null
+          raw_data: Json | null
+          registration_date: string | null
+          source_file: string | null
+          state: string | null
+          updated_at: string
+          voter_id: string | null
+          zip: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          county?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          name: string
+          name_normalized: string
+          party_affiliation?: string | null
+          precinct?: string | null
+          project_id?: string | null
+          raw_data?: Json | null
+          registration_date?: string | null
+          source_file?: string | null
+          state?: string | null
+          updated_at?: string
+          voter_id?: string | null
+          zip?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          county?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          name?: string
+          name_normalized?: string
+          party_affiliation?: string | null
+          precinct?: string | null
+          project_id?: string | null
+          raw_data?: Json | null
+          registration_date?: string | null
+          source_file?: string | null
+          state?: string | null
+          updated_at?: string
+          voter_id?: string | null
+          zip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "voter_registry_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "voter_registry_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       webhook_configs: {
         Row: {
           created_at: string
