@@ -2361,29 +2361,44 @@ const [isExporting, setIsExporting] = useState(false);
                       <Button 
                         onClick={async () => {
                           // Compile all signature validation results from all documents
-                          const headers = ['Document', 'Row #', 'Name', 'Address', 'City', 'Zip', 'Signature', 'Registry Status', 'Match Score', 'Reason'];
+                          const headers = ['Document', 'Row #', 'Name', 'Address', 'City', 'Zip', 'Signature', 'Registry Status', 'Match Score', 'Reason', 'Operator Action'];
                           const rows: string[] = [];
+                          let validCount = 0;
+                          let rejectedCount = 0;
                           
                           validatedDocs.forEach((doc: any) => {
                             const results = doc.validation_suggestions?.lookupValidation?.results || [];
                             results.forEach((result: any, idx: number) => {
-                              // Skip rejected signatures
-                              if (result.rejected) return;
-                              
                               const lineItem = result.lineItem || {};
                               const signaturePresent = result.signatureStatus?.present ?? 
                                 (lineItem.Signature_Present || lineItem.signature_present || '').toString().toLowerCase() === 'yes';
                               const signatureStatus = signaturePresent ? 'Signed' : 'Missing';
                               
+                              // Check if rejected by operator
+                              const isRejected = result.rejected === true;
+                              
                               // Check if operator override approved - if so, mark as Valid
                               const isOverrideApproved = result.overrideApproved === true;
                               // Match the same logic as LineItemValidation: valid if found AND matchScore >= 90%
-                              const isValid = isOverrideApproved || (result.found && result.matchScore >= 0.9);
-                              const registryStatus = isValid ? 'Valid' : result.found ? 'Mismatch' : 'Not Found';
+                              const isValid = !isRejected && (isOverrideApproved || (result.found && result.matchScore >= 0.9));
+                              
+                              // Track counts
+                              if (isRejected) {
+                                rejectedCount++;
+                              } else if (isValid) {
+                                validCount++;
+                              }
+                              
+                              const registryStatus = isRejected ? 'Rejected' : isValid ? 'Valid' : result.found ? 'Mismatch' : 'Not Found';
                               
                               // Generate detailed reason with specific field mismatches
-                              let reason = isOverrideApproved ? 'Manually approved by operator' : 'Verified in registry';
-                              if (!isValid) {
+                              let reason = isRejected 
+                                ? 'Rejected by operator' 
+                                : isOverrideApproved 
+                                  ? 'Manually approved by operator' 
+                                  : 'Verified in registry';
+                              
+                              if (!isRejected && !isValid) {
                                 if (!result.found) {
                                   reason = 'Not found in voter registry';
                                 } else {
@@ -2408,6 +2423,13 @@ const [isExporting, setIsExporting] = useState(false);
                                 }
                               }
                               
+                              // Operator action column
+                              const operatorAction = isRejected 
+                                ? 'Operator Rejected Signature' 
+                                : isOverrideApproved 
+                                  ? 'Operator Approved' 
+                                  : '';
+                              
                               rows.push([
                                 `"${(doc.file_name || '').replace(/"/g, '""')}"`,
                                 idx + 1,
@@ -2418,14 +2440,20 @@ const [isExporting, setIsExporting] = useState(false);
                                 signatureStatus,
                                 registryStatus,
                                 result.matchScore ? `${Math.round(result.matchScore * 100)}%` : 'N/A',
-                                `"${reason}"`
+                                `"${reason}"`,
+                                `"${operatorAction}"`
                               ].join(','));
                             });
                           });
                           
-                          // Add total signatures count at the bottom
-                          const totalRow = `\n"Total Signatures = ${rows.length}"`;
-                          const csvContent = [headers.join(','), ...rows].join('\n') + totalRow;
+                          // Add summary counts at the bottom
+                          const summaryRows = [
+                            '',
+                            `"Total Signatures = ${rows.length}"`,
+                            `"Valid Signatures = ${validCount}"`,
+                            `"Rejected Signatures = ${rejectedCount}"`
+                          ];
+                          const csvContent = [headers.join(','), ...rows, ...summaryRows].join('\n');
                           const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                           const url = URL.createObjectURL(blob);
                           const link = document.createElement('a');
