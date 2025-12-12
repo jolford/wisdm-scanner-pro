@@ -2317,16 +2317,22 @@ const [isExporting, setIsExporting] = useState(false);
                           validatedDocs.forEach((doc: any) => {
                             const results = doc.validation_suggestions?.lookupValidation?.results || [];
                             results.forEach((result: any, idx: number) => {
+                              // Skip rejected signatures
+                              if (result.rejected) return;
+                              
                               const lineItem = result.lineItem || {};
                               const signaturePresent = result.signatureStatus?.present ?? 
                                 (lineItem.Signature_Present || lineItem.signature_present || '').toString().toLowerCase() === 'yes';
                               const signatureStatus = signaturePresent ? 'Signed' : 'Missing';
+                              
+                              // Check if operator override approved - if so, mark as Valid
+                              const isOverrideApproved = result.overrideApproved === true;
                               // Match the same logic as LineItemValidation: valid if found AND matchScore >= 90%
-                              const isValid = result.found && result.matchScore >= 0.9;
+                              const isValid = isOverrideApproved || (result.found && result.matchScore >= 0.9);
                               const registryStatus = isValid ? 'Valid' : result.found ? 'Mismatch' : 'Not Found';
                               
                               // Generate detailed reason with specific field mismatches
-                              let reason = 'Verified in registry';
+                              let reason = isOverrideApproved ? 'Manually approved by operator' : 'Verified in registry';
                               if (!isValid) {
                                 if (!result.found) {
                                   reason = 'Not found in voter registry';
@@ -2367,7 +2373,9 @@ const [isExporting, setIsExporting] = useState(false);
                             });
                           });
                           
-                          const csvContent = [headers.join(','), ...rows].join('\n');
+                          // Add total signatures count at the bottom
+                          const totalRow = `\n"Total Signatures = ${rows.length}"`;
+                          const csvContent = [headers.join(','), ...rows].join('\n') + totalRow;
                           const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                           const url = URL.createObjectURL(blob);
                           const link = document.createElement('a');

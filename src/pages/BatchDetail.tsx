@@ -191,11 +191,18 @@ const BatchDetail = () => {
           const item = lineItems[i];
           const validationResult = lookupResults[i];
           
-          const isValid = validationResult?.found && 
-            validationResult?.matchScore >= 0.8 && 
-            validationResult?.signatureStatus?.present !== false;
+          // Skip rejected signatures
+          if (validationResult?.rejected) continue;
           
-          const reasons = validationResult ? getValidationReasons(validationResult) : 'Not validated';
+          // Check if operator override approved - if so, mark as Valid
+          const isOverrideApproved = validationResult?.overrideApproved === true;
+          const isValid = isOverrideApproved || (validationResult?.found && 
+            validationResult?.matchScore >= 0.8 && 
+            validationResult?.signatureStatus?.present !== false);
+          
+          const reasons = isOverrideApproved 
+            ? 'Manually approved by operator' 
+            : (validationResult ? getValidationReasons(validationResult) : 'Not validated');
           
           rows.push([
             batch?.batch_name || '',
@@ -213,7 +220,10 @@ const BatchDetail = () => {
         }
       }
 
-      const csv = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+      // Add total signatures count at the bottom
+      const csvRows = [headers, ...rows].map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+      const totalRow = `\n"Total Signatures = ${rows.length}"`;
+      const csv = csvRows + totalRow;
       const blob = new Blob([csv], { type: 'text/csv' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
