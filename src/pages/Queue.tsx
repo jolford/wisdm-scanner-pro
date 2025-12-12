@@ -1385,6 +1385,50 @@ const [isExporting, setIsExporting] = useState(false);
     }
   };
 
+  // Auto-delete batch and documents after successful export
+  const autoDeleteBatchAfterExport = async () => {
+    if (!selectedBatch) return;
+    
+    try {
+      // Delete all documents in the batch
+      const { error: docsError } = await supabase
+        .from('documents')
+        .delete()
+        .eq('batch_id', selectedBatch.id);
+      
+      if (docsError) {
+        console.error('Failed to delete documents:', docsError);
+        return;
+      }
+
+      // Delete the batch
+      const { error: batchError } = await supabase
+        .from('batches')
+        .delete()
+        .eq('id', selectedBatch.id);
+      
+      if (batchError) {
+        console.error('Failed to delete batch:', batchError);
+        return;
+      }
+
+      console.log(`Auto-deleted batch ${selectedBatch.batch_name} after successful export`);
+      
+      // Clear selection - the BatchSelector will auto-refresh via its useQuery
+      setSelectedBatch(null);
+      setSelectedBatchId(null);
+      setValidatedDocs([]);
+      setValidationQueue([]);
+      
+      toast({
+        title: 'Batch Deleted',
+        description: 'Batch and documents automatically removed after export',
+      });
+    } catch (error) {
+      console.error('Auto-delete failed:', error);
+    }
+  };
+
   const exportImages = async () => {
     if (!validatedDocs.length) {
       toast({
@@ -1427,6 +1471,9 @@ const [isExporting, setIsExporting] = useState(false);
       title: 'Images Downloaded',
       description: `Downloaded ${docsWithImages.length} images`,
     });
+
+    // Auto-delete after successful export
+    await autoDeleteBatchAfterExport();
   };
 
   const downloadRedactedImages = async () => {
@@ -1713,6 +1760,9 @@ const [isExporting, setIsExporting] = useState(false);
         title: 'PDF Generated',
         description: 'Batch exported as PDF successfully',
       });
+
+      // Auto-delete after successful export
+      await autoDeleteBatchAfterExport();
     } catch (error: any) {
       console.error('PDF generation error:', error);
       toast({
@@ -2309,7 +2359,7 @@ const [isExporting, setIsExporting] = useState(false);
                     <div className="pt-4 border-t">
                       <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Signature Validation Report</h4>
                       <Button 
-                        onClick={() => {
+                        onClick={async () => {
                           // Compile all signature validation results from all documents
                           const headers = ['Document', 'Row #', 'Name', 'Address', 'City', 'Zip', 'Signature', 'Registry Status', 'Match Score', 'Reason'];
                           const rows: string[] = [];
@@ -2387,7 +2437,10 @@ const [isExporting, setIsExporting] = useState(false);
                           URL.revokeObjectURL(url);
                           
                           toast({ title: 'Exported successfully', description: `${rows.length} signatures exported to CSV` });
-                        }} 
+
+                          // Auto-delete after successful export
+                          await autoDeleteBatchAfterExport();
+                        }}
                         disabled={validatedDocs.length === 0} 
                         variant="outline" 
                         className="w-full h-16 gap-2 hover:border-primary/50 hover:bg-primary/5"
