@@ -32,6 +32,8 @@ interface LineItemValidationProps {
   };
   keyField: string;
   documentId?: string;
+  projectId?: string;
+  authenticateSignatures?: boolean;
   precomputedResults?: {
     validated: boolean;
     validatedAt?: string;
@@ -55,6 +57,10 @@ interface LineItemValidationProps {
         suggestion: string | null;
       }>;
       bestMatch: Record<string, any> | null;
+      signatureStatus?: {
+        present: boolean;
+        value: string;
+      };
     }>;
   };
 }
@@ -92,7 +98,15 @@ interface ReferenceSignature {
   signedUrl?: string;
 }
 
-export const LineItemValidation = ({ lineItems, lookupConfig, keyField, documentId, precomputedResults }: LineItemValidationProps) => {
+export const LineItemValidation = ({
+  lineItems,
+  lookupConfig,
+  keyField,
+  documentId,
+  projectId,
+  authenticateSignatures,
+  precomputedResults,
+}: LineItemValidationProps) => {
   const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
   const [isValidating, setIsValidating] = useState(false);
   const [autoValidatedAt, setAutoValidatedAt] = useState<string | null>(null);
@@ -101,6 +115,9 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, document
   const [loadingSignatures, setLoadingSignatures] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('valid');
   const { toast } = useToast();
+
+  const isServerVoterRegistryMode =
+    lookupConfig.system === 'csv' && !lookupConfig.excelFileUrl && !!documentId && !!projectId;
 
   // Fetch reference signatures for valid entries
   const fetchReferenceSignatures = async (names: string[]) => {
@@ -205,6 +222,120 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, document
   }, [precomputedResults, keyField]);
 
   const validateAllLineItems = async () => {
+    // Petition / voter registry mode: re-run server-side validation
+    if (isServerVoterRegistryMode) {
+      if (!documentId || !projectId) return;
+
+      setIsValidating(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('validate-line-items', {
+          body: {
+            documentId,
+            projectId,
+            lineItems,
+            authenticateSignatures: authenticateSignatures ?? true,
+          },
+        });
+
+        if (error) {
+          console.error('Server validation error:', error);
+          toast({
+            title: 'Validation failed',
+            description: error.message || 'An error occurred while validating signatures',
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        if (!data?.results) {
+          console.warn('No validation results returned from validate-line-items');
+          return;
+        }
+
+        console.log('Reloaded validation results from server:', data.results.length, 'items');
+
+        const converted: ValidationResult[] = data.results.map((r: any) => {
+          const isPartialMatch = r.partialMatch === true;
+          const isFullMatch = r.found && r.matchScore >= 0.9;
+
+          let message = 'Not found in voter registry';
+          if (r.found) {
+            message = `Match score: ${Math.round(r.matchScore * 100)}%`;
+          } else if (isPartialMatch) {
+            message = r.mismatchReason === 'address_mismatch'
+              ? 'Name found - Address mismatch'
+              : 'Partial match found';
+          }
+
+          return {
+            index: r.lineIndex,
+            keyValue:
+              r.lineItem[keyField] ||
+              r.lineItem[keyField.toLowerCase()] ||
+              r.lineItem.Printed_Name ||
+              r.lineItem.printed_name ||
+              `Row ${r.lineIndex + 1}`,
+            found: r.found,
+            partialMatch: isPartialMatch,
+            mismatchReason: r.mismatchReason,
+            allMatch: isFullMatch,
+            matchScore: r.matchScore,
+            validationResults:
+              r.fieldResults?.map((fr: any) => ({
+                field: fr.field,
+                excelValue: fr.lookupValue || '',
+                wisdmValue: fr.extractedValue || '',
+                matches: fr.matches,
+                suggestion: fr.suggestion,
+                score: fr.score,
+              })) || [],
+            message,
+            signatureStatus:
+              r.signatureStatus || {
+                present:
+                  (r.lineItem?.Signature_Present || r.lineItem?.signature_present || '')
+                    .toString()
+                    .toLowerCase() === 'yes',
+                value: r.lineItem?.Signature_Present || r.lineItem?.signature_present || 'unknown',
+              },
+            overrideApproved: r.overrideApproved || false,
+            rejected: r.rejected || false,
+            overrideAt: r.overrideAt,
+            signatureAuthentication: r.signatureAuthentication,
+          };
+        });
+
+        setValidationResults(converted);
+        setAutoValidatedAt(new Date().toISOString());
+
+        const matchedNames = converted
+          .filter((r) => r.found || r.partialMatch)
+          .map((r) => r.keyValue)
+          .filter((name) => name && name !== '(empty)');
+
+        if (matchedNames.length > 0) {
+          fetchReferenceSignatures(matchedNames);
+        }
+
+        toast({
+          title: 'Signatures re-validated',
+          description: 'Voter registry results have been refreshed.',
+        });
+      } catch (error: any) {
+        console.error('Line item validation error:', error);
+        toast({
+          title: 'Validation failed',
+          description: error.message || 'An error occurred',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsValidating(false);
+      }
+
+      return;
+    }
+
+    // Generic CSV/Excel lookup mode (non-petition projects)
     if (!lookupConfig.excelFileUrl) {
       toast({
         title: 'Configuration incomplete',
@@ -218,9 +349,10 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, document
     const results: ValidationResult[] = [];
 
     try {
-      const keyColumn = lookupConfig.excelKeyColumn || 
-        lookupConfig.lookupFields?.find(f => 
-          f.wisdmField.toLowerCase() === keyField.toLowerCase()
+      const keyColumn =
+        lookupConfig.excelKeyColumn ||
+        lookupConfig.lookupFields?.find(
+          (f) => f.wisdmField.toLowerCase() === keyField.toLowerCase()
         )?.ecmField;
 
       for (let i = 0; i < lineItems.length; i++) {
@@ -239,10 +371,10 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, document
         }
 
         const lookupFields = (lookupConfig.lookupFields || [])
-          .filter(f => f.enabled !== false && f.lookupEnabled !== false)
-          .map(f => ({
+          .filter((f) => f.enabled !== false && f.lookupEnabled !== false)
+          .map((f) => ({
             ...f,
-            wisdmValue: lineItem[f.wisdmField] || lineItem[f.wisdmField.toLowerCase()] || '',
+            wisdmValue: lineItems[i][f.wisdmField] || lineItems[i][f.wisdmField.toLowerCase()] || '',
           }));
 
         const signedUrl = await getSignedUrl(lookupConfig.excelFileUrl);
@@ -280,8 +412,8 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, document
       setValidationResults(results);
       setAutoValidatedAt(null);
 
-      const foundCount = results.filter(r => r.found).length;
-      const matchCount = results.filter(r => r.allMatch).length;
+      const foundCount = results.filter((r) => r.found).length;
+      const matchCount = results.filter((r) => r.allMatch).length;
 
       toast({
         title: 'Line item validation complete',
@@ -421,7 +553,7 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, document
           </div>
           <Button
             onClick={validateAllLineItems}
-            disabled={isValidating || !lookupConfig.excelFileUrl}
+            disabled={isValidating || (!isServerVoterRegistryMode && !lookupConfig.excelFileUrl)}
             size="sm"
             variant="outline"
             className="h-6 text-[10px] px-2"

@@ -2227,6 +2227,8 @@ export const BatchValidationScreen = ({
                                   lookupConfig={{ system: 'csv' }}
                                   keyField="Printed_Name"
                                   documentId={doc.id}
+                                  projectId={doc.project_id}
+                                  authenticateSignatures={true}
                                   precomputedResults={doc.validation_suggestions.lookupValidation}
                                 />
                               </div>
