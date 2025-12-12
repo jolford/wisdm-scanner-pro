@@ -9,7 +9,9 @@ interface BatchProcessingStatusProps {
   status: string;
   totalDocuments: number;
   processedDocuments: number;
+  validatedDocuments?: number;
   className?: string;
+  showDetails?: boolean;
 }
 
 export const BatchProcessingStatus = ({ 
@@ -17,11 +19,14 @@ export const BatchProcessingStatus = ({
   status: initialStatus, 
   totalDocuments: initialTotal,
   processedDocuments: initialProcessed,
-  className 
+  validatedDocuments: initialValidated = 0,
+  className,
+  showDetails = false
 }: BatchProcessingStatusProps) => {
   const [status, setStatus] = useState(initialStatus);
   const [totalDocuments, setTotalDocuments] = useState(initialTotal);
   const [processedDocuments, setProcessedDocuments] = useState(initialProcessed);
+  const [validatedDocuments, setValidatedDocuments] = useState(initialValidated);
   const [isProcessing, setIsProcessing] = useState(
     ['new', 'scanning', 'indexing'].includes(initialStatus)
   );
@@ -43,6 +48,7 @@ export const BatchProcessingStatus = ({
           setStatus(newBatch.status);
           setTotalDocuments(newBatch.total_documents || 0);
           setProcessedDocuments(newBatch.processed_documents || 0);
+          setValidatedDocuments(newBatch.validated_documents || 0);
           setIsProcessing(['new', 'scanning', 'indexing'].includes(newBatch.status));
         }
       )
@@ -53,64 +59,76 @@ export const BatchProcessingStatus = ({
     };
   }, [batchId]);
 
-  const progress = totalDocuments > 0 
+  const ocrProgress = totalDocuments > 0 
     ? Math.round((processedDocuments / totalDocuments) * 100) 
     : 0;
 
-  // Check if batch is actually complete based on document counts
-  const isActuallyComplete = totalDocuments > 0 && processedDocuments >= totalDocuments;
+  const validationProgress = totalDocuments > 0 
+    ? Math.round((validatedDocuments / totalDocuments) * 100) 
+    : 0;
+
+  // Check if OCR is complete based on document counts
+  const isOcrComplete = totalDocuments > 0 && processedDocuments >= totalDocuments;
+  const isValidationComplete = totalDocuments > 0 && validatedDocuments >= totalDocuments;
 
   const getStatusConfig = () => {
-    // Override processing status if all documents are already processed
-    if (isActuallyComplete && ['scanning', 'indexing'].includes(status)) {
+    // Show different status based on actual progress
+    if (status === 'error') {
       return {
-        icon: CheckCircle2,
-        label: 'Ready',
-        color: 'bg-green-500',
-        showProgress: false
+        icon: XCircle,
+        label: 'Failed',
+        color: 'bg-red-500',
+        phase: 'error'
       };
     }
-    
-    switch (status) {
-      case 'new':
-        return {
-          icon: Clock,
-          label: 'Queued',
-          color: 'bg-blue-500',
-          showProgress: false
-        };
-      case 'scanning':
-      case 'indexing':
-        return {
-          icon: Loader2,
-          label: `Processing (${processedDocuments}/${totalDocuments})`,
-          color: 'bg-purple-500',
-          showProgress: true,
-          animate: true
-        };
-      case 'error':
-        return {
-          icon: XCircle,
-          label: 'Failed',
-          color: 'bg-red-500',
-          showProgress: false
-        };
-      case 'complete':
-      case 'validated':
-        return {
-          icon: CheckCircle2,
-          label: 'Complete',
-          color: 'bg-green-500',
-          showProgress: false
-        };
-      default:
-        return {
-          icon: Clock,
-          label: status,
-          color: 'bg-gray-500',
-          showProgress: false
-        };
+
+    if (status === 'new') {
+      return {
+        icon: Clock,
+        label: 'Queued',
+        color: 'bg-blue-500',
+        phase: 'queued'
+      };
     }
+
+    // OCR phase - scanning or indexing status, OCR not complete
+    if (['scanning', 'indexing'].includes(status) && !isOcrComplete) {
+      return {
+        icon: Loader2,
+        label: `OCR ${processedDocuments}/${totalDocuments}`,
+        color: 'bg-purple-500',
+        phase: 'ocr',
+        animate: true
+      };
+    }
+
+    // Ready for validation - OCR complete but validation not complete
+    if (isOcrComplete && !isValidationComplete) {
+      return {
+        icon: Clock,
+        label: 'Ready for Validation',
+        color: 'bg-orange-500',
+        phase: 'validation'
+      };
+    }
+
+    // Complete
+    if (['complete', 'validated', 'exported'].includes(status) || isValidationComplete) {
+      return {
+        icon: CheckCircle2,
+        label: 'Complete',
+        color: 'bg-green-500',
+        phase: 'complete'
+      };
+    }
+
+    // Default fallback
+    return {
+      icon: Clock,
+      label: status,
+      color: 'bg-gray-500',
+      phase: 'unknown'
+    };
   };
 
   const config = getStatusConfig();
@@ -123,12 +141,36 @@ export const BatchProcessingStatus = ({
         <span className="text-xs font-medium">{config.label}</span>
       </Badge>
       
-      {config.showProgress && (
+      {/* Show OCR progress during processing */}
+      {config.phase === 'ocr' && (
         <div className="mt-2 space-y-1">
-          <Progress value={progress} className="h-1.5" />
+          <Progress value={ocrProgress} className="h-1.5" />
           <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-            <span>OCR Progress</span>
-            <span className="font-semibold">{progress}%</span>
+            <span>OCR Processing</span>
+            <span className="font-semibold">{ocrProgress}%</span>
+          </div>
+        </div>
+      )}
+
+      {/* Show detailed progress when requested */}
+      {showDetails && totalDocuments > 0 && (
+        <div className="mt-2 space-y-2">
+          {/* OCR Progress */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+              <span>OCR</span>
+              <span className="font-semibold">{processedDocuments}/{totalDocuments}</span>
+            </div>
+            <Progress value={ocrProgress} className="h-1" />
+          </div>
+          
+          {/* Validation Progress */}
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+              <span>Validated</span>
+              <span className="font-semibold">{validatedDocuments}/{totalDocuments}</span>
+            </div>
+            <Progress value={validationProgress} className="h-1" />
           </div>
         </div>
       )}

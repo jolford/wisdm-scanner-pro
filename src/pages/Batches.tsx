@@ -343,7 +343,12 @@ const Batches = () => {
     return colors[status as keyof typeof colors] || 'border-l-gray-500';
   };
 
-  const getProgressPercentage = (batch: Batch) => {
+  const getOcrProgress = (batch: Batch) => {
+    if (batch.total_documents === 0) return 0;
+    return Math.round(((batch.processed_documents || 0) / batch.total_documents) * 100);
+  };
+
+  const getValidationProgress = (batch: Batch) => {
     if (batch.total_documents === 0) return 0;
     return Math.round((batch.validated_documents / batch.total_documents) * 100);
   };
@@ -510,7 +515,8 @@ const Batches = () => {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredBatches.map((batch) => {
               const StatusIcon = getStatusIcon(batch.status);
-              const progressPercent = getProgressPercentage(batch);
+              const progressPercent = getValidationProgress(batch);
+              const ocrPercent = getOcrProgress(batch);
               
               return (
                 <Card 
@@ -548,6 +554,7 @@ const Batches = () => {
                           status={batch.status}
                           totalDocuments={batch.total_documents}
                           processedDocuments={batch.processed_documents || 0}
+                          validatedDocuments={batch.validated_documents || 0}
                         />
                         {getPriorityBadge(batch.priority)}
                       </div>
@@ -608,19 +615,30 @@ const Batches = () => {
                         <div className="text-2xl font-bold text-foreground">{batch.total_documents}</div>
                         <div className="text-xs text-muted-foreground">Total Docs</div>
                       </div>
-                      <div className="bg-primary/10 rounded-lg p-3 text-center">
-                        <div className="text-2xl font-bold text-primary">{batch.validated_documents}</div>
-                        <div className="text-xs text-muted-foreground">Validated</div>
+                      <div className="bg-purple-500/10 rounded-lg p-3 text-center">
+                        <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">{batch.processed_documents || 0}</div>
+                        <div className="text-xs text-muted-foreground">OCR'd</div>
                       </div>
                     </div>
 
-                    {/* Progress Bar */}
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center text-xs">
-                        <span className="text-muted-foreground">Progress</span>
-                        <span className="font-semibold text-primary">{progressPercent}%</span>
+                    {/* Progress Bars */}
+                    <div className="space-y-3">
+                      {/* OCR Progress */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-muted-foreground">OCR Processing</span>
+                          <span className="font-semibold text-purple-600 dark:text-purple-400">{ocrPercent}%</span>
+                        </div>
+                        <Progress value={ocrPercent} className="h-1.5 [&>div]:bg-purple-500" />
                       </div>
-                      <Progress value={progressPercent} className="h-2" />
+                      {/* Validation Progress */}
+                      <div className="space-y-1">
+                        <div className="flex justify-between items-center text-xs">
+                          <span className="text-muted-foreground">Validation</span>
+                          <span className="font-semibold text-primary">{progressPercent}%</span>
+                        </div>
+                        <Progress value={progressPercent} className="h-1.5" />
+                      </div>
                     </div>
 
                     {/* Duration (Admin only) */}
@@ -646,7 +664,8 @@ const Batches = () => {
           <div className="space-y-3">
             {filteredBatches.map((batch) => {
               const StatusIcon = getStatusIcon(batch.status);
-              const progressPercent = getProgressPercentage(batch);
+              const progressPercent = getValidationProgress(batch);
+              const ocrPercent = getOcrProgress(batch);
               
               return (
                 <Card 
@@ -698,12 +717,17 @@ const Batches = () => {
                       
                       <div className="flex items-center gap-6 shrink-0">
                         {/* Progress */}
-                        <div className="w-32">
-                          <div className="flex justify-between text-xs mb-1">
-                            <span className="text-muted-foreground">Progress</span>
+                        <div className="w-40 space-y-1">
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">OCR</span>
+                            <span className="font-semibold text-purple-600 dark:text-purple-400">{ocrPercent}%</span>
+                          </div>
+                          <Progress value={ocrPercent} className="h-1 [&>div]:bg-purple-500" />
+                          <div className="flex justify-between text-xs">
+                            <span className="text-muted-foreground">Validation</span>
                             <span className="font-semibold text-primary">{progressPercent}%</span>
                           </div>
-                          <Progress value={progressPercent} className="h-1.5" />
+                          <Progress value={progressPercent} className="h-1" />
                         </div>
                         
                         {/* Stats */}
@@ -713,8 +737,8 @@ const Batches = () => {
                             <div className="text-xs text-muted-foreground">Total</div>
                           </div>
                           <div className="text-right">
-                            <div className="font-bold text-primary">{batch.validated_documents}</div>
-                            <div className="text-xs text-muted-foreground">Validated</div>
+                            <div className="font-bold text-purple-600 dark:text-purple-400">{batch.processed_documents || 0}</div>
+                            <div className="text-xs text-muted-foreground">OCR'd</div>
                           </div>
                           {(isAdmin || isSystemAdmin) && batch.completed_at && (
                             <div className="text-right border-l border-border/50 pl-4">
