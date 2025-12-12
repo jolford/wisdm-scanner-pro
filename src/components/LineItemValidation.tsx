@@ -5,8 +5,10 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { 
   CheckCircle2, XCircle, AlertCircle, Loader2, RefreshCw, Clock, 
-  Users, FileCheck, FileX, ChevronDown, ChevronUp, PenTool, Info, GripHorizontal
+  Users, FileCheck, FileX, ChevronDown, ChevronUp, PenTool, Info, GripHorizontal,
+  ThumbsUp, Eye, ClipboardCheck
 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Tooltip,
   TooltipContent,
@@ -17,14 +19,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getSignedUrl } from '@/hooks/use-signed-url';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -34,6 +28,7 @@ import {
   ResizablePanel,
   ResizableHandle,
 } from '@/components/ui/resizable';
+import { SignatureTable } from '@/components/petition/SignatureTable';
 
 interface LineItemValidationProps {
   lineItems: Array<Record<string, any>>;
@@ -94,6 +89,9 @@ interface ValidationResult {
     present: boolean;
     value: string;
   };
+  overrideApproved?: boolean;
+  overrideBy?: string;
+  overrideAt?: string;
 }
 
 interface ReferenceSignature {
@@ -109,6 +107,7 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [referenceSignatures, setReferenceSignatures] = useState<Map<string, ReferenceSignature>>(new Map());
   const [loadingSignatures, setLoadingSignatures] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('all');
   const { toast } = useToast();
 
   // Fetch reference signatures for valid entries
@@ -314,20 +313,43 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
     setExpandedRows(newExpanded);
   };
 
+  // Override/Approve a flagged item
+  const handleOverrideApprove = (index: number) => {
+    setValidationResults(prev => prev.map(r => 
+      r.index === index 
+        ? { ...r, overrideApproved: true, overrideAt: new Date().toISOString() }
+        : r
+    ));
+    toast({
+      title: 'Signature Approved',
+      description: 'Item has been manually approved and moved to valid signatures.',
+    });
+  };
+
   // Calculate statistics
   const totalSignatures = lineItems.length;
-  const validSignatures = validationResults.filter(r => r.allMatch);
-  const invalidSignatures = validationResults.filter(r => !r.allMatch);
+  const validSignatures = validationResults.filter(r => r.allMatch || r.overrideApproved);
+  const invalidSignatures = validationResults.filter(r => !r.allMatch && !r.overrideApproved);
   const validCount = validSignatures.length;
-  const mismatchCount = validationResults.filter(r => r.found && !r.allMatch).length;
-  const partialMatchCount = validationResults.filter(r => r.partialMatch).length;
-  const notFoundCount = validationResults.filter(r => !r.found && !r.partialMatch).length;
+  const mismatchCount = validationResults.filter(r => r.found && !r.allMatch && !r.overrideApproved).length;
+  const partialMatchCount = validationResults.filter(r => r.partialMatch && !r.overrideApproved).length;
+  const notFoundCount = validationResults.filter(r => !r.found && !r.partialMatch && !r.overrideApproved).length;
   const signaturesPresent = validationResults.filter(r => r.signatureStatus?.present).length;
-  const signaturesMissing = validationResults.filter(r => r.signatureStatus && !r.signatureStatus.present).length;
+  const signaturesMissing = validationResults.filter(r => r.signatureStatus && !r.signatureStatus.present && !r.overrideApproved).length;
   const validPercentage = validationResults.length > 0 
     ? Math.round((validCount / totalSignatures) * 100) 
     : 0;
   const invalidCount = invalidSignatures.length;
+
+  // Items needing review: address mismatch, not found, or missing signature (not yet overridden)
+  const forReviewItems = validationResults.filter(r => 
+    !r.overrideApproved && (
+      r.partialMatch || 
+      (!r.found && !r.partialMatch) || 
+      (r.signatureStatus && !r.signatureStatus.present)
+    )
+  );
+  const forReviewCount = forReviewItems.length;
 
   // State for expanded follow-up sections
   const [showValidList, setShowValidList] = useState(false);
@@ -545,261 +567,84 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
           
           <ResizableHandle withHandle className="bg-border hover:bg-primary/20 transition-colors" />
           
-          {/* Signatures Table - Resizable */}
+          {/* Signatures Table with Tabs - Resizable */}
           <ResizablePanel defaultSize={65} minSize={30}>
-            <div className="overflow-auto h-full">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">#</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Address</TableHead>
-                <TableHead>City</TableHead>
-                <TableHead>Zip</TableHead>
-                <TableHead className="w-24 text-center">Signature</TableHead>
-                <TableHead className="w-24 text-center">Registry</TableHead>
-                <TableHead className="w-20 text-center">Match</TableHead>
-                <TableHead className="w-12"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {validationResults.map((result, idx) => {
-                const lineItem = lineItems[result.index] || {};
-                const isExpanded = expandedRows.has(idx);
-                
-                return (
-                  <Collapsible key={idx} open={isExpanded} onOpenChange={() => toggleRow(idx)} asChild>
-                    <>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <TableRow 
-                              className={`cursor-pointer hover:bg-muted/50 ${
-                                result.allMatch ? 'bg-success/5' : 
-                                result.found ? 'bg-warning/5' : 'bg-destructive/5'
-                              }`}
-                              onClick={() => toggleRow(idx)}
-                            >
-                              <TableCell className="font-mono text-muted-foreground">{result.index + 1}</TableCell>
-                              <TableCell className="font-medium">{result.keyValue}</TableCell>
-                              <TableCell className="text-sm">{lineItem.Address || lineItem.address || '-'}</TableCell>
-                              <TableCell className="text-sm">{lineItem.City || lineItem.city || '-'}</TableCell>
-                              <TableCell className="text-sm font-mono">{lineItem.Zip || lineItem.zip || '-'}</TableCell>
-                              <TableCell className="text-center">
-                                {result.signatureStatus?.present ? (
-                                  <Badge className="bg-success text-success-foreground">
-                                    <PenTool className="h-3 w-3 mr-1" />
-                                    Signed
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="destructive">
-                                    <XCircle className="h-3 w-3 mr-1" />
-                                    Missing
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                {result.allMatch ? (
-                                  <Badge className="bg-success text-success-foreground">
-                                    <CheckCircle2 className="h-3 w-3 mr-1" />
-                                    Valid
-                                  </Badge>
-                                ) : result.partialMatch ? (
-                                  <Badge variant="secondary" className="bg-warning text-warning-foreground">
-                                    <AlertCircle className="h-3 w-3 mr-1" />
-                                    Addr. Mismatch
-                                  </Badge>
-                                ) : result.found ? (
-                                  <Badge variant="secondary" className="bg-warning text-warning-foreground">
-                                    <AlertCircle className="h-3 w-3 mr-1" />
-                                    Mismatch
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="destructive">
-                                    <XCircle className="h-3 w-3 mr-1" />
-                                    Not Found
-                                  </Badge>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-center">
-                                {result.matchScore !== undefined && result.found ? (
-                                  <span className={`font-mono text-sm ${
-                                    result.matchScore >= 0.9 ? 'text-success' :
-                                    result.matchScore >= 0.7 ? 'text-warning' : 'text-destructive'
-                                  }`}>
-                                    {Math.round(result.matchScore * 100)}%
-                                  </span>
-                                ) : (
-                                  <span className="text-muted-foreground">-</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                <CollapsibleTrigger asChild>
-                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                    {isExpanded ? (
-                                      <ChevronUp className="h-4 w-4" />
-                                    ) : (
-                                      <ChevronDown className="h-4 w-4" />
-                                    )}
-                                  </Button>
-                                </CollapsibleTrigger>
-                              </TableCell>
-                            </TableRow>
-                          </TooltipTrigger>
-                          <TooltipContent side="top" className="max-w-sm p-3">
-                            {(() => {
-                              // Build rejection reason tooltip
-                              if (result.allMatch) {
-                                return (
-                                  <div className="flex items-center gap-2 text-success">
-                                    <CheckCircle2 className="h-4 w-4" />
-                                    <span>All fields match voter registry</span>
-                                  </div>
-                                );
-                              }
-                              
-                              if (!result.found) {
-                                return (
-                                  <div className="space-y-2">
-                                    <div className="flex items-center gap-2 text-destructive font-medium">
-                                      <XCircle className="h-4 w-4" />
-                                      <span>Not found in voter registry</span>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground">
-                                      No matching record found for "{result.keyValue}"
-                                    </p>
-                                  </div>
-                                );
-                              }
-                              
-                              // Found but mismatch - show which fields don't match
-                              const mismatches = (result.validationResults || []).filter(fr => !fr.matches);
-                              return (
-                                <div className="space-y-2">
-                                  <div className="flex items-center gap-2 text-warning font-medium">
-                                    <AlertCircle className="h-4 w-4" />
-                                    <span>Field mismatch detected</span>
-                                  </div>
-                                  {mismatches.length > 0 ? (
-                                    <ul className="text-xs space-y-1">
-                                      {mismatches.map((m, i) => (
-                                        <li key={i} className="flex flex-col">
-                                          <span className="font-medium text-foreground">{m.field}:</span>
-                                          <span className="text-muted-foreground">
-                                            Document: "{m.wisdmValue || '(empty)'}" → Registry: "{m.excelValue || '(empty)'}"
-                                          </span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  ) : (
-                                    <p className="text-xs text-muted-foreground">Click to see details</p>
-                                  )}
-                                </div>
-                              );
-                            })()}
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      <CollapsibleContent asChild>
-                        <TableRow className="bg-muted/30">
-                          <TableCell colSpan={9} className="p-4">
-                            <div className="flex gap-4">
-                              {/* Reference Signature for valid entries */}
-                              {result.allMatch && (() => {
-                                const refSig = referenceSignatures.get(result.keyValue.toLowerCase());
-                                return refSig?.signedUrl ? (
-                                  <div className="flex-shrink-0 w-48">
-                                    <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                                      <PenTool className="h-3 w-3" />
-                                      Reference Signature
-                                    </div>
-                                    <div className="border rounded-lg p-2 bg-background">
-                                      <img 
-                                        src={refSig.signedUrl} 
-                                        alt={`Reference signature for ${result.keyValue}`}
-                                        className="w-full h-auto max-h-24 object-contain"
-                                      />
-                                    </div>
-                                    <p className="text-xs text-muted-foreground mt-1 text-center">{refSig.name}</p>
-                                  </div>
-                                ) : result.allMatch && !loadingSignatures ? (
-                                  <div className="flex-shrink-0 w-48">
-                                    <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                                      <PenTool className="h-3 w-3" />
-                                      Reference Signature
-                                    </div>
-                                    <div className="border rounded-lg p-4 bg-muted/50 text-center">
-                                      <p className="text-xs text-muted-foreground">No reference on file</p>
-                                    </div>
-                                  </div>
-                                ) : loadingSignatures ? (
-                                  <div className="flex-shrink-0 w-48">
-                                    <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
-                                      <PenTool className="h-3 w-3" />
-                                      Reference Signature
-                                    </div>
-                                    <div className="border rounded-lg p-4 bg-muted/50 text-center">
-                                      <Loader2 className="h-4 w-4 animate-spin mx-auto" />
-                                    </div>
-                                  </div>
-                                ) : null;
-                              })()}
-                              
-                              {/* Field validation results */}
-                              <div className="flex-1">
-                                {result.validationResults && result.validationResults.length > 0 ? (
-                                  <div className="grid grid-cols-2 gap-3">
-                                    {result.validationResults.map((fieldResult, fieldIdx) => (
-                                      <div
-                                        key={fieldIdx}
-                                        className={`p-3 rounded-lg border ${
-                                          fieldResult.matches
-                                            ? 'bg-success/10 border-success/20'
-                                            : 'bg-warning/10 border-warning/20'
-                                        }`}
-                                      >
-                                        <div className="flex items-center justify-between mb-2">
-                                          <span className="font-semibold text-sm">{fieldResult.field}</span>
-                                          {fieldResult.matches ? (
-                                            <CheckCircle2 className="h-4 w-4 text-success" />
-                                          ) : (
-                                            <AlertCircle className="h-4 w-4 text-warning" />
-                                          )}
-                                        </div>
-                                        <div className="grid grid-cols-2 gap-2 text-xs">
-                                          <div>
-                                            <span className="text-muted-foreground">Document:</span>
-                                            <div className="font-medium">{fieldResult.wisdmValue || '(empty)'}</div>
-                                          </div>
-                                          <div>
-                                            <span className="text-muted-foreground">Registry:</span>
-                                            <div className="font-medium">{fieldResult.excelValue || '(empty)'}</div>
-                                          </div>
-                                        </div>
-                                        {!fieldResult.matches && fieldResult.suggestion && (
-                                          <div className="mt-2 pt-2 border-t border-border/30 text-xs">
-                                            <span className="text-muted-foreground">Suggestion: </span>
-                                            <span className="font-medium">{fieldResult.suggestion}</span>
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <p className="text-sm text-muted-foreground">{result.message || 'No detailed results available'}</p>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      </CollapsibleContent>
-                    </>
-                  </Collapsible>
-                );
-              })}
-            </TableBody>
-          </Table>
-            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+              <div className="border-b px-4 pt-2">
+                <TabsList className="grid w-full max-w-md grid-cols-3">
+                  <TabsTrigger value="all" className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    All ({validationResults.length})
+                  </TabsTrigger>
+                  <TabsTrigger value="review" className="flex items-center gap-2">
+                    <ClipboardCheck className="h-4 w-4" />
+                    For Review ({forReviewCount})
+                  </TabsTrigger>
+                  <TabsTrigger value="valid" className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Valid ({validCount})
+                  </TabsTrigger>
+                </TabsList>
+              </div>
+              
+              {/* All Signatures Tab */}
+              <TabsContent value="all" className="flex-1 overflow-auto m-0">
+                <SignatureTable 
+                  results={validationResults}
+                  lineItems={lineItems}
+                  expandedRows={expandedRows}
+                  toggleRow={toggleRow}
+                  referenceSignatures={referenceSignatures}
+                  loadingSignatures={loadingSignatures}
+                  onOverride={handleOverrideApprove}
+                  showOverrideButton={false}
+                />
+              </TabsContent>
+              
+              {/* For Review Tab */}
+              <TabsContent value="review" className="flex-1 overflow-auto m-0">
+                {forReviewCount > 0 ? (
+                  <SignatureTable 
+                    results={forReviewItems}
+                    lineItems={lineItems}
+                    expandedRows={expandedRows}
+                    toggleRow={toggleRow}
+                    referenceSignatures={referenceSignatures}
+                    loadingSignatures={loadingSignatures}
+                    onOverride={handleOverrideApprove}
+                    showOverrideButton={true}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                    <CheckCircle2 className="h-16 w-16 text-success mb-4" />
+                    <h3 className="text-xl font-semibold text-success mb-2">All Clear!</h3>
+                    <p className="text-muted-foreground">No items require manual review.</p>
+                  </div>
+                )}
+              </TabsContent>
+              
+              {/* Valid Signatures Tab */}
+              <TabsContent value="valid" className="flex-1 overflow-auto m-0">
+                {validCount > 0 ? (
+                  <SignatureTable 
+                    results={validSignatures}
+                    lineItems={lineItems}
+                    expandedRows={expandedRows}
+                    toggleRow={toggleRow}
+                    referenceSignatures={referenceSignatures}
+                    loadingSignatures={loadingSignatures}
+                    onOverride={handleOverrideApprove}
+                    showOverrideButton={false}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full py-12 text-center">
+                    <AlertCircle className="h-16 w-16 text-muted-foreground mb-4" />
+                    <h3 className="text-xl font-semibold text-muted-foreground mb-2">No Valid Signatures</h3>
+                    <p className="text-muted-foreground">No signatures have been validated yet.</p>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
           </ResizablePanel>
         </ResizablePanelGroup>
       )}
