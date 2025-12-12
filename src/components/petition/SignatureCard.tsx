@@ -103,19 +103,19 @@ export const SignatureCard = ({
   return (
     <Collapsible open={isExpanded} onOpenChange={onToggle}>
       <Card className={`${borderClass} ${bgClass} overflow-hidden transition-all`}>
-        <div className="p-3">
+        <div className="p-2">
           {/* Main row - compact */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {/* Index */}
-            <div className="flex-shrink-0 w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-mono text-muted-foreground">
+            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-mono text-muted-foreground">
               {result.index + 1}
             </div>
             
             {/* Name and status badges */}
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-medium text-sm text-foreground truncate max-w-[120px]" title={result.keyValue}>
-                  {result.keyValue.length > 15 ? result.keyValue.substring(0, 15) + '...' : result.keyValue}
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-medium text-xs text-foreground truncate max-w-[100px]" title={result.keyValue}>
+                  {result.keyValue.length > 12 ? result.keyValue.substring(0, 12) + '...' : result.keyValue}
                 </span>
                 
                 {/* Status badges - compact */}
