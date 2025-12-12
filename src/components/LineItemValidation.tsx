@@ -107,7 +107,7 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [referenceSignatures, setReferenceSignatures] = useState<Map<string, ReferenceSignature>>(new Map());
   const [loadingSignatures, setLoadingSignatures] = useState(false);
-  const [activeTab, setActiveTab] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<string>('valid');
   const { toast } = useToast();
 
   // Fetch reference signatures for valid entries
@@ -410,10 +410,10 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-5 gap-3">
+        <div className="grid grid-cols-6 gap-3">
           <div className="bg-background/80 backdrop-blur rounded-lg p-3 text-center border">
             <div className="text-2xl font-bold text-foreground">{totalSignatures}</div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wide mt-1">Total</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wide mt-1">Total Signatures</div>
           </div>
           <div className="bg-primary/10 rounded-lg p-3 text-center border border-primary/20">
             <div className="text-2xl font-bold text-primary">{signaturesPresent}</div>
@@ -430,6 +430,10 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
           <div className="bg-destructive/10 rounded-lg p-3 text-center border border-destructive/20">
             <div className="text-2xl font-bold text-destructive">{notFoundCount}</div>
             <div className="text-xs text-destructive uppercase tracking-wide mt-1">Not Found</div>
+          </div>
+          <div className="bg-amber-500/10 rounded-lg p-3 text-center border border-amber-500/20">
+            <div className="text-2xl font-bold text-amber-600">{forReviewCount}</div>
+            <div className="text-xs text-amber-600 uppercase tracking-wide mt-1">For Review</div>
           </div>
         </div>
 
