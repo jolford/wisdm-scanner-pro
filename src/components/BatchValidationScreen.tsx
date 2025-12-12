@@ -16,7 +16,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { SignatureValidator } from './SignatureValidator';
 
 // Icon imports from lucide-react
-import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles, FileText, ShieldAlert, Pencil, Plus, ExternalLink, Database } from 'lucide-react';
+import { CheckCircle2, XCircle, ChevronDown, ChevronUp, Image as ImageIcon, ZoomIn, ZoomOut, RotateCw, Printer, Download, RefreshCw, Lightbulb, Loader2, Sparkles, FileText, ShieldAlert, Pencil, Plus, ExternalLink, Database, PanelTopClose, PanelTop } from 'lucide-react';
 
 // Backend and utility imports
 import { supabase } from '@/integrations/supabase/client';
@@ -238,6 +238,9 @@ export const BatchValidationScreen = ({
   
   // Track which documents are showing unredacted originals (default redacted for PII docs)
   const [showingOriginal, setShowingOriginal] = useState<Set<string>>(new Set());
+  
+  // Track collapsed state for edit fields panel
+  const [fieldsCollapsed, setFieldsCollapsed] = useState(false);
   useEffect(() => {
     // Only run client-side PII detection if project has PII detection enabled
     if (!detectPii) {
@@ -2115,24 +2118,34 @@ export const BatchValidationScreen = ({
                       </div>
 
                       {/* Right column: Editable metadata fields */}
-                      <div className="space-y-4">
-                        <Tabs defaultValue="fields" className="w-full">
-                          <TabsList className={`w-full grid ${isAB1466Project ? 'grid-cols-3' : 'grid-cols-2'} p-0.5 sm:p-1 h-auto`}>
-                            <TabsTrigger value="fields" className="text-[10px] sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 data-[state=active]:text-xs sm:data-[state=active]:text-sm">
-                              <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
-                              Edit Fields
-                            </TabsTrigger>
-                            {isAB1466Project && (
-                              <TabsTrigger value="image" className="text-[10px] sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 data-[state=active]:text-xs sm:data-[state=active]:text-sm">
-                                <ImageIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
-                                Sensitive
-                              </TabsTrigger>
-                            )}
-                            <TabsTrigger value="text" className="text-[10px] sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 data-[state=active]:text-xs sm:data-[state=active]:text-sm">
-                              <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
-                              Extracted Text
-                            </TabsTrigger>
-                          </TabsList>
+                      <Collapsible open={!fieldsCollapsed} onOpenChange={(open) => setFieldsCollapsed(!open)}>
+                        <div className="flex items-center justify-between mb-2">
+                          <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-7 px-2 gap-1 text-xs">
+                              {fieldsCollapsed ? <PanelTop className="h-3 w-3" /> : <PanelTopClose className="h-3 w-3" />}
+                              {fieldsCollapsed ? 'Show Fields' : 'Hide Fields'}
+                            </Button>
+                          </CollapsibleTrigger>
+                        </div>
+                        <CollapsibleContent>
+                          <div className="space-y-4">
+                            <Tabs defaultValue="fields" className="w-full">
+                              <TabsList className={`w-full grid ${isAB1466Project ? 'grid-cols-3' : 'grid-cols-2'} p-0.5 sm:p-1 h-auto`}>
+                                <TabsTrigger value="fields" className="text-[10px] sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 data-[state=active]:text-xs sm:data-[state=active]:text-sm">
+                                  <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
+                                  Edit Fields
+                                </TabsTrigger>
+                                {isAB1466Project && (
+                                  <TabsTrigger value="image" className="text-[10px] sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 data-[state=active]:text-xs sm:data-[state=active]:text-sm">
+                                    <ImageIcon className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
+                                    Sensitive
+                                  </TabsTrigger>
+                                )}
+                                <TabsTrigger value="text" className="text-[10px] sm:text-sm px-2 sm:px-3 py-1.5 sm:py-2 data-[state=active]:text-xs sm:data-[state=active]:text-sm">
+                                  <FileText className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />
+                                  Extracted Text
+                                </TabsTrigger>
+                              </TabsList>
                           
                           <TabsContent value="fields" className="space-y-4 mt-4">
                             {/* AI Smart Validation Banner - Compact */}
@@ -2567,7 +2580,9 @@ export const BatchValidationScreen = ({
                           </TabsContent>
                         </Tabs>
                       </div>
-                    </div>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </div>
                   </div>
                 </CollapsibleContent>
               </Collapsible>
