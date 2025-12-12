@@ -1453,6 +1453,8 @@ const EditProject = () => {
                         extractionFields={fields}
                         onConfigChange={setValidationLookupConfig}
                         disabled={!validationLookupConfig.enabled}
+                        projectId={id}
+                        customerId={customerId}
                       />
                     )}
                   </Card>

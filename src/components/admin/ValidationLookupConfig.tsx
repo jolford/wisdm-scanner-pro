@@ -53,13 +53,17 @@ interface ValidationLookupConfigProps {
   extractionFields: Array<{ name: string; description: string }>;
   onConfigChange: (config: ValidationLookupConfig) => void;
   disabled?: boolean;
+  projectId?: string;
+  customerId?: string;
 }
 
 export function ValidationLookupConfig({ 
   config, 
   extractionFields,
   onConfigChange,
-  disabled = false 
+  disabled = false,
+  projectId,
+  customerId
 }: ValidationLookupConfigProps) {
   const [testing, setTesting] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -69,6 +73,8 @@ export function ValidationLookupConfig({
   const [selectedProjectId, setSelectedProjectId] = useState<string>(config.project || '');
   const [loadingFields, setLoadingFields] = useState(false);
   const [uploadingExcel, setUploadingExcel] = useState(false);
+  const [importingVoterRegistry, setImportingVoterRegistry] = useState(false);
+  const [voterRegistryCount, setVoterRegistryCount] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Auto-load columns when returning to the page with an existing file
@@ -303,11 +309,12 @@ export function ValidationLookupConfig({
         .getPublicUrl(filePath);
 
       let columns: string[] = [];
+      let csvText = '';
 
       if (isCSV) {
         // Parse CSV directly in browser
-        const text = await file.text();
-        const lines = text.split('\n');
+        csvText = await file.text();
+        const lines = csvText.split('\n');
         if (lines.length > 0) {
           // Get header row (first line)
           columns = lines[0].split(',').map(col => col.trim().replace(/^"(.*)"$/, '$1'));
@@ -337,6 +344,41 @@ export function ValidationLookupConfig({
       });
 
       toast.success(`${fileType} file uploaded successfully`);
+
+      // For CSV files with voter registry columns, import into database for fast lookups
+      if (isCSV && customerId && csvText) {
+        const lowerColumns = columns.map(c => c.toLowerCase());
+        const hasNameColumn = lowerColumns.some(c => c.includes('name'));
+        const hasAddressColumn = lowerColumns.some(c => c.includes('address') || c.includes('city') || c.includes('zip'));
+        
+        if (hasNameColumn && hasAddressColumn) {
+          setImportingVoterRegistry(true);
+          toast.info('Importing voter registry for fast lookups...');
+          
+          try {
+            const { data: importResult, error: importError } = await supabase.functions.invoke('import-voter-registry', {
+              body: {
+                csvData: csvText,
+                customerId,
+                projectId,
+                sourceFile: file.name
+              }
+            });
+
+            if (importError) throw importError;
+
+            if (importResult?.success) {
+              setVoterRegistryCount(importResult.imported);
+              toast.success(`Imported ${importResult.imported} voter records for fast lookups`);
+            }
+          } catch (importErr) {
+            console.error('Voter registry import error:', importErr);
+            toast.warning('CSV uploaded but database import failed. Validation will use file-based lookup.');
+          } finally {
+            setImportingVoterRegistry(false);
+          }
+        }
+      }
     } catch (error) {
       console.error(`Error uploading ${fileType}:`, error);
       toast.error(`Failed to upload ${fileType} file`);
@@ -543,11 +585,22 @@ export function ValidationLookupConfig({
                   <Badge variant="outline">{config.excelFileName}</Badge>
                 )}
                 {uploadingExcel && <Loader2 className="h-4 w-4 animate-spin" />}
+                {importingVoterRegistry && (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Importing voter registry...
+                  </span>
+                )}
               </div>
               {config.excelFileName && (
                 <p className="text-xs text-muted-foreground">
                   Current file: <a href={config.excelFileUrl} target="_blank" rel="noreferrer" className="underline">{config.excelFileName}</a>
                 </p>
+              )}
+              {voterRegistryCount !== null && voterRegistryCount > 0 && (
+                <Badge variant="secondary" className="w-fit">
+                  {voterRegistryCount.toLocaleString()} voter records indexed for fast lookups
+                </Badge>
               )}
               <p className="text-xs text-muted-foreground">
                 Upload {config.system === 'csv' ? 'a CSV file (.csv)' : 'an Excel file (.xlsx or .xls)'} containing validation data
