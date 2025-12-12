@@ -2277,6 +2277,7 @@ useEffect(() => {
                 lineItems={validationSuggestions.lookupValidation.results.map((r: any) => r.lineItem).filter(Boolean)}
                 lookupConfig={validationLookupConfig || { system: 'csv', enabled: true }}
                 keyField="Printed_Name"
+                documentId={documentId}
                 precomputedResults={validationSuggestions.lookupValidation}
               />
             </div>
