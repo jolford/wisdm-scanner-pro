@@ -412,25 +412,19 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, document
   return (
     <Card className="p-0 overflow-hidden h-full flex flex-col">
       {/* Compact Summary Header */}
-      <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-3 border-b flex-shrink-0">
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-primary/20 rounded-lg">
-              <Users className="h-4 w-4 text-primary" />
-            </div>
-            <div>
-              <h3 className="text-sm font-bold">Signature Validation</h3>
-              <p className="text-xs text-muted-foreground">
-                {validationResults.length > 0 ? 'Voter registry comparison' : `${totalSignatures} signatures`}
-              </p>
-            </div>
+      <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-2 border-b flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-1.5">
+            <Users className="h-3.5 w-3.5 text-primary" />
+            <span className="text-xs font-semibold">Signatures</span>
+            <Badge variant="outline" className="text-[10px] h-4 px-1">{totalSignatures}</Badge>
           </div>
           <Button
             onClick={validateAllLineItems}
             disabled={isValidating || !lookupConfig.excelFileUrl}
             size="sm"
             variant="outline"
-            className="h-7 text-xs"
+            className="h-6 text-[10px] px-2"
           >
             {isValidating ? (
               <>
@@ -452,21 +446,18 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, document
         </div>
 
         {/* Compact Statistics */}
-        <div className="flex flex-wrap gap-1.5">
-          <Badge variant="outline" className="bg-background text-xs h-5">
-            {totalSignatures} Total
-          </Badge>
-          <Badge variant="outline" className="bg-success/10 text-success border-success/30 text-xs h-5">
-            <CheckCircle2 className="h-3 w-3 mr-0.5" />
+        <div className="flex flex-wrap gap-1 mt-1.5">
+          <Badge variant="outline" className="bg-success/10 text-success border-success/30 text-[10px] h-4 px-1">
+            <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
             {validCount}
           </Badge>
-          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 text-xs h-5">
-            <AlertCircle className="h-3 w-3 mr-0.5" />
+          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 text-[10px] h-4 px-1">
+            <AlertCircle className="h-2.5 w-2.5 mr-0.5" />
             {forReviewCount}
           </Badge>
           {rejectedCount > 0 && (
-            <Badge variant="outline" className="bg-muted text-muted-foreground text-xs h-5">
-              <Ban className="h-3 w-3 mr-0.5" />
+            <Badge variant="outline" className="bg-muted text-muted-foreground text-[10px] h-4 px-1">
+              <Ban className="h-2.5 w-2.5 mr-0.5" />
               {rejectedCount}
             </Badge>
           )}
@@ -475,22 +466,22 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, document
 
       {validationResults.length > 0 && (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0">
-          <div className="border-b px-2 pt-1 bg-muted/30 flex-shrink-0">
-            <TabsList className="grid w-full grid-cols-4 h-8">
-              <TabsTrigger value="valid" className="text-xs h-7 px-2">
-                <CheckCircle2 className="h-3 w-3 mr-1" />
+          <div className="border-b px-1 bg-muted/30 flex-shrink-0">
+            <TabsList className="grid w-full grid-cols-4 h-7">
+              <TabsTrigger value="valid" className="text-[10px] h-6 px-1">
+                <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />
                 Valid ({validCount})
               </TabsTrigger>
-              <TabsTrigger value="review" className="text-xs h-7 px-2">
-                <ClipboardCheck className="h-3 w-3 mr-1" />
+              <TabsTrigger value="review" className="text-[10px] h-6 px-1">
+                <ClipboardCheck className="h-2.5 w-2.5 mr-0.5" />
                 Review ({forReviewCount})
               </TabsTrigger>
-              <TabsTrigger value="rejected" className="text-xs h-7 px-2">
-                <Ban className="h-3 w-3 mr-1" />
+              <TabsTrigger value="rejected" className="text-[10px] h-6 px-1">
+                <Ban className="h-2.5 w-2.5 mr-0.5" />
                 Rejected ({rejectedCount})
               </TabsTrigger>
-              <TabsTrigger value="all" className="text-xs h-7 px-2">
-                <Users className="h-3 w-3 mr-1" />
+              <TabsTrigger value="all" className="text-[10px] h-6 px-1">
+                <Users className="h-2.5 w-2.5 mr-0.5" />
                 All ({validationResults.length})
               </TabsTrigger>
             </TabsList>

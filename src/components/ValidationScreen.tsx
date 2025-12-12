@@ -1648,7 +1648,7 @@ useEffect(() => {
         )}
         
         {/* Document and Text Grid (always visible) */}
-        <div className={displayFieldsAbove ? "grid grid-cols-[3fr_2fr] gap-4" : "contents"}>
+        <div className={displayFieldsAbove ? "grid grid-cols-2 gap-3 h-[calc(100vh-200px)]" : "contents"}>
         {/* Left: Document Viewer */}
         {useInteractiveViewer ? (
           <InteractiveDocumentViewer
