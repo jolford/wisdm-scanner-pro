@@ -12,7 +12,6 @@ function parseCSV(csvText: string): any[] {
   const lines = csvText.trim().split('\n');
   if (lines.length === 0) return [];
   
-  // Parse header - handle quoted values
   const parseRow = (line: string) => {
     const values: string[] = [];
     let current = '';
@@ -63,16 +62,123 @@ function similarity(str1: string, str2: string): number {
   if (s1 === s2) return 1.0;
   if (!s1 || !s2) return 0;
   
-  // Check if one contains the other
   if (s1.includes(s2) || s2.includes(s1)) return 0.9;
   
-  // Simple word overlap check
   const words1 = s1.split(' ');
   const words2 = s2.split(' ');
   const commonWords = words1.filter(w => words2.includes(w));
   const overlapScore = commonWords.length / Math.max(words1.length, words2.length);
   
   return overlapScore;
+}
+
+// Authenticate signature against reference using AI vision
+async function authenticateSignature(
+  signatureImageUrl: string,
+  referenceImageUrl: string,
+  supabaseAdmin: any
+): Promise<{ similarityScore: number; status: string; analysis: string }> {
+  try {
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      console.log('No AI API key configured for signature authentication');
+      return { similarityScore: 0, status: 'no_api_key', analysis: 'AI service not configured' };
+    }
+
+    // Get signed URLs for both images
+    const getSignedUrl = async (url: string) => {
+      if (url.includes('supabase.co/storage')) {
+        const urlParts = url.match(/\/storage\/v1\/object\/(?:public\/)?([^/]+)\/(.+)/);
+        if (urlParts) {
+          const { data } = await supabaseAdmin.storage.from(urlParts[1]).createSignedUrl(urlParts[2], 300);
+          return data?.signedUrl || url;
+        }
+      }
+      return url;
+    };
+
+    const signedSignatureUrl = await getSignedUrl(signatureImageUrl);
+    const signedReferenceUrl = await getSignedUrl(referenceImageUrl);
+
+    // Convert images to base64 for AI API
+    const toBase64 = async (url: string) => {
+      const response = await fetch(url);
+      const buffer = await response.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+      const contentType = response.headers.get('content-type') || 'image/png';
+      return `data:${contentType};base64,${base64}`;
+    };
+
+    const [sigBase64, refBase64] = await Promise.all([
+      toBase64(signedSignatureUrl),
+      toBase64(signedReferenceUrl)
+    ]);
+
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'google/gemini-2.5-flash',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a signature authentication expert. Compare two signatures and determine similarity.
+Return ONLY a JSON object:
+{
+  "similarityScore": 0.0-1.0,
+  "match": true/false,
+  "confidence": 0.0-1.0,
+  "analysis": "brief explanation",
+  "recommendation": "accept|review|reject"
+}`
+          },
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: 'Compare these two signatures. First is from petition, second is reference. Analyze stroke patterns, slant, and overall similarity.' },
+              { type: 'image_url', image_url: { url: sigBase64 } },
+              { type: 'image_url', image_url: { url: refBase64 } }
+            ]
+          }
+        ],
+        temperature: 0.1,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error('Signature auth AI error:', response.status);
+      return { similarityScore: 0, status: 'ai_error', analysis: 'AI service unavailable' };
+    }
+
+    const data = await response.json();
+    const content = data.choices[0].message.content;
+    
+    // Parse JSON from response
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const result = JSON.parse(jsonMatch[0]);
+      const score = result.similarityScore || 0;
+      let status = 'no_reference';
+      
+      if (score >= 0.8) status = 'authenticated';
+      else if (score >= 0.5) status = 'review_needed';
+      else status = 'suspicious';
+      
+      return {
+        similarityScore: score,
+        status,
+        analysis: result.analysis || ''
+      };
+    }
+
+    return { similarityScore: 0, status: 'parse_error', analysis: 'Could not parse AI response' };
+  } catch (error) {
+    console.error('Signature authentication error:', error);
+    return { similarityScore: 0, status: 'error', analysis: String(error) };
+  }
 }
 
 serve(async (req) => {
@@ -86,7 +192,7 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    const { documentId, projectId, lineItems } = await req.json();
+    const { documentId, projectId, lineItems, authenticateSignatures = false } = await req.json();
 
     if (!documentId || !projectId) {
       return new Response(
@@ -95,12 +201,12 @@ serve(async (req) => {
       );
     }
 
-    console.log(`Validating line items for document ${documentId}, project ${projectId}`);
+    console.log(`Validating line items for document ${documentId}, project ${projectId}, auth signatures: ${authenticateSignatures}`);
 
-    // Get project validation lookup config
+    // Get project and customer info
     const { data: project, error: projectError } = await supabaseAdmin
       .from('projects')
-      .select('metadata')
+      .select('metadata, customer_id')
       .eq('id', projectId)
       .single();
 
@@ -112,73 +218,78 @@ serve(async (req) => {
       );
     }
 
-    const lookupConfig = (project.metadata as any)?.validation_lookup_config;
-    
-    if (!lookupConfig?.enabled || !lookupConfig.excelFileUrl) {
-      console.log('Validation lookup not enabled for project');
-      return new Response(
-        JSON.stringify({ validated: false, reason: 'Lookup not configured' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
+    // Check for voter registry in indexed database first
+    const { data: voterRegistry, error: registryError } = await supabaseAdmin
+      .from('voter_registry')
+      .select('*')
+      .eq('project_id', projectId)
+      .limit(1);
 
-    console.log('Lookup config:', { 
-      system: lookupConfig.system, 
-      fileName: lookupConfig.excelFileName,
-      fieldsCount: lookupConfig.lookupFields?.length 
-    });
+    const useIndexedRegistry = voterRegistry && voterRegistry.length > 0;
+    console.log(`Using ${useIndexedRegistry ? 'indexed database' : 'file-based'} voter registry`);
 
-    // Get signed URL for private bucket access
-    let fileUrl = lookupConfig.excelFileUrl;
+    // Build lookup data from either indexed DB or file
+    let lookupData: any[] = [];
     
-    // If it's a Supabase storage URL, generate a signed URL
-    if (fileUrl.includes('supabase.co/storage/v1/object')) {
-      // Extract bucket and path from URL
-      const urlParts = fileUrl.match(/\/storage\/v1\/object\/(?:public\/)?([^/]+)\/(.+)/);
-      if (urlParts) {
-        const bucket = urlParts[1];
-        const path = urlParts[2];
-        console.log(`Generating signed URL for bucket: ${bucket}, path: ${path}`);
-        
-        const { data: signedData, error: signedError } = await supabaseAdmin.storage
-          .from(bucket)
-          .createSignedUrl(path, 300); // 5 minute expiry
-        
-        if (signedError) {
-          console.error('Failed to create signed URL:', signedError);
-        } else if (signedData?.signedUrl) {
-          fileUrl = signedData.signedUrl;
-          console.log('Using signed URL for file access');
+    if (useIndexedRegistry) {
+      // Query all records from indexed voter_registry
+      const { data: allVoters } = await supabaseAdmin
+        .from('voter_registry')
+        .select('*')
+        .eq('project_id', projectId);
+      
+      lookupData = (allVoters || []).map(v => ({
+        Name: v.name,
+        name_normalized: v.name_normalized,
+        Address: v.address,
+        City: v.city,
+        Zip: v.zip,
+        signature_reference_url: v.signature_reference_url
+      }));
+      console.log(`Loaded ${lookupData.length} voters from indexed registry`);
+    } else {
+      // Fall back to file-based lookup
+      const lookupConfig = (project.metadata as any)?.validation_lookup_config;
+      
+      if (!lookupConfig?.enabled || !lookupConfig.excelFileUrl) {
+        console.log('Validation lookup not enabled for project');
+        return new Response(
+          JSON.stringify({ validated: false, reason: 'Lookup not configured' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Generate signed URL if needed
+      let fileUrl = lookupConfig.excelFileUrl;
+      if (fileUrl.includes('supabase.co/storage/v1/object')) {
+        const urlParts = fileUrl.match(/\/storage\/v1\/object\/(?:public\/)?([^/]+)\/(.+)/);
+        if (urlParts) {
+          const { data: signedData } = await supabaseAdmin.storage
+            .from(urlParts[1])
+            .createSignedUrl(urlParts[2], 300);
+          if (signedData?.signedUrl) fileUrl = signedData.signedUrl;
         }
+      }
+
+      const fileResponse = await fetch(fileUrl);
+      if (!fileResponse.ok) {
+        return new Response(
+          JSON.stringify({ validated: false, reason: 'Could not fetch lookup file' }),
+          { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      const fileExtension = lookupConfig.excelFileUrl.toLowerCase();
+      if (fileExtension.endsWith('.csv')) {
+        lookupData = parseCSV(await fileResponse.text());
+      } else {
+        const arrayBuffer = await fileResponse.arrayBuffer();
+        const workbook = read(new Uint8Array(arrayBuffer), { type: 'array' });
+        lookupData = utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
       }
     }
 
-    // Fetch the lookup file
-    const fileResponse = await fetch(fileUrl);
-    if (!fileResponse.ok) {
-      console.error('Failed to fetch lookup file:', fileResponse.statusText, fileUrl);
-      return new Response(
-        JSON.stringify({ validated: false, reason: 'Could not fetch lookup file' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Parse the lookup data
-    let lookupData: any[];
-    const fileExtension = lookupConfig.excelFileUrl.toLowerCase();
-    
-    if (fileExtension.endsWith('.csv')) {
-      const csvText = await fileResponse.text();
-      lookupData = parseCSV(csvText);
-    } else {
-      const arrayBuffer = await fileResponse.arrayBuffer();
-      const workbook = read(new Uint8Array(arrayBuffer), { type: 'array' });
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
-      lookupData = utils.sheet_to_json(worksheet);
-    }
-
-    console.log(`Loaded ${lookupData.length} records from lookup file`);
+    console.log(`Loaded ${lookupData.length} records from lookup source`);
 
     // Get line items from document if not provided
     let itemsToValidate = lineItems;
@@ -188,12 +299,10 @@ serve(async (req) => {
         .select('line_items')
         .eq('id', documentId)
         .single();
-      
       itemsToValidate = doc?.line_items || [];
     }
 
     if (!itemsToValidate || itemsToValidate.length === 0) {
-      console.log('No line items to validate');
       return new Response(
         JSON.stringify({ validated: false, reason: 'No line items found' }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -202,28 +311,13 @@ serve(async (req) => {
 
     console.log(`Validating ${itemsToValidate.length} line items`);
 
-    // Get lookup field mappings
-    const lookupFields = lookupConfig.lookupFields?.filter((f: any) => f.lookupEnabled) || [];
-    
-    // Validate each line item against the lookup data
+    // Validation results
     const validationResults: any[] = [];
     let validCount = 0;
     let invalidCount = 0;
     let partialMatchCount = 0;
-
-    // Identify name fields for primary matching
-    const nameFields = lookupFields.filter((f: any) => 
-      f.wisdmField.toLowerCase().includes('name') || 
-      f.ecmField.toLowerCase().includes('name')
-    );
-    const addressFields = lookupFields.filter((f: any) => 
-      f.wisdmField.toLowerCase().includes('address') || 
-      f.wisdmField.toLowerCase().includes('city') || 
-      f.wisdmField.toLowerCase().includes('zip') ||
-      f.ecmField.toLowerCase().includes('address') || 
-      f.ecmField.toLowerCase().includes('city') || 
-      f.ecmField.toLowerCase().includes('zip')
-    );
+    let authenticatedCount = 0;
+    let suspiciousCount = 0;
 
     for (let i = 0; i < itemsToValidate.length; i++) {
       const lineItem = itemsToValidate[i];
@@ -235,118 +329,99 @@ serve(async (req) => {
         matchScore: 0,
         fieldResults: [],
         bestMatch: null,
-        mismatchReason: null
+        mismatchReason: null,
+        signatureAuthentication: null
       };
 
-      // Try to find a matching record in the lookup data
+      // Find best matching voter
       let bestMatch: any = null;
       let bestScore = 0;
       let bestNameScore = 0;
       let bestAddressScore = 0;
 
-      for (const lookupRecord of lookupData) {
-        let totalScore = 0;
-        let fieldsChecked = 0;
-        let nameScore = 0;
-        let nameFieldsChecked = 0;
-        let addressScore = 0;
-        let addressFieldsChecked = 0;
+      const itemName = lineItem.Printed_Name || lineItem.printed_name || lineItem.Name || '';
+      const itemAddress = lineItem.Address || lineItem.address || '';
+      const itemCity = lineItem.City || lineItem.city || '';
+      const itemZip = lineItem.Zip || lineItem.zip || '';
 
-        for (const fieldMapping of lookupFields) {
-          const extractedValue = lineItem[fieldMapping.wisdmField] || '';
-          const lookupValue = lookupRecord[fieldMapping.ecmField] || '';
+      for (const voter of lookupData) {
+        const voterName = voter.Name || voter.name || '';
+        const nameScore = similarity(itemName, voterName);
+        
+        if (nameScore >= 0.7) {
+          const addressScore = similarity(itemAddress, voter.Address || voter.address || '');
+          const cityScore = similarity(itemCity, voter.City || voter.city || '');
+          const zipScore = similarity(itemZip, voter.Zip || voter.zip || '');
+          const avgAddressScore = (addressScore + cityScore + zipScore) / 3;
           
-          if (extractedValue) {
-            const fieldScore = similarity(extractedValue, lookupValue);
-            totalScore += fieldScore;
-            fieldsChecked++;
-            
-            // Track name vs address scores separately
-            const isNameField = nameFields.some((nf: any) => nf.wisdmField === fieldMapping.wisdmField);
-            const isAddressField = addressFields.some((af: any) => af.wisdmField === fieldMapping.wisdmField);
-            
-            if (isNameField) {
-              nameScore += fieldScore;
-              nameFieldsChecked++;
-            }
-            if (isAddressField) {
-              addressScore += fieldScore;
-              addressFieldsChecked++;
-            }
-          }
-        }
-
-        if (fieldsChecked > 0) {
-          const avgScore = totalScore / fieldsChecked;
-          const avgNameScore = nameFieldsChecked > 0 ? nameScore / nameFieldsChecked : 0;
-          const avgAddressScore = addressFieldsChecked > 0 ? addressScore / addressFieldsChecked : 0;
-          
-          // Prioritize name match over address match
-          if (avgNameScore > bestNameScore || (avgNameScore === bestNameScore && avgScore > bestScore)) {
-            bestScore = avgScore;
-            bestNameScore = avgNameScore;
+          if (nameScore > bestNameScore || (nameScore === bestNameScore && avgAddressScore > bestAddressScore)) {
+            bestNameScore = nameScore;
             bestAddressScore = avgAddressScore;
-            bestMatch = lookupRecord;
+            bestScore = (nameScore + avgAddressScore) / 2;
+            bestMatch = voter;
           }
         }
       }
 
       // Evaluate match quality
       if (bestMatch) {
-        // Full match: name matches well (≥70%) AND address matches well (≥70%)
         if (bestNameScore >= 0.7 && bestAddressScore >= 0.7) {
           itemResult.found = true;
           itemResult.matchScore = bestScore;
           itemResult.bestMatch = bestMatch;
           validCount++;
-        }
-        // Partial match: name matches (≥70%) but address doesn't match well (<70%)
-        else if (bestNameScore >= 0.7) {
-          itemResult.found = false;
+        } else if (bestNameScore >= 0.7) {
           itemResult.partialMatch = true;
           itemResult.matchScore = bestNameScore;
           itemResult.bestMatch = bestMatch;
           itemResult.mismatchReason = 'address_mismatch';
           partialMatchCount++;
           invalidCount++;
-        }
-        // No match: name doesn't match well
-        else {
+        } else {
           invalidCount++;
         }
 
-        // Compare each field for the best match
-        for (const fieldMapping of lookupFields) {
-          const extractedValue = lineItem[fieldMapping.wisdmField] || '';
-          const lookupValue = bestMatch[fieldMapping.ecmField] || '';
-          const fieldScore = similarity(extractedValue, lookupValue);
-          
-          itemResult.fieldResults.push({
-            field: fieldMapping.wisdmField,
-            extractedValue,
-            lookupValue,
-            matches: fieldScore >= 0.9,
-            score: fieldScore,
-            suggestion: fieldScore < 0.9 ? lookupValue : null
-          });
+        // Signature authentication if enabled and reference exists
+        if (authenticateSignatures && bestMatch.signature_reference_url) {
+          const signatureImageUrl = lineItem.signature_image_url;
+          if (signatureImageUrl) {
+            console.log(`Authenticating signature for line ${i}`);
+            const authResult = await authenticateSignature(
+              signatureImageUrl,
+              bestMatch.signature_reference_url,
+              supabaseAdmin
+            );
+            itemResult.signatureAuthentication = authResult;
+            
+            if (authResult.status === 'authenticated') authenticatedCount++;
+            else if (authResult.status === 'suspicious') suspiciousCount++;
+          } else {
+            itemResult.signatureAuthentication = {
+              similarityScore: 0,
+              status: 'no_signature_image',
+              analysis: 'No signature image captured from petition'
+            };
+          }
+        } else if (authenticateSignatures && !bestMatch.signature_reference_url) {
+          itemResult.signatureAuthentication = {
+            similarityScore: 0,
+            status: 'no_reference',
+            analysis: 'No reference signature on file for this voter'
+          };
         }
+
+        // Field results
+        itemResult.fieldResults = [
+          { field: 'Name', extractedValue: itemName, lookupValue: bestMatch.Name || bestMatch.name, matches: bestNameScore >= 0.9, score: bestNameScore },
+          { field: 'Address', extractedValue: itemAddress, lookupValue: bestMatch.Address || bestMatch.address, matches: similarity(itemAddress, bestMatch.Address || '') >= 0.9, score: similarity(itemAddress, bestMatch.Address || '') },
+          { field: 'City', extractedValue: itemCity, lookupValue: bestMatch.City || bestMatch.city, matches: similarity(itemCity, bestMatch.City || '') >= 0.9, score: similarity(itemCity, bestMatch.City || '') },
+          { field: 'Zip', extractedValue: itemZip, lookupValue: bestMatch.Zip || bestMatch.zip, matches: similarity(itemZip, bestMatch.Zip || '') >= 0.9, score: similarity(itemZip, bestMatch.Zip || '') }
+        ];
       } else {
         invalidCount++;
-        
-        // Still provide field details for review
-        for (const fieldMapping of lookupFields) {
-          itemResult.fieldResults.push({
-            field: fieldMapping.wisdmField,
-            extractedValue: lineItem[fieldMapping.wisdmField] || '',
-            lookupValue: null,
-            matches: false,
-            score: 0,
-            suggestion: null
-          });
-        }
       }
 
-      // Add signature status from extracted line item (for petitions)
+      // Signature presence status
       const signaturePresent = lineItem.Signature_Present || lineItem.signature_present || '';
       itemResult.signatureStatus = {
         present: signaturePresent.toLowerCase() === 'yes' || signaturePresent === true,
@@ -356,9 +431,12 @@ serve(async (req) => {
       validationResults.push(itemResult);
     }
 
-    console.log(`Validation complete: ${validCount} valid, ${partialMatchCount} partial matches, ${invalidCount - partialMatchCount} not found`);
+    console.log(`Validation complete: ${validCount} valid, ${partialMatchCount} partial, ${invalidCount} invalid`);
+    if (authenticateSignatures) {
+      console.log(`Signature auth: ${authenticatedCount} authenticated, ${suspiciousCount} suspicious`);
+    }
 
-    // Store validation results in document metadata
+    // Store results
     const { error: updateError } = await supabaseAdmin
       .from('documents')
       .update({
@@ -370,10 +448,12 @@ serve(async (req) => {
             validCount,
             invalidCount,
             partialMatchCount,
+            authenticatedCount,
+            suspiciousCount,
             results: validationResults
           }
         },
-        needs_review: invalidCount > 0
+        needs_review: invalidCount > 0 || suspiciousCount > 0
       })
       .eq('id', documentId);
 
@@ -388,6 +468,8 @@ serve(async (req) => {
         validCount,
         invalidCount,
         partialMatchCount,
+        authenticatedCount,
+        suspiciousCount,
         results: validationResults
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -397,10 +479,7 @@ serve(async (req) => {
     console.error('Error in line item validation:', error);
     return new Response(
       JSON.stringify({ error: error?.message || 'Unknown error' }),
-      { 
-        status: 500,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

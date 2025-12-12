@@ -3,13 +3,20 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { 
   CheckCircle2, XCircle, AlertCircle, Loader2, 
-  PenTool, ThumbsUp, ThumbsDown, ChevronDown, ChevronUp, User
+  PenTool, ThumbsUp, ThumbsDown, ChevronDown, ChevronUp, User, ShieldCheck, ShieldAlert, ShieldQuestion
 } from 'lucide-react';
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import { Progress } from '@/components/ui/progress';
+
+interface SignatureAuthentication {
+  similarityScore: number;
+  status: 'authenticated' | 'suspicious' | 'review_needed' | 'no_reference' | 'no_signature_image' | 'error';
+  analysis: string;
+}
 
 interface ValidationResult {
   index: number;
@@ -32,6 +39,7 @@ interface ValidationResult {
     present: boolean;
     value: string;
   };
+  signatureAuthentication?: SignatureAuthentication;
   overrideApproved?: boolean;
   rejected?: boolean;
   overrideBy?: string;
@@ -143,6 +151,33 @@ export const SignatureCard = ({
               )}
             </div>
             
+            {/* Signature Authentication status - NEW */}
+            {result.signatureAuthentication && (
+              <div className="flex-shrink-0">
+                {result.signatureAuthentication.status === 'authenticated' ? (
+                  <Badge variant="outline" className="bg-success/10 text-success border-success/30 text-xs">
+                    <ShieldCheck className="h-3 w-3 mr-1" />
+                    {Math.round(result.signatureAuthentication.similarityScore * 100)}%
+                  </Badge>
+                ) : result.signatureAuthentication.status === 'suspicious' ? (
+                  <Badge variant="outline" className="bg-destructive/10 text-destructive border-destructive/30 text-xs">
+                    <ShieldAlert className="h-3 w-3 mr-1" />
+                    Suspicious
+                  </Badge>
+                ) : result.signatureAuthentication.status === 'review_needed' ? (
+                  <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30 text-xs">
+                    <ShieldQuestion className="h-3 w-3 mr-1" />
+                    Review
+                  </Badge>
+                ) : result.signatureAuthentication.status === 'no_reference' ? (
+                  <Badge variant="outline" className="bg-muted text-muted-foreground text-xs">
+                    <ShieldQuestion className="h-3 w-3 mr-1" />
+                    No Ref
+                  </Badge>
+                ) : null}
+              </div>
+            )}
+            
             {/* Registry status */}
             <div className="flex-shrink-0">
               {isApproved ? (
@@ -248,6 +283,46 @@ export const SignatureCard = ({
                     {lineItem.Address || lineItem.address || '-'}, {lineItem.City || lineItem.city || '-'} {lineItem.Zip || lineItem.zip || '-'}
                   </p>
                 </div>
+                
+                {/* Signature Authentication Details - NEW */}
+                {result.signatureAuthentication && result.signatureAuthentication.status !== 'no_reference' && result.signatureAuthentication.status !== 'no_signature_image' && (
+                  <div>
+                    <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
+                      <ShieldCheck className="h-3 w-3" />
+                      Signature Authentication
+                    </div>
+                    <div className={`p-3 rounded border ${
+                      result.signatureAuthentication.status === 'authenticated' 
+                        ? 'bg-success/5 border-success/20' 
+                        : result.signatureAuthentication.status === 'suspicious'
+                          ? 'bg-destructive/5 border-destructive/20'
+                          : 'bg-warning/5 border-warning/20'
+                    }`}>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-medium">
+                          {result.signatureAuthentication.status === 'authenticated' ? 'Authenticated' :
+                           result.signatureAuthentication.status === 'suspicious' ? 'Suspicious - Possible Forgery' :
+                           'Needs Review'}
+                        </span>
+                        <span className="text-sm font-mono">
+                          {Math.round(result.signatureAuthentication.similarityScore * 100)}% match
+                        </span>
+                      </div>
+                      <Progress 
+                        value={result.signatureAuthentication.similarityScore * 100} 
+                        className={`h-2 ${
+                          result.signatureAuthentication.similarityScore >= 0.8 ? '[&>div]:bg-success' :
+                          result.signatureAuthentication.similarityScore >= 0.5 ? '[&>div]:bg-warning' : '[&>div]:bg-destructive'
+                        }`}
+                      />
+                      {result.signatureAuthentication.analysis && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          {result.signatureAuthentication.analysis}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
                 
                 {/* Field validation details */}
                 {result.validationResults && result.validationResults.length > 0 && (
