@@ -2,19 +2,11 @@ import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { 
   CheckCircle2, XCircle, AlertCircle, Loader2, RefreshCw, Clock, 
-  Users, FileCheck, FileX, ChevronDown, ChevronUp, PenTool, Info, GripHorizontal,
-  ThumbsUp, Eye, ClipboardCheck
+  Users, FileCheck, FileX, ChevronDown, ChevronUp, ClipboardCheck, Ban
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getSignedUrl } from '@/hooks/use-signed-url';
@@ -23,12 +15,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
-import {
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
-} from '@/components/ui/resizable';
-import { SignatureTable } from '@/components/petition/SignatureTable';
+import { SignatureCardList } from '@/components/petition/SignatureCardList';
 
 interface LineItemValidationProps {
   lineItems: Array<Record<string, any>>;
@@ -90,6 +77,7 @@ interface ValidationResult {
     value: string;
   };
   overrideApproved?: boolean;
+  rejected?: boolean;
   overrideBy?: string;
   overrideAt?: string;
 }
@@ -317,7 +305,7 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
   const handleOverrideApprove = (index: number) => {
     setValidationResults(prev => prev.map(r => 
       r.index === index 
-        ? { ...r, overrideApproved: true, overrideAt: new Date().toISOString() }
+        ? { ...r, overrideApproved: true, rejected: false, overrideAt: new Date().toISOString() }
         : r
     ));
     toast({
@@ -326,24 +314,36 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
     });
   };
 
-  // Calculate statistics
-  const totalSignatures = lineItems.length;
-  const validSignatures = validationResults.filter(r => r.allMatch || r.overrideApproved);
-  const invalidSignatures = validationResults.filter(r => !r.allMatch && !r.overrideApproved);
-  const validCount = validSignatures.length;
-  const mismatchCount = validationResults.filter(r => r.found && !r.allMatch && !r.overrideApproved).length;
-  const partialMatchCount = validationResults.filter(r => r.partialMatch && !r.overrideApproved).length;
-  const notFoundCount = validationResults.filter(r => !r.found && !r.partialMatch && !r.overrideApproved).length;
-  const signaturesPresent = validationResults.filter(r => r.signatureStatus?.present).length;
-  const signaturesMissing = validationResults.filter(r => r.signatureStatus && !r.signatureStatus.present && !r.overrideApproved).length;
-  const validPercentage = validationResults.length > 0 
-    ? Math.round((validCount / totalSignatures) * 100) 
-    : 0;
-  const invalidCount = invalidSignatures.length;
+  // Reject a signature - removes from counts/exports
+  const handleReject = (index: number) => {
+    setValidationResults(prev => prev.map(r => 
+      r.index === index 
+        ? { ...r, rejected: true, overrideApproved: false }
+        : r
+    ));
+    toast({
+      title: 'Signature Rejected',
+      description: 'Item has been rejected and will not be included in exports.',
+    });
+  };
 
-  // Items needing review: address mismatch, not found, or missing signature (not yet overridden)
+  // Calculate statistics (exclude rejected)
+  const totalSignatures = lineItems.length;
+  const activeResults = validationResults.filter(r => !r.rejected);
+  const rejectedCount = validationResults.filter(r => r.rejected).length;
+  const validSignatures = activeResults.filter(r => r.allMatch || r.overrideApproved);
+  const invalidSignatures = activeResults.filter(r => !r.allMatch && !r.overrideApproved);
+  const validCount = validSignatures.length;
+  const partialMatchCount = activeResults.filter(r => r.partialMatch && !r.overrideApproved).length;
+  const notFoundCount = activeResults.filter(r => !r.found && !r.partialMatch && !r.overrideApproved).length;
+  const signaturesPresent = activeResults.filter(r => r.signatureStatus?.present).length;
+  const validPercentage = activeResults.length > 0 
+    ? Math.round((validCount / activeResults.length) * 100) 
+    : 0;
+
+  // Items needing review: address mismatch, not found, or missing signature (not yet overridden, not rejected)
   const forReviewItems = validationResults.filter(r => 
-    !r.overrideApproved && (
+    !r.overrideApproved && !r.rejected && (
       r.partialMatch || 
       (!r.found && !r.partialMatch) || 
       (r.signatureStatus && !r.signatureStatus.present)
@@ -351,22 +351,18 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
   );
   const forReviewCount = forReviewItems.length;
 
-  // State for expanded follow-up sections
-  const [showValidList, setShowValidList] = useState(false);
-  const [showInvalidList, setShowInvalidList] = useState(true); // Default open for follow-up
-
   return (
     <Card className="p-0 overflow-hidden">
       {/* Summary Header */}
-      <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-6 border-b">
-        <div className="flex items-center justify-between mb-4">
+      <div className="bg-gradient-to-r from-primary/10 to-primary/5 p-4 border-b">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-primary/20 rounded-lg">
-              <Users className="h-6 w-6 text-primary" />
+              <Users className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h3 className="text-xl font-bold">Petition Signature Validation</h3>
-              <p className="text-sm text-muted-foreground">
+              <h3 className="text-lg font-bold">Petition Signature Validation</h3>
+              <p className="text-xs text-muted-foreground">
                 {validationResults.length > 0 ? (
                   <>
                     Compared against voter registry
@@ -378,279 +374,168 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
                     )}
                   </>
                 ) : (
-                  `${totalSignatures} signature(s) extracted from document`
+                  `${totalSignatures} signature(s) extracted`
                 )}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={validateAllLineItems}
-              disabled={isValidating || !lookupConfig.excelFileUrl}
-              size="lg"
-            >
-              {isValidating ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Validating...
-                </>
-              ) : validationResults.length > 0 ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Re-validate
-                </>
-              ) : (
-                <>
-                  <FileCheck className="h-4 w-4 mr-2" />
-                  Validate All
-                </>
-              )}
-            </Button>
-          </div>
+          <Button
+            onClick={validateAllLineItems}
+            disabled={isValidating || !lookupConfig.excelFileUrl}
+            size="sm"
+          >
+            {isValidating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Validating...
+              </>
+            ) : validationResults.length > 0 ? (
+              <>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Re-validate
+              </>
+            ) : (
+              <>
+                <FileCheck className="h-4 w-4 mr-2" />
+                Validate All
+              </>
+            )}
+          </Button>
         </div>
 
-        {/* Statistics Cards */}
-        <div className="grid grid-cols-6 gap-3">
-          <div className="bg-background/80 backdrop-blur rounded-lg p-3 text-center border">
-            <div className="text-2xl font-bold text-foreground">{totalSignatures}</div>
-            <div className="text-xs text-muted-foreground uppercase tracking-wide mt-1">Total Signatures</div>
-          </div>
-          <div className="bg-primary/10 rounded-lg p-3 text-center border border-primary/20">
-            <div className="text-2xl font-bold text-primary">{signaturesPresent}</div>
-            <div className="text-xs text-primary uppercase tracking-wide mt-1">Signed</div>
-          </div>
-          <div className="bg-success/10 rounded-lg p-3 text-center border border-success/20">
-            <div className="text-2xl font-bold text-success">{validCount}</div>
-            <div className="text-xs text-success uppercase tracking-wide mt-1">Registry Match</div>
-          </div>
-          <div className="bg-warning/10 rounded-lg p-3 text-center border border-warning/20">
-            <div className="text-2xl font-bold text-warning">{partialMatchCount}</div>
-            <div className="text-xs text-warning uppercase tracking-wide mt-1">Addr. Mismatch</div>
-          </div>
-          <div className="bg-destructive/10 rounded-lg p-3 text-center border border-destructive/20">
-            <div className="text-2xl font-bold text-destructive">{notFoundCount}</div>
-            <div className="text-xs text-destructive uppercase tracking-wide mt-1">Not Found</div>
-          </div>
-          <div className="bg-amber-500/10 rounded-lg p-3 text-center border border-amber-500/20">
-            <div className="text-2xl font-bold text-amber-600">{forReviewCount}</div>
-            <div className="text-xs text-amber-600 uppercase tracking-wide mt-1">For Review</div>
-          </div>
+        {/* Compact Statistics */}
+        <div className="flex flex-wrap gap-2">
+          <Badge variant="outline" className="bg-background">
+            {totalSignatures} Total
+          </Badge>
+          <Badge variant="outline" className="bg-success/10 text-success border-success/30">
+            <CheckCircle2 className="h-3 w-3 mr-1" />
+            {validCount} Valid
+          </Badge>
+          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/30">
+            <AlertCircle className="h-3 w-3 mr-1" />
+            {forReviewCount} Review
+          </Badge>
+          {rejectedCount > 0 && (
+            <Badge variant="outline" className="bg-muted text-muted-foreground">
+              <Ban className="h-3 w-3 mr-1" />
+              {rejectedCount} Rejected
+            </Badge>
+          )}
+          <Badge variant="outline" className="ml-auto">
+            {validPercentage}% Valid Rate
+          </Badge>
         </div>
-
-        {/* Progress Bar */}
-        {validationResults.length > 0 && (
-          <div className="mt-4">
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-muted-foreground">Validation Rate</span>
-              <span className="font-semibold">{validPercentage}% Valid</span>
-            </div>
-            <div className="h-3 bg-muted rounded-full overflow-hidden flex">
-              <div 
-                className="bg-success transition-all duration-500"
-                style={{ width: `${(validCount / totalSignatures) * 100}%` }}
-              />
-              <div 
-                className="bg-warning transition-all duration-500"
-                style={{ width: `${(mismatchCount / totalSignatures) * 100}%` }}
-              />
-              <div 
-                className="bg-destructive transition-all duration-500"
-                style={{ width: `${(notFoundCount / totalSignatures) * 100}%` }}
-              />
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* Resizable Summary and Table Sections */}
+      {/* Tabbed Card List */}
       {validationResults.length > 0 && (
-        <ResizablePanelGroup direction="vertical" className="min-h-[400px]">
-          {/* Follow-up Summary Lists - Resizable */}
-          <ResizablePanel defaultSize={35} minSize={15} maxSize={60}>
-            <div className="p-4 bg-muted/30 h-full overflow-y-auto">
-              <h4 className="font-semibold mb-3 flex items-center gap-2">
-                📋 Signature Verification Summary
-                <span className="text-xs text-muted-foreground font-normal ml-auto flex items-center gap-1">
-                  <GripHorizontal className="h-3 w-3" />
-                  Drag to resize
-                </span>
-              </h4>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Valid Signatures */}
-                <Collapsible open={showValidList} onOpenChange={setShowValidList}>
-                  <CollapsibleTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between bg-success/10 border-success/30 hover:bg-success/20">
-                      <span className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-success" />
-                        <span className="font-semibold text-success">Valid Signatures</span>
-                        <Badge className="bg-success text-success-foreground ml-2">{validCount}</Badge>
-                      </span>
-                      {showValidList ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2">
-                    <div className="bg-success/5 border border-success/20 rounded-lg p-3 max-h-full overflow-y-auto">
-                      {validSignatures.length > 0 ? (
-                        <ul className="space-y-1">
-                          {validSignatures.map((sig, idx) => {
-                            const lineItem = lineItems[sig.index] || {};
-                            return (
-                              <li key={idx} className="flex items-center gap-2 text-sm">
-                                <CheckCircle2 className="h-3 w-3 text-success flex-shrink-0" />
-                                <span className="font-medium">{sig.keyValue}</span>
-                                <span className="text-muted-foreground">
-                                  - {lineItem.City || lineItem.city || ''} {lineItem.Zip || lineItem.zip || ''}
-                                </span>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-muted-foreground italic">No valid signatures found</p>
-                      )}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-
-                {/* Invalid Signatures - For Follow-up */}
-                <Collapsible open={showInvalidList} onOpenChange={setShowInvalidList}>
-                  <CollapsibleTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between bg-destructive/10 border-destructive/30 hover:bg-destructive/20">
-                      <span className="flex items-center gap-2">
-                        <XCircle className="h-4 w-4 text-destructive" />
-                        <span className="font-semibold text-destructive">Invalid - Follow Up Required</span>
-                        <Badge variant="destructive" className="ml-2">{invalidCount}</Badge>
-                      </span>
-                      {showInvalidList ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    </Button>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent className="mt-2">
-                    <div className="bg-destructive/5 border border-destructive/20 rounded-lg p-3 max-h-full overflow-y-auto">
-                      {invalidSignatures.length > 0 ? (
-                        <ul className="space-y-2">
-                          {invalidSignatures.map((sig, idx) => {
-                            const lineItem = lineItems[sig.index] || {};
-                            const isPartialMatch = sig.partialMatch;
-                            const reason = isPartialMatch 
-                              ? (sig.mismatchReason === 'address_mismatch' ? 'Address mismatch' : 'Partial match')
-                              : (sig.found ? 'Mismatch' : 'Not in registry');
-                            const iconColor = isPartialMatch ? 'text-warning' : 'text-destructive';
-                            const badgeVariant = isPartialMatch ? 'secondary' : 'outline';
-                            const badgeClass = isPartialMatch ? 'bg-warning/20 text-warning border-warning/30' : '';
-                            return (
-                              <li key={idx} className="flex items-start gap-2 text-sm border-b border-destructive/10 pb-2 last:border-0 last:pb-0">
-                                {isPartialMatch ? (
-                                  <AlertCircle className={`h-3 w-3 ${iconColor} flex-shrink-0 mt-0.5`} />
-                                ) : (
-                                  <XCircle className={`h-3 w-3 ${iconColor} flex-shrink-0 mt-0.5`} />
-                                )}
-                                <div>
-                                  <span className="font-medium">{sig.keyValue}</span>
-                                  <div className="text-muted-foreground text-xs">
-                                    {lineItem.Address || lineItem.address || ''}, {lineItem.City || lineItem.city || ''} {lineItem.Zip || lineItem.zip || ''}
-                                  </div>
-                                  <Badge variant={badgeVariant} className={`mt-1 text-xs ${badgeClass}`}>{reason}</Badge>
-                                </div>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-success italic flex items-center gap-1">
-                          <CheckCircle2 className="h-3 w-3" />
-                          All signatures are valid!
-                        </p>
-                      )}
-                    </div>
-                  </CollapsibleContent>
-                </Collapsible>
-              </div>
-            </div>
-          </ResizablePanel>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col">
+          <div className="border-b px-4 pt-2 bg-muted/30">
+            <TabsList className="grid w-full max-w-lg grid-cols-4">
+              <TabsTrigger value="valid" className="text-xs">
+                <CheckCircle2 className="h-3 w-3 mr-1" />
+                Valid ({validCount})
+              </TabsTrigger>
+              <TabsTrigger value="review" className="text-xs">
+                <ClipboardCheck className="h-3 w-3 mr-1" />
+                Review ({forReviewCount})
+              </TabsTrigger>
+              <TabsTrigger value="rejected" className="text-xs">
+                <Ban className="h-3 w-3 mr-1" />
+                Rejected ({rejectedCount})
+              </TabsTrigger>
+              <TabsTrigger value="all" className="text-xs">
+                <Users className="h-3 w-3 mr-1" />
+                All ({validationResults.length})
+              </TabsTrigger>
+            </TabsList>
+          </div>
           
-          <ResizableHandle withHandle className="bg-border hover:bg-primary/20 transition-colors" />
-          
-          {/* Signatures Table with Tabs - Resizable */}
-          <ResizablePanel defaultSize={65} minSize={30}>
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
-              <div className="border-b px-4 pt-2">
-                <TabsList className="grid w-full max-w-md grid-cols-3">
-                  <TabsTrigger value="all" className="flex items-center gap-2">
-                    <Users className="h-4 w-4" />
-                    All ({validationResults.length})
-                  </TabsTrigger>
-                  <TabsTrigger value="review" className="flex items-center gap-2">
-                    <ClipboardCheck className="h-4 w-4" />
-                    For Review ({forReviewCount})
-                  </TabsTrigger>
-                  <TabsTrigger value="valid" className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4" />
-                    Valid ({validCount})
-                  </TabsTrigger>
-                </TabsList>
+          {/* Valid Signatures Tab */}
+          <TabsContent value="valid" className="flex-1 overflow-auto m-0 max-h-[400px]">
+            {validCount > 0 ? (
+              <SignatureCardList 
+                results={validSignatures}
+                lineItems={lineItems}
+                expandedRows={expandedRows}
+                toggleRow={toggleRow}
+                referenceSignatures={referenceSignatures}
+                loadingSignatures={loadingSignatures}
+                onApprove={handleOverrideApprove}
+                onReject={handleReject}
+                showActions={false}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <AlertCircle className="h-12 w-12 text-muted-foreground mb-3" />
+                <h3 className="text-lg font-semibold text-muted-foreground mb-1">No Valid Signatures</h3>
+                <p className="text-sm text-muted-foreground">Approve signatures from the Review tab</p>
               </div>
-              
-              {/* All Signatures Tab */}
-              <TabsContent value="all" className="flex-1 overflow-auto m-0">
-                <SignatureTable 
-                  results={validationResults}
-                  lineItems={lineItems}
-                  expandedRows={expandedRows}
-                  toggleRow={toggleRow}
-                  referenceSignatures={referenceSignatures}
-                  loadingSignatures={loadingSignatures}
-                  onOverride={handleOverrideApprove}
-                  showOverrideButton={false}
-                />
-              </TabsContent>
-              
-              {/* For Review Tab */}
-              <TabsContent value="review" className="flex-1 overflow-auto m-0">
-                {forReviewCount > 0 ? (
-                  <SignatureTable 
-                    results={forReviewItems}
-                    lineItems={lineItems}
-                    expandedRows={expandedRows}
-                    toggleRow={toggleRow}
-                    referenceSignatures={referenceSignatures}
-                    loadingSignatures={loadingSignatures}
-                    onOverride={handleOverrideApprove}
-                    showOverrideButton={true}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full py-12 text-center">
-                    <CheckCircle2 className="h-16 w-16 text-success mb-4" />
-                    <h3 className="text-xl font-semibold text-success mb-2">All Clear!</h3>
-                    <p className="text-muted-foreground">No items require manual review.</p>
-                  </div>
-                )}
-              </TabsContent>
-              
-              {/* Valid Signatures Tab */}
-              <TabsContent value="valid" className="flex-1 overflow-auto m-0">
-                {validCount > 0 ? (
-                  <SignatureTable 
-                    results={validSignatures}
-                    lineItems={lineItems}
-                    expandedRows={expandedRows}
-                    toggleRow={toggleRow}
-                    referenceSignatures={referenceSignatures}
-                    loadingSignatures={loadingSignatures}
-                    onOverride={handleOverrideApprove}
-                    showOverrideButton={false}
-                  />
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full py-12 text-center">
-                    <AlertCircle className="h-16 w-16 text-muted-foreground mb-4" />
-                    <h3 className="text-xl font-semibold text-muted-foreground mb-2">No Valid Signatures</h3>
-                    <p className="text-muted-foreground">No signatures have been validated yet.</p>
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
-          </ResizablePanel>
-        </ResizablePanelGroup>
+            )}
+          </TabsContent>
+          
+          {/* For Review Tab */}
+          <TabsContent value="review" className="flex-1 overflow-auto m-0 max-h-[400px]">
+            {forReviewCount > 0 ? (
+              <SignatureCardList 
+                results={forReviewItems}
+                lineItems={lineItems}
+                expandedRows={expandedRows}
+                toggleRow={toggleRow}
+                referenceSignatures={referenceSignatures}
+                loadingSignatures={loadingSignatures}
+                onApprove={handleOverrideApprove}
+                onReject={handleReject}
+                showActions={true}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <CheckCircle2 className="h-12 w-12 text-success mb-3" />
+                <h3 className="text-lg font-semibold text-success mb-1">All Clear!</h3>
+                <p className="text-sm text-muted-foreground">No items require manual review</p>
+              </div>
+            )}
+          </TabsContent>
+          
+          {/* Rejected Tab */}
+          <TabsContent value="rejected" className="flex-1 overflow-auto m-0 max-h-[400px]">
+            {rejectedCount > 0 ? (
+              <SignatureCardList 
+                results={validationResults.filter(r => r.rejected)}
+                lineItems={lineItems}
+                expandedRows={expandedRows}
+                toggleRow={toggleRow}
+                referenceSignatures={referenceSignatures}
+                loadingSignatures={loadingSignatures}
+                onApprove={handleOverrideApprove}
+                onReject={handleReject}
+                showActions={false}
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <CheckCircle2 className="h-12 w-12 text-muted-foreground mb-3" />
+                <h3 className="text-lg font-semibold text-muted-foreground mb-1">No Rejected Signatures</h3>
+                <p className="text-sm text-muted-foreground">Rejected items will appear here</p>
+              </div>
+            )}
+          </TabsContent>
+          
+          {/* All Signatures Tab */}
+          <TabsContent value="all" className="flex-1 overflow-auto m-0 max-h-[400px]">
+            <SignatureCardList 
+              results={validationResults}
+              lineItems={lineItems}
+              expandedRows={expandedRows}
+              toggleRow={toggleRow}
+              referenceSignatures={referenceSignatures}
+              loadingSignatures={loadingSignatures}
+              onApprove={handleOverrideApprove}
+              onReject={handleReject}
+              showActions={false}
+            />
+          </TabsContent>
+        </Tabs>
       )}
       
       {/* Empty State */}
