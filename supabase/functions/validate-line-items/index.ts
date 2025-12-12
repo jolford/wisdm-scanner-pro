@@ -218,26 +218,29 @@ serve(async (req) => {
       );
     }
 
-    // Check for voter registry in indexed database first
-    const { data: voterRegistry, error: registryError } = await supabaseAdmin
+    // Check for voter registry in indexed database first (project-level, then customer-level)
+    let lookupData: any[] = [];
+    let useIndexedRegistry = false;
+
+    // Try project-specific voter registry first
+    const { data: projectRegistry, error: projectRegistryError } = await supabaseAdmin
       .from('voter_registry')
       .select('*')
       .eq('project_id', projectId)
       .limit(1);
 
-    const useIndexedRegistry = voterRegistry && voterRegistry.length > 0;
-    console.log(`Using ${useIndexedRegistry ? 'indexed database' : 'file-based'} voter registry`);
+    if (projectRegistryError) {
+      console.error('Error checking project voter registry:', projectRegistryError);
+    }
 
-    // Build lookup data from either indexed DB or file
-    let lookupData: any[] = [];
-    
-    if (useIndexedRegistry) {
-      // Query all records from indexed voter_registry
+    if (projectRegistry && projectRegistry.length > 0) {
+      useIndexedRegistry = true;
+      console.log('Using project-scoped indexed voter registry');
       const { data: allVoters } = await supabaseAdmin
         .from('voter_registry')
         .select('*')
         .eq('project_id', projectId);
-      
+
       lookupData = (allVoters || []).map(v => ({
         Name: v.name,
         name_normalized: v.name_normalized,
@@ -246,8 +249,43 @@ serve(async (req) => {
         Zip: v.zip,
         signature_reference_url: v.signature_reference_url
       }));
-      console.log(`Loaded ${lookupData.length} voters from indexed registry`);
+      console.log(`Loaded ${lookupData.length} voters from project registry`);
     } else {
+      // Fallback: use customer-level registry if available (shared across petition projects)
+      const { data: customerRegistry, error: customerRegistryError } = await supabaseAdmin
+        .from('voter_registry')
+        .select('*')
+        .eq('customer_id', project.customer_id)
+        .limit(1);
+
+      if (customerRegistryError) {
+        console.error('Error checking customer voter registry:', customerRegistryError);
+      }
+
+      if (customerRegistry && customerRegistry.length > 0) {
+        useIndexedRegistry = true;
+        console.log('Using customer-scoped indexed voter registry');
+        const { data: allCustomerVoters } = await supabaseAdmin
+          .from('voter_registry')
+          .select('*')
+          .eq('customer_id', project.customer_id);
+
+        lookupData = (allCustomerVoters || []).map(v => ({
+          Name: v.name,
+          name_normalized: v.name_normalized,
+          Address: v.address,
+          City: v.city,
+          Zip: v.zip,
+          signature_reference_url: v.signature_reference_url
+        }));
+        console.log(`Loaded ${lookupData.length} voters from customer registry`);
+      }
+    }
+
+    console.log(`Using ${useIndexedRegistry ? 'indexed database' : 'file-based'} voter registry`);
+
+    // Build lookup data from either indexed DB or file
+    if (!useIndexedRegistry) {
       // Fall back to file-based lookup
       const lookupConfig = (project.metadata as any)?.validation_lookup_config;
       
