@@ -2427,7 +2427,7 @@ const [isExporting, setIsExporting] = useState(false);
                               const operatorAction = isRejected 
                                 ? 'Operator Rejected Signature' 
                                 : isOverrideApproved 
-                                  ? 'Operator Approved' 
+                                  ? 'Operator Approved Signature' 
                                   : '';
                               
                               rows.push([
