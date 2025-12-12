@@ -212,12 +212,12 @@ export const SignatureCard = ({
         <CollapsibleContent>
           <div className="px-4 pb-4 pt-2 border-t border-border/50">
             <div className="flex gap-4">
-              {/* Reference Signature */}
-              {isApproved && (
+              {/* Reference Signature - show when there's a registry match */}
+              {(result.found || result.partialMatch) && (
                 <div className="flex-shrink-0 w-40">
                   <div className="text-xs font-semibold text-muted-foreground mb-2 flex items-center gap-1">
                     <PenTool className="h-3 w-3" />
-                    Reference
+                    Reference Signature
                   </div>
                   {referenceSignature?.signedUrl ? (
                     <div className="border rounded-lg p-2 bg-background">
@@ -233,7 +233,8 @@ export const SignatureCard = ({
                     </div>
                   ) : (
                     <div className="border rounded-lg p-3 bg-muted/50 text-center">
-                      <p className="text-xs text-muted-foreground">None on file</p>
+                      <User className="h-4 w-4 mx-auto mb-1 text-muted-foreground" />
+                      <p className="text-xs text-muted-foreground">No reference on file</p>
                     </div>
                   )}
                 </div>

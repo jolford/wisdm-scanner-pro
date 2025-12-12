@@ -184,14 +184,14 @@ export const LineItemValidation = ({ lineItems, lookupConfig, keyField, precompu
       setValidationResults(converted);
       setAutoValidatedAt(precomputedResults.validatedAt || new Date().toISOString());
       
-      // Fetch reference signatures for valid entries
-      const validNames = converted
-        .filter(r => r.allMatch)
+      // Fetch reference signatures for all registry matches (found or partial match)
+      const matchedNames = converted
+        .filter(r => r.found || r.partialMatch)
         .map(r => r.keyValue)
         .filter(name => name && name !== '(empty)');
       
-      if (validNames.length > 0) {
-        fetchReferenceSignatures(validNames);
+      if (matchedNames.length > 0) {
+        fetchReferenceSignatures(matchedNames);
       }
     }
   }, [precomputedResults, keyField]);
