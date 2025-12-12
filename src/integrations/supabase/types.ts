@@ -1144,6 +1144,8 @@ export type Database = {
           redacted_file_url: string | null
           redaction_metadata: Json | null
           search_vector: unknown
+          signature_authentication_status: string | null
+          signature_similarity_score: number | null
           uploaded_by: string
           validated_at: string | null
           validated_by: string | null
@@ -1183,6 +1185,8 @@ export type Database = {
           redacted_file_url?: string | null
           redaction_metadata?: Json | null
           search_vector?: unknown
+          signature_authentication_status?: string | null
+          signature_similarity_score?: number | null
           uploaded_by: string
           validated_at?: string | null
           validated_by?: string | null
@@ -1222,6 +1226,8 @@ export type Database = {
           redacted_file_url?: string | null
           redaction_metadata?: Json | null
           search_vector?: unknown
+          signature_authentication_status?: string | null
+          signature_similarity_score?: number | null
           uploaded_by?: string
           validated_at?: string | null
           validated_by?: string | null
@@ -3828,6 +3834,8 @@ export type Database = {
           project_id: string | null
           raw_data: Json | null
           registration_date: string | null
+          signature_reference_uploaded_at: string | null
+          signature_reference_url: string | null
           source_file: string | null
           state: string | null
           updated_at: string
@@ -3848,6 +3856,8 @@ export type Database = {
           project_id?: string | null
           raw_data?: Json | null
           registration_date?: string | null
+          signature_reference_uploaded_at?: string | null
+          signature_reference_url?: string | null
           source_file?: string | null
           state?: string | null
           updated_at?: string
@@ -3868,6 +3878,8 @@ export type Database = {
           project_id?: string | null
           raw_data?: Json | null
           registration_date?: string | null
+          signature_reference_uploaded_at?: string | null
+          signature_reference_url?: string | null
           source_file?: string | null
           state?: string | null
           updated_at?: string
