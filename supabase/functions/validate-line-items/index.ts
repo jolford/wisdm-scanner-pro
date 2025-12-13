@@ -287,19 +287,24 @@ serve(async (req) => {
         }
       }
 
-      // Global fallback registry (demo/sample data or shared registry)
+      // Global fallback registry - ONLY use entries that are explicitly global (no project/customer scope)
+      // This prevents accidentally loading other projects' data
       if (lookupData.length === 0) {
-        const { data: anyRegistry } = await supabaseAdmin
+        const { data: globalOnlyRegistry } = await supabaseAdmin
           .from('voter_registry')
           .select('*')
+          .is('project_id', null)
+          .is('customer_id', null)
           .limit(1);
 
-        if (anyRegistry && anyRegistry.length > 0) {
+        if (globalOnlyRegistry && globalOnlyRegistry.length > 0) {
           lookupSource = 'global_registry';
-          console.log('Using GLOBAL voter_registry as fallback for petition project');
+          console.log('Using explicitly global voter_registry (no project/customer scope) for petition project');
           const { data: allGlobalVoters } = await supabaseAdmin
             .from('voter_registry')
-            .select('*');
+            .select('*')
+            .is('project_id', null)
+            .is('customer_id', null);
 
           lookupData = (allGlobalVoters || []).map(v => ({
             Name: v.name,
