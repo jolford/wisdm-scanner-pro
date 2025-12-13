@@ -98,7 +98,9 @@ serve(async (req) => {
     // Default column mapping - tries common column names
     const mapping = columnMapping || {
       name: ['Name', 'name', 'Printed_Name', 'printed_name', 'Full_Name', 'full_name', 'VoterName', 'voter_name'],
-      address: ['Address', 'address', 'Street_Address', 'street_address', 'ResAddress', 'res_address'],
+      firstName: ['FirstName', 'First_Name', 'first_name', 'First'],
+      lastName: ['LastName', 'Last_Name', 'last_name', 'Last'],
+      address: ['Address', 'address', 'Street_Address', 'street_address', 'ResAddress', 'res_address', 'StreetAddress'],
       city: ['City', 'city', 'ResCity', 'res_city'],
       zip: ['Zip', 'zip', 'ZipCode', 'zipcode', 'Zip_Code', 'zip_code', 'ResZip', 'res_zip'],
       county: ['County', 'county'],
@@ -120,6 +122,8 @@ serve(async (req) => {
     };
 
     const nameColumn = findColumn(mapping.name);
+    const firstNameColumn = findColumn(mapping.firstName);
+    const lastNameColumn = findColumn(mapping.lastName);
     const addressColumn = findColumn(mapping.address);
     const cityColumn = findColumn(mapping.city);
     const zipColumn = findColumn(mapping.zip);
@@ -129,9 +133,15 @@ serve(async (req) => {
     const partyColumn = findColumn(mapping.party);
     const precinctColumn = findColumn(mapping.precinct);
 
-    if (!nameColumn) {
-      throw new Error(`Could not find name column. Available columns: ${Object.keys(sampleRow).join(', ')}`);
+    // Support either combined Name OR FirstName+LastName
+    const hasNameColumn = nameColumn !== null;
+    const hasFirstLastColumns = firstNameColumn !== null && lastNameColumn !== null;
+    
+    if (!hasNameColumn && !hasFirstLastColumns) {
+      throw new Error(`Could not find name column(s). Need either 'Name' or 'FirstName'+'LastName'. Available: ${Object.keys(sampleRow).join(', ')}`);
     }
+
+    console.log('Column mapping:', { nameColumn, firstNameColumn, lastNameColumn, addressColumn, cityColumn, zipColumn });
 
     console.log('Column mapping:', { nameColumn, addressColumn, cityColumn, zipColumn });
 
@@ -162,7 +172,16 @@ serve(async (req) => {
       const batch = data.slice(i, i + BATCH_SIZE);
       
       const records = batch.map((row: any) => {
-        const name = String(row[nameColumn] || '').trim();
+        // Build name from either combined column or FirstName+LastName
+        let name = '';
+        if (nameColumn) {
+          name = String(row[nameColumn] || '').trim();
+        } else if (firstNameColumn && lastNameColumn) {
+          const firstName = String(row[firstNameColumn] || '').trim();
+          const lastName = String(row[lastNameColumn] || '').trim();
+          name = `${firstName} ${lastName}`.trim();
+        }
+        
         return {
           customer_id: customerId,
           project_id: projectId || null,
