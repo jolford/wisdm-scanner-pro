@@ -353,7 +353,7 @@ CRITICAL: Look carefully at each field label and extract ANY handwritten or type
 RESPOND WITH ONLY THE JSON OBJECT containing the extracted values.`;
       } else if (isPetition) {
         // SPECIALIZED PROMPT FOR PETITION/SIGNATURE SHEETS
-        // Extract ALL signers as line items with name, signature status, city, zip
+        // Extract ALL signers as line items with name, signature status, city, zip, AND signature bounding boxes
         const baseJson = `{"fullText": "complete extracted text", "documentType": "petition", "confidence": 0.0-1.0, "fields": {${fieldNames.map((n: string) => `"${n}": {"value": "first signer value only", "bbox": {"x": 0, "y": 0, "width": 0, "height": 0}}`).join(', ')}}, "lineItems": []}`;
         
         systemPrompt = `CRITICAL: You MUST return ONLY valid JSON with no additional text, explanations, or markdown formatting.
@@ -373,16 +373,24 @@ LINE ITEM EXTRACTION:
 For EACH signer row, extract into lineItems array:
 - "Printed_Name": The printed/written name (e.g., "Michael Lory", "Owen Doyles")
 - "Signature_Present": "yes" if signature exists in that row, "no" if blank
+- "Signature_Bbox": CRITICAL - bounding box of the SIGNATURE REGION (not the name) as {"x": 0-100, "y": 0-100, "width": 0-100, "height": 0-100} percentages
 - "Address": Full address if present, or partial address/street
 - "City": City name (e.g., "Roseville", "Silver Springs")
 - "Zip": ZIP code (e.g., "95678", "91234")
 - "Row_Number": The row number if visible (1, 2, 3, etc.)
 
+SIGNATURE BOUNDING BOX RULES:
+- The Signature_Bbox should capture the SIGNATURE CELL/AREA, not the printed name
+- Signatures are typically in a separate column from the printed name
+- If no signature exists (blank), still provide the bbox of where the signature WOULD be
+- Coordinates are PERCENTAGES of document dimensions (0-100 scale)
+- x: left edge, y: top edge, width: horizontal span, height: vertical span
+
 CRITICAL:
 - Extract ALL rows, not just the first one
 - Even if some fields are hard to read, include the row with your best guess
 - If a signature row is empty/blank, still include it with Signature_Present: "no"
-- Count the total signatures at the end
+- ALWAYS include Signature_Bbox for each row to enable signature image extraction
 
 For the "fields" object, extract only the FIRST signer's data.
 
@@ -390,7 +398,7 @@ RESPONSE REQUIREMENTS:
 - Return ONLY the JSON object
 - NO markdown code blocks
 - NO explanatory text
-- lineItems MUST contain ALL signer rows`;
+- lineItems MUST contain ALL signer rows with Signature_Bbox`;
 
         userPrompt = `This is a PETITION SIGNATURE SHEET with MULTIPLE SIGNERS. 
 
@@ -399,15 +407,15 @@ CRITICAL TASK: Extract EVERY SINGLE SIGNER ROW into the lineItems array.
 For each row on the petition, extract:
 - Printed_Name (handwritten or printed name)
 - Signature_Present (yes/no)
+- Signature_Bbox (bounding box of the signature cell as percentages: {"x": 0-100, "y": 0-100, "width": 0-100, "height": 0-100})
 - Address (if visible)
 - City 
 - Zip code
 - Row_Number
 
-I can see there are multiple rows with names like "Michael Lory", "Owen Doyles", "Emily Cole", etc. 
-Extract ALL of them - do not stop at the first row.
+The Signature_Bbox should capture the region where the signature appears (or should appear), NOT the printed name column.
 
-Count every visible signature row and include it in lineItems.
+Extract ALL rows - do not stop at the first row.
 
 RESPOND WITH ONLY THE JSON OBJECT - NO OTHER TEXT.`;
       } else if (isCasinoVoucher) {
@@ -2294,6 +2302,158 @@ Review the image and provide corrected text with any OCR errors fixed.`;
           })()
         );
         
+        // --- PETITION SIGNATURE IMAGE EXTRACTION (ASYNC - NON-BLOCKING) ---
+        // Extract and store individual signature images from petition documents
+        if (isPetition && lineItems && lineItems.length > 0 && documentId && imageData) {
+          EdgeRuntime.waitUntil(
+            (async () => {
+              try {
+                console.log(`Signature Extraction: Starting for ${lineItems.length} signatures in document ${documentId}`);
+                
+                // Filter line items that have signature bboxes
+                const itemsWithBbox = lineItems.filter((item: any) => 
+                  item.Signature_Bbox && 
+                  typeof item.Signature_Bbox === 'object' &&
+                  item.Signature_Present === 'yes'
+                );
+                
+                if (itemsWithBbox.length === 0) {
+                  console.log('Signature Extraction: No signatures with bounding boxes found');
+                  return;
+                }
+                
+                console.log(`Signature Extraction: Found ${itemsWithBbox.length} signatures with bboxes`);
+                
+                // Get document batch_id for storage path
+                const { data: doc } = await supabaseAdmin
+                  .from('documents')
+                  .select('batch_id, file_name')
+                  .eq('id', documentId)
+                  .single();
+                
+                const batchId = doc?.batch_id || 'unknown';
+                const docName = doc?.file_name?.replace(/\.[^/.]+$/, '') || documentId;
+                
+                // Use AI to crop signatures from the document image
+                const extractedSignatures: Array<{rowNumber: number | string, imageUrl: string}> = [];
+                
+                for (let i = 0; i < itemsWithBbox.length; i++) {
+                  const item = itemsWithBbox[i];
+                  const bbox = item.Signature_Bbox;
+                  const rowNum = item.Row_Number || (i + 1);
+                  
+                  try {
+                    // Use Gemini to extract/crop the signature region
+                    const cropPrompt = `Extract ONLY the signature region from this document.
+
+The signature is located at these coordinates (as percentages of document dimensions):
+- Left edge (x): ${bbox.x}%
+- Top edge (y): ${bbox.y}%  
+- Width: ${bbox.width}%
+- Height: ${bbox.height}%
+
+Return ONLY the cropped signature image - nothing else. Make the background white/clean.
+This is for Row ${rowNum}, signer: ${item.Printed_Name || 'Unknown'}.`;
+
+                    const cropResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({
+                        model: 'google/gemini-2.5-flash-image-preview',
+                        messages: [
+                          {
+                            role: 'user',
+                            content: [
+                              { type: 'text', text: cropPrompt },
+                              { type: 'image_url', image_url: { url: imageData } }
+                            ]
+                          }
+                        ],
+                        modalities: ['image', 'text']
+                      })
+                    });
+                    
+                    if (!cropResponse.ok) {
+                      console.error(`Signature crop failed for row ${rowNum}:`, await cropResponse.text());
+                      continue;
+                    }
+                    
+                    const cropResult = await cropResponse.json();
+                    const croppedImageUrl = cropResult.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+                    
+                    if (!croppedImageUrl) {
+                      console.log(`No image generated for row ${rowNum}`);
+                      continue;
+                    }
+                    
+                    // Convert base64 to blob and upload to storage
+                    const base64Data = croppedImageUrl.replace(/^data:image\/\w+;base64,/, '');
+                    const binaryString = atob(base64Data);
+                    const bytes = new Uint8Array(binaryString.length);
+                    for (let j = 0; j < binaryString.length; j++) {
+                      bytes[j] = binaryString.charCodeAt(j);
+                    }
+                    
+                    const sigFileName = `signatures/${batchId}/${docName}_row${rowNum}_sig.png`;
+                    
+                    const { error: uploadError } = await supabaseAdmin.storage
+                      .from('documents')
+                      .upload(sigFileName, bytes, {
+                        contentType: 'image/png',
+                        upsert: true
+                      });
+                    
+                    if (uploadError) {
+                      console.error(`Failed to upload signature for row ${rowNum}:`, uploadError);
+                      continue;
+                    }
+                    
+                    // Get public URL
+                    const { data: urlData } = supabaseAdmin.storage
+                      .from('documents')
+                      .getPublicUrl(sigFileName);
+                    
+                    extractedSignatures.push({
+                      rowNumber: rowNum,
+                      imageUrl: urlData?.publicUrl || sigFileName
+                    });
+                    
+                    console.log(`Signature Extraction: Saved signature for row ${rowNum}`);
+                    
+                  } catch (cropError) {
+                    console.error(`Failed to extract signature for row ${rowNum}:`, cropError);
+                  }
+                }
+                
+                // Update line_items in database with signature URLs
+                if (extractedSignatures.length > 0) {
+                  const updatedLineItems = lineItems.map((item: any) => {
+                    const rowNum = item.Row_Number || 0;
+                    const sigMatch = extractedSignatures.find(s => String(s.rowNumber) === String(rowNum));
+                    if (sigMatch) {
+                      return { ...item, Signature_Image_Url: sigMatch.imageUrl };
+                    }
+                    return item;
+                  });
+                  
+                  await supabaseAdmin
+                    .from('documents')
+                    .update({ line_items: updatedLineItems })
+                    .eq('id', documentId);
+                  
+                  console.log(`Signature Extraction: Updated ${extractedSignatures.length} signatures in database`);
+                }
+                
+              } catch (sigError) {
+                console.error('Signature extraction background task failed:', sigError);
+              }
+            })()
+          );
+        }
+        
         // --- LINE ITEM VALIDATION LOOKUP (ASYNC - NON-BLOCKING) ---
         // Automatically validate extracted line items against configured lookup database
         if (lineItems && lineItems.length > 0 && projectId) {
@@ -2303,13 +2463,16 @@ Review the image and provide corrected text with any OCR errors fixed.`;
                 // Check if project has validation lookup enabled
                 const { data: projectSettings } = await supabaseAdmin
                   .from('projects')
-                  .select('metadata')
+                  .select('metadata, name')
                   .eq('id', projectId)
                   .single();
                 
+                const projectName = (projectSettings?.name || '').toLowerCase();
+                const isPetitionProject = projectName.includes('petition');
                 const lookupConfig = (projectSettings?.metadata as any)?.validation_lookup_config;
                 
-                if (lookupConfig?.enabled && lookupConfig.excelFileUrl) {
+                // For petition projects, always run validation if lookup is enabled OR if voter_registry has data
+                if (isPetitionProject || (lookupConfig?.enabled && lookupConfig.excelFileUrl)) {
                   console.log(`Line Item Validation: Triggering validation for document ${documentId} with ${lineItems.length} items`);
                   
                   const validationResult = await supabaseAdmin.functions.invoke('validate-line-items', {
