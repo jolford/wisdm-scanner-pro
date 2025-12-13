@@ -75,8 +75,12 @@ serve(async (req) => {
       replaceExisting = true 
     } = await req.json();
 
-    if (!fileUrl || !customerId) {
-      throw new Error('Missing required parameters: fileUrl and customerId');
+    if (!fileUrl) {
+      throw new Error('Missing required parameter: fileUrl');
+    }
+
+    if (!customerId && !projectId) {
+      throw new Error('At least one of customerId or projectId is required');
     }
 
     console.log('Importing voter registry:', { customerId, projectId, replaceExisting });
@@ -147,19 +151,24 @@ serve(async (req) => {
 
     // Delete existing records if replacing
     if (replaceExisting) {
-      const deleteQuery = projectId 
-        ? { customer_id: customerId, project_id: projectId }
-        : { customer_id: customerId };
+      let deleteQuery: any = {};
+      if (projectId) {
+        deleteQuery.project_id = projectId;
+      } else if (customerId) {
+        deleteQuery.customer_id = customerId;
+      }
       
-      const { error: deleteError } = await supabase
-        .from('voter_registry')
-        .delete()
-        .match(deleteQuery);
-      
-      if (deleteError) {
-        console.error('Error deleting existing records:', deleteError);
-      } else {
-        console.log('Deleted existing voter registry records');
+      if (Object.keys(deleteQuery).length > 0) {
+        const { error: deleteError } = await supabase
+          .from('voter_registry')
+          .delete()
+          .match(deleteQuery);
+        
+        if (deleteError) {
+          console.error('Error deleting existing records:', deleteError);
+        } else {
+          console.log('Deleted existing voter registry records');
+        }
       }
     }
 
@@ -183,7 +192,7 @@ serve(async (req) => {
         }
         
         return {
-          customer_id: customerId,
+          customer_id: customerId || null,
           project_id: projectId || null,
           name: name,
           name_normalized: name.toLowerCase().replace(/\s+/g, ' ').trim(),

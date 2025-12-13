@@ -362,18 +362,18 @@ export function ValidationLookupConfig({
           try {
             const { data: importResult, error: importError } = await supabase.functions.invoke('import-voter-registry', {
               body: {
-                csvData: csvText,
+                fileUrl: publicUrl,
                 customerId,
                 projectId,
-                sourceFile: file.name
+                replaceExisting: true
               }
             });
 
             if (importError) throw importError;
 
             if (importResult?.success) {
-              setVoterRegistryCount(importResult.imported);
-              toast.success(`Imported ${importResult.imported} voter records for fast lookups`);
+              setVoterRegistryCount(importResult.insertedCount);
+              toast.success(`Imported ${importResult.insertedCount} voter records for fast lookups`);
             }
           } catch (importErr) {
             console.error('Voter registry import error:', importErr);
@@ -605,6 +605,51 @@ export function ValidationLookupConfig({
                 <Badge variant="secondary" className="w-fit">
                   {voterRegistryCount.toLocaleString()} voter records indexed for fast lookups
                 </Badge>
+              )}
+              {isPetitionProject && config.excelFileUrl && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={async () => {
+                    if (!config.excelFileUrl) return;
+                    setImportingVoterRegistry(true);
+                    toast.info('Importing voter registry to database for fast lookups...');
+                    try {
+                      const { data: importResult, error: importError } = await supabase.functions.invoke('import-voter-registry', {
+                        body: {
+                          fileUrl: config.excelFileUrl,
+                          customerId: customerId || null,
+                          projectId: projectId || null,
+                          replaceExisting: true
+                        }
+                      });
+                      if (importError) throw importError;
+                      if (importResult?.success) {
+                        setVoterRegistryCount(importResult.insertedCount);
+                        toast.success(`Imported ${importResult.insertedCount} voter records for fast indexed lookups (100K+ scale)`);
+                      } else {
+                        throw new Error(importResult?.error || 'Import failed');
+                      }
+                    } catch (err: any) {
+                      console.error('Manual import error:', err);
+                      toast.error(`Import failed: ${err.message}`);
+                    } finally {
+                      setImportingVoterRegistry(false);
+                    }
+                  }}
+                  disabled={importingVoterRegistry || disabled}
+                  className="w-fit"
+                >
+                  {importingVoterRegistry ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Importing...
+                    </>
+                  ) : (
+                    'Import to Database (for 100K+ scale)'
+                  )}
+                </Button>
               )}
               <p className="text-xs text-muted-foreground">
                 Upload {config.system === 'csv' ? 'a CSV file (.csv)' : 'an Excel file (.xlsx or .xls)'} containing validation data
