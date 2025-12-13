@@ -206,7 +206,7 @@ serve(async (req) => {
     // Get project and customer info
     const { data: project, error: projectError } = await supabaseAdmin
       .from('projects')
-      .select('metadata, customer_id')
+      .select('name, metadata, customer_id')
       .eq('id', projectId)
       .single();
 
@@ -223,6 +223,7 @@ serve(async (req) => {
     let lookupSource = 'none';
 
     const lookupConfig = (project.metadata as any)?.validation_lookup_config;
+    const isPetitionProject = (project.name || '').toLowerCase().includes('petition');
     
     // PRIORITY 1: Use file-based lookup if configured for this project
     if (lookupConfig?.enabled && lookupConfig.excelFileUrl) {
@@ -441,11 +442,12 @@ serve(async (req) => {
           itemResult.matchScore = bestScore;
           itemResult.bestMatch = bestMatch;
           validCount++;
-        } else if (bestNameScore >= 0.7) {
+        } else if (bestNameScore >= (isPetitionProject ? 0.6 : 0.7)) {
+          // Name is a reasonably good match, but address and/or other fields differ
           itemResult.partialMatch = true;
           itemResult.matchScore = bestNameScore;
           itemResult.bestMatch = bestMatch;
-          itemResult.mismatchReason = 'address_mismatch';
+          itemResult.mismatchReason = bestAddressScore >= 0.4 ? 'address_mismatch' : 'name_mismatch';
           partialMatchCount++;
           invalidCount++;
         } else {
