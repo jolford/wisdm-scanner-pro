@@ -54,7 +54,25 @@ function normalize(value: string): string {
   return String(value || '').toLowerCase().trim().replace(/\s+/g, ' ');
 }
 
-// Calculate similarity score between two strings
+// Levenshtein distance for fuzzy matching
+function levenshtein(a: string, b: string): number {
+  const m = a.length, n = b.length;
+  if (m === 0) return n;
+  if (n === 0) return m;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1]
+        ? dp[i - 1][j - 1]
+        : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+// Calculate similarity score between two strings using Levenshtein + word overlap
 function similarity(str1: string, str2: string): number {
   const s1 = normalize(str1);
   const s2 = normalize(str2);
@@ -62,14 +80,21 @@ function similarity(str1: string, str2: string): number {
   if (s1 === s2) return 1.0;
   if (!s1 || !s2) return 0;
   
+  // Substring containment
   if (s1.includes(s2) || s2.includes(s1)) return 0.9;
   
+  // Levenshtein-based similarity
+  const maxLen = Math.max(s1.length, s2.length);
+  const levScore = 1 - levenshtein(s1, s2) / maxLen;
+  
+  // Word overlap
   const words1 = s1.split(' ');
   const words2 = s2.split(' ');
   const commonWords = words1.filter(w => words2.includes(w));
   const overlapScore = commonWords.length / Math.max(words1.length, words2.length);
   
-  return overlapScore;
+  // Return best of the two
+  return Math.max(levScore, overlapScore);
 }
 
 // Authenticate signature against reference using AI vision
@@ -597,6 +622,14 @@ serve(async (req) => {
           // Non‑petition: fall back to previous behavior
           (!isPetitionProject && bestNameScore >= 0.6)
         ) {
+          itemResult.partialMatch = true;
+          itemResult.matchScore = bestNameScore;
+          itemResult.bestMatch = bestMatch;
+          itemResult.mismatchReason = bestNameScore < 0.7 ? 'name_mismatch' : 'address_mismatch';
+          partialMatchCount++;
+          invalidCount++;
+        } else if (isPetitionProject && bestNameScore >= 0.3) {
+          // For petitions: ANY reasonable name candidate → partial match for review
           itemResult.partialMatch = true;
           itemResult.matchScore = bestNameScore;
           itemResult.bestMatch = bestMatch;
