@@ -48,17 +48,17 @@ export const ProgressTrackingDashboard = ({ metrics, batchName }: ProgressTracki
       {/* Progress Bars */}
       <Card>
         <CardContent className="pt-6 space-y-4">
-          {/* OCR Progress - Show if we have OCR metrics and processing isn't complete */}
-          {ocrPercentage !== null && ocrPercentage < 100 && (
+          {/* OCR Progress - Always show when we have documents */}
+          {metrics.totalDocuments > 0 && (
             <div className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span className="font-medium flex items-center gap-2">
                   <Zap className="h-4 w-4 text-purple-500" />
                   OCR Processing
                 </span>
-                <span className="text-muted-foreground">{ocrPercentage}%</span>
+                <span className="text-muted-foreground">{ocrPercentage ?? 0}%</span>
               </div>
-              <Progress value={ocrPercentage} className="h-2" />
+              <Progress value={ocrPercentage ?? 0} className="h-2" />
               <div className="flex justify-between text-xs text-muted-foreground">
                 <span>{metrics.ocrProcessed || 0} processed</span>
                 <span>{(metrics.ocrTotal || 0) - (metrics.ocrProcessed || 0)} remaining</span>
