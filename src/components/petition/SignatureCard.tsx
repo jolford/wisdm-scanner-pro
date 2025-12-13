@@ -329,30 +329,44 @@ export const SignatureCard = ({
                   <div>
                     <div className="text-xs font-semibold text-muted-foreground mb-2">Field Comparison</div>
                     <div className="grid grid-cols-2 gap-2">
-                      {result.validationResults.map((fieldResult, idx) => (
-                        <div
-                          key={idx}
-                          className={`p-2 rounded border text-xs ${
-                            fieldResult.matches
-                              ? 'bg-success/5 border-success/20'
-                              : 'bg-warning/5 border-warning/20'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <span className="font-medium">{fieldResult.field}</span>
-                            {fieldResult.matches ? (
-                              <CheckCircle2 className="h-3 w-3 text-success" />
-                            ) : (
-                              <AlertCircle className="h-3 w-3 text-warning" />
-                            )}
-                          </div>
-                          {!fieldResult.matches && (
-                            <div className="text-muted-foreground">
-                              "{fieldResult.wisdmValue}" → "{fieldResult.excelValue}"
+                      {result.validationResults.map((fieldResult, idx) => {
+                        const extracted = fieldResult.wisdmValue || '';
+                        const lookup = fieldResult.excelValue || '';
+                        const showArrow = extracted && lookup && extracted !== lookup;
+
+                        return (
+                          <div
+                            key={idx}
+                            className={`p-2 rounded border text-xs ${
+                              fieldResult.matches
+                                ? 'bg-success/5 border-success/20'
+                                : 'bg-warning/5 border-warning/20'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-medium">{fieldResult.field}</span>
+                              {fieldResult.matches ? (
+                                <CheckCircle2 className="h-3 w-3 text-success" />
+                              ) : (
+                                <AlertCircle className="h-3 w-3 text-warning" />
+                              )}
                             </div>
-                          )}
-                        </div>
-                      ))}
+                            <div className="text-[11px] text-muted-foreground leading-tight">
+                              {extracted && !showArrow && (
+                                <span>"{extracted}"</span>
+                              )}
+                              {showArrow && (
+                                <span>
+                                  "{extracted}" → "{lookup}"
+                                </span>
+                              )}
+                              {!extracted && lookup && (
+                                <span>"{lookup}"</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
