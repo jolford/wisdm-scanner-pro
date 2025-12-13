@@ -522,6 +522,15 @@ export const BatchValidationScreen = ({
   
   // Calculate progress metrics from all documents in batch (not just pending ones)
   const docsForMetrics = allDocuments || documents;
+  
+  // Calculate OCR progress from actual document data - documents with extracted_text are considered processed
+  const actualOcrProcessed = docsForMetrics.filter(d => d.extracted_text || d.extracted_metadata).length;
+  const actualOcrTotal = docsForMetrics.length;
+  
+  // Use actual counts from documents, fallback to props if documents not loaded yet
+  const effectiveOcrProcessed = actualOcrTotal > 0 ? actualOcrProcessed : (ocrProcessed || 0);
+  const effectiveOcrTotal = actualOcrTotal > 0 ? actualOcrTotal : (ocrTotal || 0);
+  
   const progressMetrics = {
     totalDocuments: docsForMetrics.length,
     validated: docsForMetrics.filter(d => d.validation_status === 'validated').length,
@@ -532,8 +541,8 @@ export const BatchValidationScreen = ({
       ? Math.round((docsForMetrics.filter(d => d.validation_status === 'validated').length / docsForMetrics.length) * 100)
       : 0,
     topVendor: undefined, // Could be calculated from metadata
-    ocrProcessed,
-    ocrTotal,
+    ocrProcessed: effectiveOcrProcessed,
+    ocrTotal: effectiveOcrTotal,
   };
 
   // Keyboard shortcuts
