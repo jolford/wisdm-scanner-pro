@@ -538,16 +538,26 @@ serve(async (req) => {
       let bestNameScore = 0;
       let bestAddressScore = 0;
 
-      const itemName = lineItem.Printed_Name || lineItem.printed_name || lineItem.Name || '';
+      const itemNameRaw = lineItem.Printed_Name || lineItem.printed_name || lineItem.Name || '';
+      const itemName = String(itemNameRaw).trim();
       const itemAddress = lineItem.Address || lineItem.address || '';
       const itemCity = lineItem.City || lineItem.city || '';
       const itemZip = lineItem.Zip || lineItem.zip || '';
 
       for (const voter of lookupData) {
         const voterName = voter.Name || voter.name || '';
-        const nameScore = similarity(itemName, voterName);
+        const voterNameNormalized = (voter.name_normalized || String(voterName).toLowerCase().trim());
+        const itemNameNormalized = itemName.toLowerCase();
+
+        // Prefer exact/normalized equality when possible
+        let nameScore = 0;
+        if (itemNameNormalized && voterNameNormalized && itemNameNormalized === voterNameNormalized) {
+          nameScore = 1;
+        } else {
+          nameScore = similarity(itemName, voterName);
+        }
         
-        if (nameScore >= 0.7) {
+        if (nameScore >= (isPetitionProject ? 0.5 : 0.7)) {
           const addressScore = similarity(itemAddress, voter.Address || voter.address || '');
           const cityScore = similarity(itemCity, voter.City || voter.city || '');
           const zipScore = similarity(itemZip, voter.Zip || voter.zip || '');
