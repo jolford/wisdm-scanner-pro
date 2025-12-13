@@ -562,23 +562,22 @@ serve(async (req) => {
         } else {
           nameScore = similarity(itemName, voterName);
         }
+        const addressScore = similarity(itemAddress, voter.Address || voter.address || '');
+        const cityScore = similarity(itemCity, voter.City || voter.city || '');
+        const zipScore = similarity(itemZip, voter.Zip || voter.zip || '');
+        const avgAddressScore = (addressScore + cityScore + zipScore) / 3;
         
-        if (nameScore >= (isPetitionProject ? 0.5 : 0.7)) {
-          const addressScore = similarity(itemAddress, voter.Address || voter.address || '');
-          const cityScore = similarity(itemCity, voter.City || voter.city || '');
-          const zipScore = similarity(itemZip, voter.Zip || voter.zip || '');
-          const avgAddressScore = (addressScore + cityScore + zipScore) / 3;
-          
-          if (
-            nameScore > bestNameScore ||
-            (nameScore === bestNameScore && avgAddressScore > bestAddressScore)
-          ) {
-            bestNameScore = nameScore;
-            bestAddressScore = avgAddressScore;
-            bestZipScore = zipScore;
-            bestScore = (nameScore + avgAddressScore) / 2;
-            bestMatch = voter;
-          }
+        // Always track the best overall candidate so we can still surface
+        // a partial match when the name is misspelled but address/ZIP align
+        if (
+          nameScore > bestNameScore ||
+          (nameScore === bestNameScore && avgAddressScore > bestAddressScore)
+        ) {
+          bestNameScore = nameScore;
+          bestAddressScore = avgAddressScore;
+          bestZipScore = zipScore;
+          bestScore = (nameScore + avgAddressScore) / 2;
+          bestMatch = voter;
         }
       }
 
@@ -592,12 +591,16 @@ serve(async (req) => {
           itemResult.matchScore = bestScore;
           itemResult.bestMatch = bestMatch;
           validCount++;
-        } else if (bestNameScore >= (isPetitionProject ? 0.6 : 0.7)) {
-          // Name is a reasonably good match, but address and/or other fields differ
+        } else if (
+          // Petition: allow looser name score when address+ZIP are strong (likely typo)
+          (isPetitionProject && bestNameScore >= 0.3 && bestAddressScore >= 0.8 && zipStrongMatch) ||
+          // Non‑petition: fall back to previous behavior
+          (!isPetitionProject && bestNameScore >= 0.6)
+        ) {
           itemResult.partialMatch = true;
           itemResult.matchScore = bestNameScore;
           itemResult.bestMatch = bestMatch;
-          itemResult.mismatchReason = 'address_mismatch';
+          itemResult.mismatchReason = bestNameScore < 0.7 ? 'name_mismatch' : 'address_mismatch';
           partialMatchCount++;
           invalidCount++;
         } else {
