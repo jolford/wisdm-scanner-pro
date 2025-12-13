@@ -218,86 +218,24 @@ serve(async (req) => {
       );
     }
 
-    // Build lookup data - prioritize file-based config if enabled for this project
+    // Build lookup data - prioritize appropriate source based on project type
     let lookupData: any[] = [];
     let lookupSource = 'none';
 
     const lookupConfig = (project.metadata as any)?.validation_lookup_config;
     const isPetitionProject = (project.name || '').toLowerCase().includes('petition');
     
-    // PRIORITY 1: Use file-based lookup if configured for this project
-    if (lookupConfig?.enabled && lookupConfig.excelFileUrl) {
-      console.log('Using file-based voter registry from project config');
-      lookupSource = 'file';
-      
-      // Generate signed URL if needed
-      let fileUrl = lookupConfig.excelFileUrl;
-      if (fileUrl.includes('supabase.co/storage/v1/object')) {
-        const urlParts = fileUrl.match(/\/storage\/v1\/object\/(?:public\/)?([^/]+)\/(.+)/);
-        if (urlParts) {
-          const { data: signedData } = await supabaseAdmin.storage
-            .from(urlParts[1])
-            .createSignedUrl(urlParts[2], 300);
-          if (signedData?.signedUrl) fileUrl = signedData.signedUrl;
-        }
-      }
-
-      try {
-        const fileResponse = await fetch(fileUrl);
-        if (fileResponse.ok) {
-          const fileExtension = lookupConfig.excelFileUrl.toLowerCase();
-          if (fileExtension.endsWith('.csv')) {
-            lookupData = parseCSV(await fileResponse.text());
-          } else {
-            const arrayBuffer = await fileResponse.arrayBuffer();
-            const workbook = read(new Uint8Array(arrayBuffer), { type: 'array' });
-            lookupData = utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
-          }
-          console.log(`Loaded ${lookupData.length} records from CSV file`);
-          
-          // Map CSV columns to standard field names based on lookupFields config
-          if (lookupConfig.lookupFields && lookupData.length > 0) {
-            const fieldMapping: Record<string, string> = {};
-            for (const field of lookupConfig.lookupFields) {
-              if (field.ecmField && field.wisdmField) {
-                fieldMapping[field.ecmField] = field.wisdmField;
-              }
-            }
-            
-            // Normalize lookup data - combine FirstName + LastName if separate
-            lookupData = lookupData.map(row => {
-              const normalized: any = { ...row };
-              
-              // Build full name from FirstName/MiddleInitial/LastName if present
-              if (row.FirstName || row.LastName) {
-                const nameParts = [row.FirstName, row.MiddleInitial, row.LastName].filter(Boolean);
-                normalized.Name = nameParts.join(' ').trim();
-              }
-              
-              // Map StreetAddress to Address
-              if (row.StreetAddress && !row.Address) {
-                normalized.Address = row.StreetAddress;
-              }
-              
-              // Map ZipCode to Zip
-              if (row.ZipCode && !row.Zip) {
-                normalized.Zip = row.ZipCode;
-              }
-              
-              return normalized;
-            });
-          }
-        } else {
-          console.error('Failed to fetch lookup file:', fileResponse.status);
-        }
-      } catch (err) {
-        console.error('Error loading file-based lookup:', err);
-      }
-    }
+    // =============================
+    // LOOKUP STRATEGY OVERVIEW
+    // - Petition projects: prefer indexed voter_registry (fast, scalable), CSV as fallback only
+    // - Other projects: use file-based lookup first (legacy behavior), then voter_registry
+    // =============================
     
-    // PRIORITY 2: Fall back to indexed voter_registry if no file config or file failed
-    if (lookupData.length === 0) {
-      // Try project-specific voter registry
+    // PRIORITY A (PETITION): Indexed voter_registry first
+    if (isPetitionProject) {
+      console.log('Petition project detected - using indexed voter_registry as primary lookup');
+
+      // Project-scoped registry
       const { data: projectRegistry } = await supabaseAdmin
         .from('voter_registry')
         .select('*')
@@ -306,7 +244,7 @@ serve(async (req) => {
 
       if (projectRegistry && projectRegistry.length > 0) {
         lookupSource = 'project_registry';
-        console.log('Using project-scoped indexed voter registry');
+        console.log('Using project-scoped indexed voter registry for petition project');
         const { data: allVoters } = await supabaseAdmin
           .from('voter_registry')
           .select('*')
@@ -322,7 +260,7 @@ serve(async (req) => {
         }));
         console.log(`Loaded ${lookupData.length} voters from project registry`);
       } else if (project.customer_id) {
-        // Try customer-level registry
+        // Customer-scoped registry
         const { data: customerRegistry } = await supabaseAdmin
           .from('voter_registry')
           .select('*')
@@ -331,7 +269,7 @@ serve(async (req) => {
 
         if (customerRegistry && customerRegistry.length > 0) {
           lookupSource = 'customer_registry';
-          console.log('Using customer-scoped indexed voter registry');
+          console.log('Using customer-scoped indexed voter registry for petition project');
           const { data: allCustomerVoters } = await supabaseAdmin
             .from('voter_registry')
             .select('*')
@@ -348,9 +286,198 @@ serve(async (req) => {
           console.log(`Loaded ${lookupData.length} voters from customer registry`);
         }
       }
+
+      // Global fallback registry (demo/sample data or shared registry)
+      if (lookupData.length === 0) {
+        const { data: anyRegistry } = await supabaseAdmin
+          .from('voter_registry')
+          .select('*')
+          .limit(1);
+
+        if (anyRegistry && anyRegistry.length > 0) {
+          lookupSource = 'global_registry';
+          console.log('Using GLOBAL voter_registry as fallback for petition project');
+          const { data: allGlobalVoters } = await supabaseAdmin
+            .from('voter_registry')
+            .select('*');
+
+          lookupData = (allGlobalVoters || []).map(v => ({
+            Name: v.name,
+            name_normalized: v.name_normalized,
+            Address: v.address,
+            City: v.city,
+            Zip: v.zip,
+            signature_reference_url: v.signature_reference_url
+          }));
+          console.log(`Loaded ${lookupData.length} voters from global registry`);
+        }
+      }
+
+      // If STILL no data and CSV is configured, fall back to file-based lookup
+      if (lookupData.length === 0 && lookupConfig?.enabled && lookupConfig.excelFileUrl) {
+        console.log('Petition project: falling back to file-based voter registry from project config');
+        lookupSource = 'file_fallback';
+        
+        // Generate signed URL if needed
+        let fileUrl = lookupConfig.excelFileUrl;
+        if (fileUrl.includes('supabase.co/storage/v1/object')) {
+          const urlParts = fileUrl.match(/\/storage\/v1\/object\/(?:public\/)?([^/]+)\/(.+)/);
+          if (urlParts) {
+            const { data: signedData } = await supabaseAdmin.storage
+              .from(urlParts[1])
+              .createSignedUrl(urlParts[2], 300);
+            if (signedData?.signedUrl) fileUrl = signedData.signedUrl;
+          }
+        }
+
+        try {
+          const fileResponse = await fetch(fileUrl);
+          if (fileResponse.ok) {
+            const fileExtension = lookupConfig.excelFileUrl.toLowerCase();
+            if (fileExtension.endsWith('.csv')) {
+              lookupData = parseCSV(await fileResponse.text());
+            } else {
+              const arrayBuffer = await fileResponse.arrayBuffer();
+              const workbook = read(new Uint8Array(arrayBuffer), { type: 'array' });
+              lookupData = utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+            }
+            console.log(`Loaded ${lookupData.length} records from CSV file (petition fallback)`);
+            
+            // Normalize CSV data
+            if (lookupConfig.lookupFields && lookupData.length > 0) {
+              lookupData = lookupData.map(row => {
+                const normalized: any = { ...row };
+
+                if (row.FirstName || row.LastName) {
+                  const nameParts = [row.FirstName, row.MiddleInitial, row.LastName].filter(Boolean);
+                  normalized.Name = nameParts.join(' ').trim();
+                }
+                if (row.StreetAddress && !row.Address) {
+                  normalized.Address = row.StreetAddress;
+                }
+                if (row.ZipCode && !row.Zip) {
+                  normalized.Zip = row.ZipCode;
+                }
+                return normalized;
+              });
+            }
+          } else {
+            console.error('Failed to fetch lookup file for petition project:', fileResponse.status);
+          }
+        } catch (err) {
+          console.error('Error loading file-based lookup for petition project:', err);
+        }
+      }
+    } else {
+      // NON-PETITION PROJECTS: existing behavior - file first, then registry
+      // PRIORITY 1: Use file-based lookup if configured for this project
+      if (lookupConfig?.enabled && lookupConfig.excelFileUrl) {
+        console.log('Using file-based voter registry from project config');
+        lookupSource = 'file';
+        
+        let fileUrl = lookupConfig.excelFileUrl;
+        if (fileUrl.includes('supabase.co/storage/v1/object')) {
+          const urlParts = fileUrl.match(/\/storage\/v1\/object\/(?:public\/)?([^/]+)\/(.+)/);
+          if (urlParts) {
+            const { data: signedData } = await supabaseAdmin.storage
+              .from(urlParts[1])
+              .createSignedUrl(urlParts[2], 300);
+            if (signedData?.signedUrl) fileUrl = signedData.signedUrl;
+          }
+        }
+
+        try {
+          const fileResponse = await fetch(fileUrl);
+          if (fileResponse.ok) {
+            const fileExtension = lookupConfig.excelFileUrl.toLowerCase();
+            if (fileExtension.endsWith('.csv')) {
+              lookupData = parseCSV(await fileResponse.text());
+            } else {
+              const arrayBuffer = await fileResponse.arrayBuffer();
+              const workbook = read(new Uint8Array(arrayBuffer), { type: 'array' });
+              lookupData = utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+            }
+            console.log(`Loaded ${lookupData.length} records from CSV file`);
+            
+            if (lookupConfig.lookupFields && lookupData.length > 0) {
+              lookupData = lookupData.map(row => {
+                const normalized: any = { ...row };
+                if (row.FirstName || row.LastName) {
+                  const nameParts = [row.FirstName, row.MiddleInitial, row.LastName].filter(Boolean);
+                  normalized.Name = nameParts.join(' ').trim();
+                }
+                if (row.StreetAddress && !row.Address) {
+                  normalized.Address = row.StreetAddress;
+                }
+                if (row.ZipCode && !row.Zip) {
+                  normalized.Zip = row.ZipCode;
+                }
+                return normalized;
+              });
+            }
+          } else {
+            console.error('Failed to fetch lookup file:', fileResponse.status);
+          }
+        } catch (err) {
+          console.error('Error loading file-based lookup:', err);
+        }
+      }
+
+      // PRIORITY 2: Fall back to indexed voter_registry if no file data
+      if (lookupData.length === 0) {
+        const { data: projectRegistry } = await supabaseAdmin
+          .from('voter_registry')
+          .select('*')
+          .eq('project_id', projectId)
+          .limit(1);
+
+        if (projectRegistry && projectRegistry.length > 0) {
+          lookupSource = 'project_registry';
+          console.log('Using project-scoped indexed voter registry');
+          const { data: allVoters } = await supabaseAdmin
+            .from('voter_registry')
+            .select('*')
+            .eq('project_id', projectId);
+
+          lookupData = (allVoters || []).map(v => ({
+            Name: v.name,
+            name_normalized: v.name_normalized,
+            Address: v.address,
+            City: v.city,
+            Zip: v.zip,
+            signature_reference_url: v.signature_reference_url
+          }));
+          console.log(`Loaded ${lookupData.length} voters from project registry`);
+        } else if (project.customer_id) {
+          const { data: customerRegistry } = await supabaseAdmin
+            .from('voter_registry')
+            .select('*')
+            .eq('customer_id', project.customer_id)
+            .limit(1);
+
+          if (customerRegistry && customerRegistry.length > 0) {
+            lookupSource = 'customer_registry';
+            console.log('Using customer-scoped indexed voter registry');
+            const { data: allCustomerVoters } = await supabaseAdmin
+              .from('voter_registry')
+              .select('*')
+              .eq('customer_id', project.customer_id);
+
+            lookupData = (allCustomerVoters || []).map(v => ({
+              Name: v.name,
+              name_normalized: v.name_normalized,
+              Address: v.address,
+              City: v.city,
+              Zip: v.zip,
+              signature_reference_url: v.signature_reference_url
+            }));
+            console.log(`Loaded ${lookupData.length} voters from customer registry`);
+          }
+        }
+      }
     }
 
-    // If still no data, return error
+    // FINAL FALLBACK: If still no data anywhere, return error
     if (lookupData.length === 0) {
       console.log('No lookup data available for project');
       return new Response(
