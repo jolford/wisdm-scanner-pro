@@ -542,6 +542,7 @@ serve(async (req) => {
       let bestScore = 0;
       let bestNameScore = 0;
       let bestAddressScore = 0;
+      let bestZipScore = 0;
 
       const itemNameRaw = lineItem.Printed_Name || lineItem.printed_name || lineItem.Name || '';
       const itemName = String(itemNameRaw).trim();
@@ -568,9 +569,13 @@ serve(async (req) => {
           const zipScore = similarity(itemZip, voter.Zip || voter.zip || '');
           const avgAddressScore = (addressScore + cityScore + zipScore) / 3;
           
-          if (nameScore > bestNameScore || (nameScore === bestNameScore && avgAddressScore > bestAddressScore)) {
+          if (
+            nameScore > bestNameScore ||
+            (nameScore === bestNameScore && avgAddressScore > bestAddressScore)
+          ) {
             bestNameScore = nameScore;
             bestAddressScore = avgAddressScore;
+            bestZipScore = zipScore;
             bestScore = (nameScore + avgAddressScore) / 2;
             bestMatch = voter;
           }
@@ -579,7 +584,10 @@ serve(async (req) => {
 
       // Evaluate match quality
       if (bestMatch) {
-        if (bestNameScore >= 0.7 && bestAddressScore >= 0.7) {
+        const zipStrongMatch = bestZipScore >= 0.9;
+
+        // Only treat as fully valid when ALL core fields align, including ZIP
+        if (bestNameScore >= 0.7 && bestAddressScore >= 0.7 && zipStrongMatch) {
           itemResult.found = true;
           itemResult.matchScore = bestScore;
           itemResult.bestMatch = bestMatch;
@@ -589,7 +597,7 @@ serve(async (req) => {
           itemResult.partialMatch = true;
           itemResult.matchScore = bestNameScore;
           itemResult.bestMatch = bestMatch;
-          itemResult.mismatchReason = bestAddressScore >= 0.4 ? 'address_mismatch' : 'name_mismatch';
+          itemResult.mismatchReason = 'address_mismatch';
           partialMatchCount++;
           invalidCount++;
         } else {

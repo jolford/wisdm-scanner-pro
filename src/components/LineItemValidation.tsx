@@ -631,7 +631,7 @@ export const LineItemValidation = ({
                 loadingSignatures={loadingSignatures}
                 onApprove={handleOverrideApprove}
                 onReject={handleReject}
-                showActions={false}
+                showActions={true}
               />
             ) : (
               <div className="flex flex-col items-center justify-center py-12 text-center">
