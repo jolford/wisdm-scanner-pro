@@ -2361,7 +2361,7 @@ const [isExporting, setIsExporting] = useState(false);
                       <Button 
                         onClick={async () => {
                           // Compile all signature validation results from all documents
-                          const headers = ['Document', 'Row #', 'Name', 'Address', 'City', 'Zip', 'Signature', 'Registry Status', 'Match Score', 'Reason', 'Operator Action'];
+                          const headers = ['Document', 'Row #', 'Name', 'Address', 'City', 'Zip', 'Signature', 'Registry Status', 'Match Score', 'Reason', 'Operator Action', 'Operator Name'];
                           const rows: string[] = [];
                           let validCount = 0;
                           let rejectedCount = 0;
@@ -2430,6 +2430,11 @@ const [isExporting, setIsExporting] = useState(false);
                                   ? 'Operator Approved Signature' 
                                   : '';
                               
+                              // Operator name from stored data
+                              const operatorName = (isRejected || isOverrideApproved) 
+                                ? (result.operatorName || '') 
+                                : '';
+                              
                               rows.push([
                                 `"${(doc.file_name || '').replace(/"/g, '""')}"`,
                                 idx + 1,
@@ -2441,7 +2446,8 @@ const [isExporting, setIsExporting] = useState(false);
                                 registryStatus,
                                 result.matchScore ? `${Math.round(result.matchScore * 100)}%` : 'N/A',
                                 `"${reason}"`,
-                                `"${operatorAction}"`
+                                `"${operatorAction}"`,
+                                `"${operatorName}"`
                               ].join(','));
                             });
                           });
