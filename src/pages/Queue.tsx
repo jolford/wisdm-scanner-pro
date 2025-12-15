@@ -545,6 +545,56 @@ const [isExporting, setIsExporting] = useState(false);
     })();
   }, [selectedBatchId]); // Only depend on selectedBatchId to force reload
 
+  // Live-update the selected batch (drives OCR/validation progress UI)
+  useEffect(() => {
+    if (!selectedBatchId) return;
+
+    const channel = supabase
+      .channel(`queue-batch-${selectedBatchId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'batches',
+          filter: `id=eq.${selectedBatchId}`,
+        },
+        (payload) => {
+          const next = payload.new as any;
+          setSelectedBatch((prev: any) => (prev ? { ...prev, ...next } : next));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedBatchId]);
+
+  // Fallback polling (in case realtime is unavailable in the browser/session)
+  useEffect(() => {
+    if (!selectedBatchId) return;
+
+    const isBatchProcessing = ['new', 'scanning', 'indexing'].includes(String(selectedBatch?.status || ''));
+    if (!isBatchProcessing) return;
+
+    const interval = window.setInterval(async () => {
+      try {
+        const { data, error } = await supabase
+          .from('batches')
+          .select('*')
+          .eq('id', selectedBatchId)
+          .maybeSingle();
+
+        if (!error && data) setSelectedBatch((prev: any) => (prev ? { ...prev, ...data } : data));
+      } catch {
+        // ignore
+      }
+    }, 3000);
+
+    return () => window.clearInterval(interval);
+  }, [selectedBatchId, selectedBatch?.status]);
+
   useEffect(() => {
     if (!selectedBatchId) return;
     if (isReadyForExport && !readyNotified && selectedBatch?.status !== 'complete') {
