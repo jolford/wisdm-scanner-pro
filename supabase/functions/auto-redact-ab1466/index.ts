@@ -793,10 +793,10 @@ async function generateRedactedImage(
 
   // Canonical AB1466 protected-class terms we redact (tight word-level)
   const protectedTerms = new Set<string>([
-    // Race / color
+    // Race / color / ancestry words
     'white', 'caucasian', 'caucasion', 'negro', 'negros', 'colored',
     'african', 'asiatic', 'ethiopian', 'mongolian', 'malay', 'oriental',
-    'aryan', 'semitic',
+    'aryan', 'semitic', 'race', 'descent', 'blood',
     // Common nationalities/ethnicities historically used
     'mexican', 'chinese', 'japanese', 'indian', 'hindu', 'filipino', 'filipine',
     // Religion
