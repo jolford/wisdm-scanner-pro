@@ -877,7 +877,7 @@ async function generateRedactedImage(
   // If no word boxes matched, try AI vision to detect coordinates
   if (boxesToRedact.length === 0 && apiKey) {
     console.log('No word boxes matched - falling back to AI vision for box detection');
-    
+
     const arrayBuffer = await fileBlob.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
     let binaryString = '';
@@ -887,7 +887,7 @@ async function generateRedactedImage(
       binaryString += String.fromCharCode.apply(null, Array.from(chunk));
     }
     const base64 = btoa(binaryString);
-    
+
     try {
       const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
         method: 'POST',
@@ -905,29 +905,28 @@ async function generateRedactedImage(
                   type: 'text',
                   text: `Find AB 1466 protected-class discriminatory TERMS in this property record image.
 
-Return a JSON array of TIGHT bounding boxes (percentages 0-100) for EACH TERM below, each as its OWN small box:
-[{"x": 10, "y": 20, "width": 8, "height": 2, "text": "term"}]
+Return a JSON array of TIGHT bounding boxes for each term occurrence. Each box can be either:
+- {"text":"term","x":10,"y":20,"width":8,"height":2}
+- {"text":"term","boundingBox":{"x":10,"y":20,"width":8,"height":2}}
 
-ONLY return boxes for these exact terms (case-insensitive). Do NOT return any other words or phrases:
+Coordinates should be percentages 0-100 when possible. Return ONLY the JSON array. If none found, return [].
+
+Only return boxes for these terms (case-insensitive):
 white, caucasian, caucasion, negro, negros, colored,
 african, asiatic, ethiopian, mongolian, malay, oriental,
 aryan, semitic,
 mexican, chinese, japanese, indian, hindu, filipino, filipine,
 jewish, hebrew, catholic, muslim, protestant,
-race, blood, descent
-
-Return ONLY the JSON array. If none found, return [].`
-
+race, blood, descent`,
                 },
                 {
                   type: 'image_url',
-                  image_url: { url: `data:${mimeType};base64,${base64}` }
-                }
-              ]
-            }
+                  image_url: { url: `data:${mimeType};base64,${base64}` },
+                },
+              ],
+            },
           ],
-          temperature: 0.1
-        })
+        }),
       });
 
       if (response.ok) {
@@ -935,7 +934,11 @@ Return ONLY the JSON array. If none found, return [].`
         const raw = data.choices?.[0]?.message?.content || '';
 
         // Strip markdown code fences if present
-        const text = String(raw).replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+        const text = String(raw)
+          .replace(/^```json\s*/i, '')
+          .replace(/^```\s*/i, '')
+          .replace(/```\s*$/i, '')
+          .trim();
 
         const jsonMatch = text.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
@@ -947,26 +950,49 @@ Return ONLY the JSON array. If none found, return [].`
             'aryan', 'semitic',
             'mexican', 'chinese', 'japanese', 'indian', 'hindu', 'filipino', 'filipine',
             'jewish', 'hebrew', 'catholic', 'muslim', 'protestant',
-            'race', 'blood', 'descent'
+            'race', 'blood', 'descent',
           ]);
 
           let added = 0;
-          aiBoxes.forEach((box: any) => {
-            if (typeof box?.x !== 'number' || typeof box?.y !== 'number') return;
-            const t = String(box?.text || '').toLowerCase().trim().replace(/[^a-z]/g, '');
+          (Array.isArray(aiBoxes) ? aiBoxes : []).forEach((box: any) => {
+            const rawText = String(box?.text || box?.term || '').toLowerCase().trim();
+            const t = rawText.replace(/[^a-z]/g, '');
             if (!t || !allowed.has(t)) return;
 
+            // Accept both shapes: {x,y,width,height} or {boundingBox:{x,y,width,height}}
+            const bb = (box && typeof box === 'object' && box.boundingBox && typeof box.boundingBox === 'object')
+              ? box.boundingBox
+              : box;
+
+            let x = Number(bb?.x);
+            let y = Number(bb?.y);
+            let width = Number(bb?.width);
+            let height = Number(bb?.height);
+
+            if (![x, y, width, height].every((n) => Number.isFinite(n))) return;
+
+            // Some models return 0-1 normalized values; normalize to 0-100 percentages
+            const maxVal = Math.max(x, y, width, height);
+            if (maxVal <= 1) {
+              x = x * 100;
+              y = y * 100;
+              width = width * 100;
+              height = height * 100;
+            }
+
+            const isPercentage = Math.max(x, y, width, height) <= 100;
+
             boxesToRedact.push({
-              x: box.x,
-              y: box.y,
-              width: box.width || 10,
-              height: box.height || 3,
-              isPercentage: true
+              x,
+              y,
+              width: width || 10,
+              height: height || 3,
+              isPercentage,
             });
             added++;
           });
 
-          console.log(`AI detected ${aiBoxes.length} boxes; accepted ${added} term boxes`);
+          console.log(`AI detected ${Array.isArray(aiBoxes) ? aiBoxes.length : 0} boxes; accepted ${added} term boxes`);
         }
       }
     } catch (e) {
@@ -983,59 +1009,74 @@ Return ONLY the JSON array. If none found, return [].`
   try {
     const arrayBuffer = await fileBlob.arrayBuffer();
     const uint8Array = new Uint8Array(arrayBuffer);
-    
+
     // Load image into canvas
     const image = await loadImage(uint8Array);
     const imgWidth = image.width();
     const imgHeight = image.height();
-    
+
     console.log(`Image loaded: ${imgWidth}x${imgHeight}`);
-    
+
     // Create canvas with same dimensions
     const canvas = createCanvas(imgWidth, imgHeight);
     const ctx = canvas.getContext("2d");
-    
+
     // Draw original image onto canvas
     ctx.drawImage(image, 0, 0);
-    
+
     // Draw solid black rectangles over each violation
-    ctx.fillStyle = "#000000";  // Pure black
-    
-    // Tight word-level redaction - minimal padding to just cover the text
-    // No artificial minimums that cause huge blocks
-    
+    ctx.fillStyle = "#000000"; // Pure black
+
+    const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
+
     for (const box of boxesToRedact) {
-      let x: number, y: number, width: number, height: number;
-      
+      let x1: number;
+      let y1: number;
+      let x2: number;
+      let y2: number;
+
       if (box.isPercentage) {
-        // Convert percentage to pixels
-        x = (box.x / 100) * imgWidth;
-        y = (box.y / 100) * imgHeight;
-        width = (box.width / 100) * imgWidth;
-        height = (box.height / 100) * imgHeight;
+        const px = (box.x / 100) * imgWidth;
+        const py = (box.y / 100) * imgHeight;
+        const pw = (box.width / 100) * imgWidth;
+        const ph = (box.height / 100) * imgHeight;
+
+        x1 = px;
+        y1 = py;
+        x2 = px + pw;
+        y2 = py + ph;
       } else {
-        // Already in pixels
-        x = box.x;
-        y = box.y;
-        width = box.width;
-        height = box.height;
+        x1 = box.x;
+        y1 = box.y;
+        x2 = box.x + box.width;
+        y2 = box.y + box.height;
       }
-      
-      // Sanity check - skip invalid boxes
+
+      // Normalize (handle negative width/height) and clamp to image bounds
+      const left = clamp(Math.min(x1, x2), 0, imgWidth);
+      const right = clamp(Math.max(x1, x2), 0, imgWidth);
+      const top = clamp(Math.min(y1, y2), 0, imgHeight);
+      const bottom = clamp(Math.max(y1, y2), 0, imgHeight);
+
+      let width = right - left;
+      let height = bottom - top;
       if (width <= 0 || height <= 0) continue;
-      
-      // Add MINIMAL padding (just 10% on each side to ensure text is fully covered)
+
+      // Minimal padding so text is fully covered
       const padX = Math.max(2, width * 0.1);
       const padY = Math.max(2, height * 0.15);
-      x = Math.max(0, x - padX);
-      y = Math.max(0, y - padY);
-      width = Math.min(width + padX * 2, imgWidth - x);
-      height = Math.min(height + padY * 2, imgHeight - y);
-      
-      console.log(`Drawing tight black box at (${x.toFixed(0)}, ${y.toFixed(0)}) size ${width.toFixed(0)}x${height.toFixed(0)}`);
-      
-      // Draw solid black rectangle
-      ctx.fillRect(x, y, width, height);
+
+      const paddedLeft = clamp(left - padX, 0, imgWidth);
+      const paddedTop = clamp(top - padY, 0, imgHeight);
+      const paddedRight = clamp(right + padX, 0, imgWidth);
+      const paddedBottom = clamp(bottom + padY, 0, imgHeight);
+
+      width = paddedRight - paddedLeft;
+      height = paddedBottom - paddedTop;
+      if (width <= 0 || height <= 0) continue;
+
+      console.log(`Drawing tight black box at (${paddedLeft.toFixed(0)}, ${paddedTop.toFixed(0)}) size ${width.toFixed(0)}x${height.toFixed(0)}`);
+      ctx.fillRect(paddedLeft, paddedTop, width, height);
     }
     
     // Convert canvas to PNG buffer
