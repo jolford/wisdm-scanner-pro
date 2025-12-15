@@ -356,19 +356,37 @@ const [isExporting, setIsExporting] = useState(false);
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // Calculate unreviewed signature count for petition projects
+  // Keep this logic aligned with LineItemValidation "For Review" rules.
   const countUnreviewedSignatures = (docs: any[]) => {
     let count = 0;
+
     docs.forEach((doc: any) => {
       const results = doc.validation_suggestions?.lookupValidation?.results || [];
+
       results.forEach((result: any) => {
         const isRejected = result.rejected === true;
         const isOverrideApproved = result.overrideApproved === true;
-        const isAutoValid = result.found && result.matchScore >= 0.9;
-        if (!isAutoValid && !isOverrideApproved && !isRejected) {
-          count++;
-        }
+
+        const matchScore = typeof result.matchScore === 'number' ? result.matchScore : null;
+        const found = result.found === true;
+        const partialMatch = result.partialMatch === true;
+        const signaturePresent = result.signatureStatus ? result.signatureStatus.present !== false : true;
+
+        // Needs review if it's not explicitly resolved (approved/rejected) and any review condition applies.
+        const needsReview =
+          !isRejected &&
+          !isOverrideApproved &&
+          (
+            partialMatch ||
+            !found ||
+            (matchScore !== null && matchScore < 0.9) ||
+            !signaturePresent
+          );
+
+        if (needsReview) count++;
       });
     });
+
     return count;
   };
 
