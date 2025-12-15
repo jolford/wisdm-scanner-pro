@@ -903,17 +903,21 @@ async function generateRedactedImage(
               content: [
                 {
                   type: 'text',
-                  text: `Find ALL discriminatory words in this property document that violate California AB 1466.
+                  text: `Find AB 1466 protected-class discriminatory TERMS in this property record image.
 
-Return a JSON array of bounding boxes (as percentages 0-100) for EACH discriminatory word separately:
-[{"x": 10, "y": 20, "width": 8, "height": 2, "text": "word"}]
+Return a JSON array of TIGHT bounding boxes (percentages 0-100) for EACH TERM below, each as its OWN small box:
+[{"x": 10, "y": 20, "width": 8, "height": 2, "text": "term"}]
 
-IMPORTANT: Find these EXACT words and provide TIGHT bounding boxes for EACH:
-- "white", "Caucasian", "negro", "colored", "race", "blood", "descent"
-- "African", "Asiatic", "Ethiopian", "Mongolian", "Mexican", "Chinese", "Japanese", "Indian"
-- "domestic servant", "persons of", "not of the"
+ONLY return boxes for these exact terms (case-insensitive). Do NOT return any other words or phrases:
+white, caucasian, caucasion, negro, negros, colored,
+african, asiatic, ethiopian, mongolian, malay, oriental,
+aryan, semitic,
+mexican, chinese, japanese, indian, hindu, filipino, filipine,
+jewish, hebrew, catholic, muslim, protestant,
+race, blood, descent
 
-Return ONLY the JSON array. Each word gets its OWN small bounding box.`
+Return ONLY the JSON array. If none found, return [].`
+
                 },
                 {
                   type: 'image_url',
@@ -928,22 +932,41 @@ Return ONLY the JSON array. Each word gets its OWN small bounding box.`
 
       if (response.ok) {
         const data = await response.json();
-        const text = data.choices?.[0]?.message?.content || '';
+        const raw = data.choices?.[0]?.message?.content || '';
+
+        // Strip markdown code fences if present
+        const text = String(raw).replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+
         const jsonMatch = text.match(/\[[\s\S]*\]/);
         if (jsonMatch) {
           const aiBoxes = JSON.parse(jsonMatch[0]);
+
+          const allowed = new Set([
+            'white', 'caucasian', 'caucasion', 'negro', 'negros', 'colored',
+            'african', 'asiatic', 'ethiopian', 'mongolian', 'malay', 'oriental',
+            'aryan', 'semitic',
+            'mexican', 'chinese', 'japanese', 'indian', 'hindu', 'filipino', 'filipine',
+            'jewish', 'hebrew', 'catholic', 'muslim', 'protestant',
+            'race', 'blood', 'descent'
+          ]);
+
+          let added = 0;
           aiBoxes.forEach((box: any) => {
-            if (typeof box.x === 'number' && typeof box.y === 'number') {
-              boxesToRedact.push({
-                x: box.x,
-                y: box.y,
-                width: box.width || 10,
-                height: box.height || 3,
-                isPercentage: true
-              });
-            }
+            if (typeof box?.x !== 'number' || typeof box?.y !== 'number') return;
+            const t = String(box?.text || '').toLowerCase().trim().replace(/[^a-z]/g, '');
+            if (!t || !allowed.has(t)) return;
+
+            boxesToRedact.push({
+              x: box.x,
+              y: box.y,
+              width: box.width || 10,
+              height: box.height || 3,
+              isPercentage: true
+            });
+            added++;
           });
-          console.log(`AI detected ${aiBoxes.length} additional boxes`);
+
+          console.log(`AI detected ${aiBoxes.length} boxes; accepted ${added} term boxes`);
         }
       }
     } catch (e) {
