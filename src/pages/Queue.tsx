@@ -383,12 +383,12 @@ const [isExporting, setIsExporting] = useState(false);
       if (unreviewedCount > 0) {
         toast({ 
           title: 'Review Required', 
-          description: `${unreviewedCount} signature(s) need operator approval or rejection before export. Check the "For Review" tab.`,
+          description: `${unreviewedCount} signature(s) need operator approval or rejection before export. Check the "For Review" tab in Quality Control.`,
           variant: 'destructive'
         });
-        // Navigate to validation instead
-        setActiveTab('validation');
-        setSearchParams({ tab: 'validation' });
+        // Navigate to QC/validated tab where signature review happens
+        setActiveTab('validated');
+        setSearchParams({ tab: 'validated' });
         return;
       }
     }
@@ -2270,15 +2270,15 @@ const [isExporting, setIsExporting] = useState(false);
                       <div className="flex-1">
                         <h4 className="font-semibold text-destructive">Review Required</h4>
                         <p className="text-sm text-destructive/80">
-                          {getUnreviewedSignatureCount()} signature(s) need operator approval or rejection before export.
+                          {getUnreviewedSignatureCount()} signature(s) need operator approval or rejection. Open a document in Quality Control to review.
                         </p>
                       </div>
                       <Button 
                         variant="destructive" 
                         size="sm"
-                        onClick={() => handleTabChange('validation')}
+                        onClick={() => handleTabChange('validated')}
                       >
-                        Go to Validation
+                        Go to Quality Control
                       </Button>
                     </div>
                   </div>
