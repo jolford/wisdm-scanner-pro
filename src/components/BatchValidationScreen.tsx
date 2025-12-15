@@ -2050,8 +2050,8 @@ export const BatchValidationScreen = ({
                             <DocumentViewerWithSignedUrl
                               doc={doc}
                               imageUrl={(doc as any).redacted_file_url || doc.file_url}
-                              boundingBoxes={fieldBoundingBoxes[doc.id] || {}}
-                              highlightedField={focusedField[doc.id]}
+                              boundingBoxes={isPetitionProject ? {} : (fieldBoundingBoxes[doc.id] || {})}
+                              highlightedField={isPetitionProject ? undefined : focusedField[doc.id]}
                               piiRegions={(doc as any).detected_pii_regions || []}
                               ab1466Violations={
                                 // If server-generated redacted image exists, don't show client-side highlights
@@ -2074,7 +2074,7 @@ export const BatchValidationScreen = ({
                                 });
                               }}
                               onPopout={() => handlePopout(doc.id, doc.file_url, doc.file_name)}
-                              onFieldClick={(fieldName) => {
+                              onFieldClick={isPetitionProject ? undefined : (fieldName) => {
                                 setFocusedField(prev => ({ ...prev, [doc.id]: fieldName }));
                                 const fieldElement = document.getElementById(`${doc.id}-${fieldName}`);
                                 if (fieldElement) {
