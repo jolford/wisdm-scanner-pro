@@ -780,49 +780,56 @@ async function generateRedactedImage(
   // Find word boxes that match discriminatory terms
   const boxesToRedact: Array<{x: number, y: number, width: number, height: number, isPercentage: boolean}> = [];
   
-  // Build a precise list of AB1466 discriminatory terms only (not generic words)
-  // These are SPECIFIC racial/ethnic/religious terms that indicate discriminatory language
+  // AB1466 discriminatory terms - ALL racial/ethnic terms that must be redacted
   const discriminatoryTerms = new Set<string>([
-    // Racial/ethnic terms (these are discriminatory when used in restrictive covenants)
-    'caucasian', 'negro', 'negros', 'colored', 'african', 'asiatic', 'ethiopian', 'mongolian',
-    'malay', 'oriental', 'aryan', 'semitic',
+    // Core racial terms (MUST be redacted in restrictive covenants)
+    'white', 'caucasian', 'negro', 'negros', 'colored', 'african', 'asiatic', 
+    'ethiopian', 'mongolian', 'malay', 'oriental', 'aryan', 'semitic',
+    // Race-related words
+    'race', 'blood', 'descent',
     // Specific nationalities/ethnicities used discriminatorily
     'mexican', 'chinese', 'japanese', 'hindu', 'filipino', 'filipine', 'indian',
-    // Religious terms when used restrictively
+    // Religious terms
     'jewish', 'hebrew',
-    // NOTE: We do NOT include generic words like 'white', 'race', 'persons', 'blood', 'excepting'
-    // as these appear in non-discriminatory contexts and cause over-redaction
+    // Common phrases broken into components
+    'persons',
   ]);
   
-  // Add the specific detected violation terms (these were found in context)
+  // Add all detected violation terms
   termsToRedact.forEach(term => {
     const lowerTerm = term.toLowerCase();
-    // Only add multi-word phrases or specific discriminatory single words
-    if (lowerTerm.includes(' ') || discriminatoryTerms.has(lowerTerm)) {
-      discriminatoryTerms.add(lowerTerm);
-    }
+    discriminatoryTerms.add(lowerTerm);
+    // Also add individual words from phrases
+    lowerTerm.split(/\s+/).forEach(word => {
+      if (word.length >= 4) discriminatoryTerms.add(word);
+    });
   });
 
-  // Match words in bounding boxes to discriminatory terms (EXACT MATCH ONLY)
+  // Match words in bounding boxes to discriminatory terms
   for (const wordBox of wordBoxes) {
-    const wordText = (wordBox.text || '').toLowerCase().trim().replace(/[^a-z]/gi, '');
+    const rawText = (wordBox.text || '').toLowerCase().trim();
+    const wordText = rawText.replace(/[^a-z]/gi, '');
     if (!wordText || wordText.length < 3) continue;
     
-    // Check if this word EXACTLY matches a discriminatory term (not partial/substring)
+    // Check if this word matches a discriminatory term
     for (const term of discriminatoryTerms) {
       const cleanTerm = term.replace(/[^a-z]/gi, '');
-      // Require exact match or the word being a significant part of the term
-      if (wordText === cleanTerm || (cleanTerm.length > 5 && wordText.includes(cleanTerm))) {
-        if (wordBox.bbox && typeof wordBox.bbox.x === 'number') {
-          boxesToRedact.push({
-            x: wordBox.bbox.x,
-            y: wordBox.bbox.y,
-            width: wordBox.bbox.width || wordBox.bbox.w || 5,
-            height: wordBox.bbox.height || wordBox.bbox.h || 2,
-            isPercentage: wordBox.bbox.x <= 100 && wordBox.bbox.y <= 100
-          });
-          console.log(`Matched discriminatory term "${term}" in word "${wordText}" at bbox:`, wordBox.bbox);
-        }
+      if (!cleanTerm || cleanTerm.length < 3) continue;
+      
+      // Match if: exact match, word contains the term, or term contains the word
+      const isMatch = wordText === cleanTerm || 
+                      (wordText.length >= 4 && wordText.includes(cleanTerm)) ||
+                      (cleanTerm.length >= 4 && cleanTerm.includes(wordText) && wordText.length >= cleanTerm.length - 2);
+      
+      if (isMatch && wordBox.bbox && typeof wordBox.bbox.x === 'number') {
+        boxesToRedact.push({
+          x: wordBox.bbox.x,
+          y: wordBox.bbox.y,
+          width: wordBox.bbox.width || wordBox.bbox.w || 5,
+          height: wordBox.bbox.height || wordBox.bbox.h || 2,
+          isPercentage: wordBox.bbox.x <= 100 && wordBox.bbox.y <= 100
+        });
+        console.log(`Matched AB1466 term "${cleanTerm}" in word "${rawText}" at bbox:`, wordBox.bbox);
         break;
       }
     }
@@ -877,14 +884,17 @@ async function generateRedactedImage(
               content: [
                 {
                   type: 'text',
-                  text: `Find ALL discriminatory text in this property document that violates California AB 1466.
+                  text: `Find ALL discriminatory words in this property document that violate California AB 1466.
 
-Return ONLY a JSON array of bounding boxes (as percentages 0-100) for each discriminatory word/phrase:
-[{"x": 10, "y": 20, "width": 15, "height": 3, "text": "discriminatory text"}]
+Return a JSON array of bounding boxes (as percentages 0-100) for EACH discriminatory word separately:
+[{"x": 10, "y": 20, "width": 8, "height": 2, "text": "word"}]
 
-Terms to find: Caucasian, white race, negro, colored, African, Asiatic, Ethiopian, Mongolian, Mexican, Chinese, Japanese, Hindu, Filipino, Indian, domestic servant, race restrictions.
+IMPORTANT: Find these EXACT words and provide TIGHT bounding boxes for EACH:
+- "white", "Caucasian", "negro", "colored", "race", "blood", "descent"
+- "African", "Asiatic", "Ethiopian", "Mongolian", "Mexican", "Chinese", "Japanese", "Indian"
+- "domestic servant", "persons of", "not of the"
 
-Return ONLY the JSON array.`
+Return ONLY the JSON array. Each word gets its OWN small bounding box.`
                 },
                 {
                   type: 'image_url',
