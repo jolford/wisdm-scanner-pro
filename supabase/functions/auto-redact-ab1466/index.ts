@@ -803,24 +803,21 @@ async function generateRedactedImage(
     'jewish', 'hebrew', 'catholic', 'muslim', 'protestant'
   ]);
 
-  // Only add terms that look like protected-class terms; ignore clause text.
+  // Only add multi-word phrases that contain canonical protected terms
+  // DO NOT add arbitrary words from AI detection - stick to AB1466 defined terms only
   for (const t of termsToRedact) {
     const cleaned = t.replace(/[^a-z\s]/g, '').trim();
     if (!cleaned) continue;
 
-    // Allow multi-word protected phrases but DO NOT split into generic words.
-    // Examples: "white persons", "colored person", "white race".
+    // Only consider multi-word phrases that contain at least one canonical protected term
+    // Examples: "white persons", "colored person", "negro race", "Asiatic descent"
     if (cleaned.includes(' ')) {
-      // Keep only if phrase contains at least one canonical protected term
       const parts = cleaned.split(/\s+/).filter(Boolean);
       if (parts.some(p => protectedTerms.has(p))) {
         protectedTerms.add(cleaned);
       }
-      continue;
     }
-
-    // Single word
-    if (cleaned.length >= 4) protectedTerms.add(cleaned);
+    // DO NOT add single words - only use the canonical protectedTerms set above
   }
 
   // 1) Exact word matches from OCR word boxes
