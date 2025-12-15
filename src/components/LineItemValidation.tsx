@@ -9,6 +9,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/use-auth';
 import { getSignedUrl } from '@/hooks/use-signed-url';
 import {
   Collapsible,
@@ -115,6 +116,24 @@ export const LineItemValidation = ({
   const [loadingSignatures, setLoadingSignatures] = useState(false);
   const [activeTab, setActiveTab] = useState<string>('valid');
   const { toast } = useToast();
+  const { user } = useAuth();
+  const [operatorProfile, setOperatorProfile] = useState<{ full_name?: string; email?: string } | null>(null);
+
+  // Fetch operator profile for name display
+  useEffect(() => {
+    const fetchProfile = async () => {
+      if (!user?.id) return;
+      const { data } = await supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', user.id)
+        .single();
+      if (data) {
+        setOperatorProfile(data);
+      }
+    };
+    fetchProfile();
+  }, [user?.id]);
 
   const isServerVoterRegistryMode =
     lookupConfig.system === 'csv' && !lookupConfig.excelFileUrl && !!documentId && !!projectId;
@@ -445,6 +464,9 @@ export const LineItemValidation = ({
   const persistOperatorAction = async (updatedResults: ValidationResult[]) => {
     if (!documentId || !precomputedResults) return;
 
+    // Get operator name
+    const operatorName = operatorProfile?.full_name || operatorProfile?.email || user?.email || 'Unknown Operator';
+
     try {
       // Merge operator actions back into precomputed results
       const updatedPrecomputed = {
@@ -456,7 +478,9 @@ export const LineItemValidation = ({
               ...r,
               overrideApproved: updatedResult.overrideApproved || false,
               rejected: updatedResult.rejected || false,
-              overrideAt: updatedResult.overrideAt
+              overrideAt: updatedResult.overrideAt,
+              operatorUserId: updatedResult.overrideApproved || updatedResult.rejected ? user?.id : r.operatorUserId,
+              operatorName: updatedResult.overrideApproved || updatedResult.rejected ? operatorName : r.operatorName
             };
           }
           return r;
@@ -483,9 +507,16 @@ export const LineItemValidation = ({
 
   // Override/Approve a flagged item
   const handleOverrideApprove = async (index: number) => {
+    const operatorName = operatorProfile?.full_name || operatorProfile?.email || user?.email || 'Unknown Operator';
     const updatedResults = validationResults.map(r => 
       r.index === index 
-        ? { ...r, overrideApproved: true, rejected: false, overrideAt: new Date().toISOString() }
+        ? { 
+            ...r, 
+            overrideApproved: true, 
+            rejected: false, 
+            overrideAt: new Date().toISOString(),
+            overrideBy: operatorName
+          }
         : r
     );
     setValidationResults(updatedResults);
@@ -501,9 +532,16 @@ export const LineItemValidation = ({
 
   // Reject a signature - removes from counts/exports
   const handleReject = async (index: number) => {
+    const operatorName = operatorProfile?.full_name || operatorProfile?.email || user?.email || 'Unknown Operator';
     const updatedResults = validationResults.map(r => 
       r.index === index 
-        ? { ...r, rejected: true, overrideApproved: false }
+        ? { 
+            ...r, 
+            rejected: true, 
+            overrideApproved: false,
+            overrideAt: new Date().toISOString(),
+            overrideBy: operatorName
+          }
         : r
     );
     setValidationResults(updatedResults);
