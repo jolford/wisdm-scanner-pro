@@ -2360,6 +2360,30 @@ const [isExporting, setIsExporting] = useState(false);
                       <h4 className="font-semibold mb-3 text-sm text-muted-foreground uppercase tracking-wide">Signature Validation Report</h4>
                       <Button 
                         onClick={async () => {
+                          // First check if there are unreviewed items
+                          let unreviewedCount = 0;
+                          validatedDocs.forEach((doc: any) => {
+                            const results = doc.validation_suggestions?.lookupValidation?.results || [];
+                            results.forEach((result: any) => {
+                              const isRejected = result.rejected === true;
+                              const isOverrideApproved = result.overrideApproved === true;
+                              const isAutoValid = result.found && result.matchScore >= 0.9;
+                              // If not valid, not approved, and not rejected - it's unreviewed
+                              if (!isAutoValid && !isOverrideApproved && !isRejected) {
+                                unreviewedCount++;
+                              }
+                            });
+                          });
+                          
+                          if (unreviewedCount > 0) {
+                            toast({ 
+                              title: 'Review Required', 
+                              description: `${unreviewedCount} signature(s) need operator approval or rejection before export. Check the "For Review" tab.`,
+                              variant: 'destructive'
+                            });
+                            return;
+                          }
+                          
                           // Compile all signature validation results from all documents
                           const headers = ['Document', 'Row #', 'Name', 'Address', 'City', 'Zip', 'Signature', 'Registry Status', 'Match Score', 'Reason', 'Operator Action', 'Operator Name'];
                           const rows: string[] = [];
@@ -2475,7 +2499,7 @@ const [isExporting, setIsExporting] = useState(false);
                           // Auto-delete after successful export
                           await autoDeleteBatchAfterExport();
                         }}
-                        disabled={validatedDocs.length === 0} 
+                        disabled={validatedDocs.length === 0}
                         variant="outline" 
                         className="w-full h-16 gap-2 hover:border-primary/50 hover:bg-primary/5"
                       >
