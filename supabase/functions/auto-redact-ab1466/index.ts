@@ -195,33 +195,72 @@ serve(async (req) => {
     const detectedViolations: DetectedViolation[] = [];
     const searchText = textToAnalyze.toLowerCase();
 
-    for (const keyword of AB1466_KEYWORDS) {
-      const searchTerm = keyword.term.toLowerCase();
-      let index = searchText.indexOf(searchTerm);
-      
-      while (index !== -1) {
+    const normalizeToken = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+    // Prefer word-level matching to avoid false positives like "asian" inside "caucasian"
+    const singleWordKeywords = new Map<string, { term: string; category: string }>();
+    const phraseKeywords: Array<{ term: string; category: string }> = [];
+
+    for (const kw of AB1466_KEYWORDS) {
+      const t = kw.term.trim();
+      if (t.includes(' ')) phraseKeywords.push(kw);
+      else singleWordKeywords.set(normalizeToken(t), kw);
+    }
+
+    // 1A) Single-word terms: match against OCR word boxes (exact match only)
+    if (Array.isArray(boundingBoxes) && boundingBoxes.length > 0) {
+      for (const wb of boundingBoxes) {
+        if (!wb || !wb.text || !wb.bbox) continue;
+        const token = normalizeToken(String(wb.text));
+        const kw = singleWordKeywords.get(token);
+        if (!kw) continue;
+
+        detectedViolations.push({
+          term: kw.term,
+          category: kw.category,
+          text: String(wb.text),
+          confidence: 0.95,
+          boundingBox: wb.bbox,
+        });
+      }
+    } else {
+      // Fallback when word boxes aren't available
+      for (const kw of singleWordKeywords.values()) {
+        const term = kw.term.toLowerCase();
+        const re = new RegExp(`(^|[^a-z0-9])${escapeRegex(term)}([^a-z0-9]|$)`, 'gi');
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(searchText)) !== null) {
+          detectedViolations.push({
+            term: kw.term,
+            category: kw.category,
+            text: kw.term,
+            confidence: 0.95,
+          });
+        }
+      }
+    }
+
+    // 1B) Phrase trigger terms: search in text (bbox may be resolved by findBoundingBoxForText)
+    for (const keyword of phraseKeywords) {
+      const term = keyword.term.toLowerCase();
+      const re = new RegExp(`(^|[^a-z0-9])${escapeRegex(term)}([^a-z0-9]|$)`, 'gi');
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(searchText)) !== null) {
+        const index = (m.index ?? 0) + (m[1]?.length ?? 0);
         const violation: DetectedViolation = {
           term: keyword.term,
           category: keyword.category,
-          text: textToAnalyze.substring(index, index + searchTerm.length),
-          confidence: 0.95
+          text: textToAnalyze.substring(index, index + term.length),
+          confidence: 0.95,
         };
 
-        // Try to find bounding box for this text
         if (Array.isArray(boundingBoxes)) {
-          const matchingBox = findBoundingBoxForText(
-            searchTerm, 
-            boundingBoxes, 
-            index, 
-            textToAnalyze
-          );
-          if (matchingBox) {
-            violation.boundingBox = matchingBox;
-          }
+          const matchingBox = findBoundingBoxForText(term, boundingBoxes, index, textToAnalyze);
+          if (matchingBox) violation.boundingBox = matchingBox;
         }
 
         detectedViolations.push(violation);
-        index = searchText.indexOf(searchTerm, index + 1);
       }
     }
 
@@ -420,26 +459,26 @@ function findBoundingBoxForText(
 ): { x: number; y: number; width: number; height: number } | null {
   if (!Array.isArray(wordBoxes) || wordBoxes.length === 0) return null;
 
-  const searchWords = searchTerm.toLowerCase().split(/\s+/);
+  const normalizeToken = (s: string) => String(s).toLowerCase().replace(/[^a-z0-9]/gi, '');
+  const searchWords = searchTerm.toLowerCase().split(/\s+/).map((w) => normalizeToken(w));
   const normalizedBoxes = wordBoxes
     .filter(b => b && b.text && b.bbox)
     .map(b => ({
-      text: String(b.text).toLowerCase().replace(/[^a-z0-9]/gi, ''),
+      text: normalizeToken(b.text),
       bbox: b.bbox
     }));
 
-  // Single word search
+  // Single word search (exact match only)
   if (searchWords.length === 1) {
-    const match = normalizedBoxes.find(b => b.text.includes(searchWords[0]));
+    const match = normalizedBoxes.find(b => b.text === searchWords[0]);
     if (match) return match.bbox;
   }
 
-  // Multi-word phrase - find consecutive matching boxes
+  // Multi-word phrase - find consecutive matching boxes (exact match per token)
   for (let i = 0; i <= normalizedBoxes.length - searchWords.length; i++) {
     let allMatch = true;
     for (let j = 0; j < searchWords.length; j++) {
-      const word = searchWords[j].replace(/[^a-z0-9]/gi, '');
-      if (!normalizedBoxes[i + j]?.text.includes(word)) {
+      if (normalizedBoxes[i + j]?.text !== searchWords[j]) {
         allMatch = false;
         break;
       }
