@@ -780,41 +780,48 @@ async function generateRedactedImage(
   // Find word boxes that match discriminatory terms
   const boxesToRedact: Array<{x: number, y: number, width: number, height: number, isPercentage: boolean}> = [];
   
-  // Build a list of all discriminatory terms including partial matches
-  const allTerms = new Set<string>();
-  termsToRedact.forEach(term => {
-    allTerms.add(term);
-    // Add individual words from multi-word terms
-    term.split(/\s+/).forEach(word => {
-      if (word.length > 2) allTerms.add(word);
-    });
-  });
+  // Build a precise list of AB1466 discriminatory terms only (not generic words)
+  // These are SPECIFIC racial/ethnic/religious terms that indicate discriminatory language
+  const discriminatoryTerms = new Set<string>([
+    // Racial/ethnic terms (these are discriminatory when used in restrictive covenants)
+    'caucasian', 'negro', 'negros', 'colored', 'african', 'asiatic', 'ethiopian', 'mongolian',
+    'malay', 'oriental', 'aryan', 'semitic',
+    // Specific nationalities/ethnicities used discriminatorily
+    'mexican', 'chinese', 'japanese', 'hindu', 'filipino', 'filipine', 'indian',
+    // Religious terms when used restrictively
+    'jewish', 'hebrew',
+    // NOTE: We do NOT include generic words like 'white', 'race', 'persons', 'blood', 'excepting'
+    // as these appear in non-discriminatory contexts and cause over-redaction
+  ]);
   
-  // Also add common AB1466 terms
-  const commonTerms = [
-    'caucasian', 'white', 'negro', 'colored', 'african', 'asiatic', 'ethiopian', 'mongolian',
-    'mexican', 'chinese', 'japanese', 'hindu', 'filipino', 'indian', 'oriental',
-    'servant', 'servants', 'domestic', 'race', 'persons', 'blood', 'excepting'
-  ];
-  commonTerms.forEach(t => allTerms.add(t));
+  // Add the specific detected violation terms (these were found in context)
+  termsToRedact.forEach(term => {
+    const lowerTerm = term.toLowerCase();
+    // Only add multi-word phrases or specific discriminatory single words
+    if (lowerTerm.includes(' ') || discriminatoryTerms.has(lowerTerm)) {
+      discriminatoryTerms.add(lowerTerm);
+    }
+  });
 
-  // Match words in bounding boxes to discriminatory terms
+  // Match words in bounding boxes to discriminatory terms (EXACT MATCH ONLY)
   for (const wordBox of wordBoxes) {
-    const wordText = (wordBox.text || '').toLowerCase().trim();
-    if (!wordText) continue;
+    const wordText = (wordBox.text || '').toLowerCase().trim().replace(/[^a-z]/gi, '');
+    if (!wordText || wordText.length < 3) continue;
     
-    // Check if this word matches any discriminatory term
-    for (const term of allTerms) {
-      if (wordText === term || wordText.includes(term) || term.includes(wordText)) {
+    // Check if this word EXACTLY matches a discriminatory term (not partial/substring)
+    for (const term of discriminatoryTerms) {
+      const cleanTerm = term.replace(/[^a-z]/gi, '');
+      // Require exact match or the word being a significant part of the term
+      if (wordText === cleanTerm || (cleanTerm.length > 5 && wordText.includes(cleanTerm))) {
         if (wordBox.bbox && typeof wordBox.bbox.x === 'number') {
           boxesToRedact.push({
             x: wordBox.bbox.x,
             y: wordBox.bbox.y,
-            width: wordBox.bbox.width || wordBox.bbox.w || 10,
-            height: wordBox.bbox.height || wordBox.bbox.h || 3,
-            isPercentage: wordBox.bbox.x <= 100 && wordBox.bbox.y <= 100 // Detect if coords are percentages
+            width: wordBox.bbox.width || wordBox.bbox.w || 5,
+            height: wordBox.bbox.height || wordBox.bbox.h || 2,
+            isPercentage: wordBox.bbox.x <= 100 && wordBox.bbox.y <= 100
           });
-          console.log(`Matched term "${term}" in word "${wordText}" at bbox:`, wordBox.bbox);
+          console.log(`Matched discriminatory term "${term}" in word "${wordText}" at bbox:`, wordBox.bbox);
         }
         break;
       }
@@ -942,9 +949,8 @@ Return ONLY the JSON array.`
     // Draw solid black rectangles over each violation
     ctx.fillStyle = "#000000";  // Pure black
     
-    // MINIMUM dimensions to ensure text is completely covered
-    const MIN_HEIGHT = Math.max(40, imgHeight * 0.035); // At least 40px or 3.5% of image
-    const MIN_WIDTH = Math.max(60, imgWidth * 0.04); // At least 60px or 4% of image
+    // Tight word-level redaction - minimal padding to just cover the text
+    // No artificial minimums that cause huge blocks
     
     for (const box of boxesToRedact) {
       let x: number, y: number, width: number, height: number;
@@ -963,27 +969,18 @@ Return ONLY the JSON array.`
         height = box.height;
       }
       
-      // Enforce MINIMUM dimensions
-      if (width < MIN_WIDTH) {
-        const diff = MIN_WIDTH - width;
-        x -= diff / 2;
-        width = MIN_WIDTH;
-      }
-      if (height < MIN_HEIGHT) {
-        const diff = MIN_HEIGHT - height;
-        y -= diff / 2;
-        height = MIN_HEIGHT;
-      }
+      // Sanity check - skip invalid boxes
+      if (width <= 0 || height <= 0) continue;
       
-      // Add generous padding (30% extra on each side for width, 50% for height)
-      const padX = Math.max(10, width * 0.3);
-      const padY = Math.max(10, height * 0.5);
+      // Add MINIMAL padding (just 10% on each side to ensure text is fully covered)
+      const padX = Math.max(2, width * 0.1);
+      const padY = Math.max(2, height * 0.15);
       x = Math.max(0, x - padX);
       y = Math.max(0, y - padY);
       width = Math.min(width + padX * 2, imgWidth - x);
       height = Math.min(height + padY * 2, imgHeight - y);
       
-      console.log(`Drawing black box at (${x.toFixed(0)}, ${y.toFixed(0)}) size ${width.toFixed(0)}x${height.toFixed(0)}`);
+      console.log(`Drawing tight black box at (${x.toFixed(0)}, ${y.toFixed(0)}) size ${width.toFixed(0)}x${height.toFixed(0)}`);
       
       // Draw solid black rectangle
       ctx.fillRect(x, y, width, height);
