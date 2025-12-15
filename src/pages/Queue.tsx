@@ -353,8 +353,45 @@ const [isExporting, setIsExporting] = useState(false);
   const initialTab = searchParams.get('tab') || 'scan';
   const [activeTab, setActiveTab] = useState(initialTab);
 
+  // Calculate unreviewed signature count for petition projects
+  const getUnreviewedSignatureCount = () => {
+    let count = 0;
+    validatedDocs.forEach((doc: any) => {
+      const results = doc.validation_suggestions?.lookupValidation?.results || [];
+      results.forEach((result: any) => {
+        const isRejected = result.rejected === true;
+        const isOverrideApproved = result.overrideApproved === true;
+        const isAutoValid = result.found && result.matchScore >= 0.9;
+        if (!isAutoValid && !isOverrideApproved && !isRejected) {
+          count++;
+        }
+      });
+    });
+    return count;
+  };
+
+  // Check if this is a petition project with signature validation
+  const hasPetitionSignatures = validatedDocs.some((doc: any) => 
+    doc.validation_suggestions?.lookupValidation?.results?.length > 0
+  );
+
   // Update URL when tab changes
   const handleTabChange = (tab: string) => {
+    // Block navigation to export if petition signatures need review
+    if (tab === 'export' && hasPetitionSignatures) {
+      const unreviewedCount = getUnreviewedSignatureCount();
+      if (unreviewedCount > 0) {
+        toast({ 
+          title: 'Review Required', 
+          description: `${unreviewedCount} signature(s) need operator approval or rejection before export. Check the "For Review" tab.`,
+          variant: 'destructive'
+        });
+        // Navigate to validation instead
+        setActiveTab('validation');
+        setSearchParams({ tab: 'validation' });
+        return;
+      }
+    }
     setActiveTab(tab);
     setSearchParams({ tab });
   };
@@ -2225,13 +2262,40 @@ const [isExporting, setIsExporting] = useState(false);
                 </Card>
               ) : (
               <Card className="p-8">
+                {/* Warning banner for unreviewed petition signatures */}
+                {hasPetitionSignatures && getUnreviewedSignatureCount() > 0 && (
+                  <div className="mb-6 p-4 rounded-lg border border-destructive/50 bg-destructive/10">
+                    <div className="flex items-center gap-3">
+                      <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-destructive">Review Required</h4>
+                        <p className="text-sm text-destructive/80">
+                          {getUnreviewedSignatureCount()} signature(s) need operator approval or rejection before export.
+                        </p>
+                      </div>
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => handleTabChange('validation')}
+                      >
+                        Go to Validation
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                
                 <div className="text-center mb-6">
                   <Download className="h-16 w-16 mx-auto mb-4 text-primary" />
                   <h3 className="text-2xl font-semibold mb-2">Export Batch</h3>
                   <p className="text-muted-foreground">
                     Export all validated documents from this batch
                   </p>
-                  {isReadyForExport && (
+                  {isReadyForExport && !hasPetitionSignatures && (
+                    <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full border border-success/30 bg-success/10 text-success text-sm">
+                      Ready for Export
+                    </div>
+                  )}
+                  {isReadyForExport && hasPetitionSignatures && getUnreviewedSignatureCount() === 0 && (
                     <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full border border-success/30 bg-success/10 text-success text-sm">
                       Ready for Export
                     </div>
