@@ -356,9 +356,9 @@ const [isExporting, setIsExporting] = useState(false);
   const [activeTab, setActiveTab] = useState(initialTab);
 
   // Calculate unreviewed signature count for petition projects
-  const getUnreviewedSignatureCount = () => {
+  const countUnreviewedSignatures = (docs: any[]) => {
     let count = 0;
-    validatedDocs.forEach((doc: any) => {
+    docs.forEach((doc: any) => {
       const results = doc.validation_suggestions?.lookupValidation?.results || [];
       results.forEach((result: any) => {
         const isRejected = result.rejected === true;
@@ -371,6 +371,8 @@ const [isExporting, setIsExporting] = useState(false);
     });
     return count;
   };
+
+  const getUnreviewedSignatureCount = () => countUnreviewedSignatures(validatedDocs);
 
   // Check if this is a petition project with signature validation
   const hasPetitionSignatures = validatedDocs.some((doc: any) => 
@@ -617,7 +619,7 @@ const [isExporting, setIsExporting] = useState(false);
 
 
   const loadQueueDocuments = async () => {
-    if (!selectedBatchId) return;
+    if (!selectedBatchId) return null;
 
     try {
       // First check if the batch still exists and get its current status
@@ -638,7 +640,7 @@ const [isExporting, setIsExporting] = useState(false);
         setSelectedBatch(null);
         setValidationQueue([]);
         setValidatedDocs([]);
-        return;
+        return null;
       }
 
       // Update selected batch with latest data
@@ -674,20 +676,25 @@ const [isExporting, setIsExporting] = useState(false);
       const batchIsComplete = batchCheck?.status === 'complete';
 
       // Show all pending documents in Validation, even if OCR failed (so users can manually index them)
-      const validationDocs = docsData?.filter(d => d.validation_status === 'pending') || [];
-      
+      const validationDocs = docsData?.filter((d) => d.validation_status === 'pending') || [];
+
       setValidationQueue(validationDocs);
 
-      // Show validated docs for export even when batch is complete
-      setValidatedDocs(docsData?.filter(d => d.validation_status === 'validated') || []);
+      const validated = docsData?.filter((d) => d.validation_status === 'validated') || [];
+      setValidatedDocs(validated);
 
       // Clear processing state if all documents have been processed (have confidence scores)
-      const allProcessed = docsData.every(d => typeof d.confidence_score === 'number' && d.confidence_score > 0);
+      const allProcessed = docsData.every(
+        (d) => typeof d.confidence_score === 'number' && d.confidence_score > 0
+      );
       if (allProcessed && docsData.length > 0) {
         setProcessing(false);
       }
+
+      return { batch: batchCheck, docs: docsData, validationDocs, validatedDocs: validated, batchIsComplete };
     } catch (error) {
       console.error('Error loading queue:', error);
+      return null;
     }
   };
 
@@ -2275,13 +2282,31 @@ const [isExporting, setIsExporting] = useState(false);
                         </header>
 
                         <LineItemValidation
-                          lineItems={qcReviewDoc.validation_suggestions.lookupValidation.results.map((r: any) => r.lineItem).filter(Boolean)}
+                          lineItems={qcReviewDoc.validation_suggestions.lookupValidation.results
+                            .map((r: any) => r.lineItem)
+                            .filter(Boolean)}
                           lookupConfig={{ system: 'csv' }}
                           keyField="Printed_Name"
                           documentId={qcReviewDoc.id}
                           projectId={selectedProjectId || undefined}
                           precomputedResults={qcReviewDoc.validation_suggestions.lookupValidation}
                           authenticateSignatures={selectedProject?.enable_signature_verification || false}
+                          onUpdated={async () => {
+                            const refreshed = await loadQueueDocuments();
+                            if (!refreshed) return;
+
+                            const hasSigs = refreshed.validatedDocs.some(
+                              (d: any) => d.validation_suggestions?.lookupValidation?.results?.length > 0
+                            );
+                            const unreviewed = countUnreviewedSignatures(refreshed.validatedDocs);
+                            const canExport = !hasSigs || unreviewed === 0;
+
+                            if (refreshed.validationDocs.length === 0 && refreshed.validatedDocs.length > 0 && canExport) {
+                              setActiveTab('export');
+                              setSearchParams({ tab: 'export' });
+                              setQcReviewDoc(null);
+                            }
+                          }}
                         />
                       </div>
                     )}

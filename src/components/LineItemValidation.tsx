@@ -64,6 +64,8 @@ interface LineItemValidationProps {
       };
     }>;
   };
+  /** Called after re-validation or operator action is successfully persisted. */
+  onUpdated?: () => void;
 }
 
 interface ValidationResult {
@@ -107,6 +109,7 @@ export const LineItemValidation = ({
   projectId,
   authenticateSignatures,
   precomputedResults,
+  onUpdated,
 }: LineItemValidationProps) => {
   const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
   const [isValidating, setIsValidating] = useState(false);
@@ -340,6 +343,8 @@ export const LineItemValidation = ({
           title: 'Signatures re-validated',
           description: 'Voter registry results have been refreshed.',
         });
+
+        onUpdated?.();
       } catch (error: any) {
         console.error('Line item validation error:', error);
         toast({
@@ -472,19 +477,21 @@ export const LineItemValidation = ({
       const updatedPrecomputed = {
         ...precomputedResults,
         results: precomputedResults.results.map((r: any) => {
-          const updatedResult = updatedResults.find(ur => ur.index === r.lineIndex);
+          const updatedResult = updatedResults.find((ur) => ur.index === r.lineIndex);
           if (updatedResult) {
             return {
               ...r,
               overrideApproved: updatedResult.overrideApproved || false,
               rejected: updatedResult.rejected || false,
               overrideAt: updatedResult.overrideAt,
-              operatorUserId: updatedResult.overrideApproved || updatedResult.rejected ? user?.id : r.operatorUserId,
-              operatorName: updatedResult.overrideApproved || updatedResult.rejected ? operatorName : r.operatorName
+              operatorUserId:
+                updatedResult.overrideApproved || updatedResult.rejected ? user?.id : r.operatorUserId,
+              operatorName:
+                updatedResult.overrideApproved || updatedResult.rejected ? operatorName : r.operatorName,
             };
           }
           return r;
-        })
+        }),
       };
 
       // Update document validation_suggestions with operator actions
@@ -492,14 +499,17 @@ export const LineItemValidation = ({
         .from('documents')
         .update({
           validation_suggestions: {
-            lookupValidation: updatedPrecomputed
-          }
+            lookupValidation: updatedPrecomputed,
+          },
         })
         .eq('id', documentId);
 
       if (error) {
         console.error('Failed to persist operator action:', error);
+        return;
       }
+
+      onUpdated?.();
     } catch (err) {
       console.error('Error persisting operator action:', err);
     }
