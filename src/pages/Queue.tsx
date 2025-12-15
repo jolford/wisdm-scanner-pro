@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScanUploader } from '@/components/ScanUploader';
 import { PhysicalScanner } from '@/components/PhysicalScanner';
 import { BatchValidationScreen } from '@/components/BatchValidationScreen';
+import { LineItemValidation } from '@/components/LineItemValidation';
 import { ProjectSelector } from '@/components/ProjectSelector';
 import { BatchSelector } from '@/components/BatchSelector';
 import { supabase } from '@/integrations/supabase/client';
@@ -309,6 +310,7 @@ const Queue = ({ launchedFiles }: { launchedFiles?: File[] }) => {
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [selectedBatch, setSelectedBatch] = useState<any>(null);
   const [customerId, setCustomerId] = useState<string | null>(null);
+  const [qcReviewDoc, setQcReviewDoc] = useState<any | null>(null);
   
   // Helper to check if current batch is processing
   const isProcessing = selectedBatchId ? processingBatches.has(selectedBatchId) : false;
@@ -2238,18 +2240,53 @@ const [isExporting, setIsExporting] = useState(false);
                             )}
                           </div>
                         </div>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          onClick={() => handleDeleteDoc(doc.id)}
-                          className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30 flex-shrink-0"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {doc.validation_suggestions?.lookupValidation?.results?.length > 0 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setQcReviewDoc(doc)}
+                              className="hover:border-primary/50 hover:bg-primary/5"
+                            >
+                              Review Signatures
+                            </Button>
+                          )}
+                          <Button 
+                            variant="outline" 
+                            size="icon" 
+                            onClick={() => handleDeleteDoc(doc.id)}
+                            className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </Card>
                   ))
                 )}
+
+                <Dialog open={!!qcReviewDoc} onOpenChange={(open) => !open && setQcReviewDoc(null)}>
+                  <DialogContent className="max-w-6xl">
+                    {qcReviewDoc && (
+                      <div className="space-y-4">
+                        <header className="space-y-1">
+                          <h2 className="text-lg font-semibold">Review Signatures</h2>
+                          <p className="text-sm text-muted-foreground truncate">{qcReviewDoc.file_name}</p>
+                        </header>
+
+                        <LineItemValidation
+                          lineItems={qcReviewDoc.validation_suggestions.lookupValidation.results.map((r: any) => r.lineItem).filter(Boolean)}
+                          lookupConfig={{ system: 'csv' }}
+                          keyField="Printed_Name"
+                          documentId={qcReviewDoc.id}
+                          projectId={selectedProjectId || undefined}
+                          precomputedResults={qcReviewDoc.validation_suggestions.lookupValidation}
+                          authenticateSignatures={selectedProject?.enable_signature_verification || false}
+                        />
+                      </div>
+                    )}
+                  </DialogContent>
+                </Dialog>
               </div>
             </TabsContent>
             
