@@ -522,15 +522,24 @@ export const BatchValidationScreen = ({
   
   // Calculate progress metrics from all documents in batch (not just pending ones)
   const docsForMetrics = allDocuments || documents;
-  
-  // Calculate OCR progress from actual document data - documents with extracted_text are considered processed
-  const actualOcrProcessed = docsForMetrics.filter(d => d.extracted_text || d.extracted_metadata).length;
-  const actualOcrTotal = docsForMetrics.length;
-  
-  // Use actual counts from documents, fallback to props if documents not loaded yet
-  const effectiveOcrProcessed = actualOcrTotal > 0 ? actualOcrProcessed : (ocrProcessed || 0);
-  const effectiveOcrTotal = actualOcrTotal > 0 ? actualOcrTotal : (ocrTotal || 0);
-  
+
+  // OCR is considered "processed" when we have any OCR/classification outputs.
+  // This is more reliable than extracted_text alone (which can be empty for some PDFs).
+  const processedFromDocs = docsForMetrics.filter((d) => {
+    const hasConfidence = typeof (d as any).confidence_score === 'number' && (d as any).confidence_score > 0;
+    const hasType = Boolean((d as any).document_type);
+    const hasText = Boolean((d as any).extracted_text);
+    const hasMeta = Boolean((d as any).extracted_metadata) && Object.keys((d as any).extracted_metadata || {}).length > 0;
+    const hasSuggestions = Boolean((d as any).validation_suggestions);
+    return hasConfidence || hasType || hasText || hasMeta || hasSuggestions;
+  }).length;
+
+  // Prefer batch-level totals when available (they represent the full batch even if docs aren't fully loaded yet)
+  const totalForOcr = Math.max(ocrTotal || 0, docsForMetrics.length);
+  const processedForOcr = Math.min(
+    totalForOcr,
+    Math.max(ocrProcessed || 0, processedFromDocs)
+  );
   const progressMetrics = {
     totalDocuments: docsForMetrics.length,
     validated: docsForMetrics.filter(d => d.validation_status === 'validated').length,
@@ -541,8 +550,8 @@ export const BatchValidationScreen = ({
       ? Math.round((docsForMetrics.filter(d => d.validation_status === 'validated').length / docsForMetrics.length) * 100)
       : 0,
     topVendor: undefined, // Could be calculated from metadata
-    ocrProcessed: effectiveOcrProcessed,
-    ocrTotal: effectiveOcrTotal,
+    ocrProcessed: processedForOcr,
+    ocrTotal: totalForOcr,
   };
 
   // Keyboard shortcuts
