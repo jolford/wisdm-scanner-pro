@@ -329,12 +329,20 @@ serve(async (req) => {
     let redactedFilePath: string | null = null;
 
     if (detectedViolations.length > 0 && LOVABLE_API_KEY) {
-      console.log(`Generating server-side redacted image for ${detectedViolations.length} violations`);
+      // Only redact the discriminatory protected-class terms (NOT whole restrictive clauses)
+      const redactionViolations = detectedViolations.filter(v =>
+        ['race', 'religion', 'national_origin', 'marital_status', 'familial_status'].includes(v.category)
+      );
+
+      console.log(
+        `Generating server-side redacted image for ${redactionViolations.length}/${detectedViolations.length} violations (word-level protected-class terms only)`
+      );
+
       try {
         redactedFilePath = await generateRedactedImage(
           supabase,
           document,
-          detectedViolations,
+          redactionViolations,
           LOVABLE_API_KEY
         );
         if (redactedFilePath) {
@@ -739,11 +747,14 @@ async function generateRedactedImage(
 ): Promise<string | null> {
   // Get word bounding boxes from document for accurate redaction
   const wordBoxes = document.word_bounding_boxes || [];
-  
-  // Get unique terms to redact (lowercase for matching)
-  const termsToRedact = [...new Set(violations.map(v => v.term.toLowerCase()))];
+
+  // IMPORTANT: Redact ONLY explicit protected-class discriminatory terms (word-level).
+  // Do NOT redact full clauses or generic restriction words like "shall", "not", "banned".
+  const termsToRedact = [...new Set(violations.map(v => v.term.toLowerCase().trim()))]
+    .filter(Boolean);
+
   if (termsToRedact.length === 0) {
-    console.log('No violations to redact');
+    console.log('No discriminatory terms to redact');
     return null;
   }
 
@@ -765,8 +776,8 @@ async function generateRedactedImage(
 
   // Determine mime type
   const ext = fileName?.split('.').pop()?.toLowerCase() || 'png';
-  const mimeType = ext === 'pdf' ? 'application/pdf' : 
-                   ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 
+  const mimeType = ext === 'pdf' ? 'application/pdf' :
+                   ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' :
                    ext === 'png' ? 'image/png' : 'image/png';
 
   // For PDFs, we can't use image editing
@@ -779,59 +790,70 @@ async function generateRedactedImage(
 
   // Find word boxes that match discriminatory terms
   const boxesToRedact: Array<{x: number, y: number, width: number, height: number, isPercentage: boolean}> = [];
-  
-  // AB1466 discriminatory terms - ALL racial/ethnic terms that must be redacted
-  const discriminatoryTerms = new Set<string>([
-    // Core racial terms (MUST be redacted in restrictive covenants)
-    'white', 'caucasian', 'negro', 'negros', 'colored', 'african', 'asiatic', 
-    'ethiopian', 'mongolian', 'malay', 'oriental', 'aryan', 'semitic',
-    // Race-related words
-    'race', 'blood', 'descent',
-    // Specific nationalities/ethnicities used discriminatorily
-    'mexican', 'chinese', 'japanese', 'hindu', 'filipino', 'filipine', 'indian',
-    // Religious terms
-    'jewish', 'hebrew',
-    // Common phrases broken into components
-    'persons',
-  ]);
-  
-  // Add all detected violation terms
-  termsToRedact.forEach(term => {
-    const lowerTerm = term.toLowerCase();
-    discriminatoryTerms.add(lowerTerm);
-    // Also add individual words from phrases
-    lowerTerm.split(/\s+/).forEach(word => {
-      if (word.length >= 4) discriminatoryTerms.add(word);
-    });
-  });
 
-  // Match words in bounding boxes to discriminatory terms
-  for (const wordBox of wordBoxes) {
-    const rawText = (wordBox.text || '').toLowerCase().trim();
-    const wordText = rawText.replace(/[^a-z]/gi, '');
-    if (!wordText || wordText.length < 3) continue;
-    
-    // Check if this word matches a discriminatory term
-    for (const term of discriminatoryTerms) {
-      const cleanTerm = term.replace(/[^a-z]/gi, '');
-      if (!cleanTerm || cleanTerm.length < 3) continue;
-      
-      // Match if: exact match, word contains the term, or term contains the word
-      const isMatch = wordText === cleanTerm || 
-                      (wordText.length >= 4 && wordText.includes(cleanTerm)) ||
-                      (cleanTerm.length >= 4 && cleanTerm.includes(wordText) && wordText.length >= cleanTerm.length - 2);
-      
-      if (isMatch && wordBox.bbox && typeof wordBox.bbox.x === 'number') {
-        boxesToRedact.push({
-          x: wordBox.bbox.x,
-          y: wordBox.bbox.y,
-          width: wordBox.bbox.width || wordBox.bbox.w || 5,
-          height: wordBox.bbox.height || wordBox.bbox.h || 2,
-          isPercentage: wordBox.bbox.x <= 100 && wordBox.bbox.y <= 100
-        });
-        console.log(`Matched AB1466 term "${cleanTerm}" in word "${rawText}" at bbox:`, wordBox.bbox);
-        break;
+  // Canonical AB1466 protected-class terms we redact (tight word-level)
+  const protectedTerms = new Set<string>([
+    // Race / color
+    'white', 'caucasian', 'caucasion', 'negro', 'negros', 'colored',
+    'african', 'asiatic', 'ethiopian', 'mongolian', 'malay', 'oriental',
+    'aryan', 'semitic',
+    // Common nationalities/ethnicities historically used
+    'mexican', 'chinese', 'japanese', 'indian', 'hindu', 'filipino', 'filipine',
+    // Religion
+    'jewish', 'hebrew', 'catholic', 'muslim', 'protestant'
+  ]);
+
+  // Only add terms that look like protected-class terms; ignore clause text.
+  for (const t of termsToRedact) {
+    const cleaned = t.replace(/[^a-z\s]/g, '').trim();
+    if (!cleaned) continue;
+
+    // Allow multi-word protected phrases but DO NOT split into generic words.
+    // Examples: "white persons", "colored person", "white race".
+    if (cleaned.includes(' ')) {
+      // Keep only if phrase contains at least one canonical protected term
+      const parts = cleaned.split(/\s+/).filter(Boolean);
+      if (parts.some(p => protectedTerms.has(p))) {
+        protectedTerms.add(cleaned);
       }
+      continue;
+    }
+
+    // Single word
+    if (cleaned.length >= 4) protectedTerms.add(cleaned);
+  }
+
+  // 1) Exact word matches from OCR word boxes
+  for (const wordBox of wordBoxes) {
+    const rawText = String(wordBox.text || '').toLowerCase().trim();
+    const wordText = rawText.replace(/[^a-z]/g, '');
+    if (!wordText || wordText.length < 3) continue;
+
+    if (protectedTerms.has(wordText) && wordBox.bbox && typeof wordBox.bbox.x === 'number') {
+      boxesToRedact.push({
+        x: wordBox.bbox.x,
+        y: wordBox.bbox.y,
+        width: wordBox.bbox.width || wordBox.bbox.w || 5,
+        height: wordBox.bbox.height || wordBox.bbox.h || 2,
+        isPercentage: wordBox.bbox.x <= 100 && wordBox.bbox.y <= 100
+      });
+      console.log(`Matched protected term "${wordText}" at bbox:`, wordBox.bbox);
+    }
+  }
+
+  // 2) Multi-word protected phrases (tight merged boxes)
+  const phraseTerms = [...protectedTerms].filter(t => t.includes(' '));
+  for (const phrase of phraseTerms) {
+    const bbox = findBoundingBoxForText(phrase, wordBoxes, 0, '');
+    if (bbox) {
+      boxesToRedact.push({
+        x: bbox.x,
+        y: bbox.y,
+        width: bbox.width,
+        height: bbox.height,
+        isPercentage: bbox.x <= 100 && bbox.y <= 100
+      });
+      console.log(`Matched protected phrase "${phrase}" via merged bbox:`, bbox);
     }
   }
 
