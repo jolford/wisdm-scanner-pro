@@ -571,6 +571,33 @@ const [isExporting, setIsExporting] = useState(false);
     };
   }, [selectedBatchId]);
 
+  // Real-time subscription for document updates (OCR completion, validation changes)
+  useEffect(() => {
+    if (!selectedBatchId) return;
+
+    const channel = supabase
+      .channel(`queue-documents-${selectedBatchId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'documents',
+          filter: `batch_id=eq.${selectedBatchId}`,
+        },
+        (payload) => {
+          console.log('Document realtime update:', payload.eventType, payload.new);
+          // Reload documents when any change occurs
+          loadQueueDocuments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedBatchId]);
+
   // Fallback polling (in case realtime is unavailable in the browser/session)
   useEffect(() => {
     if (!selectedBatchId) return;
