@@ -224,29 +224,29 @@ export function OnboardingWizard() {
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden p-0">
-          <DialogHeader className="p-6 pb-0">
-            <div className="flex items-center justify-between">
-              <div>
-                <DialogTitle className="text-2xl flex items-center gap-2">
-                  <Rocket className="h-6 w-6 text-primary" />
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-hidden p-0">
+          <DialogHeader className="p-4 sm:p-6 pb-0">
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 flex-1">
+                <DialogTitle className="text-xl sm:text-2xl flex items-center gap-2">
+                  <Rocket className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
                   Welcome to WISDM
                 </DialogTitle>
                 <DialogDescription className="mt-1">
                   Complete these steps to start processing documents
                 </DialogDescription>
               </div>
-              <Badge variant="outline" className="text-sm">
+              <Badge variant="outline" className="text-xs sm:text-sm flex-shrink-0 whitespace-nowrap">
                 {completedSteps.length} of {wizardSteps.length} complete
               </Badge>
             </div>
             <Progress value={progress} className="mt-4 h-2" />
           </DialogHeader>
 
-          <div className="flex h-[500px]">
+          <div className="flex flex-col sm:flex-row h-[60vh] sm:h-[450px]">
             {/* Step sidebar */}
-            <div className="w-64 border-r bg-muted/30 p-4 overflow-y-auto">
-              <div className="space-y-2">
+            <div className="w-full sm:w-56 border-b sm:border-b-0 sm:border-r bg-muted/30 p-3 sm:p-4 overflow-x-auto sm:overflow-y-auto flex sm:block gap-2">
+              <div className="flex sm:flex-col sm:space-y-2 gap-2 sm:gap-0 min-w-max sm:min-w-0">
                 {wizardSteps.map((step, index) => {
                   const isComplete = completedSteps.includes(step.id);
                   const isCurrent = index === currentStep;
@@ -257,24 +257,24 @@ export function OnboardingWizard() {
                       key={step.id}
                       onClick={() => goToStep(index)}
                       className={cn(
-                        "w-full flex items-center gap-3 p-3 rounded-lg text-left transition-all",
+                        "flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg text-left transition-all flex-shrink-0 sm:flex-shrink sm:w-full",
                         isCurrent && "bg-primary/10 border border-primary/20",
                         !isCurrent && "hover:bg-muted"
                       )}
                     >
                       <div className={cn(
-                        "flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center",
+                        "flex-shrink-0 h-7 w-7 sm:h-8 sm:w-8 rounded-full flex items-center justify-center",
                         isComplete && "bg-green-100 text-green-600",
                         !isComplete && isCurrent && "bg-primary/20 text-primary",
                         !isComplete && !isCurrent && "bg-muted text-muted-foreground"
                       )}>
                         {isComplete ? (
-                          <CheckCircle2 className="h-5 w-5" />
+                          <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
                         ) : (
-                          <Icon className="h-4 w-4" />
+                          <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
+                      <div className="hidden sm:block flex-1 min-w-0">
                         <p className={cn(
                           "text-sm font-medium truncate",
                           isComplete && "text-green-600",
@@ -293,7 +293,7 @@ export function OnboardingWizard() {
             </div>
 
             {/* Step content */}
-            <div className="flex-1 p-6 flex flex-col">
+            <div className="flex-1 p-4 sm:p-6 flex flex-col overflow-y-auto">
               {currentStepData && (
                 <>
                   <div className="flex-1">
