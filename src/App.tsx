@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -15,82 +15,90 @@ import { DemoModeToggle } from "@/components/demo/DemoModeToggle";
 import { DemoGuidedTour } from "@/components/demo/DemoGuidedTour";
 import { DemoBanner } from "@/components/demo/DemoBanner";
 import { PresentationMode } from "@/components/demo/PresentationMode";
+import { OnboardingWizard } from "@/components/OnboardingWizard";
+import { SkeletonPage } from "@/components/ui/skeleton-loaders";
+
+// Core pages - loaded immediately
 import Index from "./pages/Index";
 import Queue from "./pages/Queue";
 import Auth from "./pages/Auth";
 import Batches from "./pages/Batches";
 import BatchDetail from "./pages/BatchDetail";
 import Install from "./pages/Install";
-import AdminDashboard from "./pages/admin/Dashboard";
-import AdminProjects from "./pages/admin/projects/Index";
-import NewProject from "./pages/admin/projects/New";
-import EditProject from "./pages/admin/projects/Edit";
-import BatchesIndex from "./pages/admin/batches/Index";
-import NewBatch from "./pages/admin/batches/New";
-import AdminBatchDetail from "./pages/admin/batches/Detail";
-import LicensesIndex from "./pages/admin/licenses/Index";
-import NewLicense from "./pages/admin/licenses/New";
-import EditLicense from "./pages/admin/licenses/Edit";
-import CustomersIndex from "./pages/admin/customers/Index";
-import NewCustomer from "./pages/admin/customers/New";
-import EditCustomer from "./pages/admin/customers/Edit";
-import UsersIndex from "./pages/admin/users/Index";
-import NewUser from "./pages/admin/users/New";
-import DocumentsAdmin from "./pages/admin/Documents";
-import CostTracking from "./pages/admin/CostTracking";
-import Analytics from "./pages/admin/Analytics";
-import BarcodeTest from "./pages/admin/BarcodeTest";
-import SystemViability from "./pages/admin/SystemViability";
-import ErrorLogs from "./pages/admin/ErrorLogs";
-import AdvancedReports from "./pages/admin/AdvancedReports";
-import DocumentReprocessing from "./pages/admin/DocumentReprocessing";
-import BusinessMetrics from "./pages/admin/BusinessMetrics";
-import MetricsBenchmark from "./pages/admin/MetricsBenchmark";
-import WhiteLabel from "./pages/admin/WhiteLabel";
-import CustomerSuccess from "./pages/admin/CustomerSuccess";
-import BatchTemplates from "./pages/admin/BatchTemplates";
-import Help from "./pages/Help";
 import NotFound from "./pages/NotFound";
-import ApiDocs from "./pages/ApiDocs";
-import UserSettings from "./pages/UserSettings";
-import Presentation from "./pages/Presentation";
-import Training from "./pages/Training";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import CookiePolicy from "./pages/CookiePolicy";
-import DataProcessingAgreement from "./pages/DataProcessingAgreement";
-import SecurityPolicy from "./pages/SecurityPolicy";
-import IncidentResponse from "./pages/IncidentResponse";
-import BusinessContinuity from "./pages/BusinessContinuity";
-import ComplianceHub from "./pages/ComplianceHub";
-import SecurityCompliance from "./pages/SecurityCompliance";
-import ValidationAnalytics from "./pages/admin/ValidationAnalytics";
-import MLTemplates from "./pages/admin/MLTemplates";
-import ValidationLookups from "./pages/admin/ValidationLookups";
-import ConfidenceDashboard from "./pages/admin/ConfidenceDashboard";
-import ExceptionQueue from "./pages/admin/ExceptionQueue";
-import WebhookConfig from "./pages/admin/WebhookConfig";
-import DuplicateDetections from "./pages/admin/DuplicateDetections";
-import ValidationRules from "./pages/admin/ValidationRules";
-import ScheduledBatches from "./pages/admin/ScheduledBatches";
-import ReleaseNotes from "./pages/ReleaseNotes";
-import ReleaseNotesManager from "./pages/admin/ReleaseNotesManager";
-import DocumentComparison from "./pages/admin/DocumentComparison";
-import QAMetrics from "./pages/admin/QAMetrics";
-import Downloads from "./pages/Downloads";
-import CredentialMigration from "./pages/admin/CredentialMigration";
-import MLLearning from "./pages/admin/MLLearning";
-import SmartRouting from "./pages/admin/SmartRouting";
-import MobileValidation from "./pages/admin/MobileValidation";
-import WorkflowBuilder from "./pages/admin/WorkflowBuilder";
-import Workflows from "./pages/admin/Workflows";
 
-import IntegrationMarketplace from "./pages/admin/IntegrationMarketplace";
-import SSOConfig from "./pages/admin/SSOConfig";
-import SCIMConfig from "./pages/admin/SCIMConfig";
-import ScriptAgents from "./pages/admin/ScriptAgents";
-import RetentionPolicies from "./pages/admin/RetentionPolicies";
-import EnhancedSLAMonitoring from "./pages/admin/EnhancedSLAMonitoring";
+// Admin pages - lazy loaded for better initial bundle size
+const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
+const AdminProjects = lazy(() => import("./pages/admin/projects/Index"));
+const NewProject = lazy(() => import("./pages/admin/projects/New"));
+const EditProject = lazy(() => import("./pages/admin/projects/Edit"));
+const BatchesIndex = lazy(() => import("./pages/admin/batches/Index"));
+const NewBatch = lazy(() => import("./pages/admin/batches/New"));
+const AdminBatchDetail = lazy(() => import("./pages/admin/batches/Detail"));
+const LicensesIndex = lazy(() => import("./pages/admin/licenses/Index"));
+const NewLicense = lazy(() => import("./pages/admin/licenses/New"));
+const EditLicense = lazy(() => import("./pages/admin/licenses/Edit"));
+const CustomersIndex = lazy(() => import("./pages/admin/customers/Index"));
+const NewCustomer = lazy(() => import("./pages/admin/customers/New"));
+const EditCustomer = lazy(() => import("./pages/admin/customers/Edit"));
+const UsersIndex = lazy(() => import("./pages/admin/users/Index"));
+const NewUser = lazy(() => import("./pages/admin/users/New"));
+const DocumentsAdmin = lazy(() => import("./pages/admin/Documents"));
+const CostTracking = lazy(() => import("./pages/admin/CostTracking"));
+const Analytics = lazy(() => import("./pages/admin/Analytics"));
+const BarcodeTest = lazy(() => import("./pages/admin/BarcodeTest"));
+const SystemViability = lazy(() => import("./pages/admin/SystemViability"));
+const ErrorLogs = lazy(() => import("./pages/admin/ErrorLogs"));
+const AdvancedReports = lazy(() => import("./pages/admin/AdvancedReports"));
+const DocumentReprocessing = lazy(() => import("./pages/admin/DocumentReprocessing"));
+const BusinessMetrics = lazy(() => import("./pages/admin/BusinessMetrics"));
+const MetricsBenchmark = lazy(() => import("./pages/admin/MetricsBenchmark"));
+const WhiteLabel = lazy(() => import("./pages/admin/WhiteLabel"));
+const CustomerSuccess = lazy(() => import("./pages/admin/CustomerSuccess"));
+const BatchTemplates = lazy(() => import("./pages/admin/BatchTemplates"));
+const ValidationAnalytics = lazy(() => import("./pages/admin/ValidationAnalytics"));
+const MLTemplates = lazy(() => import("./pages/admin/MLTemplates"));
+const ValidationLookups = lazy(() => import("./pages/admin/ValidationLookups"));
+const ConfidenceDashboard = lazy(() => import("./pages/admin/ConfidenceDashboard"));
+const ExceptionQueue = lazy(() => import("./pages/admin/ExceptionQueue"));
+const WebhookConfig = lazy(() => import("./pages/admin/WebhookConfig"));
+const DuplicateDetections = lazy(() => import("./pages/admin/DuplicateDetections"));
+const ValidationRules = lazy(() => import("./pages/admin/ValidationRules"));
+const ScheduledBatches = lazy(() => import("./pages/admin/ScheduledBatches"));
+const ReleaseNotesManager = lazy(() => import("./pages/admin/ReleaseNotesManager"));
+const DocumentComparison = lazy(() => import("./pages/admin/DocumentComparison"));
+const QAMetrics = lazy(() => import("./pages/admin/QAMetrics"));
+const CredentialMigration = lazy(() => import("./pages/admin/CredentialMigration"));
+const MLLearning = lazy(() => import("./pages/admin/MLLearning"));
+const SmartRouting = lazy(() => import("./pages/admin/SmartRouting"));
+const MobileValidation = lazy(() => import("./pages/admin/MobileValidation"));
+const WorkflowBuilder = lazy(() => import("./pages/admin/WorkflowBuilder"));
+const Workflows = lazy(() => import("./pages/admin/Workflows"));
+const IntegrationMarketplace = lazy(() => import("./pages/admin/IntegrationMarketplace"));
+const SSOConfig = lazy(() => import("./pages/admin/SSOConfig"));
+const SCIMConfig = lazy(() => import("./pages/admin/SCIMConfig"));
+const ScriptAgents = lazy(() => import("./pages/admin/ScriptAgents"));
+const RetentionPolicies = lazy(() => import("./pages/admin/RetentionPolicies"));
+const EnhancedSLAMonitoring = lazy(() => import("./pages/admin/EnhancedSLAMonitoring"));
+
+// Static pages - lazy loaded
+const Help = lazy(() => import("./pages/Help"));
+const ApiDocs = lazy(() => import("./pages/ApiDocs"));
+const UserSettings = lazy(() => import("./pages/UserSettings"));
+const Presentation = lazy(() => import("./pages/Presentation"));
+const Training = lazy(() => import("./pages/Training"));
+const Downloads = lazy(() => import("./pages/Downloads"));
+const ReleaseNotes = lazy(() => import("./pages/ReleaseNotes"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const CookiePolicy = lazy(() => import("./pages/CookiePolicy"));
+const DataProcessingAgreement = lazy(() => import("./pages/DataProcessingAgreement"));
+const SecurityPolicy = lazy(() => import("./pages/SecurityPolicy"));
+const IncidentResponse = lazy(() => import("./pages/IncidentResponse"));
+const BusinessContinuity = lazy(() => import("./pages/BusinessContinuity"));
+const ComplianceHub = lazy(() => import("./pages/ComplianceHub"));
+const SecurityCompliance = lazy(() => import("./pages/SecurityCompliance"));
+
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -99,7 +107,17 @@ import { AIAssistant } from "./components/AIAssistant";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Bot } from "lucide-react";
 import { Button } from "./components/ui/button";
-const queryClient = new QueryClient();
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 2, // 2 minutes
+      gcTime: 1000 * 60 * 30, // 30 minutes
+      retry: 3,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Redirect users to the Auth page when arriving via a password recovery link
 // This catches reset emails that may point to "/" and use either hash tokens or a code query param
@@ -189,6 +207,7 @@ const App = () => {
             <GlobalKeyboardShortcuts onShowShortcuts={() => setShowShortcuts(true)} onFilesLaunched={handleFilesLaunched} />
           <RecoveryRedirect />
           <div id="main-content" className="flex-1" role="main">
+          <Suspense fallback={<SkeletonPage />}>
           <Routes>
             <Route path="/" element={<Queue launchedFiles={launchedFiles} />} />
             <Route path="/old" element={<Index />} />
@@ -275,7 +294,9 @@ const App = () => {
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          </Suspense>
           </div>
+          <OnboardingWizard />
           <Footer />
           {/* Demo Mode Components - must be inside Router for useNavigate */}
           <PresentationMode />
