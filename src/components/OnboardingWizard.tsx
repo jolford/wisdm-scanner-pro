@@ -225,8 +225,8 @@ export function OnboardingWizard() {
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="w-[95vw] max-w-2xl max-h-[85vh] overflow-hidden p-0">
-          <DialogHeader className="p-4 sm:p-6 pb-0">
-            <div className="flex items-start justify-between gap-4">
+          <DialogHeader className="p-4 sm:p-6 pb-0 pr-12">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
               <div className="min-w-0 flex-1">
                 <DialogTitle className="text-xl sm:text-2xl flex items-center gap-2">
                   <Rocket className="h-5 w-5 sm:h-6 sm:w-6 text-primary flex-shrink-0" />
@@ -236,7 +236,10 @@ export function OnboardingWizard() {
                   Complete these steps to start processing documents
                 </DialogDescription>
               </div>
-              <Badge variant="outline" className="text-xs sm:text-sm flex-shrink-0 whitespace-nowrap">
+              <Badge
+                variant="outline"
+                className="text-xs sm:text-sm flex-shrink-0 whitespace-nowrap sm:self-start max-w-full sm:max-w-[45%] truncate"
+              >
                 {completedSteps.length} of {wizardSteps.length} complete
               </Badge>
             </div>
@@ -293,7 +296,7 @@ export function OnboardingWizard() {
             </div>
 
             {/* Step content */}
-            <div className="flex-1 p-4 sm:p-6 flex flex-col overflow-y-auto">
+            <div className="flex-1 p-4 sm:p-6 flex flex-col overflow-y-auto overflow-x-hidden">
               {currentStepData && (
                 <>
                   <div className="flex-1">
@@ -307,8 +310,8 @@ export function OnboardingWizard() {
                           isCurrentStepComplete ? "text-green-600" : "text-primary"
                         )} />
                       </div>
-                      <div>
-                        <h3 className="text-xl font-semibold">{currentStepData.title}</h3>
+                      <div className="min-w-0">
+                        <h3 className="text-xl font-semibold truncate">{currentStepData.title}</h3>
                         {isCurrentStepComplete && (
                           <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
                             Completed
@@ -339,12 +342,13 @@ export function OnboardingWizard() {
                     </Card>
                   </div>
 
-                  <div className="flex items-center justify-between pt-6 border-t mt-6">
-                    <div className="flex gap-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pt-4 sm:pt-6 border-t mt-6">
+                    <div className="flex flex-wrap gap-2">
                       <Button
                         variant="outline"
                         onClick={() => goToStep(currentStep - 1)}
                         disabled={currentStep === 0}
+                        className="whitespace-nowrap"
                       >
                         <ArrowLeft className="h-4 w-4 mr-2" />
                         Previous
@@ -353,17 +357,18 @@ export function OnboardingWizard() {
                         variant="outline"
                         onClick={() => goToStep(currentStep + 1)}
                         disabled={currentStep === wizardSteps.length - 1}
+                        className="whitespace-nowrap"
                       >
                         Next
                         <ArrowRight className="h-4 w-4 ml-2" />
                       </Button>
                     </div>
 
-                    <div className="flex gap-2">
-                      <Button variant="ghost" onClick={() => dismissWizard.mutate()}>
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <Button variant="ghost" onClick={() => dismissWizard.mutate()} className="whitespace-nowrap">
                         Skip Setup
                       </Button>
-                      <Button onClick={handleAction}>
+                      <Button onClick={handleAction} className="whitespace-nowrap">
                         {currentStepData.action.label}
                         <ArrowRight className="h-4 w-4 ml-2" />
                       </Button>
