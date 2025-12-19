@@ -1324,25 +1324,38 @@ export const BatchValidationScreen = ({
         return;
       }
 
-      printWindow.document.write(`
-        <html>
-          <head>
-            <title>Print Document</title>
-            <style>
-              @media print {
-                body { margin: 0; }
-                img { max-width: 100%; height: auto; page-break-after: avoid; }
-              }
-              body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-              img { max-width: 100%; height: auto; }
-            </style>
-          </head>
-          <body>
-            <img src="${imageDataUrl}" onload="window.print();" />
-          </body>
-        </html>
-      `);
-      printWindow.document.close();
+      // Use safe DOM manipulation instead of document.write to prevent XSS
+      const printDoc = printWindow.document;
+      printDoc.open();
+      
+      // Create HTML structure safely
+      const html = printDoc.createElement('html');
+      const head = printDoc.createElement('head');
+      const title = printDoc.createElement('title');
+      title.textContent = 'Print Document';
+      
+      const style = printDoc.createElement('style');
+      style.textContent = `
+        @media print {
+          body { margin: 0; }
+          img { max-width: 100%; height: auto; page-break-after: avoid; }
+        }
+        body { margin: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        img { max-width: 100%; height: auto; }
+      `;
+      head.appendChild(title);
+      head.appendChild(style);
+      
+      const body = printDoc.createElement('body');
+      const img = printDoc.createElement('img');
+      img.src = imageDataUrl;
+      img.onload = () => printWindow.print();
+      body.appendChild(img);
+      
+      html.appendChild(head);
+      html.appendChild(body);
+      printDoc.appendChild(html);
+      printDoc.close();
       
       // Clean up blob URL after a delay
       if (!isPdf) {
