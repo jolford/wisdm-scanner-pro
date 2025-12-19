@@ -1427,34 +1427,46 @@ useEffect(() => {
 
     setViewerPopout(popout);
 
-    popout.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Document Viewer - ${fileName}</title>
-          <style>
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            body { 
-              background: #0a0a0a; 
-              display: flex; 
-              align-items: center; 
-              justify-content: center; 
-              height: 100vh; 
-              overflow: hidden;
-            }
-            img { 
-              max-width: 100%; 
-              max-height: 100vh; 
-              object-fit: contain; 
-            }
-          </style>
-        </head>
-        <body>
-          <img src="${effectiveImageUrl}" alt="${fileName}" />
-        </body>
-      </html>
-    `);
-    popout.document.close();
+    // Use safe DOM manipulation instead of document.write to prevent XSS
+    const popoutDoc = popout.document;
+    popoutDoc.open();
+    
+    // Create HTML structure safely
+    const html = popoutDoc.createElement('html');
+    const head = popoutDoc.createElement('head');
+    const title = popoutDoc.createElement('title');
+    title.textContent = `Document Viewer - ${fileName}`;
+    
+    const style = popoutDoc.createElement('style');
+    style.textContent = `
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body { 
+        background: #0a0a0a; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        height: 100vh; 
+        overflow: hidden;
+      }
+      img { 
+        max-width: 100%; 
+        max-height: 100vh; 
+        object-fit: contain; 
+      }
+    `;
+    head.appendChild(title);
+    head.appendChild(style);
+    
+    const body = popoutDoc.createElement('body');
+    const img = popoutDoc.createElement('img');
+    img.src = effectiveImageUrl;
+    img.alt = fileName;
+    body.appendChild(img);
+    
+    html.appendChild(head);
+    html.appendChild(body);
+    popoutDoc.appendChild(html);
+    popoutDoc.close();
   };
 
   return (
