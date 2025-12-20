@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Crop, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { isTiffUrl, convertTiffUrlToDataUrl } from '@/lib/image-utils';
 
 interface ImageRegionSelectorProps {
   imageUrl: string;
@@ -43,19 +44,40 @@ export const ImageRegionSelector = ({
   useEffect(() => {
     const loadImage = async () => {
       try {
+        const img = new Image();
+
+        img.onload = () => {
+          setImage(img);
+          updateCanvasDimensions(img);
+        };
+
+        img.onerror = () => {
+          console.error('Failed to load image for region selector');
+          toast({
+            title: 'Image Load Error',
+            description: 'Failed to load image for region selection',
+            variant: 'destructive',
+          });
+        };
+
+        // TIFFs don't load reliably in <img>; decode and convert to PNG first
+        if (isTiffUrl(imageUrl)) {
+          const pngDataUrl = await convertTiffUrlToDataUrl(imageUrl);
+          img.src = pngDataUrl;
+          return;
+        }
+
         // Fetch the image as a blob to avoid CORS issues
         const response = await fetch(imageUrl);
         const blob = await response.blob();
         const objectUrl = URL.createObjectURL(blob);
-        
-        const img = new Image();
+
         img.onload = () => {
           setImage(img);
           updateCanvasDimensions(img);
-          // Clean up blob URL
           URL.revokeObjectURL(objectUrl);
         };
-        
+
         img.onerror = () => {
           console.error('Failed to load image for region selector');
           toast({
@@ -65,7 +87,7 @@ export const ImageRegionSelector = ({
           });
           URL.revokeObjectURL(objectUrl);
         };
-        
+
         img.src = objectUrl;
       } catch (error) {
         console.error('Error loading image:', error);

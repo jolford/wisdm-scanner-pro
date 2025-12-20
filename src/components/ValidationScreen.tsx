@@ -24,6 +24,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useSignedUrl } from '@/hooks/use-signed-url';
 import { ViewOriginalButton } from './ViewOriginalButton';
 import { detectKeywords } from '@/lib/keyword-redaction';
+import { isTiffUrl, convertTiffUrlToDataUrl } from '@/lib/image-utils';
 import { AB1466ViolationAlert } from './AB1466ViolationAlert';
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.mjs';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?worker';
@@ -709,15 +710,20 @@ export const ValidationScreen = ({
       } else {
         // For images, download and convert to base64
         try {
-          const response = await fetch(signedData.signedUrl);
-          const blob = await response.blob();
-          
-          imageData = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result as string);
-            reader.onerror = reject;
-            reader.readAsDataURL(blob);
-          });
+          // TIFFs won't be accepted by the OCR vision pipeline; convert to PNG first
+          if (isTiffUrl(signedData.signedUrl) || isTiffUrl(fileName)) {
+            imageData = await convertTiffUrlToDataUrl(signedData.signedUrl);
+          } else {
+            const response = await fetch(signedData.signedUrl);
+            const blob = await response.blob();
+
+            imageData = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onloadend = () => resolve(reader.result as string);
+              reader.onerror = reject;
+              reader.readAsDataURL(blob);
+            });
+          }
         } catch (fetchError) {
           console.error('Image fetch error:', fetchError);
           imageData = undefined;
