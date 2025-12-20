@@ -14,7 +14,7 @@ import { DemoModeProvider } from "@/contexts/DemoModeContext";
 import { DemoModeToggle } from "@/components/demo/DemoModeToggle";
 import { DemoGuidedTour } from "@/components/demo/DemoGuidedTour";
 import { DemoBanner } from "@/components/demo/DemoBanner";
-import { PresentationMode } from "@/components/demo/PresentationMode";
+
 import { OnboardingWizard } from "@/components/OnboardingWizard";
 import { SkeletonPage } from "@/components/ui/skeleton-loaders";
 
@@ -85,7 +85,7 @@ const EnhancedSLAMonitoring = lazy(() => import("./pages/admin/EnhancedSLAMonito
 const Help = lazy(() => import("./pages/Help"));
 const ApiDocs = lazy(() => import("./pages/ApiDocs"));
 const UserSettings = lazy(() => import("./pages/UserSettings"));
-const Presentation = lazy(() => import("./pages/Presentation"));
+
 const Training = lazy(() => import("./pages/Training"));
 const Downloads = lazy(() => import("./pages/Downloads"));
 const ReleaseNotes = lazy(() => import("./pages/ReleaseNotes"));
@@ -280,7 +280,7 @@ const App = () => {
             <Route path="/api-docs" element={<ApiDocs />} />
             <Route path="/settings" element={<UserSettings />} />
             <Route path="/downloads" element={<Downloads />} />
-            <Route path="/presentation" element={<Presentation />} />
+            
             <Route path="/training" element={<Training />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms-of-service" element={<TermsOfService />} />
@@ -299,7 +299,7 @@ const App = () => {
           <OnboardingWizard />
           <Footer />
           {/* Demo Mode Components - must be inside Router for useNavigate */}
-          <PresentationMode />
+          
           </BrowserRouter>
           
           {/* AI Copilot Floating Button */}
