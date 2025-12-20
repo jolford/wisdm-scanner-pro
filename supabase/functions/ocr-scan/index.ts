@@ -321,10 +321,51 @@ serve(async (req) => {
       console.log(`Document fetched successfully. Type: ${document.file_type}, Size: ${arrayBuffer.byteLength} bytes`);
     }
     
-    // Validate required fields
+    // --- CHECK FOR PDF DATA URL AND HANDLE ---
+    // If imageData is a PDF data URL (data:application/pdf;base64,...), we can't use it for vision
+    // The AI vision API only accepts image formats (JPG, PNG, WEBP)
+    if (imageData && typeof imageData === 'string' && imageData.startsWith('data:application/pdf')) {
+      console.log('Detected PDF data URL in imageData - clearing for text-only processing');
+      // For PDFs sent as data URLs, we can't use vision - must rely on textData
+      isPdf = true;
+      
+      // Try to extract text from the PDF data URL
+      if (!textData) {
+        try {
+          const base64Part = imageData.split(',')[1];
+          if (base64Part) {
+            const binaryString = atob(base64Part);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            const extractedText = extractTextFromPdfBinary(bytes);
+            if (extractedText && extractedText.length > 10) {
+              textData = extractedText;
+              console.log(`Extracted ${textData.length} chars from PDF data URL`);
+            }
+          }
+        } catch (e) {
+          console.warn('Failed to extract text from PDF data URL:', e);
+        }
+      }
+      
+      // Clear imageData so we don't try to send PDF to vision API
+      imageData = null;
+    }
+    
+    // Validate required fields - for PDFs, we need textData or documentId for server-side processing
     if (!isPdf && !imageData) {
       return new Response(
         JSON.stringify({ error: 'imageData is required for non-PDF documents' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    
+    // For PDFs without image data, we need either textData or documentId
+    if (isPdf && !imageData && !textData && !documentId) {
+      return new Response(
+        JSON.stringify({ error: 'PDF documents require either pre-extracted text or a documentId for server-side processing' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -343,7 +384,7 @@ serve(async (req) => {
       console.warn('ocr-scan: Invalid projectId format, proceeding anyway:', projectId);
     }
     
-    console.log('Processing OCR request...', isPdf ? 'PDF' : 'Image');
+    console.log('Processing OCR request...', isPdf ? 'PDF' : 'Image', imageData ? '(with image)' : '(text-only)');
 
     // --- CHECK FOR ZONE TEMPLATES ---
     let zoneTemplate: any = null;
