@@ -616,7 +616,7 @@ export const ValidationScreen = ({
       // Get the document file URL
       const { data: doc, error: docError } = await supabase
         .from('documents')
-        .select('file_url, file_name')
+        .select('file_url, file_name, batch_id')
         .eq('id', documentId)
         .single();
 
@@ -631,20 +631,107 @@ export const ValidationScreen = ({
 
       if (projError || !project) throw new Error('Failed to fetch project configuration');
 
+      // Determine storage path - the file_url may be full path or just filename
+      let storagePath = doc.file_url;
+      if (doc.file_url.includes('/documents/')) {
+        storagePath = doc.file_url.split('/documents/')[1];
+      } else if (doc.batch_id) {
+        storagePath = `${doc.batch_id}/${doc.file_url}`;
+      }
+
       // Get signed URL for the document
-      const { data: signedData } = await supabase.storage
+      const { data: signedData, error: signedError } = await supabase.storage
         .from('documents')
-        .createSignedUrl(doc.file_url.split('/documents/')[1], 3600);
+        .createSignedUrl(storagePath, 3600);
 
-      if (!signedData?.signedUrl) throw new Error('Failed to generate signed URL');
+      if (signedError || !signedData?.signedUrl) {
+        console.error('Signed URL error:', signedError);
+        throw new Error('Failed to generate signed URL');
+      }
 
-      // Call OCR function
+      const isPdfFile = doc.file_name.toLowerCase().endsWith('.pdf');
+      let imageData: string | undefined;
+      let textData: string | undefined;
+
+      // For PDFs, render the first page to an image using pdfjs-dist (already loaded)
+      if (isPdfFile) {
+        toast({ title: 'Converting PDF to image', description: 'Please wait...' });
+        
+        try {
+          // Load the PDF using pdf.js
+          const loadingTask = pdfjsLib.getDocument(signedData.signedUrl);
+          const pdfDoc = await loadingTask.promise;
+          
+          // Get the first page
+          const page = await pdfDoc.getPage(1);
+          
+          // Render at 2x scale for better OCR quality
+          const scale = 2;
+          const viewport = page.getViewport({ scale });
+          
+          // Create a canvas to render the PDF
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          
+          if (!context) throw new Error('Failed to create canvas context');
+          
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          
+          // Render the page
+          await page.render({
+            canvasContext: context,
+            viewport: viewport
+          }).promise;
+          
+          // Convert canvas to base64 PNG
+          imageData = canvas.toDataURL('image/png');
+          
+          // Also try to extract text content
+          const textContent = await page.getTextContent();
+          textData = textContent.items
+            .map((item: any) => item.str || '')
+            .filter((str: string) => str.trim().length > 0)
+            .join(' ');
+          
+          console.log(`PDF rendered to ${canvas.width}x${canvas.height} image, extracted ${textData?.length || 0} chars of text`);
+          
+        } catch (pdfError) {
+          console.error('PDF rendering error:', pdfError);
+          toast({ 
+            title: 'PDF Rendering Failed', 
+            description: 'Using server-side processing instead...',
+            variant: 'default' 
+          });
+          // Fall back to server-side processing with just documentId
+          imageData = undefined;
+        }
+      } else {
+        // For images, download and convert to base64
+        try {
+          const response = await fetch(signedData.signedUrl);
+          const blob = await response.blob();
+          
+          imageData = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        } catch (fetchError) {
+          console.error('Image fetch error:', fetchError);
+          imageData = undefined;
+        }
+      }
+
+      // Call OCR function with the processed image
       toast({ title: 'Re-processing OCR', description: 'Extracting fields from document...' });
 
       const { data: ocrData, error: ocrError } = await supabase.functions.invoke('ocr-scan', {
         body: {
-          imageData: signedData.signedUrl,
-          isPdf: doc.file_name.toLowerCase().endsWith('.pdf'),
+          imageData: imageData,
+          textData: textData,
+          isPdf: isPdfFile,
           extractionFields: project.extraction_fields || [],
           documentId: documentId,
           projectId: projectId,

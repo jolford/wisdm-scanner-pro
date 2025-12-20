@@ -47,6 +47,57 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper function to extract text from PDF binary (basic implementation)
+function extractTextFromPdfBinary(pdfBytes: Uint8Array): string {
+  try {
+    // Convert bytes to string for text stream extraction
+    const decoder = new TextDecoder('utf-8', { fatal: false });
+    const pdfString = decoder.decode(pdfBytes);
+    
+    // Extract text from PDF content streams (between BT and ET markers)
+    const textMatches: string[] = [];
+    
+    // Pattern 1: Text between parentheses in text objects
+    const textInParens = pdfString.match(/\(([^)]+)\)/g);
+    if (textInParens) {
+      for (const match of textInParens) {
+        const text = match.slice(1, -1)
+          .replace(/\\n/g, '\n')
+          .replace(/\\r/g, '\r')
+          .replace(/\\t/g, '\t')
+          .replace(/\\\(/g, '(')
+          .replace(/\\\)/g, ')');
+        if (text.length > 2 && /[a-zA-Z0-9]/.test(text)) {
+          textMatches.push(text);
+        }
+      }
+    }
+    
+    // Pattern 2: Tj text strings
+    const tjMatches = pdfString.match(/\((.*?)\)\s*Tj/g);
+    if (tjMatches) {
+      for (const match of tjMatches) {
+        const textMatch = match.match(/\((.*?)\)/);
+        if (textMatch && textMatch[1]) {
+          const text = textMatch[1]
+            .replace(/\\n/g, '\n')
+            .replace(/\\r/g, '\r');
+          if (text.length > 1) {
+            textMatches.push(text);
+          }
+        }
+      }
+    }
+    
+    // Deduplicate and join
+    const uniqueTexts = [...new Set(textMatches)];
+    return uniqueTexts.join(' ').replace(/\s+/g, ' ').trim();
+  } catch (e) {
+    console.warn('PDF binary text extraction failed:', e);
+    return '';
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -162,7 +213,7 @@ serve(async (req) => {
         );
       }
       
-      // Convert blob to base64 data URL (handle large files without stack overflow)
+      // Convert blob to base64 (handle large files without stack overflow)
       const arrayBuffer = await fileBlob.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
       let binaryString = '';
@@ -172,7 +223,100 @@ serve(async (req) => {
         binaryString += String.fromCharCode.apply(null, Array.from(chunk));
       }
       const base64 = btoa(binaryString);
-      imageData = `data:${document.file_type};base64,${base64}`;
+      
+      // For PDFs, we need to convert to an image since the AI vision API only accepts image formats
+      if (isPdf) {
+        console.log('PDF detected - converting to image via pdf.co API...');
+        
+        try {
+          // Use pdf.co API for PDF to image conversion (has a free tier)
+          // Alternative: use pdfjs-dist with canvas in future
+          const PDF_CO_API_KEY = Deno.env.get('PDF_CO_API_KEY');
+          
+          if (PDF_CO_API_KEY) {
+            // First, upload the PDF to pdf.co
+            const uploadResponse = await fetch('https://api.pdf.co/v1/file/upload/base64', {
+              method: 'POST',
+              headers: {
+                'x-api-key': PDF_CO_API_KEY,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                file: base64,
+                name: fileName
+              })
+            });
+            
+            if (uploadResponse.ok) {
+              const uploadResult = await uploadResponse.json();
+              const pdfUrl = uploadResult.url;
+              
+              // Convert to PNG
+              const convertResponse = await fetch('https://api.pdf.co/v1/pdf/convert/to/png', {
+                method: 'POST',
+                headers: {
+                  'x-api-key': PDF_CO_API_KEY,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  url: pdfUrl,
+                  pages: '0',  // First page only
+                  inline: true
+                })
+              });
+              
+              if (convertResponse.ok) {
+                const convertResult = await convertResponse.json();
+                if (convertResult.urls && convertResult.urls.length > 0) {
+                  // Download the converted image
+                  const imgResponse = await fetch(convertResult.urls[0]);
+                  if (imgResponse.ok) {
+                    const imgBlob = await imgResponse.arrayBuffer();
+                    const imgBytes = new Uint8Array(imgBlob);
+                    let imgBinary = '';
+                    for (let i = 0; i < imgBytes.length; i += chunkSize) {
+                      const chunk = imgBytes.subarray(i, i + chunkSize);
+                      imgBinary += String.fromCharCode.apply(null, Array.from(chunk));
+                    }
+                    imageData = `data:image/png;base64,${btoa(imgBinary)}`;
+                    console.log('PDF successfully converted to PNG image');
+                  }
+                }
+              }
+            }
+          }
+          
+          // If PDF_CO_API_KEY is not set or conversion failed, try alternative approach
+          if (!imageData) {
+            console.log('Using text-only extraction for PDF (no PDF_CO_API_KEY or conversion failed)');
+            // For PDFs without image conversion, we'll rely heavily on text extraction
+            // and use the AI to extract from text content
+            imageData = null;
+            
+            // Try to extract text from PDF using pdfjs or fallback
+            if (!textData) {
+              console.log('No textData provided, attempting text extraction from PDF binary...');
+              // Basic PDF text extraction (look for text stream content)
+              try {
+                const pdfText = extractTextFromPdfBinary(uint8Array);
+                if (pdfText && pdfText.length > 10) {
+                  textData = pdfText;
+                  console.log(`Extracted ${textData.length} characters from PDF binary`);
+                }
+              } catch (pdfTextErr) {
+                console.warn('Binary PDF text extraction failed:', pdfTextErr);
+              }
+            }
+          }
+        } catch (convertError) {
+          console.error('PDF conversion error:', convertError);
+          imageData = null;
+          console.log('Falling back to text-only extraction for PDF');
+        }
+      } else {
+        // For images, use the original data
+        imageData = `data:${document.file_type};base64,${base64}`;
+      }
       
       console.log(`Document fetched successfully. Type: ${document.file_type}, Size: ${arrayBuffer.byteLength} bytes`);
     }
