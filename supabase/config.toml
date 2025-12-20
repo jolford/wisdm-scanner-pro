@@ -155,3 +155,7 @@ verify_jwt = true
 
 [functions.validate-voter-registry]
 verify_jwt = true
+
+# System Maintenance (scheduled cron job)
+[functions.system-maintenance]
+verify_jwt = false

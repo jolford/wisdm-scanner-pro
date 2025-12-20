@@ -4286,7 +4286,19 @@ export type Database = {
         Args: { _customer_id: string; _job_type?: string }
         Returns: boolean
       }
+      cleanup_completed_jobs: {
+        Args: { retention_days?: number }
+        Returns: Json
+      }
       cleanup_expired_locks: { Args: never; Returns: undefined }
+      cleanup_old_audit_trail: {
+        Args: { retention_days?: number }
+        Returns: Json
+      }
+      cleanup_old_error_logs: {
+        Args: { retention_days?: number }
+        Returns: Json
+      }
       consume_license_documents:
         | {
             Args: {
@@ -4330,6 +4342,7 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_system_health: { Args: never; Returns: Json }
       has_customer: {
         Args: { _customer_id: string; _user_id: string }
         Returns: boolean
@@ -4354,6 +4367,8 @@ export type Database = {
       }
       jwt_claim: { Args: { path: string }; Returns: string }
       migrate_to_encrypted_credentials: { Args: never; Returns: undefined }
+      retry_stuck_jobs: { Args: never; Returns: Json }
+      run_system_maintenance: { Args: never; Returns: Json }
       track_field_change: {
         Args: {
           _change_type: string
