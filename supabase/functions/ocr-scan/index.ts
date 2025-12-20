@@ -934,7 +934,7 @@ RESPONSE REQUIREMENTS:
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AI Gateway error:', response.status, errorText);
-      
+
       // Rate limit exceeded (429) - too many requests
       if (response.status === 429) {
         return new Response(
@@ -942,7 +942,7 @@ RESPONSE REQUIREMENTS:
           { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
+
       // Payment required (402) - insufficient credits
       if (response.status === 402) {
         return new Response(
@@ -951,15 +951,25 @@ RESPONSE REQUIREMENTS:
         );
       }
 
-      // Bad request (400) - invalid image format
+      // Bad request (400) - pass through the provider message so we can diagnose MIME/format issues
       if (response.status === 400) {
+        let message = 'Bad request to OCR provider.';
+        try {
+          const parsed = JSON.parse(errorText);
+          message = parsed?.error?.message || message;
+        } catch {
+          // ignore
+        }
         return new Response(
-          JSON.stringify({ error: 'Image format not supported. Please use JPG, PNG, or WEBP format.' }),
+          JSON.stringify({ error: message }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
-      
-      throw new Error('Service error');
+
+      return new Response(
+        JSON.stringify({ error: 'Service error', details: errorText }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
 
