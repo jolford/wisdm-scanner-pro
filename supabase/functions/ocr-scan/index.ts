@@ -328,7 +328,7 @@ serve(async (req) => {
       console.log('Detected PDF data URL in imageData - clearing for text-only processing');
       // For PDFs sent as data URLs, we can't use vision - must rely on textData
       isPdf = true;
-      
+
       // Try to extract text from the PDF data URL
       if (!textData) {
         try {
@@ -349,8 +349,21 @@ serve(async (req) => {
           console.warn('Failed to extract text from PDF data URL:', e);
         }
       }
-      
+
       // Clear imageData so we don't try to send PDF to vision API
+      imageData = null;
+    }
+
+    // If a client accidentally sends a URL instead of a data URL, don't forward it to the AI.
+    // (The AI vision endpoint expects an image data URL / supported image payload.)
+    if (imageData && typeof imageData === 'string' && /^https?:\/\//i.test(imageData)) {
+      console.warn('ocr-scan: imageData was a URL (not a data URL). Ignoring imageData and using server-side processing when possible.');
+      imageData = null;
+    }
+
+    // If imageData is a data URL with a non-image MIME type, don't send it to vision.
+    if (imageData && typeof imageData === 'string' && imageData.startsWith('data:') && !imageData.startsWith('data:image/')) {
+      console.warn('ocr-scan: imageData has non-image MIME type; ignoring for vision.');
       imageData = null;
     }
     
