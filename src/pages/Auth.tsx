@@ -8,10 +8,11 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
-import { Check, X, Sparkles, AlertTriangle } from 'lucide-react';
+import { Check, X, Sparkles, AlertTriangle, Clock, ShieldAlert } from 'lucide-react';
 import { MFAChallenge } from '@/components/auth/MFAChallenge';
 import wisdmLogo from '@/assets/wisdm-logo.png';
 import { checkPasswordSecurity } from '@/lib/password-security';
+import { useAuthRateLimit } from '@/hooks/use-auth-rate-limit';
 
 // Helper function to get user's preferred starting page
 const getUserStartingPage = async (): Promise<string> => {
@@ -54,6 +55,9 @@ const AuthPage = () => {
   const [showMfaChallenge, setShowMfaChallenge] = useState(false);
   const [establishingSession, setEstablishingSession] = useState(false);
   const authFlowRef = useRef(false); // Prevent redirects during MFA flow
+  
+  // Rate limiting
+  const { isBlocked, retryAfter, remainingAttempts, checkRateLimit, resetRateLimit, formatRetryTime } = useAuthRateLimit();
 
   // Password strength checks
   const passwordChecks = {
@@ -274,6 +278,19 @@ const AuthPage = () => {
       });
       return;
     }
+    
+    // Check rate limit before attempting sign up
+    const rateLimitResult = await checkRateLimit('sign_up', email);
+    if (!rateLimitResult.allowed) {
+      const retryTime = rateLimitResult.retry_after_seconds || 300;
+      toast({
+        title: 'Too Many Attempts',
+        description: `Please wait ${formatRetryTime(retryTime)} before trying again.`,
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     setLoading(true);
     try {
       const {
@@ -291,6 +308,8 @@ const AuthPage = () => {
       });
       if (error) throw error;
       if (data.user) {
+        // Reset rate limit on successful signup
+        await resetRateLimit('sign_up');
         // Record ToS acceptance
         await recordTosAcceptance(data.user.id);
         toast({
@@ -330,6 +349,19 @@ const AuthPage = () => {
       });
       return;
     }
+    
+    // Check rate limit before attempting sign in
+    const rateLimitResult = await checkRateLimit('sign_in', email);
+    if (!rateLimitResult.allowed) {
+      const retryTime = rateLimitResult.retry_after_seconds || 300;
+      toast({
+        title: 'Too Many Attempts',
+        description: `Please wait ${formatRetryTime(retryTime)} before trying again.`,
+        variant: 'destructive'
+      });
+      return;
+    }
+    
     setLoading(true);
     try {
       authFlowRef.current = true; // Start auth flow
@@ -341,6 +373,9 @@ const AuthPage = () => {
         password
       });
       if (error) throw error;
+
+      // Reset rate limit on successful login
+      await resetRateLimit('sign_in');
 
       // After successful password auth, check for MFA requirement
       const {
@@ -556,10 +591,24 @@ const AuthPage = () => {
           </p>
         </div>
 
+        {/* Rate limit warning */}
+        {isBlocked && retryAfter && (
+          <div className="flex items-center gap-3 p-4 bg-destructive/10 border border-destructive/30 rounded-lg animate-in slide-in-from-top-2 duration-300">
+            <ShieldAlert className="h-5 w-5 text-destructive flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-destructive">Too many failed attempts</p>
+              <p className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
+                <Clock className="h-3 w-3" />
+                Please wait {formatRetryTime(retryAfter)} before trying again
+              </p>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={isUpdatingPassword ? handleUpdatePassword : isResetPassword ? handleResetPassword : isSignUp ? handleSignUp : handleSignIn} className="space-y-4 sm:space-y-5">
           {isSignUp && !isUpdatingPassword && <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
               <Label htmlFor="fullName" className="text-sm font-medium">Full Name</Label>
-              <Input id="fullName" type="text" placeholder="John Doe" value={fullName} onChange={e => setFullName(e.target.value)} className="transition-all focus:ring-2 focus:ring-primary/20" required />
+              <Input id="fullName" type="text" placeholder="John Doe" value={fullName} onChange={e => setFullName(e.target.value)} className="transition-all focus:ring-2 focus:ring-primary/20" required disabled={isBlocked} />
             </div>}
 
           {!isUpdatingPassword && (
@@ -575,6 +624,7 @@ const AuthPage = () => {
                 onChange={e => setEmail(e.target.value)}
                 className="transition-all focus:ring-2 focus:ring-primary/20"
                 required
+                disabled={isBlocked}
               />
               {isResetPassword && (
                 <p className="text-xs text-muted-foreground mt-1">
@@ -592,7 +642,7 @@ const AuthPage = () => {
                     Forgot password?
                   </button>}
               </div>
-              <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} onFocus={() => setPasswordFocused(true)} onBlur={() => setPasswordFocused(false)} className="transition-all focus:ring-2 focus:ring-primary/20" required />
+              <Input id="password" type="password" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} onFocus={() => setPasswordFocused(true)} onBlur={() => setPasswordFocused(false)} className="transition-all focus:ring-2 focus:ring-primary/20" required disabled={isBlocked} />
             {(isSignUp || isUpdatingPassword) && password && <div className="space-y-3 mt-3 p-4 bg-gradient-to-br from-muted/50 to-muted/30 rounded-lg border border-border/50 backdrop-blur-sm animate-in slide-in-from-top-2 duration-300">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-medium">Password Strength:</span>
@@ -651,8 +701,8 @@ const AuthPage = () => {
               </Label>
             </div>}
 
-          <Button type="submit" className="w-full mt-6 h-11 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]" disabled={loading || establishingSession || isSignUp && !tosAccepted}>
-            {loading || establishingSession ? establishingSession ? 'Establishing Session...' : 'Please wait...' : isUpdatingPassword ? 'Update Password' : isResetPassword ? 'Send Reset Link' : isSignUp ? 'Create Account' : 'Sign In'}
+          <Button type="submit" className="w-full mt-6 h-11 font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]" disabled={loading || establishingSession || isBlocked || (isSignUp && !tosAccepted)}>
+            {loading || establishingSession ? establishingSession ? 'Establishing Session...' : 'Please wait...' : isBlocked ? 'Temporarily Locked' : isUpdatingPassword ? 'Update Password' : isResetPassword ? 'Send Reset Link' : isSignUp ? 'Create Account' : 'Sign In'}
           </Button>
 
           {!isUpdatingPassword && <div className="text-center text-sm space-y-2 pt-2">
