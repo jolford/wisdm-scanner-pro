@@ -257,6 +257,36 @@ export type Database = {
           },
         ]
       }
+      auth_rate_limits: {
+        Row: {
+          attempts: number | null
+          blocked_until: string | null
+          endpoint: string
+          first_attempt_at: string | null
+          id: string
+          ip_address: string
+          last_attempt_at: string | null
+        }
+        Insert: {
+          attempts?: number | null
+          blocked_until?: string | null
+          endpoint: string
+          first_attempt_at?: string | null
+          id?: string
+          ip_address: string
+          last_attempt_at?: string | null
+        }
+        Update: {
+          attempts?: number | null
+          blocked_until?: string | null
+          endpoint?: string
+          first_attempt_at?: string | null
+          id?: string
+          ip_address?: string
+          last_attempt_at?: string | null
+        }
+        Relationships: []
+      }
       barcode_types: {
         Row: {
           action: string
@@ -3066,6 +3096,45 @@ export type Database = {
           },
         ]
       }
+      security_alerts: {
+        Row: {
+          acknowledged: boolean | null
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alert_type: string
+          created_at: string | null
+          description: string | null
+          details: Json | null
+          id: string
+          severity: string
+          title: string
+        }
+        Insert: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type: string
+          created_at?: string | null
+          description?: string | null
+          details?: Json | null
+          id?: string
+          severity?: string
+          title: string
+        }
+        Update: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alert_type?: string
+          created_at?: string | null
+          description?: string | null
+          details?: Json | null
+          id?: string
+          severity?: string
+          title?: string
+        }
+        Relationships: []
+      }
       signature_comparisons: {
         Row: {
           comparison_details: Json | null
@@ -4278,6 +4347,10 @@ export type Database = {
         Returns: number
       }
       check_api_key_rate_limit: { Args: { _api_key_id: string }; Returns: Json }
+      check_auth_rate_limit: {
+        Args: { _endpoint: string; _ip_address: string }
+        Returns: Json
+      }
       check_license_capacity: {
         Args: { _documents_needed?: number; _license_id: string }
         Returns: boolean
@@ -4286,6 +4359,7 @@ export type Database = {
         Args: { _customer_id: string; _job_type?: string }
         Returns: boolean
       }
+      cleanup_auth_rate_limits: { Args: never; Returns: number }
       cleanup_completed_jobs: {
         Args: { retention_days?: number }
         Returns: Json
@@ -4368,6 +4442,7 @@ export type Database = {
       jwt_claim: { Args: { path: string }; Returns: string }
       migrate_to_encrypted_credentials: { Args: never; Returns: undefined }
       retry_stuck_jobs: { Args: never; Returns: Json }
+      run_security_scan: { Args: never; Returns: Json }
       run_system_maintenance: { Args: never; Returns: Json }
       track_field_change: {
         Args: {
