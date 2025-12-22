@@ -296,7 +296,7 @@ const App = () => {
           </Routes>
           </Suspense>
           </div>
-          <OnboardingWizard />
+          {/* <OnboardingWizard /> */}
           <Footer />
           {/* Demo Mode Components - must be inside Router for useNavigate */}
           
