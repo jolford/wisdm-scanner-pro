@@ -159,3 +159,14 @@ verify_jwt = true
 # System Maintenance (scheduled cron job)
 [functions.system-maintenance]
 verify_jwt = false
+
+# Scheduled Security Scan (daily cron job)
+[functions.scheduled-security-scan]
+verify_jwt = false
+
+# Auth Rate Limiting
+[functions.check-auth-rate-limit]
+verify_jwt = false
+
+[functions.reset-auth-rate-limit]
+verify_jwt = false
