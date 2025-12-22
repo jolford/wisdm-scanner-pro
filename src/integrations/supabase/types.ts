@@ -266,6 +266,8 @@ export type Database = {
           id: string
           ip_address: string
           last_attempt_at: string | null
+          last_lockout_at: string | null
+          lockout_count: number | null
         }
         Insert: {
           attempts?: number | null
@@ -275,6 +277,8 @@ export type Database = {
           id?: string
           ip_address: string
           last_attempt_at?: string | null
+          last_lockout_at?: string | null
+          lockout_count?: number | null
         }
         Update: {
           attempts?: number | null
@@ -284,6 +288,8 @@ export type Database = {
           id?: string
           ip_address?: string
           last_attempt_at?: string | null
+          last_lockout_at?: string | null
+          lockout_count?: number | null
         }
         Relationships: []
       }
@@ -3135,6 +3141,36 @@ export type Database = {
         }
         Relationships: []
       }
+      security_scan_notifications: {
+        Row: {
+          acknowledged: boolean | null
+          acknowledged_at: string | null
+          acknowledged_by: string | null
+          alerts_count: number
+          id: string
+          notified_at: string | null
+          scan_result: Json
+        }
+        Insert: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alerts_count?: number
+          id?: string
+          notified_at?: string | null
+          scan_result: Json
+        }
+        Update: {
+          acknowledged?: boolean | null
+          acknowledged_at?: string | null
+          acknowledged_by?: string | null
+          alerts_count?: number
+          id?: string
+          notified_at?: string | null
+          scan_result?: Json
+        }
+        Relationships: []
+      }
       signature_comparisons: {
         Row: {
           comparison_details: Json | null
@@ -4351,6 +4387,10 @@ export type Database = {
         Args: { _endpoint: string; _ip_address: string }
         Returns: Json
       }
+      check_auth_rate_limit_enhanced: {
+        Args: { _email?: string; _endpoint: string; _ip_address: string }
+        Returns: Json
+      }
       check_license_capacity: {
         Args: { _documents_needed?: number; _license_id: string }
         Returns: boolean
@@ -4441,6 +4481,10 @@ export type Database = {
       }
       jwt_claim: { Args: { path: string }; Returns: string }
       migrate_to_encrypted_credentials: { Args: never; Returns: undefined }
+      reset_auth_rate_limit: {
+        Args: { _endpoint: string; _ip_address: string }
+        Returns: undefined
+      }
       retry_stuck_jobs: { Args: never; Returns: Json }
       run_security_scan: { Args: never; Returns: Json }
       run_system_maintenance: { Args: never; Returns: Json }
