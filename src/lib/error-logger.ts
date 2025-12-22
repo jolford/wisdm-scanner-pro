@@ -52,13 +52,19 @@ export const logError = async (
   console.error(`[${componentName || 'Unknown'}]`, error, metadata);
 
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    let userId: string | null = null;
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      userId = user?.id ?? null;
+    } catch {
+      // User not authenticated, userId stays null
+    }
     
     const { error: insertError } = await supabase.from('error_logs').insert({
-      user_id: user?.id || null,
+      user_id: userId,
       error_message: sanitizeErrorMessage(error.message),
       error_stack: error.stack?.substring(0, 2000) || null, // Keep stack traces but limit size
-      component_name: componentName,
+      component_name: componentName || null,
       user_agent: navigator.userAgent,
       url: sanitizeUrl(window.location.href),
       metadata: sanitizeMetadata(metadata)
