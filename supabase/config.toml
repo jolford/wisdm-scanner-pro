@@ -170,3 +170,7 @@ verify_jwt = false
 
 [functions.reset-auth-rate-limit]
 verify_jwt = false
+
+# Health Check Endpoint (public)
+[functions.health-check]
+verify_jwt = false
