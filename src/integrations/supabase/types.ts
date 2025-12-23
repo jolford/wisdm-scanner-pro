@@ -58,6 +58,53 @@ export type Database = {
           },
         ]
       }
+      alert_thresholds: {
+        Row: {
+          alert_channels: string[] | null
+          comparison_operator: string
+          created_at: string | null
+          customer_id: string | null
+          id: string
+          is_active: boolean | null
+          threshold_type: string
+          threshold_value: number
+          time_window_minutes: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          alert_channels?: string[] | null
+          comparison_operator?: string
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          threshold_type: string
+          threshold_value: number
+          time_window_minutes?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          alert_channels?: string[] | null
+          comparison_operator?: string
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          threshold_type?: string
+          threshold_value?: number
+          time_window_minutes?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alert_thresholds_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       api_key_usage: {
         Row: {
           api_key_id: string
@@ -1521,34 +1568,46 @@ export type Database = {
       }
       error_logs: {
         Row: {
+          alert_sent: boolean | null
           component_name: string | null
           created_at: string | null
           error_message: string
           error_stack: string | null
           id: string
           metadata: Json | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string | null
           url: string | null
           user_agent: string | null
           user_id: string | null
         }
         Insert: {
+          alert_sent?: boolean | null
           component_name?: string | null
           created_at?: string | null
           error_message: string
           error_stack?: string | null
           id?: string
           metadata?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
           url?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
         Update: {
+          alert_sent?: boolean | null
           component_name?: string | null
           created_at?: string | null
           error_message?: string
           error_stack?: string | null
           id?: string
           metadata?: Json | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string | null
           url?: string | null
           user_agent?: string | null
           user_id?: string | null
@@ -1911,6 +1970,8 @@ export type Database = {
       }
       job_metrics: {
         Row: {
+          api_calls_count: number | null
+          api_errors_count: number | null
           avg_processing_time_ms: number | null
           completed_jobs: number | null
           created_at: string | null
@@ -1918,11 +1979,16 @@ export type Database = {
           failed_jobs: number | null
           id: string
           job_type: string
+          max_processing_time_ms: number | null
           metric_date: string
           metric_hour: number | null
+          min_processing_time_ms: number | null
+          p95_processing_time_ms: number | null
           total_jobs: number | null
         }
         Insert: {
+          api_calls_count?: number | null
+          api_errors_count?: number | null
           avg_processing_time_ms?: number | null
           completed_jobs?: number | null
           created_at?: string | null
@@ -1930,11 +1996,16 @@ export type Database = {
           failed_jobs?: number | null
           id?: string
           job_type: string
+          max_processing_time_ms?: number | null
           metric_date: string
           metric_hour?: number | null
+          min_processing_time_ms?: number | null
+          p95_processing_time_ms?: number | null
           total_jobs?: number | null
         }
         Update: {
+          api_calls_count?: number | null
+          api_errors_count?: number | null
           avg_processing_time_ms?: number | null
           completed_jobs?: number | null
           created_at?: string | null
@@ -1942,8 +2013,11 @@ export type Database = {
           failed_jobs?: number | null
           id?: string
           job_type?: string
+          max_processing_time_ms?: number | null
           metric_date?: string
           metric_hour?: number | null
+          min_processing_time_ms?: number | null
+          p95_processing_time_ms?: number | null
           total_jobs?: number | null
         }
         Relationships: [
@@ -3171,6 +3245,45 @@ export type Database = {
         }
         Relationships: []
       }
+      service_health: {
+        Row: {
+          consecutive_failures: number | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          last_check_at: string | null
+          metadata: Json | null
+          response_time_ms: number | null
+          service_name: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          consecutive_failures?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          last_check_at?: string | null
+          metadata?: Json | null
+          response_time_ms?: number | null
+          service_name: string
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          consecutive_failures?: number | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          last_check_at?: string | null
+          metadata?: Json | null
+          response_time_ms?: number | null
+          service_name?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       signature_comparisons: {
         Row: {
           comparison_details: Json | null
@@ -4382,6 +4495,7 @@ export type Database = {
         }
         Returns: number
       }
+      check_alert_thresholds: { Args: never; Returns: Json }
       check_api_key_rate_limit: { Args: { _api_key_id: string }; Returns: Json }
       check_auth_rate_limit: {
         Args: { _endpoint: string; _ip_address: string }
@@ -4433,6 +4547,7 @@ export type Database = {
           }
       delete_expired_cache: { Args: never; Returns: undefined }
       generate_license_key: { Args: never; Returns: string }
+      get_comprehensive_health: { Args: never; Returns: Json }
       get_next_job: { Args: never; Returns: string }
       get_project_safe: {
         Args: { project_id: string }
