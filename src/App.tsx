@@ -80,6 +80,7 @@ const SCIMConfig = lazy(() => import("./pages/admin/SCIMConfig"));
 const ScriptAgents = lazy(() => import("./pages/admin/ScriptAgents"));
 const RetentionPolicies = lazy(() => import("./pages/admin/RetentionPolicies"));
 const EnhancedSLAMonitoring = lazy(() => import("./pages/admin/EnhancedSLAMonitoring"));
+const EnhancementsDemo = lazy(() => import("./pages/admin/EnhancementsDemo"));
 
 // Static pages - lazy loaded
 const Help = lazy(() => import("./pages/Help"));
@@ -271,6 +272,7 @@ const App = () => {
           <Route path="/admin/scim" element={<SCIMConfig />} />
           <Route path="/admin/retention" element={<RetentionPolicies />} />
           <Route path="/admin/sla-monitoring" element={<EnhancedSLAMonitoring />} />
+          <Route path="/admin/enhancements-demo" element={<EnhancementsDemo />} />
           
           {/* Phase 3: QA */}
           <Route path="/admin/document-comparison" element={<DocumentComparison />} />
