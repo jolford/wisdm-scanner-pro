@@ -17,6 +17,7 @@ import { toast } from 'sonner';
 import { useQuery } from '@tanstack/react-query';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { TeamActivityIndicator } from '@/components/TeamActivityIndicator';
 
 export function AdminHeader() {
   const navigate = useNavigate();
@@ -87,6 +88,8 @@ export function AdminHeader() {
 
   return (
     <div className="flex items-center gap-2">
+      {/* Team Activity */}
+      <TeamActivityIndicator />
       {/* Search shortcut */}
       <Button
         variant="outline"

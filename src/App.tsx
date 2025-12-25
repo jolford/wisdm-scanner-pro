@@ -17,6 +17,7 @@ import { DemoBanner } from "@/components/demo/DemoBanner";
 
 import { OnboardingWizard } from "@/components/OnboardingWizard";
 import { SkeletonPage } from "@/components/ui/skeleton-loaders";
+import { OfflineIndicator } from "@/components/OfflineIndicator";
 
 // Core pages - loaded immediately
 import Index from "./pages/Index";
@@ -200,6 +201,7 @@ const App = () => {
           <ThemeProvider attribute="class" defaultTheme="light">{/* Theme toggle enabled */}
             <div className="flex flex-col min-h-screen pt-0 demo-mode-container">
             <SkipToContent />
+            <OfflineIndicator />
             <Toaster />
             <Sonner />
             <KeyboardShortcutsDialog open={showShortcuts} onOpenChange={setShowShortcuts} />
