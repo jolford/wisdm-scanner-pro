@@ -29,6 +29,7 @@ import { DashboardMetrics } from '@/components/admin/DashboardMetrics';
 import { RecentActivityFeed } from '@/components/admin/RecentActivityFeed';
 import { QuickActionsMenu } from '@/components/admin/QuickActionsMenu';
 import { LicenseWarning } from '@/components/LicenseWarning';
+import { TenantUsageMetering } from '@/components/admin/TenantUsageMetering';
 
 const AdminDashboard = () => {
   // Authentication guard - ensures only admins can access this page
@@ -202,6 +203,11 @@ const AdminDashboard = () => {
               </Card>
             </div>
           )}
+        </div>
+
+        {/* Tenant Usage Metering */}
+        <div className="mb-8">
+          <TenantUsageMetering />
         </div>
 
         {/* Quick Actions, Sales Tools & Recent Activity */}

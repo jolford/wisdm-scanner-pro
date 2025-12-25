@@ -10,6 +10,7 @@ import { ArrowLeft, FileText, CheckCircle2, XCircle, AlertCircle, Calendar, User
 import { useToast } from '@/hooks/use-toast';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { ValidationScreen } from '@/components/ValidationScreen';
+import { AnomalyDetectionAlert } from '@/components/AnomalyDetectionAlert';
 
 const BatchDetail = () => {
   const { id } = useParams();
@@ -486,6 +487,36 @@ ${xmlDocs}
             <p className="text-3xl font-bold text-destructive">{batch.error_count}</p>
           </Card>
         </div>
+
+        {/* Anomaly Detection Alerts */}
+        {batch.error_count > 0 && (
+          <div className="mb-8">
+            <AnomalyDetectionAlert 
+              anomalies={[
+                ...(batch.error_count > 5 ? [{
+                  id: 'high-error-rate',
+                  type: 'value_spike' as const,
+                  severity: 'high' as const,
+                  field: 'Error Rate',
+                  currentValue: batch.error_count,
+                  averageValue: 2,
+                  deviation: ((batch.error_count - 2) / 2) * 100,
+                  message: `This batch has ${batch.error_count} errors, which is higher than the typical average of 2 per batch.`,
+                  detectedAt: new Date(batch.updated_at || batch.created_at),
+                }] : []),
+                ...(batch.processed_documents < (batch.total_documents || 0) * 0.5 && batch.status !== 'new' ? [{
+                  id: 'low-processing',
+                  type: 'value_drop' as const,
+                  severity: 'medium' as const,
+                  field: 'Processing Progress',
+                  currentValue: `${Math.round((batch.processed_documents / (batch.total_documents || 1)) * 100)}%`,
+                  message: 'Less than 50% of documents have been processed. Consider checking for stalled jobs.',
+                  detectedAt: new Date(batch.updated_at || batch.created_at),
+                }] : []),
+              ]}
+            />
+          </div>
+        )}
 
         {/* Batch Custom Fields */}
         {(batch.metadata as any)?.custom_fields && Object.keys((batch.metadata as any).custom_fields).length > 0 && (

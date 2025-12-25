@@ -12,8 +12,10 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from '@/components/ui/hover-card';
-import { Eye, Edit, Clock } from 'lucide-react';
+import { Eye, Edit, Clock, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface TeamActivity {
   userId: string;
@@ -26,19 +28,78 @@ export interface TeamActivity {
 }
 
 interface TeamActivityIndicatorProps {
-  activities: TeamActivity[];
+  activities?: TeamActivity[];
   currentDocumentId?: string;
   maxVisible?: number;
   className?: string;
 }
 
 export function TeamActivityIndicator({
-  activities,
+  activities: externalActivities,
   currentDocumentId,
   maxVisible = 4,
   className
 }: TeamActivityIndicatorProps) {
   const [now, setNow] = useState(new Date());
+
+  // Fetch recent activity from audit_trail if no external activities provided
+  const { data: fetchedActivities = [] } = useQuery({
+    queryKey: ['team-activity'],
+    queryFn: async () => {
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      
+      const { data, error } = await supabase
+        .from('audit_trail')
+        .select('user_id, action_type, entity_id, entity_type, created_at')
+        .gte('created_at', fiveMinutesAgo)
+        .order('created_at', { ascending: false })
+        .limit(20);
+
+      if (error) return [];
+
+      // Get unique user IDs
+      const userIds = [...new Set(data.map(d => d.user_id).filter(Boolean))];
+      
+      // Fetch user profiles
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds);
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || []);
+
+      // Transform to TeamActivity format
+      const activities: TeamActivity[] = data
+        .filter(d => d.user_id)
+        .map(d => {
+          const profile = profileMap.get(d.user_id!);
+          return {
+            userId: d.user_id!,
+            userName: profile?.full_name || 'Unknown User',
+            userAvatar: undefined,
+            action: d.action_type.includes('update') ? 'editing' : 
+                   d.action_type.includes('review') ? 'reviewing' : 'viewing',
+            documentId: d.entity_type === 'document' ? d.entity_id || undefined : undefined,
+            documentName: undefined,
+            startedAt: new Date(d.created_at!),
+          };
+        });
+
+      // Deduplicate by userId, keeping most recent
+      const uniqueActivities = new Map<string, TeamActivity>();
+      for (const activity of activities) {
+        if (!uniqueActivities.has(activity.userId)) {
+          uniqueActivities.set(activity.userId, activity);
+        }
+      }
+
+      return Array.from(uniqueActivities.values());
+    },
+    enabled: !externalActivities,
+    refetchInterval: 30000,
+  });
+
+  const activities = externalActivities || fetchedActivities;
 
   // Update relative times
   useEffect(() => {
