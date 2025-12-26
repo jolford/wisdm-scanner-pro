@@ -82,8 +82,9 @@ export default function SignatureVerificationHub() {
       // Fetch projects that have petition-related extraction fields or document types
       const { data, error } = await supabase
         .from('projects')
-        .select('id, name, extraction_fields, metadata')
-        .eq('is_active', true);
+        .select('id, name, extraction_fields, metadata, is_active, enable_signature_verification')
+        // Treat NULL as active (older rows may not have is_active set)
+        .or('is_active.is.null,is_active.eq.true');
 
       if (error) throw error;
 
