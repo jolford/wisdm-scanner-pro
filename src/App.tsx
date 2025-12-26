@@ -47,7 +47,7 @@ const NewUser = lazy(() => import("./pages/admin/users/New"));
 const DocumentsAdmin = lazy(() => import("./pages/admin/Documents"));
 const CostTracking = lazy(() => import("./pages/admin/CostTracking"));
 const Analytics = lazy(() => import("./pages/admin/Analytics"));
-const BarcodeTest = lazy(() => import("./pages/admin/BarcodeTest"));
+
 const SystemViability = lazy(() => import("./pages/admin/SystemViability"));
 const ErrorLogs = lazy(() => import("./pages/admin/ErrorLogs"));
 const AdvancedReports = lazy(() => import("./pages/admin/AdvancedReports"));
@@ -63,7 +63,7 @@ const ValidationLookups = lazy(() => import("./pages/admin/ValidationLookups"));
 const ConfidenceDashboard = lazy(() => import("./pages/admin/ConfidenceDashboard"));
 const ExceptionQueue = lazy(() => import("./pages/admin/ExceptionQueue"));
 const WebhookConfig = lazy(() => import("./pages/admin/WebhookConfig"));
-const DuplicateDetections = lazy(() => import("./pages/admin/DuplicateDetections"));
+
 const ValidationRules = lazy(() => import("./pages/admin/ValidationRules"));
 const ScheduledBatches = lazy(() => import("./pages/admin/ScheduledBatches"));
 const ReleaseNotesManager = lazy(() => import("./pages/admin/ReleaseNotesManager"));
@@ -71,15 +71,13 @@ const DocumentComparison = lazy(() => import("./pages/admin/DocumentComparison")
 const QAMetrics = lazy(() => import("./pages/admin/QAMetrics"));
 const CredentialMigration = lazy(() => import("./pages/admin/CredentialMigration"));
 const MLLearning = lazy(() => import("./pages/admin/MLLearning"));
-const SmartRouting = lazy(() => import("./pages/admin/SmartRouting"));
+
 const MobileValidation = lazy(() => import("./pages/admin/MobileValidation"));
 const IntegrationMarketplace = lazy(() => import("./pages/admin/IntegrationMarketplace"));
 const SSOConfig = lazy(() => import("./pages/admin/SSOConfig"));
 const SCIMConfig = lazy(() => import("./pages/admin/SCIMConfig"));
-const ScriptAgents = lazy(() => import("./pages/admin/ScriptAgents"));
-const RetentionPolicies = lazy(() => import("./pages/admin/RetentionPolicies"));
 const EnhancedSLAMonitoring = lazy(() => import("./pages/admin/EnhancedSLAMonitoring"));
-const EnhancementsDemo = lazy(() => import("./pages/admin/EnhancementsDemo"));
+
 
 // Static pages - lazy loaded
 const Help = lazy(() => import("./pages/Help"));
@@ -234,7 +232,7 @@ const App = () => {
             <Route path="/admin/documents" element={<DocumentsAdmin />} />
             <Route path="/admin/cost-tracking" element={<CostTracking />} />
             <Route path="/admin/analytics" element={<Analytics />} />
-            <Route path="/admin/barcode-test" element={<BarcodeTest />} />
+            
             <Route path="/admin/system-viability" element={<SystemViability />} />
             <Route path="/admin/advanced-reports" element={<AdvancedReports />} />
             <Route path="/admin/error-logs" element={<ErrorLogs />} />
@@ -251,7 +249,7 @@ const App = () => {
             <Route path="/admin/confidence" element={<ConfidenceDashboard />} />
             <Route path="/admin/exceptions" element={<ExceptionQueue />} />
             <Route path="/admin/webhooks" element={<WebhookConfig />} />
-            <Route path="/admin/duplicates" element={<DuplicateDetections />} />
+            
             <Route path="/admin/validation-rules" element={<ValidationRules />} />
           <Route path="/admin/scheduled-batches" element={<ScheduledBatches />} />
           <Route path="/admin/release-notes" element={<ReleaseNotesManager />} />
@@ -259,18 +257,18 @@ const App = () => {
           
           {/* Phase 1 Enhancements */}
           <Route path="/admin/ml-learning" element={<MLLearning />} />
-          <Route path="/admin/smart-routing" element={<SmartRouting />} />
+          
           <Route path="/admin/mobile-validation" element={<MobileValidation />} />
           
           <Route path="/admin/integrations" element={<IntegrationMarketplace />} />
-          <Route path="/admin/script-agents" element={<ScriptAgents />} />
+          
           
           {/* Enterprise Features */}
           <Route path="/admin/sso" element={<SSOConfig />} />
           <Route path="/admin/scim" element={<SCIMConfig />} />
-          <Route path="/admin/retention" element={<RetentionPolicies />} />
+          
           <Route path="/admin/sla-monitoring" element={<EnhancedSLAMonitoring />} />
-          <Route path="/admin/enhancements-demo" element={<EnhancementsDemo />} />
+          
           
           {/* Phase 3: QA */}
           <Route path="/admin/document-comparison" element={<DocumentComparison />} />
