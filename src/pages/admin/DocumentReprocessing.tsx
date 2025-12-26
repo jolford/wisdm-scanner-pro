@@ -145,22 +145,25 @@ const DocumentReprocessing = () => {
           documentId: doc.id,
         };
 
-        if (isPdf && doc.extracted_text) {
-          // For PDFs, reuse the extracted text if available
-          requestBody.textData = doc.extracted_text;
+        if (isPdf) {
+          // IMPORTANT: Don't send PDFs as `data:application/pdf`.
+          // Let the backend fetch the original file via documentId and handle PDF->image conversion.
           requestBody.isPdf = true;
+          if (doc.extracted_text) {
+            requestBody.textData = doc.extracted_text;
+          }
         } else {
-          // For images or PDFs without text, we need the image data
+          // For images, fetch the file and convert to base64 data URL
           // Get a signed URL first
           // Extract the file path from file_url (remove the bucket name if present)
           let filePath = doc.file_url;
-          
+
           // If file_url contains the full storage URL, extract just the path
           if (filePath.includes('/storage/v1/object/')) {
             const parts = filePath.split('/documents/');
             filePath = parts.length > 1 ? parts[1] : filePath;
           }
-          
+
           const { data: signedUrlData } = await supabase.storage
             .from('documents')
             .createSignedUrl(filePath, 60);
@@ -180,7 +183,7 @@ const DocumentReprocessing = () => {
           });
 
           requestBody.imageData = base64;
-          requestBody.isPdf = isPdf;
+          requestBody.isPdf = false;
         }
 
         // Call OCR function
