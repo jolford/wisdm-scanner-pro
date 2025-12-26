@@ -18,6 +18,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { processPdfPageForOcr } from '@/lib/document-preprocessor';
 
 interface Document {
   id: string;
@@ -146,11 +147,34 @@ const DocumentReprocessing = () => {
         };
 
         if (isPdf) {
-          // IMPORTANT: Don't send PDFs as `data:application/pdf`.
-          // Let the backend fetch the original file via documentId and handle PDF->image conversion.
-          requestBody.isPdf = true;
-          if (doc.extracted_text) {
-            requestBody.textData = doc.extracted_text;
+          // For PDFs, render the first page client-side and send as an image.
+          // This avoids backend PDF conversion and prevents garbage "text extraction" results.
+          try {
+            // Extract the file path from file_url (remove the bucket name if present)
+            let filePath = doc.file_url;
+            if (filePath.includes('/storage/v1/object/')) {
+              const parts = filePath.split('/documents/');
+              filePath = parts.length > 1 ? parts[1] : filePath;
+            }
+
+            const { data: signedUrlData } = await supabase.storage
+              .from('documents')
+              .createSignedUrl(filePath, 60);
+
+            if (!signedUrlData?.signedUrl) {
+              throw new Error('Failed to get signed URL');
+            }
+
+            const response = await fetch(signedUrlData.signedUrl);
+            const blob = await response.blob();
+            const pdfFile = new File([blob], doc.file_name, { type: 'application/pdf' });
+            const { dataUrl } = await processPdfPageForOcr(pdfFile, 1);
+
+            requestBody.isPdf = false; // we're sending an image
+            requestBody.imageData = dataUrl;
+          } catch (e: any) {
+            console.error('PDF rendering failed during reprocess, falling back to server-side fetch:', e);
+            requestBody.isPdf = true;
           }
         } else {
           // For images, fetch the file and convert to base64 data URL

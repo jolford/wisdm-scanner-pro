@@ -1703,14 +1703,34 @@ export const BatchValidationScreen = ({
         throw new Error('Failed to get signed URL for document');
       }
 
-      // Convert URL to base64 for OCR processing
       const response = await fetch(signedUrl);
       const blob = await response.blob();
-      const base64 = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
+
+      const isPdfFile = blob.type === 'application/pdf' || doc.file_name?.toLowerCase().endsWith('.pdf');
+
+      // Convert to an IMAGE data URL for OCR (PDF data URLs break vision OCR)
+      let imageData: string;
+      if (isPdfFile) {
+        const buffer = await blob.arrayBuffer();
+        const loadingTask = pdfjsLib.getDocument({ data: buffer });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+
+        const viewport = page.getViewport({ scale: 2.0 });
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d')!;
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        await page.render({ canvasContext: context, viewport, canvas }).promise;
+        imageData = canvas.toDataURL('image/jpeg', 0.92);
+      } else {
+        imageData = await new Promise<string>((resolve) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.readAsDataURL(blob);
+        });
+      }
 
       // Get project fields for extraction
       const fieldNames = projectFields.map(f => ({ name: f.name, description: f.description || '' }));
@@ -1718,7 +1738,8 @@ export const BatchValidationScreen = ({
       // Call OCR edge function
       const { data, error } = await supabase.functions.invoke('ocr-scan', {
         body: {
-          imageData: base64,
+          imageData,
+          isPdf: false,
           documentId: doc.id,
           projectId: doc.project_id,
           extractionFields: fieldNames,
