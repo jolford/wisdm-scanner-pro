@@ -73,8 +73,6 @@ const CredentialMigration = lazy(() => import("./pages/admin/CredentialMigration
 const MLLearning = lazy(() => import("./pages/admin/MLLearning"));
 const SmartRouting = lazy(() => import("./pages/admin/SmartRouting"));
 const MobileValidation = lazy(() => import("./pages/admin/MobileValidation"));
-const WorkflowBuilder = lazy(() => import("./pages/admin/WorkflowBuilder"));
-const Workflows = lazy(() => import("./pages/admin/Workflows"));
 const IntegrationMarketplace = lazy(() => import("./pages/admin/IntegrationMarketplace"));
 const SSOConfig = lazy(() => import("./pages/admin/SSOConfig"));
 const SCIMConfig = lazy(() => import("./pages/admin/SCIMConfig"));
@@ -263,8 +261,6 @@ const App = () => {
           <Route path="/admin/ml-learning" element={<MLLearning />} />
           <Route path="/admin/smart-routing" element={<SmartRouting />} />
           <Route path="/admin/mobile-validation" element={<MobileValidation />} />
-          <Route path="/admin/workflows" element={<Workflows />} />
-          <Route path="/admin/workflow-builder" element={<WorkflowBuilder />} />
           
           <Route path="/admin/integrations" element={<IntegrationMarketplace />} />
           <Route path="/admin/script-agents" element={<ScriptAgents />} />

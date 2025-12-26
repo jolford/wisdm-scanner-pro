@@ -77,8 +77,6 @@ const menuItems: MenuGroup[] = [
     title: 'Automation & Intelligence',
     icon: Zap,
     items: [
-      { title: 'Workflow Builder', url: '/admin/workflow-builder', icon: GitBranch },
-      { title: 'Workflow Management', url: '/admin/workflows', icon: History },
       { title: 'Batch Templates', url: '/admin/batch-templates', icon: Zap },
       { title: 'Scheduled Batches', url: '/admin/scheduled-batches', icon: Clock },
       { title: 'Smart Routing', url: '/admin/smart-routing', icon: GitBranch },
@@ -219,7 +217,6 @@ export function AdminSidebar() {
                       {group.items.map((item) => {
                         const Icon = item.icon;
                         const demoClass = 
-                          item.url === '/admin/workflow-builder' ? 'demo-workflows' :
                           item.url === '/admin/integrations' ? 'demo-integrations' :
                           item.url === '/admin/analytics' ? 'demo-analytics' :
                           item.url === '/admin/credential-migration' ? 'demo-security' :
