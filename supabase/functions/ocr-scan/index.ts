@@ -2393,12 +2393,24 @@ Review the image and provide corrected text with any OCR errors fixed.`;
         // Log what we're about to save
         console.log(`Saving OCR results - line_items count: ${lineItems?.length || 0}`);
         
+        // IMPORTANT: Penalize confidence if no fields were extracted
+        // This prevents "100% confident" with empty fields
+        let finalConfidence = confidence;
+        const hasExtractedFields = sanitizedMetadata && 
+          Object.keys(sanitizedMetadata).length > 0 && 
+          Object.values(sanitizedMetadata).some(v => v && String(v).trim().length > 0);
+        
+        if (!hasExtractedFields && extractionFields && extractionFields.length > 0) {
+          console.warn(`OCR confidence override: Setting to 0 because no fields were extracted`);
+          finalConfidence = 0;
+        }
+        
         const { error: updateError } = await supabaseAdmin
           .from('documents')
           .update({
             document_type: documentType,
-            confidence_score: confidence,
-            classification_confidence: confidence,
+            confidence_score: finalConfidence,
+            classification_confidence: finalConfidence,
             extracted_metadata: sanitizedMetadata,
             extracted_text: extractedText,
             line_items: lineItems && lineItems.length > 0 ? lineItems : null,
