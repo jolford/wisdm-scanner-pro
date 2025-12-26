@@ -370,16 +370,11 @@ serve(async (req) => {
               textData = sanitizedPdfText;
               console.log(`Extracted ${textData.length} characters from PDF binary (sanitized)`);
             } else {
-              // For scanned PDFs with no extractable text, we cannot process server-side
-              console.error('PDF is scanned/image-based with no extractable text.');
-              console.error('Client-side preprocessing should have converted this to an image.');
-              return new Response(
-                JSON.stringify({ 
-                  error: 'This PDF is scanned/image-based and cannot be processed server-side. Please re-upload the document - the app will convert it to an image automatically.',
-                  code: 'SCANNED_PDF_NO_IMAGE'
-                }),
-                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-              );
+              // For scanned PDFs with no extractable text, log a warning but continue
+              // The AI will attempt extraction with minimal/no text context
+              console.warn('PDF is scanned/image-based with no extractable text.');
+              console.warn('Will attempt OCR with empty text - results may be limited.');
+              textData = '';
             }
           }
         } catch (convertError) {
@@ -532,14 +527,12 @@ serve(async (req) => {
       }
     }
 
-    // If this is a scanned PDF (no usable text and no image), we can't reliably OCR it server-side.
+    // If this is a scanned PDF with minimal text, log a warning but continue
+    // The AI will attempt to work with whatever we have
     if (isPdf && !imageData && (!textData || textData.length < 50)) {
-      return new Response(
-        JSON.stringify({
-          error: 'This PDF looks image-based (scanned) and cannot be processed reliably as text-only. Please re-upload it (the app will convert it to an image first page for OCR).'
-        }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.warn('Scanned PDF with minimal extractable text - OCR results may be limited.');
+      console.warn('For best results with scanned PDFs, ensure client-side PDF-to-image conversion is working.');
+      // Continue processing - AI will do its best
     }
 
     // --- BUILD AI PROMPT ---
