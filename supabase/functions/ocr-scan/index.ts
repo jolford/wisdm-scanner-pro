@@ -109,12 +109,33 @@ function sanitizeTextForAi(input: string, maxChars = 30_000): string {
     .replace(/\s+/g, ' ')
     .trim();
 
-  // Heuristic: if the text is mostly non-ASCII / non-alnum, it's likely binary garbage
-  const sample = out.slice(0, 5000);
-  const good = (sample.match(/[A-Za-z0-9\s]/g) || []).length;
-  const ratio = sample.length ? good / sample.length : 0;
+  // Check for PDF internal structure markers - these indicate binary extraction failed
+  const pdfMarkers = ['endobj', 'endstream', '/Type', '/Font', '/Page', 'BT', 'ET', 'Tf', 'Td', 'Tj', 'TJ', 'cm', 're', 'f', 'Q', 'q'];
+  const markerCount = pdfMarkers.reduce((count, marker) => {
+    const regex = new RegExp(`\\b${marker}\\b`, 'g');
+    return count + (out.match(regex) || []).length;
+  }, 0);
+  
+  // If we see many PDF operators, this is garbage
+  if (markerCount > 50) {
+    console.warn(`Detected ${markerCount} PDF structure markers - text is garbage`);
+    return '';
+  }
 
-  if (ratio < 0.18) {
+  // Heuristic: check for readable words (at least 3 chars with vowels)
+  const words = out.split(/\s+/).filter(w => w.length >= 3);
+  const readableWords = words.filter(w => /[aeiouAEIOU]/.test(w) && /^[a-zA-Z0-9.,;:'"!?$%&()-]+$/.test(w));
+  const readableRatio = words.length > 0 ? readableWords.length / words.length : 0;
+  
+  if (readableRatio < 0.15) {
+    console.warn(`Only ${(readableRatio * 100).toFixed(1)}% readable words - text is likely garbage`);
+    return '';
+  }
+
+  // Also check for excessive single-char "words" which indicate broken text
+  const singleChars = words.filter(w => w.length === 1).length;
+  if (words.length > 100 && singleChars / words.length > 0.3) {
+    console.warn(`${(singleChars / words.length * 100).toFixed(1)}% single-char words - text is fragmented garbage`);
     return '';
   }
 
@@ -344,15 +365,21 @@ serve(async (req) => {
           if (!imageData && !textData) {
             console.log('Using enhanced PDF text extraction...');
             const pdfText = extractTextFromPdfBinary(uint8Array);
-            if (pdfText && pdfText.length > 20) {
-              textData = pdfText;
-              console.log(`Extracted ${textData.length} characters from PDF binary`);
+            const sanitizedPdfText = sanitizeTextForAi(pdfText);
+            if (sanitizedPdfText && sanitizedPdfText.length > 50) {
+              textData = sanitizedPdfText;
+              console.log(`Extracted ${textData.length} characters from PDF binary (sanitized)`);
             } else {
-              // For scanned PDFs with no extractable text, create a warning
-              console.warn('PDF appears to be scanned/image-based with no extractable text.');
-              console.warn('For best results with scanned PDFs, add PDF_CO_API_KEY secret.');
-              // Still proceed - AI will try its best with empty/minimal text
-              textData = '[PDF document - scanned image content]';
+              // For scanned PDFs with no extractable text, we cannot process server-side
+              console.error('PDF is scanned/image-based with no extractable text.');
+              console.error('Client-side preprocessing should have converted this to an image.');
+              return new Response(
+                JSON.stringify({ 
+                  error: 'This PDF is scanned/image-based and cannot be processed server-side. Please re-upload the document - the app will convert it to an image automatically.',
+                  code: 'SCANNED_PDF_NO_IMAGE'
+                }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+              );
             }
           }
         } catch (convertError) {

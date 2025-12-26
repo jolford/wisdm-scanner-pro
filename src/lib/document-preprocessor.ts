@@ -106,18 +106,30 @@ export async function preprocessFileForUpload(
   file: File
 ): Promise<{ file: File; kind: 'pdf_as_image' | 'image' | 'other' }>
 {
+  console.log(`[preprocessFileForUpload] Processing: ${file.name}, type: ${file.type}, size: ${(file.size/1024).toFixed(1)}KB`);
+  
   if (file.type === 'application/pdf') {
-    const { dataUrl } = await processPdfPageForOcr(file, 1);
-    const imageFileName = file.name.replace(/\.pdf$/i, '') + '-page-1.jpg';
-    const imageFile = await dataUrlToFile(dataUrl, imageFileName, 'image/jpeg');
-    return { file: imageFile, kind: 'pdf_as_image' };
+    try {
+      console.log(`[preprocessFileForUpload] Rendering PDF first page to image...`);
+      const { dataUrl } = await processPdfPageForOcr(file, 1);
+      const imageFileName = file.name.replace(/\.pdf$/i, '') + '-page-1.jpg';
+      const imageFile = await dataUrlToFile(dataUrl, imageFileName, 'image/jpeg');
+      console.log(`[preprocessFileForUpload] PDF converted: ${imageFileName}, size: ${(imageFile.size/1024).toFixed(1)}KB`);
+      return { file: imageFile, kind: 'pdf_as_image' };
+    } catch (e) {
+      console.error(`[preprocessFileForUpload] PDF conversion failed for ${file.name}:`, e);
+      // Return original file if conversion fails
+      return { file, kind: 'other' };
+    }
   }
 
   if (file.type.startsWith('image/')) {
     const { file: compressed } = await compressImage(file, 'standard');
+    console.log(`[preprocessFileForUpload] Image compressed: ${file.name} -> ${(compressed.size/1024).toFixed(1)}KB`);
     return { file: compressed, kind: 'image' };
   }
 
+  console.log(`[preprocessFileForUpload] Unsupported type, returning as-is: ${file.name}`);
   return { file, kind: 'other' };
 }
 /**

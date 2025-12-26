@@ -112,20 +112,25 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
     try {
       const processed: File[] = [];
       for (const f of files) {
+        console.log(`[ScanUploader] Processing file: ${f.name}, type: ${f.type}`);
+        
         // Preserve TIFF support
         if (isTiffFile(f)) {
+          console.log(`[ScanUploader] Converting TIFF: ${f.name}`);
           const pngDataUrl = await convertTiffToPngDataUrl(f);
           const pngFile = await dataUrlToFile(pngDataUrl, f.name.replace(/\.tiff?$/i, '.png'), 'image/png');
           processed.push(pngFile);
           continue;
         }
 
-        const { file: outFile } = await preprocessFileForUpload(f);
+        const { file: outFile, kind } = await preprocessFileForUpload(f);
+        console.log(`[ScanUploader] Preprocessed ${f.name} -> ${outFile.name} (kind: ${kind}, type: ${outFile.type})`);
         processed.push(outFile);
       }
+      console.log(`[ScanUploader] Uploading ${processed.length} preprocessed files:`, processed.map(f => `${f.name} (${f.type})`));
       onMultipleFilesUpload(processed);
     } catch (err) {
-      console.error('Multi-file preprocessing failed, uploading originals:', err);
+      console.error('[ScanUploader] Multi-file preprocessing failed, uploading originals:', err);
       toast({
         title: 'Upload Optimization Skipped',
         description: 'Uploading original files (OCR may be slower).',
@@ -163,19 +168,24 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
     try {
       const processed: File[] = [];
       for (const f of files) {
+        console.log(`[ScanUploader] Processing file: ${f.name}, type: ${f.type}`);
+        
         if (isTiffFile(f)) {
+          console.log(`[ScanUploader] Converting TIFF: ${f.name}`);
           const pngDataUrl = await convertTiffToPngDataUrl(f);
           const pngFile = await dataUrlToFile(pngDataUrl, f.name.replace(/\.tiff?$/i, '.png'), 'image/png');
           processed.push(pngFile);
           continue;
         }
 
-        const { file: outFile } = await preprocessFileForUpload(f);
+        const { file: outFile, kind } = await preprocessFileForUpload(f);
+        console.log(`[ScanUploader] Preprocessed ${f.name} -> ${outFile.name} (kind: ${kind}, type: ${outFile.type})`);
         processed.push(outFile);
       }
+      console.log(`[ScanUploader] Uploading ${processed.length} preprocessed files:`, processed.map(f => `${f.name} (${f.type})`));
       onMultipleFilesUpload(processed);
     } catch (err) {
-      console.error('Multi-file preprocessing failed, uploading originals:', err);
+      console.error('[ScanUploader] Multi-file preprocessing failed, uploading originals:', err);
       toast({
         title: 'Upload Optimization Skipped',
         description: 'Uploading original files (OCR may be slower).',
