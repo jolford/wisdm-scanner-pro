@@ -1031,9 +1031,24 @@ const [isExporting, setIsExporting] = useState(false);
   };
 
   const processPdf = async (file: File, preRenderedImageUrl?: string) => {
-    // Route single-PDF uploads through the same background import path
-    // If we have a pre-rendered image, we could pass it along, but importDocuments
-    // handles its own processing for now
+    // OPTIMIZED: If ScanUploader provided a pre-rendered first page, upload that image instead of the PDF
+    if (preRenderedImageUrl) {
+      try {
+        const res = await fetch(preRenderedImageUrl);
+        const blob = await res.blob();
+        const imgFile = new File(
+          [blob],
+          file.name.replace(/\.pdf$/i, '') + '-page-1.jpg',
+          { type: 'image/jpeg' }
+        );
+        await importDocuments([imgFile]);
+        return;
+      } catch (e) {
+        console.warn('Failed to convert pre-rendered PDF image to file, falling back to PDF upload:', e);
+      }
+    }
+
+    // Fallback: upload the original PDF
     await importDocuments([file]);
   };
 

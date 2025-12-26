@@ -84,6 +84,43 @@ export function fileToDataUrl(file: File): Promise<string> {
 }
 
 /**
+ * Convert a data URL (data:image/*;base64,...) to a File
+ */
+export async function dataUrlToFile(
+  dataUrl: string,
+  fileName: string,
+  mimeType?: string
+): Promise<File> {
+  const res = await fetch(dataUrl);
+  const blob = await res.blob();
+  const type = mimeType || blob.type || 'application/octet-stream';
+  return new File([blob], fileName, { type });
+}
+
+/**
+ * Preprocess a single file for upload:
+ * - PDF -> render first page to compressed JPEG File
+ * - Image -> compress and return compressed File
+ */
+export async function preprocessFileForUpload(
+  file: File
+): Promise<{ file: File; kind: 'pdf_as_image' | 'image' | 'other' }>
+{
+  if (file.type === 'application/pdf') {
+    const { dataUrl } = await processPdfPageForOcr(file, 1);
+    const imageFileName = file.name.replace(/\.pdf$/i, '') + '-page-1.jpg';
+    const imageFile = await dataUrlToFile(dataUrl, imageFileName, 'image/jpeg');
+    return { file: imageFile, kind: 'pdf_as_image' };
+  }
+
+  if (file.type.startsWith('image/')) {
+    const { file: compressed } = await compressImage(file, 'standard');
+    return { file: compressed, kind: 'image' };
+  }
+
+  return { file, kind: 'other' };
+}
+/**
  * Render a PDF page to a canvas and return as data URL
  * @param pdfDoc - PDF document object
  * @param pageNum - Page number (1-indexed)
