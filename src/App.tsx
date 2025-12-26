@@ -77,6 +77,7 @@ const IntegrationMarketplace = lazy(() => import("./pages/admin/IntegrationMarke
 const SSOConfig = lazy(() => import("./pages/admin/SSOConfig"));
 const SCIMConfig = lazy(() => import("./pages/admin/SCIMConfig"));
 const EnhancedSLAMonitoring = lazy(() => import("./pages/admin/EnhancedSLAMonitoring"));
+const SignatureVerificationHub = lazy(() => import("./pages/admin/SignatureVerificationHub"));
 
 
 // Static pages - lazy loaded
@@ -268,6 +269,7 @@ const App = () => {
           <Route path="/admin/scim" element={<SCIMConfig />} />
           
           <Route path="/admin/sla-monitoring" element={<EnhancedSLAMonitoring />} />
+          <Route path="/admin/signature-verification" element={<SignatureVerificationHub />} />
           
           
           {/* Phase 3: QA */}

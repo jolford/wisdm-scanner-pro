@@ -5,7 +5,7 @@ import {
   Brain, RefreshCw, Database, Palette, Activity,
   Settings, LogOut, HelpCircle, GitBranch, FileType,
   Smartphone, Package, ChevronDown, History, Zap, Bug, Code,
-  KeyRound, UserCog, Gauge, LucideIcon, Terminal
+  KeyRound, UserCog, Gauge, LucideIcon, Terminal, FileSignature
 } from 'lucide-react';
 import { NavLink } from '@/components/NavLink';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -92,6 +92,7 @@ const menuItems: MenuGroup[] = [
     items: [
       { title: 'Exception Queue', url: '/admin/exceptions', icon: AlertTriangle },
       { title: 'Confidence Scoring', url: '/admin/confidence', icon: Target },
+      { title: 'Signature Verification', url: '/admin/signature-verification', icon: FileSignature },
       { title: 'Validation Analytics', url: '/admin/analytics', icon: BarChart2 },
       { title: 'SLA Monitoring', url: '/admin/sla-monitoring', icon: Gauge },
       { title: 'QA Metrics', url: '/admin/qa-metrics', icon: Activity },
