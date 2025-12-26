@@ -91,11 +91,15 @@ export default function SignatureVerificationHub() {
       const petitionProjects = (data || []).filter(p => {
         const fields = p.extraction_fields as any[];
         if (!fields) return false;
-        return fields.some(f => 
-          f.name?.toLowerCase().includes('signer') || 
-          f.name?.toLowerCase().includes('signature') ||
-          f.name?.toLowerCase().includes('petition')
-        );
+        // Check for petition-related field names (case-insensitive)
+        return fields.some(f => {
+          const name = f.name?.toLowerCase() || '';
+          return name.includes('signer') || 
+            name.includes('signature') ||
+            name.includes('petition') ||
+            name.includes('printed_name') ||
+            name.includes('printed name');
+        });
       });
 
       setProjects(petitionProjects.map(p => ({ id: p.id, name: p.name })));
@@ -140,17 +144,24 @@ export default function SignatureVerificationHub() {
         if (!lineItems?.length) return;
 
         lineItems.forEach((item, idx) => {
+          // Handle various field naming conventions (OCR may use different casing)
+          const getName = () => item.Printed_Name || item.printed_name || item.signer_name || item.name || item.Name || 'Unknown';
+          const getAddress = () => item.Address || item.address || item.Street_Address || item.street_address || '';
+          const getCity = () => item.City || item.city || '';
+          const getZip = () => item.Zip || item.zip || item.ZIP || '';
+          const getSignatureUrl = () => item.Signature_Image_Url || item.signature_image_url || item.signature_region?.url || item.Signature?.url || '';
+          
           signatureRecords.push({
             id: `${doc.id}-${idx}`,
             document_id: doc.id,
             file_name: doc.file_name,
             batch_name: (doc.batches as any)?.batch_name || 'Unknown',
             batch_id: doc.batch_id || '',
-            signer_name: item.signer_name || item.name || 'Unknown',
-            address: item.address || '',
-            city: item.city || '',
-            zip: item.zip || '',
-            signature_url: item.signature_region?.url,
+            signer_name: getName(),
+            address: getAddress(),
+            city: getCity(),
+            zip: getZip(),
+            signature_url: getSignatureUrl(),
             similarity_score: doc.signature_similarity_score,
             authentication_status: doc.signature_authentication_status || 'pending',
             voter_match_status: item.voter_match_status || 'pending',
