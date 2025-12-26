@@ -3,7 +3,7 @@ import { Upload, Scan, FileText, Loader2, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { isTiffFile, convertTiffToPngDataUrl } from '@/lib/image-utils';
-import { compressImage, processPdfPageForOcr } from '@/lib/document-preprocessor';
+import { compressImage, processPdfPageForOcr, preprocessFileForUpload, dataUrlToFile } from '@/lib/document-preprocessor';
 import { MobileCapture } from '@/components/MobileCapture';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
@@ -95,17 +95,44 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const files = Array.from(e.dataTransfer.files);
-    if (files.length > 0) {
-      if (files.length === 1) {
-        handleFile(files[0]);
-      } else {
-        onMultipleFilesUpload(files);
+    if (files.length === 0) return;
+
+    if (files.length === 1) {
+      await handleFile(files[0]);
+      return;
+    }
+
+    // MULTI-FILE OPTIMIZATION: preprocess PDFs to images + compress images
+    setIsPreprocessing(true);
+    try {
+      const processed: File[] = [];
+      for (const f of files) {
+        // Preserve TIFF support
+        if (isTiffFile(f)) {
+          const pngDataUrl = await convertTiffToPngDataUrl(f);
+          const pngFile = await dataUrlToFile(pngDataUrl, f.name.replace(/\.tiff?$/i, '.png'), 'image/png');
+          processed.push(pngFile);
+          continue;
+        }
+
+        const { file: outFile } = await preprocessFileForUpload(f);
+        processed.push(outFile);
       }
+      onMultipleFilesUpload(processed);
+    } catch (err) {
+      console.error('Multi-file preprocessing failed, uploading originals:', err);
+      toast({
+        title: 'Upload Optimization Skipped',
+        description: 'Uploading original files (OCR may be slower).',
+      });
+      onMultipleFilesUpload(files);
+    } finally {
+      setIsPreprocessing(false);
     }
   };
 
@@ -122,12 +149,40 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
     fileInputRef.current?.click();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files ? Array.from(e.target.files) : [];
+    if (files.length === 0) return;
+
     if (files.length === 1) {
-      handleFile(files[0]);
-    } else if (files.length > 1) {
+      await handleFile(files[0]);
+      return;
+    }
+
+    // MULTI-FILE OPTIMIZATION: preprocess PDFs to images + compress images
+    setIsPreprocessing(true);
+    try {
+      const processed: File[] = [];
+      for (const f of files) {
+        if (isTiffFile(f)) {
+          const pngDataUrl = await convertTiffToPngDataUrl(f);
+          const pngFile = await dataUrlToFile(pngDataUrl, f.name.replace(/\.tiff?$/i, '.png'), 'image/png');
+          processed.push(pngFile);
+          continue;
+        }
+
+        const { file: outFile } = await preprocessFileForUpload(f);
+        processed.push(outFile);
+      }
+      onMultipleFilesUpload(processed);
+    } catch (err) {
+      console.error('Multi-file preprocessing failed, uploading originals:', err);
+      toast({
+        title: 'Upload Optimization Skipped',
+        description: 'Uploading original files (OCR may be slower).',
+      });
       onMultipleFilesUpload(files);
+    } finally {
+      setIsPreprocessing(false);
     }
   };
 
