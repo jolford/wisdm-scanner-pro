@@ -1030,8 +1030,10 @@ const [isExporting, setIsExporting] = useState(false);
     }
   };
 
-  const processPdf = async (file: File) => {
+  const processPdf = async (file: File, preRenderedImageUrl?: string) => {
     // Route single-PDF uploads through the same background import path
+    // If we have a pre-rendered image, we could pass it along, but importDocuments
+    // handles its own processing for now
     await importDocuments([file]);
   };
 

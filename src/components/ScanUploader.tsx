@@ -3,13 +3,14 @@ import { Upload, Scan, FileText, Loader2, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { isTiffFile, convertTiffToPngDataUrl } from '@/lib/image-utils';
+import { compressImage, processPdfPageForOcr } from '@/lib/document-preprocessor';
 import { MobileCapture } from '@/components/MobileCapture';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 interface ScanUploaderProps {
   onScanComplete: (text: string, imageUrl: string, fileName: string) => void;
-  onPdfUpload: (file: File) => void;
+  onPdfUpload: (file: File, preRenderedImageUrl?: string) => void;
   onMultipleFilesUpload: (files: File[]) => void;
   isProcessing: boolean;
 }
@@ -17,18 +18,36 @@ interface ScanUploaderProps {
 export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUpload, isProcessing }: ScanUploaderProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [showMobileCapture, setShowMobileCapture] = useState(false);
+  const [isPreprocessing, setIsPreprocessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
 
   const handleFile = async (file: File) => {
-    // Handle PDFs separately
+    // Handle PDFs with client-side pre-rendering
     if (file.type === 'application/pdf') {
-      onPdfUpload(file);
+      setIsPreprocessing(true);
+      try {
+        console.log(`Pre-rendering PDF: ${file.name} (${(file.size / 1024).toFixed(1)}KB)`);
+        const { dataUrl } = await processPdfPageForOcr(file);
+        console.log('PDF pre-rendered to image successfully');
+        onPdfUpload(file, dataUrl);
+      } catch (error) {
+        console.error('PDF pre-rendering failed:', error);
+        toast({
+          title: 'PDF Processing',
+          description: 'Using server-side processing for this PDF.',
+          variant: 'default',
+        });
+        // Fallback to server-side processing
+        onPdfUpload(file);
+      } finally {
+        setIsPreprocessing(false);
+      }
       return;
     }
 
-    // Handle images
+    // Handle images with compression
     if (!file.type.startsWith('image/')) {
       toast({
         title: 'Invalid File',
@@ -54,12 +73,26 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
       }
     }
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const imageData = e.target?.result as string;
-      onScanComplete('', imageData, file.name);
-    };
-    reader.readAsDataURL(file);
+    // Compress large images before processing
+    setIsPreprocessing(true);
+    try {
+      const { dataUrl, originalSize, compressedSize } = await compressImage(file);
+      if (compressedSize < originalSize) {
+        console.log(`Image optimized: ${(originalSize / 1024).toFixed(1)}KB → ${(compressedSize / 1024).toFixed(1)}KB`);
+      }
+      onScanComplete('', dataUrl, file.name);
+    } catch (error) {
+      console.error('Image compression failed:', error);
+      // Fallback to uncompressed
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageData = e.target?.result as string;
+        onScanComplete('', imageData, file.name);
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      setIsPreprocessing(false);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -108,7 +141,7 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
         relative border-2 border-dashed rounded-lg p-12 text-center cursor-pointer
         transition-all duration-300 hover:shadow-[var(--shadow-elegant)]
         ${isDragging ? 'border-primary bg-accent/10 scale-[1.02]' : 'border-border hover:border-primary/50'}
-        ${isProcessing ? 'pointer-events-none opacity-50' : ''}
+        ${(isProcessing || isPreprocessing) ? 'pointer-events-none opacity-50' : ''}
       `}
     >
       <input
@@ -124,7 +157,7 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
         <div className="relative">
           <div className="absolute inset-0 bg-gradient-to-br from-primary to-accent rounded-full blur-xl opacity-20 animate-pulse" />
           <div className="relative bg-gradient-to-br from-primary to-accent p-4 rounded-full">
-            {isProcessing ? (
+          {(isProcessing || isPreprocessing) ? (
               <LoadingSpinner className="[&>div]:border-primary-foreground/20 [&>div:nth-child(2)]:border-t-primary-foreground [&>div:nth-child(2)]:border-r-primary-foreground/60 [&>div:last-child>div]:bg-primary-foreground" />
             ) : (
               <div className="flex items-center justify-center">
@@ -137,7 +170,7 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
         
         <div>
           <h3 className="text-lg font-semibold mb-2">
-            {isProcessing ? 'Processing Document...' : 'Upload Document or Image'}
+            {isPreprocessing ? 'Optimizing Document...' : isProcessing ? 'Processing Document...' : 'Upload Document or Image'}
           </h3>
           <p className="text-sm text-muted-foreground">
             Drag and drop or click to select files
@@ -147,7 +180,7 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
           </p>
         </div>
 
-        {!isProcessing && (
+        {!isProcessing && !isPreprocessing && (
           <div className="flex gap-2 mt-2">
             <Button variant="outline">
               Select File

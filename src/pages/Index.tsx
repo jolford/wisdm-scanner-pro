@@ -636,7 +636,7 @@ const Index = () => {
     console.log(`Created OCR job for PDF ${doc.id}`);
   };
 
-  const processPdf = async (file: File) => {
+  const processPdf = async (file: File, preRenderedImageUrl?: string) => {
     if (!selectedProjectId || !selectedBatchId) {
       toast({
         title: 'Select Project and Batch',
@@ -668,40 +668,24 @@ const Index = () => {
         .from('documents')
         .getPublicUrl(fileName);
 
-      // Fast path: extract text from PDF using pdfjs for small, text-based PDFs
-      let arrayBuffer: ArrayBuffer | null = null;
-      let extractedPdfText = '';
-      try {
-        arrayBuffer = await file.arrayBuffer();
-        const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer as ArrayBuffer });
-        const pdf = await loadingTask.promise;
-        const pages = Math.min(pdf.numPages, 3);
-        for (let i = 1; i <= pages; i++) {
-          const page = await pdf.getPage(i);
-          const textContent = await page.getTextContent();
-          const pageText = (textContent.items || [])
-            .map((item: any) => (item && item.str) ? item.str : '')
-            .join(' ');
-          extractedPdfText += pageText + '\n';
-        }
-      } catch (e) {
-        console.warn('PDF text extraction fallback:', e);
-      }
+      const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
+        ? selectedProject?.metadata?.table_extraction_config?.fields || []
+        : [];
 
-      if (extractedPdfText && extractedPdfText.trim().length > 10) {
-        const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
-          ? selectedProject?.metadata?.table_extraction_config?.fields || []
-          : [];
-        
-        // Create document first with pending status
-        const doc = await saveDocument(file.name, 'application/pdf', publicUrl, '', {}, []);
-        if (!doc) throw new Error('Failed to create document');
+      // Create document first with pending status
+      const doc = await saveDocument(file.name, 'application/pdf', publicUrl, '', {}, []);
+      if (!doc) throw new Error('Failed to create document');
 
-        // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) throw new Error('User not authenticated');
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
 
-        // Create job for OCR processing
+      // OPTIMIZED: Use pre-rendered image from client-side if available
+      if (preRenderedImageUrl) {
+        console.log('Using pre-rendered PDF image for OCR (optimized path)');
+        setCurrentImage(preRenderedImageUrl);
+
+        // Create job for OCR processing with image data
         const { error: jobError } = await supabase.from('jobs').insert([{
           job_type: 'ocr_document',
           customer_id: selectedProject?.customer_id || null,
@@ -709,8 +693,8 @@ const Index = () => {
           priority: 'normal',
           payload: {
             documentId: doc.id,
-            textData: extractedPdfText,
-            isPdf: true,
+            imageData: preRenderedImageUrl,
+            isPdf: false, // Already converted to image
             extractionFields: selectedProject?.extraction_fields || [],
             tableExtractionFields: tableFields,
             enableCheckScanning: selectedProject?.enable_check_scanning || false,
@@ -720,40 +704,27 @@ const Index = () => {
         if (jobError) throw jobError;
         toast({ title: 'PDF Queued', description: 'Processing in background...' });
       } else {
-        // Fallback: render first PDF page to image and run OCR
+        // Fallback: try text extraction first, then render to image
+        let extractedPdfText = '';
         try {
-          // Always re-read file to avoid using a detached ArrayBuffer
-          const freshBuffer = await file.arrayBuffer();
-          const loadingTask2 = pdfjsLib.getDocument({ data: freshBuffer as ArrayBuffer });
-          const pdf2 = await loadingTask2.promise;
-          const page1 = await pdf2.getPage(1);
-          let viewport = page1.getViewport({ scale: 1.5 });
-          const maxDim = 2000;
-          const scale = Math.min(1.5, maxDim / Math.max(viewport.width, viewport.height));
-          viewport = page1.getViewport({ scale });
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          canvas.width = Math.ceil(viewport.width);
-          canvas.height = Math.ceil(viewport.height);
-          if (!ctx) throw new Error('Canvas context not available');
-          await page1.render({ canvasContext: ctx as any, viewport }).promise;
-          const dataUrl = canvas.toDataURL('image/png');
+          const arrayBuffer = await file.arrayBuffer();
+          const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+          const pdf = await loadingTask.promise;
+          const pages = Math.min(pdf.numPages, 3);
+          for (let i = 1; i <= pages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = (textContent.items || [])
+              .map((item: any) => (item && item.str) ? item.str : '')
+              .join(' ');
+            extractedPdfText += pageText + '\n';
+          }
+        } catch (e) {
+          console.warn('PDF text extraction fallback:', e);
+        }
 
-          const tableFields = selectedProject?.metadata?.table_extraction_config?.enabled 
-            ? selectedProject?.metadata?.table_extraction_config?.fields || []
-            : [];
-
-          setCurrentImage(dataUrl);
-
-          // Create document first with pending status
-          const doc = await saveDocument(file.name, 'application/pdf', publicUrl, '', {}, []);
-          if (!doc) throw new Error('Failed to create document');
-
-          // Get current user
-          const { data: { user } } = await supabase.auth.getUser();
-          if (!user) throw new Error('User not authenticated');
-
-          // Create job for OCR processing
+        if (extractedPdfText && extractedPdfText.trim().length > 50) {
+          // Text-based PDF - use text directly
           const { error: jobError } = await supabase.from('jobs').insert([{
             job_type: 'ocr_document',
             customer_id: selectedProject?.customer_id || null,
@@ -761,8 +732,8 @@ const Index = () => {
             priority: 'normal',
             payload: {
               documentId: doc.id,
-              imageData: dataUrl,
-              isPdf: false,
+              textData: extractedPdfText,
+              isPdf: true,
               extractionFields: selectedProject?.extraction_fields || [],
               tableExtractionFields: tableFields,
               enableCheckScanning: selectedProject?.enable_check_scanning || false,
@@ -771,15 +742,51 @@ const Index = () => {
 
           if (jobError) throw jobError;
           toast({ title: 'PDF Queued', description: 'Processing in background...' });
-        } catch (fallbackErr: any) {
-          console.error('PDF image OCR fallback failed:', fallbackErr);
-          toast({
-            title: 'PDF Processing Failed',
-            description: 'Could not extract text from PDF. Please try a different file.',
-            variant: 'destructive',
-          });
-          setIsProcessing(false);
-          return;
+        } else {
+          // Scanned PDF - render to image
+          try {
+            const freshBuffer = await file.arrayBuffer();
+            const loadingTask2 = pdfjsLib.getDocument({ data: freshBuffer });
+            const pdf2 = await loadingTask2.promise;
+            const page1 = await pdf2.getPage(1);
+            const viewport = page1.getViewport({ scale: 2.0 });
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = Math.ceil(viewport.width);
+            canvas.height = Math.ceil(viewport.height);
+            if (!ctx) throw new Error('Canvas context not available');
+            await page1.render({ canvasContext: ctx as any, viewport }).promise;
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.90);
+
+            setCurrentImage(dataUrl);
+
+            const { error: jobError } = await supabase.from('jobs').insert([{
+              job_type: 'ocr_document',
+              customer_id: selectedProject?.customer_id || null,
+              user_id: user.id,
+              priority: 'normal',
+              payload: {
+                documentId: doc.id,
+                imageData: dataUrl,
+                isPdf: false,
+                extractionFields: selectedProject?.extraction_fields || [],
+                tableExtractionFields: tableFields,
+                enableCheckScanning: selectedProject?.enable_check_scanning || false,
+              },
+            }]);
+
+            if (jobError) throw jobError;
+            toast({ title: 'PDF Queued', description: 'Processing in background...' });
+          } catch (fallbackErr: any) {
+            console.error('PDF image OCR fallback failed:', fallbackErr);
+            toast({
+              title: 'PDF Processing Failed',
+              description: 'Could not extract text from PDF. Please try a different file.',
+              variant: 'destructive',
+            });
+            setIsProcessing(false);
+            return;
+          }
         }
       }
     } catch (error: any) {
