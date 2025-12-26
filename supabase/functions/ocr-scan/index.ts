@@ -181,17 +181,6 @@ serve(async (req) => {
 
     let { imageData, isPdf, extractionFields, textData, tableExtractionFields, enableCheckScanning, documentId: docId, customerId, projectId } = body;
     documentId = docId;
-
-    // If a client sends a PDF data URL, treat it as a PDF.
-    // IMPORTANT: If documentId is present, ignore the PDF data URL and fetch from storage instead.
-    // This makes reprocessing resilient to cached/older frontends still sending `data:application/pdf`.
-    if (typeof imageData === 'string' && imageData.startsWith('data:application/pdf')) {
-      isPdf = true;
-      if (documentId) {
-        console.warn('PDF data URL provided with documentId; ignoring imageData and using server-side fetch/convert.');
-        imageData = null;
-      }
-    }
     
     // If documentId is provided but imageData is missing, fetch the document from database
     if (documentId && !imageData) {
