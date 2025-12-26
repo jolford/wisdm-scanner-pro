@@ -98,6 +98,34 @@ function extractTextFromPdfBinary(pdfBytes: Uint8Array): string {
   }
 }
 
+// IMPORTANT: When PDFs are scanned (image-based), "binary text extraction" produces garbage.
+// This sanitizer prevents feeding huge/binary-looking strings into the AI prompt.
+function sanitizeTextForAi(input: string, maxChars = 30_000): string {
+  if (!input) return '';
+
+  // Remove control chars; keep newlines/tabs
+  let out = input
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F-\x9F]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Heuristic: if the text is mostly non-ASCII / non-alnum, it's likely binary garbage
+  const sample = out.slice(0, 5000);
+  const good = (sample.match(/[A-Za-z0-9\s]/g) || []).length;
+  const ratio = sample.length ? good / sample.length : 0;
+
+  if (ratio < 0.18) {
+    return '';
+  }
+
+  if (out.length > maxChars) {
+    out = out.slice(0, maxChars) + `\n[TRUNCATED ${out.length - maxChars} CHARS]`;
+  }
+
+  return out;
+}
+
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -359,9 +387,12 @@ serve(async (req) => {
               bytes[i] = binaryString.charCodeAt(i);
             }
             const extractedText = extractTextFromPdfBinary(bytes);
-            if (extractedText && extractedText.length > 10) {
-              textData = extractedText;
-              console.log(`Extracted ${textData.length} chars from PDF data URL`);
+            const sanitized = sanitizeTextForAi(extractedText);
+            if (sanitized && sanitized.length > 10) {
+              textData = sanitized;
+              console.log(`Extracted ${textData.length} chars from PDF data URL (sanitized)`);
+            } else {
+              console.warn('PDF data URL appears image-based; skipping binary text extraction.');
             }
           }
         } catch (e) {
@@ -461,6 +492,27 @@ serve(async (req) => {
     // UNLESS we're processing via documentId (server-side flow), in which case we'll use AI to extract text
     if (isPdf && !textData && !documentId) {
       throw new Error('PDF text extraction required. Please ensure text is extracted before sending.');
+    }
+
+    // Sanitize/truncate any provided text before sending to AI (prevents JSON-breaking garbage).
+    if (textData && typeof textData === 'string') {
+      const beforeLen = textData.length;
+      textData = sanitizeTextForAi(textData);
+      if (!textData) {
+        console.warn('textData was discarded after sanitization (likely binary/garbage).');
+      } else if (textData.length !== beforeLen) {
+        console.log(`textData sanitized: ${beforeLen} → ${textData.length} chars`);
+      }
+    }
+
+    // If this is a scanned PDF (no usable text and no image), we can't reliably OCR it server-side.
+    if (isPdf && !imageData && (!textData || textData.length < 50)) {
+      return new Response(
+        JSON.stringify({
+          error: 'This PDF looks image-based (scanned) and cannot be processed reliably as text-only. Please re-upload it (the app will convert it to an image first page for OCR).'
+        }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // --- BUILD AI PROMPT ---
