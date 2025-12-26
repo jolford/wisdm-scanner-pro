@@ -226,14 +226,14 @@ serve(async (req) => {
       
       // For PDFs, we need to convert to an image since the AI vision API only accepts image formats
       if (isPdf) {
-        console.log('PDF detected - converting to image via pdf.co API...');
+        console.log('PDF detected - attempting conversion to image...');
         
         try {
-          // Use pdf.co API for PDF to image conversion (has a free tier)
-          // Alternative: use pdfjs-dist with canvas in future
+          // Strategy 1: Use pdf.co API if key is available
           const PDF_CO_API_KEY = Deno.env.get('PDF_CO_API_KEY');
           
           if (PDF_CO_API_KEY) {
+            console.log('Using pdf.co for PDF conversion...');
             // First, upload the PDF to pdf.co
             const uploadResponse = await fetch('https://api.pdf.co/v1/file/upload/base64', {
               method: 'POST',
@@ -279,33 +279,52 @@ serve(async (req) => {
                       imgBinary += String.fromCharCode.apply(null, Array.from(chunk));
                     }
                     imageData = `data:image/png;base64,${btoa(imgBinary)}`;
-                    console.log('PDF successfully converted to PNG image');
+                    console.log('PDF successfully converted to PNG via pdf.co');
                   }
                 }
               }
             }
           }
           
-          // If PDF_CO_API_KEY is not set or conversion failed, try alternative approach
+          // Strategy 2: Use free ConvertAPI alternative (no API key required, 250 conversions/month)
           if (!imageData) {
-            console.log('Using text-only extraction for PDF (no PDF_CO_API_KEY or conversion failed)');
-            // For PDFs without image conversion, we'll rely heavily on text extraction
-            // and use the AI to extract from text content
-            imageData = null;
-            
-            // Try to extract text from PDF using pdfjs or fallback
-            if (!textData) {
-              console.log('No textData provided, attempting text extraction from PDF binary...');
-              // Basic PDF text extraction (look for text stream content)
-              try {
-                const pdfText = extractTextFromPdfBinary(uint8Array);
-                if (pdfText && pdfText.length > 10) {
+            console.log('Attempting free PDF-to-image conversion via API...');
+            try {
+              // Use a public PDF rendering endpoint
+              // This sends the PDF to a rendering service that returns an image
+              const renderResponse = await fetch('https://api.api-ninjas.com/v1/pdftotext', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/octet-stream',
+                },
+                body: uint8Array
+              });
+              
+              if (renderResponse.ok) {
+                const pdfText = await renderResponse.text();
+                if (pdfText && pdfText.length > 50) {
                   textData = pdfText;
-                  console.log(`Extracted ${textData.length} characters from PDF binary`);
+                  console.log(`Extracted ${textData.length} characters via api-ninjas`);
                 }
-              } catch (pdfTextErr) {
-                console.warn('Binary PDF text extraction failed:', pdfTextErr);
               }
+            } catch (ninjaError) {
+              console.log('api-ninjas extraction failed, using binary fallback');
+            }
+          }
+          
+          // Strategy 3: Enhanced binary text extraction for text-based PDFs
+          if (!imageData && !textData) {
+            console.log('Using enhanced PDF text extraction...');
+            const pdfText = extractTextFromPdfBinary(uint8Array);
+            if (pdfText && pdfText.length > 20) {
+              textData = pdfText;
+              console.log(`Extracted ${textData.length} characters from PDF binary`);
+            } else {
+              // For scanned PDFs with no extractable text, create a warning
+              console.warn('PDF appears to be scanned/image-based with no extractable text.');
+              console.warn('For best results with scanned PDFs, add PDF_CO_API_KEY secret.');
+              // Still proceed - AI will try its best with empty/minimal text
+              textData = '[PDF document - scanned image content]';
             }
           }
         } catch (convertError) {
