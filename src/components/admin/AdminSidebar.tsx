@@ -79,7 +79,6 @@ const menuItems: MenuGroup[] = [
     items: [
       { title: 'Batch Templates', url: '/admin/batch-templates', icon: Zap },
       { title: 'Scheduled Batches', url: '/admin/scheduled-batches', icon: Clock },
-      { title: 'Smart Routing', url: '/admin/smart-routing', icon: GitBranch },
       { title: 'ML Learning', url: '/admin/ml-learning', icon: Brain },
       { title: 'ML Templates', url: '/admin/ml-templates', icon: FileType },
       { title: 'Integrations', url: '/admin/integrations', icon: Package },
@@ -121,8 +120,6 @@ const menuItems: MenuGroup[] = [
       { title: 'Validation Lookups', url: '/admin/validation-lookups', icon: Database },
       { title: 'SSO/SAML Config', url: '/admin/sso', icon: KeyRound },
       { title: 'SCIM Provisioning', url: '/admin/scim', icon: UserCog },
-      { title: 'Script Agents', url: '/admin/script-agents', icon: Terminal },
-      
     ],
     defaultOpen: false,
   },
