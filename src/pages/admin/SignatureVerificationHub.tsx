@@ -61,6 +61,10 @@ export default function SignatureVerificationHub() {
   const [selectedProject, setSelectedProject] = useState<string>('all');
   const [verifying, setVerifying] = useState<string | null>(null);
 
+  const [capturedSignatureDisplayUrl, setCapturedSignatureDisplayUrl] = useState<string | null>(null);
+  const [referenceSignatureDisplayUrl, setReferenceSignatureDisplayUrl] = useState<string | null>(null);
+  const [signatureImagesLoading, setSignatureImagesLoading] = useState(false);
+
   useEffect(() => {
     fetchPetitionProjects();
   }, []);
@@ -76,6 +80,65 @@ export default function SignatureVerificationHub() {
       }
     }
   }, [selectedProject, projects]);
+
+  const getSignedDisplayUrl = async (rawUrl: string | undefined | null) => {
+    if (!rawUrl) return null;
+
+    // If it's already a non-storage URL, just use it.
+    if (!rawUrl.includes('/storage/v1/object/')) return rawUrl;
+
+    // Parse URLs like:
+    // https://.../storage/v1/object/public/documents/signatures/...
+    // https://.../storage/v1/object/documents/signatures/...
+    const match = rawUrl.match(/\/storage\/v1\/object\/(?:public\/)?([^/]+)\/(.+)$/);
+    if (!match) return rawUrl;
+
+    const bucket = match[1];
+    const path = match[2];
+
+    const { data, error } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(path, 60 * 60);
+
+    if (error) throw error;
+    return data?.signedUrl ?? null;
+  };
+
+  const loadComparisonImages = async (sig: SignatureRecord) => {
+    setSignatureImagesLoading(true);
+    setCapturedSignatureDisplayUrl(null);
+    setReferenceSignatureDisplayUrl(null);
+
+    try {
+      const captured = await getSignedDisplayUrl(sig.signature_url);
+      setCapturedSignatureDisplayUrl(captured);
+
+      // Find best matching reference signature (uploaded via Project → Signatures)
+      const { data: refs, error: refsError } = await supabase
+        .from('signature_references')
+        .select('id, entity_name, signature_image_url')
+        .eq('project_id', selectedProject)
+        .ilike('entity_name', sig.signer_name) // case-insensitive exact
+        .limit(1);
+
+      if (refsError) throw refsError;
+
+      const refUrlRaw = refs?.[0]?.signature_image_url ?? null;
+      const reference = await getSignedDisplayUrl(refUrlRaw);
+      setReferenceSignatureDisplayUrl(reference);
+    } catch (e) {
+      console.error('Error loading signature images:', e);
+      toast.error('Could not load signature images');
+    } finally {
+      setSignatureImagesLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!comparisonOpen || !selectedSignature || !selectedProject || selectedProject === 'all') return;
+    loadComparisonImages(selectedSignature);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comparisonOpen, selectedSignature?.id, selectedProject]);
 
   const fetchPetitionProjects = async () => {
     try {
@@ -743,21 +806,41 @@ export default function SignatureVerificationHub() {
                   <div className="border rounded-lg p-4">
                     <h4 className="font-medium mb-2 text-center">Captured Signature</h4>
                     <div className="bg-muted h-32 rounded flex items-center justify-center">
-                      {selectedSignature.signature_url ? (
+                      {signatureImagesLoading ? (
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      ) : capturedSignatureDisplayUrl ? (
                         <img 
-                          src={selectedSignature.signature_url} 
+                          src={capturedSignatureDisplayUrl} 
                           alt="Captured signature" 
+                          loading="lazy"
                           className="max-h-full max-w-full object-contain"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
                         />
                       ) : (
-                        <span className="text-muted-foreground">No signature image</span>
+                        <span className="text-muted-foreground">No captured signature available</span>
                       )}
                     </div>
                   </div>
                   <div className="border rounded-lg p-4">
                     <h4 className="font-medium mb-2 text-center">Reference Signature</h4>
                     <div className="bg-muted h-32 rounded flex items-center justify-center">
-                      <span className="text-muted-foreground">No reference available</span>
+                      {signatureImagesLoading ? (
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      ) : referenceSignatureDisplayUrl ? (
+                        <img 
+                          src={referenceSignatureDisplayUrl} 
+                          alt="Reference signature" 
+                          loading="lazy"
+                          className="max-h-full max-w-full object-contain"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none';
+                          }}
+                        />
+                      ) : (
+                        <span className="text-muted-foreground">No reference available</span>
+                      )}
                     </div>
                   </div>
                 </div>
