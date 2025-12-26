@@ -9,8 +9,11 @@
 import imageCompression from 'browser-image-compression';
 import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Configure PDF.js worker - use CDN for reliability
+const pdfjsVersion = pdfjsLib.version;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsVersion}/pdf.worker.min.mjs`;
+
+console.log('[document-preprocessor] PDF.js version:', pdfjsVersion);
 
 /**
  * Compression options for different scenarios
