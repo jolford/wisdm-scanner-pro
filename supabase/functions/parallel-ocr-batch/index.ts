@@ -34,7 +34,7 @@ serve(async (req) => {
 
     const { 
       batchId, 
-      maxParallel = 5,
+      maxParallel = 8, // Increased from 5 to 8 for faster processing
       prioritizeSimple = true,
       skipProcessed = true
     } = await req.json();
@@ -106,7 +106,8 @@ serve(async (req) => {
           const batchPromises = batch.map(async (doc) => {
             const docStartTime = Date.now();
             try {
-              const timeoutMs = doc.file_type === 'application/pdf' ? 75000 : 45000;
+              // Reduced timeouts since we removed secondary AI calls
+              const timeoutMs = doc.file_type === 'application/pdf' ? 45000 : 30000;
               
               const timeoutPromise = new Promise((_, reject) => 
                 setTimeout(() => reject(new Error(`OCR timeout after ${timeoutMs/1000}s`)), timeoutMs)

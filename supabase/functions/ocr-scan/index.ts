@@ -1693,71 +1693,11 @@ Review the image and provide corrected text with any OCR errors fixed.`;
       console.log('No bounding boxes extracted');
     }
 
-    // --- EXTRACT WORD-LEVEL BOUNDING BOXES FOR SENSITIVE LANGUAGE DETECTION ---
-    // Using Flash-Lite for fast, efficient word extraction
+    // --- WORD-LEVEL BOUNDING BOXES DISABLED FOR PERFORMANCE ---
+    // This was making a secondary AI call per document, adding 5-10s latency
+    // Word boxes are only used for zone templates which are rarely configured
+    // If zone templates are needed, they use ROI-based extraction instead
     let wordBoundingBoxes: Array<{ text: string; bbox: { x: number; y: number; width: number; height: number } }> = [];
-    try {
-      // For image processing (not text-based PDFs), extract word coordinates if available
-      if (!textData && imageData) {
-        const systemPromptWords = `You are a specialized OCR system that returns word-level bounding boxes. Return ONLY a JSON array of words with coordinates: [{"text": "word", "bbox": {"x": 0, "y": 0, "width": 10, "height": 10}}]. Use percentage coordinates (0-100). Extract ALL visible words.`;
-        const userPromptWords = 'Extract all words from this image with their exact bounding box coordinates as percentages of image dimensions.';
-        
-        const wordsResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-2.5-flash-lite',
-            messages: [
-              { role: 'system', content: systemPromptWords },
-              { 
-                role: 'user', 
-                content: [
-                  { type: 'text', text: userPromptWords },
-                  { type: 'image_url', image_url: { url: imageData } }
-                ]
-              }
-            ],
-            temperature: 0.1, // Gemini supports temperature
-          }),
-        });
-        
-        if (wordsResponse.ok) {
-          const wordsData = await wordsResponse.json();
-          const wordsText = wordsData.choices[0].message.content;
-          
-          try {
-            let jsonToParse = wordsText;
-            if (wordsText.includes('```')) {
-              const codeBlockMatch = wordsText.match(/```(?:json)?\s*\n?([\s\S]*?)\n?```/);
-              if (codeBlockMatch) {
-                jsonToParse = codeBlockMatch[1].trim();
-              }
-            }
-            
-            const jsonMatch = jsonToParse.match(/\[[\s\S]*\]/);
-            if (jsonMatch) {
-              const parsed = JSON.parse(jsonMatch[0]);
-              if (Array.isArray(parsed)) {
-                wordBoundingBoxes = parsed.filter((item: any) => 
-                  item && typeof item === 'object' && 
-                  item.text && item.bbox &&
-                  typeof item.bbox.x === 'number'
-                );
-              }
-            }
-          } catch (e) {
-            // Silently fail - word boxes are nice-to-have but not critical
-            wordBoundingBoxes = [];
-          }
-        }
-      }
-    } catch (e) {
-      // Word boxes are optional - don't let this crash the main extraction
-      wordBoundingBoxes = [];
-    }
  
     let zoneExtractedCount = 0;
 
@@ -1856,8 +1796,13 @@ Review the image and provide corrected text with any OCR errors fixed.`;
       }
     }
 
-    // ROI-based zone extraction when word boxes are unavailable or zones yielded no values
-    if (zoneTemplate && zoneTemplate.zone_definitions && zoneTemplate.zone_definitions.length > 0 && (wordBoundingBoxes.length === 0 || zoneExtractedCount === 0) && imageData) {
+    // --- ROI-BASED ZONE EXTRACTION ---
+    // Only run this expensive secondary AI call if:
+    // 1. Zone template is configured AND
+    // 2. Primary extraction didn't populate required fields (zoneExtractedCount === 0)
+    // This avoids making unnecessary AI calls when primary OCR already succeeded
+    if (zoneTemplate && zoneTemplate.zone_definitions && zoneTemplate.zone_definitions.length > 0 && zoneExtractedCount === 0 && imageData) {
+      console.log('Running ROI extraction (zone template configured, primary extraction had no zone matches)');
       try {
         const normalize = (val: number, axis: 'x' | 'y' | 'w' | 'h') => {
           const base = axis === 'x' || axis === 'w' ? 1000 : 700;
@@ -1875,14 +1820,15 @@ Review the image and provide corrected text with any OCR errors fixed.`;
           validation_flags: z.validation_flags || 'i',
         }));
 
-        const systemPromptRoi = 'You are an OCR system. Read ONLY the specified rectangular regions (percent coordinates 0-100 relative to page). Return STRICT JSON: {"fields": {"Field Name": "value"}}. Do not include any extra text.';
-        const userPromptRoi = `Extract each field ONLY from its region (percent of page):\n${zones.map((z: any) => `- ${z.name} (${z.type}) at x:${z.x.toFixed(1)} y:${z.y.toFixed(1)} w:${z.width.toFixed(1)} h:${z.height.toFixed(1)}`).join('\n')}\nRespond with JSON as specified.`;
+        // Use flash-lite for speed on ROI extraction
+        const systemPromptRoi = 'OCR: Read specified regions. Return JSON: {"fields": {"Name": "value"}}. No extra text.';
+        const userPromptRoi = `Extract fields:\n${zones.map((z: any) => `${z.name} at (${z.x.toFixed(0)}%,${z.y.toFixed(0)}%)`).join(', ')}\nJSON only.`;
 
         const roiResp = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            model: 'google/gemini-2.5-flash',
+            model: 'google/gemini-2.5-flash-lite',
             messages: [
               { role: 'system', content: systemPromptRoi },
               { role: 'user', content: [ { type: 'text', text: userPromptRoi }, { type: 'image_url', image_url: { url: imageData } } ] }
@@ -1924,26 +1870,20 @@ Review the image and provide corrected text with any OCR errors fixed.`;
 
                   if (z.validation_pattern) {
                     const re = new RegExp(z.validation_pattern, z.validation_flags || 'i');
-                    if (!re.test(s)) {
-                      console.log(`ROI ${z.name}: validation failed for "${s}"`);
-                      continue;
-                    }
+                    if (!re.test(s)) continue;
                   }
 
                   metadata[z.name] = s;
                   if (fieldConfidence) fieldConfidence[z.name] = 0.97;
-                  console.log(`ROI extracted ${z.name}: ${s}`);
                 }
               }
             } catch (e) {
-              console.log('Failed to parse ROI JSON:', e);
+              // Silently continue
             }
           }
-        } else {
-          console.log('ROI model call failed:', await roiResp.text());
         }
       } catch (e) {
-        console.log('ROI extraction error:', e);
+        console.log('ROI extraction skipped:', e);
       }
     }
 
