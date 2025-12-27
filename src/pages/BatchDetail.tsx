@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -16,6 +16,7 @@ const BatchDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [exporting, setExporting] = useState(false);
   const [selectedDocument, setSelectedDocument] = useState<any>(null);
 
@@ -23,6 +24,34 @@ const BatchDetail = () => {
   useEffect(() => {
     setSelectedDocument(null);
   }, [id]);
+
+  // Subscribe to real-time updates for documents in this batch
+  useEffect(() => {
+    if (!id) return;
+
+    const channel = supabase
+      .channel(`batch-documents-${id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'documents',
+          filter: `batch_id=eq.${id}`,
+        },
+        (payload) => {
+          console.log('Document updated:', payload);
+          // Refetch documents when any document in this batch is updated
+          queryClient.invalidateQueries({ queryKey: ['batch-documents', id] });
+          queryClient.invalidateQueries({ queryKey: ['batch-detail', id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id, queryClient]);
 
   const { data: batch, isLoading } = useQuery({
     queryKey: ['batch-detail', id],
