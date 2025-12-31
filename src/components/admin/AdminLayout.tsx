@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Menu } from 'lucide-react';
-import lucidDocsLogo from '@/assets/luciddocs-logo-new.png';
+import { BrandLogo } from '@/components/BrandLogo';
 import {
   SidebarProvider,
   SidebarTrigger,
@@ -30,10 +30,9 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
                     <Menu className="h-5 w-5" />
                   </SidebarTrigger>
                   <div className="bg-card rounded-lg border border-border/50 p-2 shadow-sm">
-                    <img
-                      src={lucidDocsLogo}
+                    <BrandLogo
                       alt="LucidDocs AI Document Processing"
-                      className="h-10 sm:h-12 w-auto"
+                      className="h-12 sm:h-14 w-auto"
                     />
                   </div>
                   <div>
