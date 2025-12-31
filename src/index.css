@@ -7,85 +7,84 @@ All colors MUST be HSL.
 */
 
 @layer base {
-  /* Force light mode on all devices */
   :root {
-    color-scheme: light only;
-    /* LucidDocs AI - Dark navy base with cyan/purple accents (like logo background) */
-    --background: 222 47% 11%;
-    --foreground: 210 40% 96%;
+    color-scheme: light;
+    /* LucidDocs AI - Light mode with cyan/purple accents */
+    --background: 220 20% 97%;
+    --foreground: 222 47% 11%;
 
-    --card: 220 40% 13%;
-    --card-foreground: 210 40% 96%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
 
-    --popover: 220 40% 13%;
-    --popover-foreground: 210 40% 96%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
 
     /* Bright cyan primary - matches logo */
-    --primary: 187 100% 48%;
-    --primary-foreground: 222 47% 11%;
+    --primary: 187 100% 42%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 35% 18%;
-    --secondary-foreground: 210 40% 96%;
+    --secondary: 220 20% 94%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 220 35% 16%;
-    --muted-foreground: 220 20% 65%;
+    --muted: 220 15% 92%;
+    --muted-foreground: 220 15% 46%;
 
     /* Purple/violet accent - matches logo gradient */
-    --accent: 265 85% 60%;
+    --accent: 265 85% 55%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 35% 22%;
-    --input: 220 35% 22%;
-    --ring: 187 100% 48%;
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 187 100% 42%;
 
     --radius: 0.75rem;
     
     /* Enhanced Status Colors */
-    --success: 152 76% 45%;
+    --success: 152 76% 40%;
     --success-foreground: 0 0% 100%;
-    --success-light: 152 50% 18%;
+    --success-light: 152 50% 94%;
     
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --warning-light: 38 70% 18%;
+    --warning-light: 38 92% 95%;
     
-    --info: 187 100% 48%;
+    --info: 187 100% 42%;
     --info-foreground: 0 0% 100%;
-    --info-light: 187 80% 15%;
+    --info-light: 187 80% 94%;
     
-    --processing: 265 85% 60%;
+    --processing: 265 85% 55%;
     --processing-foreground: 0 0% 100%;
-    --processing-light: 265 60% 18%;
+    --processing-light: 265 60% 94%;
     
     /* Gradients - Cyan to Purple (matches logo) */
-    --gradient-primary: linear-gradient(135deg, hsl(187 100% 48%) 0%, hsl(265 85% 60%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(220 40% 13%) 0%, hsl(222 47% 11%) 100%);
-    --gradient-success: linear-gradient(135deg, hsl(152 76% 45%) 0%, hsl(152 76% 35%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(187 100% 42%) 0%, hsl(265 85% 55%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 20% 97%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(152 76% 40%) 0%, hsl(152 76% 32%) 100%);
     --gradient-warning: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(38 92% 40%) 100%);
     
-    /* Shadows with dark base */
-    --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
-    --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.4), 0 1px 2px -1px hsl(0 0% 0% / 0.3);
-    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.5), 0 2px 4px -2px hsl(0 0% 0% / 0.4);
-    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.6), 0 4px 6px -4px hsl(0 0% 0% / 0.5);
-    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.7), 0 8px 10px -6px hsl(0 0% 0% / 0.6);
+    /* Shadows */
+    --shadow-xs: 0 1px 2px 0 hsl(220 40% 13% / 0.04);
+    --shadow-sm: 0 1px 3px 0 hsl(220 40% 13% / 0.08), 0 1px 2px -1px hsl(220 40% 13% / 0.06);
+    --shadow-md: 0 4px 6px -1px hsl(220 40% 13% / 0.08), 0 2px 4px -2px hsl(220 40% 13% / 0.06);
+    --shadow-lg: 0 10px 15px -3px hsl(220 40% 13% / 0.1), 0 4px 6px -4px hsl(220 40% 13% / 0.08);
+    --shadow-xl: 0 20px 25px -5px hsl(220 40% 13% / 0.12), 0 8px 10px -6px hsl(220 40% 13% / 0.08);
     
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 
-    --sidebar-background: 220 50% 8%;
+    --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 30% 92%;
     --sidebar-primary: 187 100% 48%;
-    --sidebar-primary-foreground: 222 47% 11%;
+    --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 265 60% 25%;
     --sidebar-accent-foreground: 265 85% 85%;
     --sidebar-border: 220 35% 18%;
-    --sidebar-ring: 187 100% 48%;
+    --sidebar-ring: 187 100% 42%;
   }
 
   .dark {
