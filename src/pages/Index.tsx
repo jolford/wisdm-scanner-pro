@@ -986,12 +986,8 @@ const Index = () => {
       <header className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-10 bg-background/80">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src={lucidDocsLogo} alt="LucidDocs AI" className="h-16 w-auto" />
-              <div className="border-l border-border/50 pl-3">
-                <p className="text-sm text-primary font-medium">Document Processing</p>
-                <p className="text-xs text-muted-foreground">Scan → Extract → Validate → Export</p>
-              </div>
+            <div className="flex items-center gap-4">
+              <img src={lucidDocsLogo} alt="LucidDocs AI" className="h-14 w-auto" />
             </div>
             <div className="flex items-center gap-2">
               {isAdmin && (
