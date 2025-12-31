@@ -171,6 +171,16 @@ serve(async (req) => {
     let baseUrl = fileboundUrl.replace(/\/$/, '');
     const authString = btoa(`${username}:${password}`);
 
+    const fetchWithTimeout = async (url: string, init: RequestInit = {}, timeoutMs = 25000) => {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(url, { ...init, signal: controller.signal });
+      } finally {
+        clearTimeout(id);
+      }
+    };
+
     // Some FileBound deployments are hosted under /FileBoundWebApi
     const baseCandidates = Array.from(
       new Set([
@@ -878,237 +888,83 @@ serve(async (req) => {
         // Convert bytes to standard array for Blob
         const byteArray = Array.from(bytes);
 
-        // 0) Try creating a Document resource first, then upload pages to it (common in some FileBound versions)
+        // 0) Preferred: DocumentBinaryData (official API) - create a new document in this File using raw bytes
         if (!uploaded) {
-          // Create document under file
-          const createDocBodies = [
-            { Name: doc.file_name || `document.${ext}`, Notes: doc.file_name || '' },
-            { Title: doc.file_name || `document.${ext}`, Notes: doc.file_name || '' },
-            { name: doc.file_name || `document.${ext}`, notes: doc.file_name || '' },
-          ];
-          const createDocEndpoints = [
-            { url: `${baseUrl}/api/files/${fileId}/documents`, method: 'POST' as const },
-            { url: `${baseUrl}/api/projects/${projectId}/files/${fileId}/documents`, method: 'POST' as const },
-          ];
+          const url = urlWithDivider(
+            `${baseUrl}/api/documentBinaryData/0?extension=${encodeURIComponent(ext)}&fileId=${encodeURIComponent(String(fileId))}`
+          );
 
-          let documentId: string | undefined;
-          outerCreate: for (const body of createDocBodies) {
-            for (const ep of createDocEndpoints) {
-              try {
-                const res = await fetch(ep.url, {
-                  method: ep.method,
-                  headers: {
-                    'Authorization': `Basic ${authString}`,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest'
-                  },
-                  body: JSON.stringify(body)
-                });
-                if (res.ok || res.status === 201) {
-                  // Try to get id from headers then body
-                  const loc = res.headers.get('Location') || res.headers.get('location');
-                  if (loc) {
-                    const m = loc.match(/documents\/(\d+|[a-f0-9-]+)$/i);
-                    if (m) { documentId = m[1]; break outerCreate; }
-                  }
-                  const txt = await res.text();
-                  try {
-                    const j = JSON.parse(txt);
-                    documentId = j.DocumentId ?? j.documentId ?? j.Id ?? j.id ?? j?.Data?.DocumentId;
-                    if (documentId) break outerCreate;
-                  } catch (_) {}
-                } else {
-                  const t = await res.text();
-                  lastError = { url: ep.url, status: res.status, details: (t || '').slice(0, 500) };
-                }
-              } catch (err: any) {
-                lastError = { url: ep.url, status: 0, details: err?.message };
-              }
-            }
-          }
+          try {
+            const res = await fetchWithTimeout(url, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Basic ${authString}`,
+                'Accept': 'application/json',
+                'Content-Type': contentType || 'application/octet-stream',
+              },
+              body: new Uint8Array(byteArray),
+            });
 
-          // If a document was created, try uploading its page content
-          if (documentId) {
-            const filename = doc.file_name || `document.${ext}`;
-            const blob = new Blob([new Uint8Array(byteArray)], { type: contentType || 'application/octet-stream' });
-            const pageFormFields = ['PageFile', 'file', 'document', 'upload', 'UploadedFile', 'File'];
-            const pageEndpoints = [
-              { url: `${baseUrl}/api/documents/${documentId}/pages`, method: 'POST' as const },
-              { url: `${baseUrl}/api/documents/${documentId}/upload`, method: 'POST' as const },
-            ];
-            pageUploadLoop: for (const ep of pageEndpoints) {
-              for (const field of pageFormFields) {
-                try {
-                  const fd = new FormData();
-                  fd.append(field, blob, filename);
-                  fd.append('FileName', filename);
-                  const res = await fetch(ep.url, {
-                    method: ep.method,
-                    headers: {
-                      'Authorization': `Basic ${authString}`,
-                      'Accept': 'application/json',
-                      'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: fd,
-                  });
-                  if (res.ok || res.status === 201) {
-                    const okJson = await res.json().catch(() => ({ success: true }));
-                    successes.push({ id: doc.id, result: okJson, fileId, documentId });
-                    uploaded = true;
-                    break pageUploadLoop;
-                  } else {
-                    const t = await res.text();
-                    lastError = { url: ep.url, status: res.status, details: (t || '').slice(0, 500) };
-                  }
-                } catch (err: any) {
-                  lastError = { url: ep.url, status: 0, details: err?.message };
-                }
-              }
+            if (res.ok || res.status === 201) {
+              const okJson = await res.json().catch(() => ({ success: true }));
+              successes.push({ id: doc.id, result: okJson, fileId });
+              uploaded = true;
+            } else {
+              const t = await res.text();
+              lastError = { url, status: res.status, details: (t || '').slice(0, 500) };
+              console.warn('FileBound DocumentBinaryData upload failed', lastError);
             }
+          } catch (err: any) {
+            lastError = { url, status: 0, details: err?.message || String(err) };
+            console.warn('FileBound DocumentBinaryData upload error', lastError);
           }
         }
 
-        // 1) Try multipart/form-data (commonly required by FileBound)
+        // 1) Fallback: DocumentUpload (multipart)
         if (!uploaded) {
-            const formEndpoints = [
-              { url: urlWithDivider(`${baseUrl}/api/documentUpload`), method: 'POST' as const },
-              // no version prefix
-              { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/document`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/pages`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/upload`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/document`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/documents`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/pages`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/documents/upload?fileId=${fileId}`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/documents?fileId=${fileId}`), method: 'POST' as const },
-              // v1
-              { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/document`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/documents`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/pages`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/upload`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v1/projects/${projectId}/files/${fileId}/documents`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v1/documents/upload?fileId=${fileId}`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v1/documents?fileId=${fileId}`), method: 'POST' as const },
-              // v2
-              { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/document`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/documents`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/pages`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/upload`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v2/projects/${projectId}/files/${fileId}/documents`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v2/documents/upload?fileId=${fileId}`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v2/documents?fileId=${fileId}`), method: 'POST' as const },
-              // PUT variants
-              { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'PUT' as const },
-              { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/pages`), method: 'PUT' as const },
-              { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/documents`), method: 'PUT' as const },
-              { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/pages`), method: 'PUT' as const },
-              { url: urlWithDivider(`${baseUrl}/api/documents?fileId=${fileId}`), method: 'PUT' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/documents`), method: 'PUT' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/pages`), method: 'PUT' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v1/projects/${projectId}/files/${fileId}/documents`), method: 'PUT' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v1/documents?fileId=${fileId}`), method: 'PUT' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/documents`), method: 'PUT' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/pages`), method: 'PUT' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v2/projects/${projectId}/files/${fileId}/documents`), method: 'PUT' as const },
-              { url: urlWithDivider(`${baseUrl}/api/v2/documents?fileId=${fileId}`), method: 'PUT' as const },
-            ];
+          const formEndpoints = [{ url: urlWithDivider(`${baseUrl}/api/documentUpload`), method: 'POST' as const }];
+
           for (const ep of formEndpoints) {
             try {
               const fd = new FormData();
               const filename = doc.file_name || `document.${ext}`;
               const blob = new Blob([new Uint8Array(byteArray)], { type: contentType || 'application/octet-stream' });
-              // Official field names per FileBound docs
+
               fd.append('documentToUpload', blob, filename);
-              fd.append('fileId', String(fileId)); // DocumentBinaryData
-              fd.append('fileid', String(fileId)); // DocumentUpload
+              fd.append('fileId', String(fileId));
+              fd.append('fileid', String(fileId));
               fd.append('extension', ext);
-              fd.append('id', '0'); // new document
-              fd.append('status', '1'); // active
-              // Also include common alternates for broader compatibility
-              fd.append('file', blob, filename);
-              fd.append('document', blob, filename);
-              fd.append('upload', blob, filename);
-              fd.append('UploadedFile', blob, filename);
-              fd.append('File', blob, filename);
-              fd.append('PageFile', blob, filename);
-              fd.append('page', blob, filename);
-              // Provide filename hints
+              fd.append('id', '0');
+              fd.append('status', '1');
               fd.append('FileName', filename);
-              fd.append('fileName', filename);
-              fd.append('name', filename);
-              const res = await fetch(ep.url, {
+
+              const res = await fetchWithTimeout(ep.url, {
                 method: ep.method,
                 headers: {
                   'Authorization': `Basic ${authString}`,
-                  'Accept': 'application/json'
-                  // Do not set Content-Type explicitly; let the browser set boundary
+                  'Accept': 'application/json',
                 },
                 body: fd,
               });
+
               if (res.ok || res.status === 201) {
                 console.log(`Multipart upload successful to ${ep.url}`);
                 const okJson = await res.json().catch(() => ({ success: true }));
                 successes.push({ id: doc.id, result: okJson, fileId });
                 uploaded = true;
                 break;
-              } else {
-                const t = await res.text();
-                lastError = { url: ep.url, status: res.status, details: (t || '').slice(0, 500) };
-                console.warn('FileBound multipart upload failed', lastError);
               }
+
+              const t = await res.text();
+              lastError = { url: ep.url, status: res.status, details: (t || '').slice(0, 500) };
+              console.warn('FileBound multipart upload failed', lastError);
             } catch (err: any) {
-              console.warn(`Multipart upload error to ${ep.url}:`, err.message);
+              lastError = { url: ep.url, status: 0, details: err?.message || String(err) };
+              console.warn('FileBound multipart upload error', lastError);
             }
           }
         }
 
-        // 2) Try raw binary upload
-        if (!uploaded) {
-          const uploadEndpoints = [
-            // no version prefix
-            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/document`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/pages`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/upload`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/document`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/documents`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/pages`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/documents/upload?fileId=${fileId}`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/documents?fileId=${fileId}`), method: 'POST' as const },
-            // v1
-            { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/document`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/documents`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/pages`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/upload`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v1/projects/${projectId}/files/${fileId}/documents`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v1/documents/upload?fileId=${fileId}`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v1/documents?fileId=${fileId}`), method: 'POST' as const },
-            // v2
-            { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/document`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/documents`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/pages`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/upload`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v2/projects/${projectId}/files/${fileId}/documents`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v2/documents/upload?fileId=${fileId}`), method: 'POST' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v2/documents?fileId=${fileId}`), method: 'POST' as const },
-            // PUT variants
-            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/documents`), method: 'PUT' as const },
-            { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/pages`), method: 'PUT' as const },
-            { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/documents`), method: 'PUT' as const },
-            { url: urlWithDivider(`${baseUrl}/api/projects/${projectId}/files/${fileId}/pages`), method: 'PUT' as const },
-            { url: urlWithDivider(`${baseUrl}/api/documents?fileId=${fileId}`), method: 'PUT' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/documents`), method: 'PUT' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v1/files/${fileId}/pages`), method: 'PUT' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v1/projects/${projectId}/files/${fileId}/documents`), method: 'PUT' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v1/documents?fileId=${fileId}`), method: 'PUT' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/documents`), method: 'PUT' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v2/files/${fileId}/pages`), method: 'PUT' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v2/projects/${projectId}/files/${fileId}/documents`), method: 'PUT' as const },
-            { url: urlWithDivider(`${baseUrl}/api/v2/documents?fileId=${fileId}`), method: 'PUT' as const },
-            // Avoid /api/documents/{id} as it's often for existing document resources
-          ];
           for (const ep of uploadEndpoints) {
             try {
               console.log(`Attempting binary upload to ${ep.url}`);
