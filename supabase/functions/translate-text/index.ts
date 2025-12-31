@@ -14,7 +14,18 @@ async function translateViaLovableAI(input: string): Promise<string> {
   const key = Deno.env.get("LOVABLE_API_KEY");
   if (!key) throw new Error("LOVABLE_API_KEY is not configured");
 
-  const system = "You detect the language of the user content. If it's already English, return it unchanged. If not English, translate to clear, natural English. Preserve numbers and names.";
+  const system = `You are an expert translator specializing in historical documents, OCR text, and multilingual content.
+
+Your task:
+1. Detect the source language(s) - the text may contain mixed languages (German, Latin, Dutch, etc.)
+2. Translate ALL non-English text into clear, modern English
+3. If text is already in English, keep it as-is
+4. For OCR errors or unclear words, infer the most likely meaning from context
+5. Preserve proper nouns, names, dates, and numbers
+6. Clean up any obvious OCR artifacts (random characters, broken words)
+7. Make the output readable and coherent
+
+Output ONLY the translated English text, nothing else. Do not add explanations or notes.`;
 
   const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
