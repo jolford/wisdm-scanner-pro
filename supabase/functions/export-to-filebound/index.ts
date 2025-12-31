@@ -441,12 +441,20 @@ serve(async (req) => {
               if (!Number.isNaN(idx) && idx >= 1 && idx <= 20) return idx;
             }
 
-            // Helpers
-            const normalizeKey = (s: string) =>
-              s
-                .toLowerCase()
-                .replace(/\b(number|no|#|total|amount|date|name)\b/g, '')
-                .replace(/[^a-z0-9]/g, '');
+             // Helpers
+             const normalizeKey = (s: string) => {
+               let t = s.toLowerCase();
+
+               // Common abbreviations / synonyms (helps match "Purchase Order Number" -> "PO Number")
+               t = t.replace(/purchase\s*order/g, 'po');
+               t = t.replace(/invoice\s*number/g, 'invoice');
+
+               t = t
+                 .replace(/\b(number|no|#|total|amount|date|name)\b/g, '')
+                 .trim();
+
+               return t.replace(/[^a-z0-9]/g, '');
+             };
 
             const fieldNameCandidates = (f: any): string[] => {
               const candidates = [
@@ -579,12 +587,13 @@ serve(async (req) => {
           
           console.log('Named fields array for FileBound:', JSON.stringify(namedFieldsArray));
 
-          // Build comprehensive notes including batch notes and document validation notes
-          const noteParts: string[] = [];
-          if (batchNotes) noteParts.push(`Batch: ${batchNotes}`);
-          if (doc.validation_notes) noteParts.push(`Document: ${doc.validation_notes}`);
-          if (!noteParts.length) noteParts.push(doc.file_name || '');
-          const combinedNotes = noteParts.join(' | ');
+           // Build comprehensive notes including batch name, batch notes, and document validation notes
+           const noteParts: string[] = [];
+           noteParts.push(`Batch Name: ${batch.batch_name}`);
+           noteParts.push(`Document ID: ${doc.id}`);
+           if (batchNotes) noteParts.push(`Batch Notes: ${batchNotes}`);
+           if (doc.validation_notes) noteParts.push(`Document Notes: ${doc.validation_notes}`);
+           const combinedNotes = noteParts.join(' | ');
 
           const fileBodies = [
             // Prefer F1-F20 format first (most FileBound instances actually persist these)
@@ -663,14 +672,13 @@ serve(async (req) => {
             return undefined;
           };
 
-          // Per FileBound API docs: PUT /api/files creates a new file
-          // The response body should contain the created file object with fileId
-          const createEndpoints = [
-            { url: `${baseUrl}/api/files`, method: 'PUT' as const },  // Primary documented endpoint
-            { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'PUT' as const },
-            { url: `${baseUrl}/api/files`, method: 'POST' as const },  // Fallback for older versions
-            { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'POST' as const },
-          ];
+           // FileBound instances differ: many treat PUT as update/upsert; prefer POST to force new files
+           const createEndpoints = [
+             { url: `${baseUrl}/api/files`, method: 'POST' as const },
+             { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'POST' as const },
+             { url: `${baseUrl}/api/files`, method: 'PUT' as const },
+             { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'PUT' as const },
+           ];
 
           // Helper to extract fileId from various response formats
           const extractFileId = (responseText: string, headers: Headers): string | undefined => {
