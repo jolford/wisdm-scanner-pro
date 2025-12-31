@@ -987,7 +987,7 @@ const Index = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={lucidDocsLogo} alt="LucidDocs AI" className="h-10 w-auto" />
+              <img src={lucidDocsLogo} alt="LucidDocs AI" className="h-12 w-auto rounded-lg" />
               <div className="border-l border-border/50 pl-3">
                 <h1 className="text-xl font-bold">LucidDocs AI</h1>
                 <p className="text-xs text-muted-foreground">Intelligent Document Processing</p>
