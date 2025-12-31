@@ -552,10 +552,10 @@ const AuthPage = () => {
 
   // Show MFA challenge if needed
   if (showMfaChallenge && mfaFactorId) {
-    return <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 flex items-center justify-center p-4 animate-in fade-in duration-500">
+    return <div className="min-h-screen bg-gradient-to-br from-[hsl(220,45%,8%)] via-[hsl(220,40%,12%)] to-[hsl(265,60%,15%)] flex items-center justify-center p-4 animate-in fade-in duration-500">
         <div className="w-full max-w-md animate-in slide-in-from-bottom-4 duration-700">
           <div className="text-center mb-6">
-            <img src={lucidDocsLogo} alt="LucidDocs AI" className="h-14 w-auto mx-auto mb-4 animate-in zoom-in duration-500" />
+            <img src={lucidDocsLogo} alt="LucidDocs AI" className="h-20 w-auto mx-auto mb-4 animate-in zoom-in duration-500 rounded-xl" />
           </div>
           <MFAChallenge factorId={mfaFactorId} onSuccess={async () => {
           const startingPage = await getUserStartingPage();
@@ -568,18 +568,12 @@ const AuthPage = () => {
         </div>
       </div>;
   }
-  return <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-500">
-      <Card className="w-full max-w-md p-4 sm:p-8 bg-card/95 backdrop-blur-xl shadow-2xl animate-in slide-in-from-bottom-4 duration-700 hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-shadow border-2">
+  return <div className="min-h-screen bg-gradient-to-br from-[hsl(220,45%,8%)] via-[hsl(220,40%,12%)] to-[hsl(265,60%,15%)] flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-500">
+      <Card className="w-full max-w-md p-4 sm:p-8 bg-card/98 backdrop-blur-xl shadow-2xl animate-in slide-in-from-bottom-4 duration-700 hover:shadow-[0_20px_50px_rgba(0,200,255,0.1)] transition-shadow border border-primary/20">
         <div className="text-center mb-6 sm:mb-8 animate-in zoom-in duration-500 demo-logo">
-          <div className="relative inline-block mb-3 sm:mb-4">
-            <img src={lucidDocsLogo} alt="LucidDocs AI" className="h-12 sm:h-14 w-auto mx-auto transition-transform hover:scale-110 duration-300" />
-            <div className="absolute -top-1 -right-1 animate-pulse">
-              <Sparkles className="h-4 w-4 text-primary" />
-            </div>
+          <div className="relative inline-block mb-4 sm:mb-5">
+            <img src={lucidDocsLogo} alt="LucidDocs AI" className="h-20 sm:h-24 w-auto mx-auto transition-transform hover:scale-105 duration-300 rounded-xl" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-            LucidDocs AI
-          </h1>
           <p className="text-muted-foreground text-sm">
             {isUpdatingPassword
               ? 'Enter your new password to finish resetting your account.'
