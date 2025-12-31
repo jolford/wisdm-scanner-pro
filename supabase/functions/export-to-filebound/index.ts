@@ -577,20 +577,23 @@ serve(async (req) => {
           const combinedNotes = noteParts.join(' | ');
 
           const fileBodies = [
-            // Try with actual field names first (most likely to work)
-            { ProjectId: projectId, IndexFields: namedFieldsArray, Notes: combinedNotes },
-            { ProjectId: projectId, IndexFields: indexFields, Notes: combinedNotes },
-            { projectId, indexFields: indexFields, notes: combinedNotes },
-            // Then try with F1-F20 format
-            { field: fieldsArray, notes: combinedNotes, projectId },
+            // Prefer F1-F20 format first (most FileBound instances actually persist these)
             { Field: fieldsArray, Notes: combinedNotes, ProjectId: projectId },
+            { field: fieldsArray, notes: combinedNotes, projectId },
             { ProjectId: projectId, Fields: fieldsSlice, Notes: combinedNotes },
+            { projectId, field: fieldsSlice, notes: combinedNotes },
+
+            // Then try named/indexed formats (some instances support these)
             { ProjectId: projectId, IndexFields: fieldsObj, Notes: combinedNotes },
             { ProjectId: projectId, IndexFields: indexArrayByNumber, Notes: combinedNotes },
             { ProjectId: projectId, IndexFields: indexArrayByFieldNumber, Notes: combinedNotes },
             { ProjectId: projectId, IndexFields: indexArrayByName, Notes: combinedNotes },
             { projectId, indexFields: fieldsObj, notes: combinedNotes },
-            { projectId, field: fieldsSlice, notes: combinedNotes },
+
+            // Last: try with actual field names
+            { ProjectId: projectId, IndexFields: namedFieldsArray, Notes: combinedNotes },
+            { ProjectId: projectId, IndexFields: indexFields, Notes: combinedNotes },
+            { projectId, indexFields: indexFields, notes: combinedNotes },
           ];
 
           // Helper: find a file by index fields using FileBound filter syntax
@@ -732,19 +735,14 @@ serve(async (req) => {
                     return String(fid);
                   }
                   
-                  // Fallback: search for file by index fields if API didn't return id
-                  console.log('FileBound returned success but no fileId, searching for created file...');
-                  const altId = await findFileByFields();
-                  if (altId) {
-                    console.log(`Found file via search: fileId=${altId}`);
-                    return String(altId);
-                  }
-                  
-                  console.warn('FileBound create file: success response without id', { 
-                    endpoint: ep, 
+                  console.warn('FileBound create file: success response without id', {
+                    endpoint: ep,
                     status: res.status,
                     responsePreview: responseText.slice(0, 500)
                   });
+                  // Do NOT attempt to search for an existing file; we want one new FileBound file per exported document.
+                  // Continue trying other payloads/endpoints.
+                  continue;
                 } else {
                   console.warn('FileBound create file failed', { 
                     endpoint: ep, 
@@ -798,12 +796,9 @@ serve(async (req) => {
                     return String(fid);
                   }
                   
-                  // Try search fallback
-                  const altId = await findFileByFields();
-                  if (altId) {
-                    console.log(`Found file via search after legacy create: fileId=${altId}`);
-                    return String(altId);
-                  }
+                  // Do NOT attempt to search for an existing file; we want one new FileBound file per exported document.
+                  // Continue trying other payloads/endpoints.
+                  continue;
                 } else {
                   console.warn('FileBound legacy create file failed', { 
                     endpoint: ep, 
@@ -977,9 +972,6 @@ serve(async (req) => {
         // 1) Try multipart/form-data (commonly required by FileBound)
         if (!uploaded) {
             const formEndpoints = [
-              // Direct, documented upload endpoints
-              { url: urlWithDivider(`${baseUrl}/api/documentBinaryData/0?extension=${ext}&fileId=${fileId}`), method: 'POST' as const },
-              { url: urlWithDivider(`${baseUrl}/api/DocumentBinaryData/0?extension=${ext}&fileId=${fileId}`), method: 'POST' as const },
               { url: urlWithDivider(`${baseUrl}/api/documentUpload`), method: 'POST' as const },
               // no version prefix
               { url: urlWithDivider(`${baseUrl}/api/files/${fileId}/document`), method: 'POST' as const },
@@ -1296,8 +1288,8 @@ serve(async (req) => {
       })
       .eq('id', batchId);
 
-    // Auto-delete batch and documents after successful export
-    if (successes.length > 0) {
+    // Auto-delete batch and documents after successful export (opt-in)
+    if (successes.length > 0 && fileboundConfig?.autoDeleteAfterExport === true) {
       await supabase
         .from('documents')
         .delete()
