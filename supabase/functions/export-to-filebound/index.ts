@@ -490,53 +490,113 @@ serve(async (req) => {
             return undefined;
           };
 
+          // Per FileBound API docs: PUT /api/files creates a new file
+          // The response body should contain the created file object with fileId
           const createEndpoints = [
+            { url: `${baseUrl}/api/files`, method: 'PUT' as const },  // Primary documented endpoint
             { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'PUT' as const },
+            { url: `${baseUrl}/api/files`, method: 'POST' as const },  // Fallback for older versions
             { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'POST' as const },
-            { url: `${baseUrl}/api/files`, method: 'PUT' as const },
-            { url: `${baseUrl}/api/files`, method: 'POST' as const },
           ];
+
+          // Helper to extract fileId from various response formats
+          const extractFileId = (responseText: string, headers: Headers): string | undefined => {
+            // Check headers first
+            const headerKeys = ['Location', 'Content-Location', 'X-Entity-Id', 'EntityId', 'X-Resource-Id', 'X-File-Id'];
+            for (const hk of headerKeys) {
+              const hv = headers.get(hk) || headers.get(hk.toLowerCase());
+              if (hv) {
+                const m = hv.match(/(?:files|documents)\/(\d+|[a-f0-9-]+)$/i) || hv.match(/(\d+|[a-f0-9-]+)$/i);
+                if (m) return m[1];
+              }
+            }
+            
+            // Parse response body
+            if (!responseText || responseText.trim() === '') return undefined;
+            
+            try {
+              const j = JSON.parse(responseText);
+              
+              // Try all known property names for file ID
+              const candidates = [
+                j?.fileId, j?.FileId, j?.fileid, j?.FILEID,
+                j?.id, j?.Id, j?.ID,
+                j?.Data?.FileId, j?.Data?.fileId, j?.Data?.id, j?.Data?.Id,
+                j?.Result?.FileId, j?.Result?.fileId, j?.Result?.id, j?.Result?.Id,
+                j?.data?.fileId, j?.data?.id,
+                j?.result?.fileId, j?.result?.id
+              ];
+              
+              for (const candidate of candidates) {
+                if (candidate !== undefined && candidate !== null && candidate !== '') {
+                  return String(candidate);
+                }
+              }
+              
+              // If response is just a number, use it as the ID
+              if (typeof j === 'number') return String(j);
+              if (typeof j === 'string' && /^\d+$/.test(j)) return j;
+              
+            } catch {
+              // Try regex fallback
+              const m2 = responseText.match(/(?:fileId|FileId|fileid)["\s:]*["\s]*(\d+)/i);
+              if (m2) return m2[1];
+              
+              // If response is just a number
+              if (/^\d+$/.test(responseText.trim())) return responseText.trim();
+            }
+            
+            return undefined;
+          };
 
           for (const body of fileBodies) {
             for (const ep of createEndpoints) {
-              const res = await fetch(ep.url, {
-                method: ep.method,
-                headers: {
-                  'Authorization': `Basic ${authString}`,
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json'
-                },
-                body: JSON.stringify(body)
-              });
-              if (res.ok || res.status === 201) {
-                let fid: string | undefined;
-                // Some instances return identifiers via headers
-                const headerKeys = ['Location', 'Content-Location', 'X-Entity-Id', 'EntityId', 'X-Resource-Id'];
-                for (const hk of headerKeys) {
-                  const hv = res.headers.get(hk) || res.headers.get(hk.toLowerCase());
-                  if (hv && !fid) {
-                    const m = hv.match(/(?:files|documents)\/(\d+|[a-f0-9-]+)$/i) || hv.match(/(\d+|[a-f0-9-]+)$/i);
-                    if (m) fid = m[1];
+              try {
+                console.log(`Trying to create FileBound file: ${ep.method} ${ep.url}`);
+                const res = await fetch(ep.url, {
+                  method: ep.method,
+                  headers: {
+                    'Authorization': `Basic ${authString}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                  },
+                  body: JSON.stringify(body)
+                });
+                
+                const responseText = await res.text();
+                
+                if (res.ok || res.status === 201) {
+                  const fid = extractFileId(responseText, res.headers);
+                  if (fid) {
+                    console.log(`FileBound file created successfully: fileId=${fid}`);
+                    return String(fid);
                   }
-                }
-                if (!fid) {
-                  const txt = await res.text();
-                  try {
-                    const j = JSON.parse(txt);
-                    fid = j.FileId ?? j.fileId ?? j.Id ?? j.id ?? j?.Data?.FileId ?? j?.Data?.fileId ?? j?.Result?.FileId ?? j?.Result?.Id;
-                  } catch {
-                    const m2 = (txt || '').match(/(?:FileId|Id)[^\d]*(\d+)/i);
-                    if (m2) fid = m2[1];
+                  
+                  // Fallback: search for file by index fields if API didn't return id
+                  console.log('FileBound returned success but no fileId, searching for created file...');
+                  const altId = await findFileByFields();
+                  if (altId) {
+                    console.log(`Found file via search: fileId=${altId}`);
+                    return String(altId);
                   }
+                  
+                  console.warn('FileBound create file: success response without id', { 
+                    endpoint: ep, 
+                    status: res.status,
+                    responsePreview: responseText.slice(0, 500)
+                  });
+                } else {
+                  console.warn('FileBound create file failed', { 
+                    endpoint: ep, 
+                    status: res.status, 
+                    body: responseText.slice(0, 500) 
+                  });
                 }
-                if (fid) return String(fid);
-                // Fallback: search for file by index fields if API didn't return id
-                const altId = await findFileByFields();
-                if (altId) return String(altId);
-                console.warn('FileBound create file: success response without id', { endpoint: ep, status: res.status });
-              } else {
-                const t = await res.text();
-                console.warn('FileBound create file failed', { endpoint: ep, status: res.status, body: (t || '').slice(0, 500) });
+              } catch (err: any) {
+                console.warn('FileBound create file exception', { 
+                  endpoint: ep, 
+                  error: err?.message || String(err) 
+                });
               }
             }
           }
@@ -551,35 +611,51 @@ serve(async (req) => {
             }
           ];
           const legacyEndpoints = [
+            { url: `${baseUrl}/api/files`, method: 'PUT' as const },  // Primary per docs
             { url: `${baseUrl}/api/projects/${projectId}/files`, method: 'PUT' as const },
-            { url: `${baseUrl}/api/files`, method: 'PUT' as const },
           ];
+          
           for (const body of legacyBodies) {
             for (const ep of legacyEndpoints) {
-              const res = await fetch(ep.url, {
-                method: ep.method,
-                headers: {
-                  'Authorization': `Basic ${authString}`,
-                  'Content-Type': 'application/json',
-                  'Accept': 'application/json'
-                },
-                body: JSON.stringify(body)
-              });
-              if (res.ok) {
-                let fid: string | undefined;
-                const loc = res.headers.get('Location') || res.headers.get('location');
-                if (loc) {
-                  const m = loc.match(/files\/(\d+|[a-f0-9-]+)$/i);
-                  if (m) fid = m[1];
+              try {
+                console.log(`Trying legacy FileBound file creation: ${ep.method} ${ep.url}`);
+                const res = await fetch(ep.url, {
+                  method: ep.method,
+                  headers: {
+                    'Authorization': `Basic ${authString}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                  },
+                  body: JSON.stringify(body)
+                });
+                
+                const responseText = await res.text();
+                
+                if (res.ok) {
+                  const fid = extractFileId(responseText, res.headers);
+                  if (fid) {
+                    console.log(`FileBound file created via legacy endpoint: fileId=${fid}`);
+                    return String(fid);
+                  }
+                  
+                  // Try search fallback
+                  const altId = await findFileByFields();
+                  if (altId) {
+                    console.log(`Found file via search after legacy create: fileId=${altId}`);
+                    return String(altId);
+                  }
+                } else {
+                  console.warn('FileBound legacy create file failed', { 
+                    endpoint: ep, 
+                    status: res.status,
+                    body: responseText.slice(0, 300) 
+                  });
                 }
-                if (!fid) {
-                  const j = await res.json().catch(() => ({}));
-                  fid = j.FileId ?? j.Id ?? j.fileId ?? j.id;
-                }
-                if (fid) return String(fid);
-              } else {
-                const t = await res.text();
-                console.warn('FileBound legacy create file failed', ep, (t || '').slice(0, 300));
+              } catch (err: any) {
+                console.warn('FileBound legacy create exception', { 
+                  endpoint: ep, 
+                  error: err?.message || String(err) 
+                });
               }
             }
           }
