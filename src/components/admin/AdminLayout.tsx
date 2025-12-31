@@ -29,7 +29,7 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
                   <SidebarTrigger aria-label="Toggle navigation menu">
                     <Menu className="h-5 w-5" />
                   </SidebarTrigger>
-                  <img src={lucidDocsLogo} alt="LucidDocs AI Document Processing" className="h-6 w-auto dark:bg-white dark:p-1.5 dark:rounded-md" />
+                  <img src={lucidDocsLogo} alt="LucidDocs AI Document Processing" className="h-10 w-auto" />
                   <div>
                     <h1 className="text-xl font-bold">{title}</h1>
                     {description && (
