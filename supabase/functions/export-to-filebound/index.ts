@@ -127,9 +127,9 @@ serve(async (req) => {
     // Validate URL to prevent SSRF attacks
     try {
       validateExternalUrl(fileboundConfig.url);
-    } catch (error: any) {
+    } catch (error) {
       return new Response(
-        JSON.stringify({ success: false, error: `Invalid Filebound URL: ${error.message}` }),
+        JSON.stringify({ success: false, error: `Invalid Filebound URL: ${(error as any)?.message}` }),
         { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -760,12 +760,12 @@ serve(async (req) => {
                     body: responseText.slice(0, 500) 
                   });
                 }
-              } catch (err: any) {
-                console.warn('FileBound create file exception', { 
-                  endpoint: ep, 
-                  error: err?.message || String(err) 
-                });
-              }
+                } catch (err) {
+                  console.warn('FileBound create file exception', { 
+                    endpoint: ep, 
+                    error: (err as any)?.message || String(err) 
+                  });
+                }
             }
           }
 
@@ -816,12 +816,12 @@ serve(async (req) => {
                     body: responseText.slice(0, 300) 
                   });
                 }
-              } catch (err: any) {
-                console.warn('FileBound legacy create exception', { 
-                  endpoint: ep, 
-                  error: err?.message || String(err) 
-                });
-              }
+                } catch (err) {
+                  console.warn('FileBound legacy create exception', { 
+                    endpoint: ep, 
+                    error: (err as any)?.message || String(err) 
+                  });
+                }
             }
           }
 
@@ -914,8 +914,8 @@ serve(async (req) => {
               lastError = { url, status: res.status, details: (t || '').slice(0, 500) };
               console.warn('FileBound DocumentBinaryData upload failed', lastError);
             }
-          } catch (err: any) {
-            lastError = { url, status: 0, details: err?.message || String(err) };
+          } catch (err) {
+            lastError = { url, status: 0, details: (err as any)?.message || String(err) };
             console.warn('FileBound DocumentBinaryData upload error', lastError);
           }
         }
@@ -958,43 +958,15 @@ serve(async (req) => {
               const t = await res.text();
               lastError = { url: ep.url, status: res.status, details: (t || '').slice(0, 500) };
               console.warn('FileBound multipart upload failed', lastError);
-            } catch (err: any) {
-              lastError = { url: ep.url, status: 0, details: err?.message || String(err) };
+            } catch (err) {
+              lastError = { url: ep.url, status: 0, details: (err as any)?.message || String(err) };
               console.warn('FileBound multipart upload error', lastError);
             }
           }
         }
 
-          for (const ep of uploadEndpoints) {
-            try {
-              console.log(`Attempting binary upload to ${ep.url}`);
-              const blob = new Blob([new Uint8Array(byteArray)], { type: contentType || 'application/octet-stream' });
-              const res = await fetch(ep.url, {
-                method: ep.method,
-                headers: {
-                  'Authorization': `Basic ${authString}`,
-                  'Accept': 'application/json',
-                  'Content-Type': contentType || 'application/octet-stream',
-                  'Content-Disposition': `attachment; filename="${doc.file_name}"`,
-                },
-                body: blob
-              });
-              if (res.ok || res.status === 201) {
-                console.log(`Binary upload successful to ${ep.url}`);
-                const okJson = await res.json().catch(() => ({ success: true }));
-                successes.push({ id: doc.id, result: okJson, fileId });
-                uploaded = true;
-                break;
-              } else {
-                const t = await res.text();
-                lastError = { url: ep.url, status: res.status, details: (t || '').slice(0, 500) };
-                console.warn('FileBound binary upload failed', lastError);
-              }
-            } catch (err: any) {
-              console.warn(`Binary upload error to ${ep.url}:`, err.message);
-            }
-          }
-        }
+        // 2) (Removed) legacy binary upload loop (was causing mismatched braces / build failures)
+
 
         // 3) If still failing, try JSON with base64
         if (!uploaded) {
@@ -1044,11 +1016,11 @@ serve(async (req) => {
               try {
                 const res = await fetch(ep.url, {
                   method: ep.method,
-                    headers: {
-                      'Authorization': `Basic ${authString}`,
-                      'Accept': 'application/json',
-                      'Content-Type': 'application/json',
-                    },
+                  headers: {
+                    'Authorization': `Basic ${authString}`,
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                  },
                   body: JSON.stringify(body)
                 });
                 if (res.ok || res.status === 201) {
@@ -1056,11 +1028,11 @@ serve(async (req) => {
                   const okJson = await res.json().catch(() => ({ success: true }));
                   successes.push({ id: doc.id, result: okJson, fileId });
                   uploaded = true;
-                  
+
                   // Insert separator/divider if configured and document type changes
                   const currentIndex = documents.indexOf(doc);
                   const nextDoc = documents[currentIndex + 1];
-                  
+
                   if (exportSeparators && nextDoc && doc.document_type !== nextDoc.document_type) {
                     try {
                       // Create a separator document in FileBound
@@ -1071,7 +1043,7 @@ serve(async (req) => {
                         Notes: `--- Document Type Change: ${doc.document_type || 'Unknown'} to ${nextDoc.document_type || 'Unknown'} ---`,
                         IsSeparator: true
                       };
-                      
+
                       await fetch(`${baseUrl}/api/files/${fileId}/documents`, {
                         method: 'POST',
                         headers: {
@@ -1081,21 +1053,21 @@ serve(async (req) => {
                         },
                         body: JSON.stringify(separatorPayload)
                       });
-                      
+
                       console.log('Separator inserted between document types');
                     } catch (sepError) {
                       console.warn('Failed to insert separator:', sepError);
                     }
                   }
-                  
+
                   break;
                 } else {
                   const t = await res.text();
                   lastError = { url: ep.url, status: res.status, details: (t || '').slice(0, 500) };
                   console.warn('FileBound JSON upload failed', lastError);
                 }
-              } catch (err: any) {
-                console.warn(`JSON upload error to ${ep.url}:`, err.message);
+              } catch (err) {
+                console.warn(`JSON upload error to ${ep.url}:`, (err as any)?.message || String(err));
               }
             }
             if (uploaded) break;
@@ -1106,9 +1078,9 @@ serve(async (req) => {
         if (!uploaded) {
           failures.push({ id: doc.id, error: 'Upload failed', ...lastError });
         }
-      } catch (e: any) {
-        console.warn('Export error for document', { id: doc.id, url: doc.redacted_file_url || doc.file_url, message: e?.message });
-        failures.push({ id: doc.id, error: e?.message || String(e) });
+      } catch (e) {
+        console.warn('Export error for document', { id: doc.id, url: doc.redacted_file_url || doc.file_url, message: (e as any)?.message });
+        failures.push({ id: doc.id, error: (e as any)?.message || String(e) });
       }
     }
 
@@ -1168,13 +1140,13 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error exporting to Filebound:', error);
 
     return new Response(
       JSON.stringify({
         success: false,
-        error: error?.message || 'Failed to export to FileBound. Please try again.',
+        error: (error as any)?.message || 'Failed to export to FileBound. Please try again.',
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
