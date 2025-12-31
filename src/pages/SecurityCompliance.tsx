@@ -2,7 +2,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Shield, Lock, Database, Server, CheckCircle2, AlertCircle, Download } from "lucide-react";
-import wisdmLogo from "@/assets/wisdm-logo.png";
+import lucidDocsLogo from "@/assets/luciddocs-logo.png";
 import jsPDF from "jspdf";
 import { useToast } from "@/hooks/use-toast";
 
@@ -96,9 +96,9 @@ export default function SecurityCompliance() {
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-4">
-              <img src={wisdmLogo} alt="WISDM Logo" className="h-12 w-auto" />
+              <img src={lucidDocsLogo} alt="LucidDocs AI" className="h-12 w-auto" />
               <div>
-                <h1 className="text-4xl font-bold">WISDM Capture PRO</h1>
+                <h1 className="text-4xl font-bold">LucidDocs AI</h1>
                 <p className="text-lg text-muted-foreground">Security Compliance & Standards</p>
               </div>
             </div>
