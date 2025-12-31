@@ -10,82 +10,82 @@ All colors MUST be HSL.
   /* Force light mode on all devices */
   :root {
     color-scheme: light only;
-    /* LucidDocs AI - Dark navy base with cyan/purple accents */
-    --background: 220 25% 97%;
-    --foreground: 220 40% 13%;
+    /* LucidDocs AI - Dark navy base with cyan/purple accents (like logo background) */
+    --background: 222 47% 11%;
+    --foreground: 210 40% 96%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 40% 13%;
+    --card: 220 40% 13%;
+    --card-foreground: 210 40% 96%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 40% 13%;
+    --popover: 220 40% 13%;
+    --popover-foreground: 210 40% 96%;
 
     /* Bright cyan primary - matches logo */
-    --primary: 187 100% 42%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 187 100% 48%;
+    --primary-foreground: 222 47% 11%;
 
-    --secondary: 220 25% 94%;
-    --secondary-foreground: 220 40% 13%;
+    --secondary: 220 35% 18%;
+    --secondary-foreground: 210 40% 96%;
 
-    --muted: 220 20% 92%;
-    --muted-foreground: 220 15% 46%;
+    --muted: 220 35% 16%;
+    --muted-foreground: 220 20% 65%;
 
     /* Purple/violet accent - matches logo gradient */
-    --accent: 265 85% 58%;
+    --accent: 265 85% 60%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 20% 88%;
-    --input: 220 20% 88%;
-    --ring: 187 100% 42%;
+    --border: 220 35% 22%;
+    --input: 220 35% 22%;
+    --ring: 187 100% 48%;
 
     --radius: 0.75rem;
     
     /* Enhanced Status Colors */
-    --success: 152 76% 40%;
+    --success: 152 76% 45%;
     --success-foreground: 0 0% 100%;
-    --success-light: 152 76% 94%;
+    --success-light: 152 50% 18%;
     
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
-    --warning-light: 38 92% 95%;
+    --warning-light: 38 70% 18%;
     
-    --info: 187 100% 42%;
+    --info: 187 100% 48%;
     --info-foreground: 0 0% 100%;
-    --info-light: 187 100% 94%;
+    --info-light: 187 80% 15%;
     
-    --processing: 265 85% 58%;
+    --processing: 265 85% 60%;
     --processing-foreground: 0 0% 100%;
-    --processing-light: 265 85% 94%;
+    --processing-light: 265 60% 18%;
     
     /* Gradients - Cyan to Purple (matches logo) */
-    --gradient-primary: linear-gradient(135deg, hsl(187 100% 42%) 0%, hsl(265 85% 58%) 100%);
-    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 25% 97%) 100%);
-    --gradient-success: linear-gradient(135deg, hsl(152 76% 40%) 0%, hsl(152 76% 32%) 100%);
+    --gradient-primary: linear-gradient(135deg, hsl(187 100% 48%) 0%, hsl(265 85% 60%) 100%);
+    --gradient-subtle: linear-gradient(180deg, hsl(220 40% 13%) 0%, hsl(222 47% 11%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(152 76% 45%) 0%, hsl(152 76% 35%) 100%);
     --gradient-warning: linear-gradient(135deg, hsl(38 92% 50%) 0%, hsl(38 92% 40%) 100%);
     
-    /* Shadows with cyan tint */
-    --shadow-xs: 0 1px 2px 0 hsl(220 40% 13% / 0.04);
-    --shadow-sm: 0 1px 3px 0 hsl(220 40% 13% / 0.08), 0 1px 2px -1px hsl(220 40% 13% / 0.06);
-    --shadow-md: 0 4px 6px -1px hsl(220 40% 13% / 0.08), 0 2px 4px -2px hsl(220 40% 13% / 0.06);
-    --shadow-lg: 0 10px 15px -3px hsl(220 40% 13% / 0.1), 0 4px 6px -4px hsl(220 40% 13% / 0.08);
-    --shadow-xl: 0 20px 25px -5px hsl(220 40% 13% / 0.12), 0 8px 10px -6px hsl(220 40% 13% / 0.08);
+    /* Shadows with dark base */
+    --shadow-xs: 0 1px 2px 0 hsl(0 0% 0% / 0.3);
+    --shadow-sm: 0 1px 3px 0 hsl(0 0% 0% / 0.4), 0 1px 2px -1px hsl(0 0% 0% / 0.3);
+    --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.5), 0 2px 4px -2px hsl(0 0% 0% / 0.4);
+    --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.6), 0 4px 6px -4px hsl(0 0% 0% / 0.5);
+    --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.7), 0 8px 10px -6px hsl(0 0% 0% / 0.6);
     
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 
-    --sidebar-background: 220 30% 10%;
-    --sidebar-foreground: 220 15% 90%;
-    --sidebar-primary: 187 100% 45%;
-    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-background: 220 50% 8%;
+    --sidebar-foreground: 210 30% 92%;
+    --sidebar-primary: 187 100% 48%;
+    --sidebar-primary-foreground: 222 47% 11%;
     --sidebar-accent: 265 60% 25%;
     --sidebar-accent-foreground: 265 85% 85%;
-    --sidebar-border: 220 25% 18%;
-    --sidebar-ring: 187 100% 42%;
+    --sidebar-border: 220 35% 18%;
+    --sidebar-ring: 187 100% 48%;
   }
 
   .dark {
