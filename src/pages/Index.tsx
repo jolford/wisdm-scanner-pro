@@ -17,7 +17,7 @@ import { LicenseWarning } from '@/components/LicenseWarning';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { useLicense } from '@/hooks/use-license';
-import lucidDocsLogo from '@/assets/luciddocs-logo-dark.png';
+import lucidDocsLogo from '@/assets/luciddocs-logo.png';
 import { useQuery } from '@tanstack/react-query';
 import { applyDocumentNamingPattern } from '@/lib/document-naming';
 import imageCompression from 'browser-image-compression';
@@ -986,8 +986,8 @@ const Index = () => {
       <header className="border-b border-border/50 backdrop-blur-sm sticky top-0 z-10 bg-background/80">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <img src={lucidDocsLogo} alt="LucidDocs AI" className="h-14 w-auto" />
+            <div className="flex items-center">
+              <img src={lucidDocsLogo} alt="LucidDocs AI" className="h-12 w-auto" />
             </div>
             <div className="flex items-center gap-2">
               {isAdmin && (
