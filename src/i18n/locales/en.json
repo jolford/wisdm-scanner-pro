@@ -139,6 +139,14 @@
     "spanish": "Spanish",
     "french": "French",
     "german": "German",
+    "portuguese": "Portuguese",
+    "italian": "Italian",
+    "chinese": "Chinese",
+    "japanese": "Japanese",
+    "korean": "Korean",
+    "arabic": "Arabic",
+    "russian": "Russian",
+    "dutch": "Dutch",
     "selectLanguage": "Select Language"
   },
   "exceptions": {
