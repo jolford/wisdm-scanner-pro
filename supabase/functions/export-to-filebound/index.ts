@@ -212,8 +212,13 @@ serve(async (req) => {
     const fieldMappings = (fileboundConfig.fieldMappings || {}) as Record<string, string>;
     const batchCustomFields = (batch.metadata as any)?.custom_fields || {};
     
+    console.log('FileBound export - field mappings configured:', JSON.stringify(fieldMappings));
+    
     const buildIndexFields = (doc: any) => {
       const out: Record<string, any> = {};
+      const extractedMetadata = doc.extracted_metadata || {};
+      
+      console.log('Document extracted metadata:', JSON.stringify(extractedMetadata));
       
       // Add batch-level custom fields first
       for (const [batchField, batchValue] of Object.entries(batchCustomFields)) {
@@ -227,15 +232,33 @@ serve(async (req) => {
         }
       }
       
-      // Add document-level extracted fields
+      // Add document-level extracted fields using fieldMappings
       for (const [localField, ecmField] of Object.entries(fieldMappings)) {
         if (!ecmField) continue;
-        const val = (doc.extracted_metadata || {})[localField];
-        if (val !== undefined && val !== null && val !== '') out[ecmField] = val;
+        const val = extractedMetadata[localField];
+        console.log(`Field mapping: ${localField} -> ${ecmField}, value: ${val}`);
+        if (val !== undefined && val !== null && val !== '') {
+          out[ecmField] = val;
+        }
+      }
+      
+      // Also include any extracted fields that might not be in fieldMappings (direct passthrough)
+      // This handles cases where users want to export all metadata
+      if (Object.keys(fieldMappings).length === 0) {
+        // No explicit mappings - export all extracted fields with original names
+        for (const [field, value] of Object.entries(extractedMetadata)) {
+          // Skip internal calculation fields
+          if (field.startsWith('_')) continue;
+          if (value !== undefined && value !== null && value !== '') {
+            out[field] = value;
+          }
+        }
       }
       
       // Always include batch name
       out['Batch Name'] = batch.batch_name;
+      
+      console.log('Built index fields for export:', JSON.stringify(out));
       
       return out;
     };
@@ -362,9 +385,19 @@ serve(async (req) => {
               }
             });
             if (fieldsRes.ok) {
-              projectFields = await fieldsRes.json().catch(() => []);
+              const fieldsData = await fieldsRes.json().catch(() => []);
+              // Handle different response formats
+              projectFields = Array.isArray(fieldsData) ? fieldsData : 
+                             (Array.isArray(fieldsData?.Data) ? fieldsData.Data : 
+                             (Array.isArray(fieldsData?.data) ? fieldsData.data : []));
+              console.log('FileBound project fields retrieved:', JSON.stringify(projectFields));
+            } else {
+              const errText = await fieldsRes.text();
+              console.warn('Failed to fetch FileBound project fields:', fieldsRes.status, errText.slice(0, 200));
             }
-          } catch (_) {}
+          } catch (e) {
+            console.warn('Exception fetching FileBound project fields:', (e as any)?.message);
+          }
 
           // 2) Convert our indexFields object to FileBound "field" array (index 1..20)
           const fieldsArray: string[] = new Array(21).fill("");
@@ -372,36 +405,76 @@ serve(async (req) => {
           fieldsArray[0] = 'not used - ignore';
 
           const getIndexFromName = (name: string): number | undefined => {
+            const normalizedName = name.trim().toLowerCase();
+            
             // Accept F1/F2/... direct mapping
             const m = /^F(\d{1,2})$/i.exec(name.trim());
             if (m) {
               const idx = parseInt(m[1], 10);
               if (!Number.isNaN(idx) && idx >= 1 && idx <= 20) return idx;
             }
+            
             // Try to locate by field name in project fields metadata
             const match = projectFields.find((f: any) => {
-              const candidates = [f?.Name, f?.name, f?.FieldName, f?.fieldName, f?.DisplayName, f?.displayName];
-              return candidates.some((n: any) => typeof n === 'string' && n.toLowerCase() === name.toLowerCase());
+              // Check all possible name properties
+              const candidates = [
+                f?.Name, f?.name, f?.FieldName, f?.fieldName, 
+                f?.DisplayName, f?.displayName, f?.Label, f?.label,
+                f?.Caption, f?.caption, f?.Title, f?.title
+              ];
+              return candidates.some((n: any) => 
+                typeof n === 'string' && n.toLowerCase() === normalizedName
+              );
             });
+            
             if (match) {
-              const possibleIdx = match?.FieldNumber ?? match?.fieldNumber ?? match?.Index ?? match?.index ?? match?.Number ?? match?.number;
-              if (typeof possibleIdx === 'number') return possibleIdx;
+              // Try multiple properties for the field index
+              const possibleIdx = match?.FieldNumber ?? match?.fieldNumber ?? 
+                                 match?.Index ?? match?.index ?? 
+                                 match?.Number ?? match?.number ??
+                                 match?.FieldIndex ?? match?.fieldIndex ??
+                                 match?.Position ?? match?.position ??
+                                 match?.Ordinal ?? match?.ordinal;
+              if (typeof possibleIdx === 'number' && possibleIdx >= 1 && possibleIdx <= 20) {
+                console.log(`Field "${name}" matched to index ${possibleIdx} via project fields`);
+                return possibleIdx;
+              }
               // Some APIs return F# as Key
-              const key = match?.Key ?? match?.key;
+              const key = match?.Key ?? match?.key ?? match?.Id ?? match?.id;
               if (typeof key === 'string') {
                 const km = /^F(\d{1,2})$/i.exec(key);
-                if (km) return parseInt(km[1], 10);
+                if (km) {
+                  const idx = parseInt(km[1], 10);
+                  console.log(`Field "${name}" matched to index ${idx} via key`);
+                  return idx;
+                }
               }
+              // If we found a match but couldn't get the index, log it
+              console.warn(`Field "${name}" found in project fields but couldn't determine index:`, JSON.stringify(match));
+            } else {
+              console.warn(`Field "${name}" not found in project fields`);
             }
             return undefined;
           };
 
+          // Map each index field to the appropriate F1-F20 slot
+          let mappedCount = 0;
+          let unmappedFields: string[] = [];
+          
           for (const [ecmField, valueRaw] of Object.entries(indexFields)) {
             const value = valueRaw as any;
             if (value === undefined || value === null || value === '') continue;
             const idx = getIndexFromName(String(ecmField));
-            if (idx !== undefined) fieldsArray[idx] = String(value);
+            if (idx !== undefined) {
+              fieldsArray[idx] = String(value);
+              mappedCount++;
+            } else {
+              unmappedFields.push(ecmField);
+            }
           }
+          
+          console.log(`Field mapping complete: ${mappedCount} fields mapped, ${unmappedFields.length} unmapped: ${unmappedFields.join(', ')}`);
+          console.log('FileBound fields array (F1-F20):', fieldsArray.slice(1).map((v, i) => v ? `F${i+1}=${v}` : null).filter(Boolean).join(', '));
 
           // Build multiple payload shapes since FileBound instances vary
           const fieldsObj: Record<string, string> = {};
@@ -413,6 +486,13 @@ serve(async (req) => {
           const indexArrayByNumber = Object.entries(fieldsObj).map(([k, v]) => ({ Index: parseInt(k.slice(1), 10), Value: v }));
           const indexArrayByFieldNumber = Object.entries(fieldsObj).map(([k, v]) => ({ FieldNumber: parseInt(k.slice(1), 10), Value: v }));
           const indexArrayByName = Object.entries(fieldsObj).map(([k, v]) => ({ Name: k, Value: v }));
+          
+          // Also create arrays using actual field names from indexFields (not just F1-F20)
+          const namedFieldsArray = Object.entries(indexFields)
+            .filter(([_, v]) => v !== undefined && v !== null && v !== '')
+            .map(([Name, Value]) => ({ Name, Value: String(Value) }));
+          
+          console.log('Named fields array for FileBound:', JSON.stringify(namedFieldsArray));
 
           // Build comprehensive notes including batch notes and document validation notes
           const noteParts: string[] = [];
@@ -422,6 +502,11 @@ serve(async (req) => {
           const combinedNotes = noteParts.join(' | ');
 
           const fileBodies = [
+            // Try with actual field names first (most likely to work)
+            { ProjectId: projectId, IndexFields: namedFieldsArray, Notes: combinedNotes },
+            { ProjectId: projectId, IndexFields: indexFields, Notes: combinedNotes },
+            { projectId, indexFields: indexFields, notes: combinedNotes },
+            // Then try with F1-F20 format
             { field: fieldsArray, notes: combinedNotes, projectId },
             { Field: fieldsArray, Notes: combinedNotes, ProjectId: projectId },
             { ProjectId: projectId, Fields: fieldsSlice, Notes: combinedNotes },
