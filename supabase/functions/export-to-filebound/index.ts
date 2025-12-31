@@ -760,12 +760,12 @@ serve(async (req) => {
                     body: responseText.slice(0, 500) 
                   });
                 }
-                } catch (err) {
-                  console.warn('FileBound create file exception', { 
-                    endpoint: ep, 
-                    error: (err as any)?.message || String(err) 
-                  });
-                }
+              } catch (err) {
+                console.warn('FileBound create file exception', { 
+                  endpoint: ep, 
+                  error: (err as any)?.message || String(err) 
+                });
+              }
             }
           }
 
@@ -816,12 +816,12 @@ serve(async (req) => {
                     body: responseText.slice(0, 300) 
                   });
                 }
-                } catch (err) {
-                  console.warn('FileBound legacy create exception', { 
-                    endpoint: ep, 
-                    error: (err as any)?.message || String(err) 
-                  });
-                }
+              } catch (err) {
+                console.warn('FileBound legacy create exception', { 
+                  endpoint: ep, 
+                  error: (err as any)?.message || String(err) 
+                });
+              }
             }
           }
 
