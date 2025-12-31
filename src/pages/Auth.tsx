@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Check, X, Sparkles, AlertTriangle, Clock, ShieldAlert } from 'lucide-react';
 import { MFAChallenge } from '@/components/auth/MFAChallenge';
-import lucidDocsLogo from '@/assets/luciddocs-logo.png';
+import lucidDocsLogo from '@/assets/luciddocs-logo-light-bg.png';
 import { checkPasswordSecurity } from '@/lib/password-security';
 import { useAuthRateLimit } from '@/hooks/use-auth-rate-limit';
 

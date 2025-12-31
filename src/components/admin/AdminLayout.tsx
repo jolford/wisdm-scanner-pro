@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Menu } from 'lucide-react';
-import lucidDocsLogo from '@/assets/luciddocs-logo.png';
+import lucidDocsLogo from '@/assets/luciddocs-logo-light-bg.png';
 import {
   SidebarProvider,
   SidebarTrigger,
