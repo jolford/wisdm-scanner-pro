@@ -405,55 +405,114 @@ serve(async (req) => {
           fieldsArray[0] = 'not used - ignore';
 
           const getIndexFromName = (name: string): number | undefined => {
-            const normalizedName = name.trim().toLowerCase();
-            
+            const raw = name.trim();
+            const normalizedName = raw.toLowerCase();
+
             // Accept F1/F2/... direct mapping
-            const m = /^F(\d{1,2})$/i.exec(name.trim());
+            const m = /^F(\d{1,2})$/i.exec(raw);
             if (m) {
               const idx = parseInt(m[1], 10);
               if (!Number.isNaN(idx) && idx >= 1 && idx <= 20) return idx;
             }
-            
-            // Try to locate by field name in project fields metadata
-            const match = projectFields.find((f: any) => {
-              // Check all possible name properties
+
+            // Helpers
+            const normalizeKey = (s: string) =>
+              s
+                .toLowerCase()
+                .replace(/\b(number|no|#|total|amount|date|name)\b/g, '')
+                .replace(/[^a-z0-9]/g, '');
+
+            const fieldNameCandidates = (f: any): string[] => {
               const candidates = [
-                f?.Name, f?.name, f?.FieldName, f?.fieldName, 
-                f?.DisplayName, f?.displayName, f?.Label, f?.label,
-                f?.Caption, f?.caption, f?.Title, f?.title
+                f?.Name,
+                f?.name,
+                f?.FieldName,
+                f?.fieldName,
+                f?.DisplayName,
+                f?.displayName,
+                f?.Label,
+                f?.label,
+                f?.Caption,
+                f?.caption,
+                f?.Title,
+                f?.title,
               ];
-              return candidates.some((n: any) => 
-                typeof n === 'string' && n.toLowerCase() === normalizedName
-              );
-            });
-            
-            if (match) {
-              // Try multiple properties for the field index
-              const possibleIdx = match?.FieldNumber ?? match?.fieldNumber ?? 
-                                 match?.Index ?? match?.index ?? 
-                                 match?.Number ?? match?.number ??
-                                 match?.FieldIndex ?? match?.fieldIndex ??
-                                 match?.Position ?? match?.position ??
-                                 match?.Ordinal ?? match?.ordinal;
-              if (typeof possibleIdx === 'number' && possibleIdx >= 1 && possibleIdx <= 20) {
-                console.log(`Field "${name}" matched to index ${possibleIdx} via project fields`);
-                return possibleIdx;
-              }
-              // Some APIs return F# as Key
-              const key = match?.Key ?? match?.key ?? match?.Id ?? match?.id;
+              return candidates.filter((x: any) => typeof x === 'string' && x.trim());
+            };
+
+            const getFieldIndex = (f: any): number | undefined => {
+              const possibleIdx =
+                f?.FieldNumber ??
+                f?.fieldNumber ??
+                f?.Index ??
+                f?.index ??
+                f?.Number ??
+                f?.number ??
+                f?.FieldIndex ??
+                f?.fieldIndex ??
+                f?.Position ??
+                f?.position ??
+                f?.Ordinal ??
+                f?.ordinal;
+              if (typeof possibleIdx === 'number' && possibleIdx >= 1 && possibleIdx <= 20) return possibleIdx;
+
+              const key = f?.Key ?? f?.key ?? f?.Id ?? f?.id;
               if (typeof key === 'string') {
                 const km = /^F(\d{1,2})$/i.exec(key);
                 if (km) {
                   const idx = parseInt(km[1], 10);
-                  console.log(`Field "${name}" matched to index ${idx} via key`);
+                  if (!Number.isNaN(idx) && idx >= 1 && idx <= 20) return idx;
+                }
+              }
+              return undefined;
+            };
+
+            // 1) Exact match against project fields
+            const exactMatch = projectFields.find((f: any) =>
+              fieldNameCandidates(f).some((n) => n.toLowerCase() === normalizedName)
+            );
+            if (exactMatch) {
+              const idx = getFieldIndex(exactMatch);
+              if (idx !== undefined) {
+                console.log(`Field "${name}" matched to index ${idx} via project fields (exact)`);
+                return idx;
+              }
+              console.warn(
+                `Field "${name}" found in project fields but couldn't determine index:`,
+                JSON.stringify(exactMatch)
+              );
+              return undefined;
+            }
+
+            // 2) Fuzzy match (handles "Purchase Order Number" -> "PO Number", etc.)
+            const key = normalizeKey(raw);
+            if (key) {
+              let best: { f: any; score: number } | null = null;
+              for (const f of projectFields) {
+                for (const n of fieldNameCandidates(f)) {
+                  const nk = normalizeKey(n);
+                  if (!nk) continue;
+
+                  const includes = nk.includes(key) || key.includes(nk);
+                  if (!includes) continue;
+
+                  // Prefer closer lengths (lower diff) and longer overlap
+                  const score = Math.abs(nk.length - key.length);
+                  if (!best || score < best.score) best = { f, score };
+                }
+              }
+
+              if (best) {
+                const idx = getFieldIndex(best.f);
+                if (idx !== undefined) {
+                  const nm = fieldNameCandidates(best.f)[0];
+                  console.log(`Field "${name}" matched to index ${idx} via fuzzy match -> "${nm}"`);
                   return idx;
                 }
               }
-              // If we found a match but couldn't get the index, log it
-              console.warn(`Field "${name}" found in project fields but couldn't determine index:`, JSON.stringify(match));
-            } else {
-              console.warn(`Field "${name}" not found in project fields`);
             }
+
+            console.warn(`Field "${name}" not found in project fields`);
             return undefined;
           };
 
@@ -781,11 +840,15 @@ serve(async (req) => {
         }
 
         function getExtension(fileName: string, ct: string): string {
+          const cleanCt = (ct || '').toLowerCase();
           const fromName = (fileName?.split('.')?.pop() || '').toLowerCase();
+
+          // Prefer content-type when it conflicts with the filename extension
+          if (cleanCt.includes('pdf')) return 'pdf';
+          if (cleanCt.includes('png')) return 'png';
+          if (cleanCt.includes('jpeg') || cleanCt.includes('jpg')) return 'jpg';
+
           if (fromName) return fromName;
-          if (ct === 'application/pdf') return 'pdf';
-          if (ct.includes('png')) return 'png';
-          if (ct.includes('jpeg') || ct.includes('jpg')) return 'jpg';
           return 'bin';
         }
 
