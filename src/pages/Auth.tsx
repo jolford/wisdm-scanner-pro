@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Check, X, Sparkles, AlertTriangle, Clock, ShieldAlert } from 'lucide-react';
 import { MFAChallenge } from '@/components/auth/MFAChallenge';
-import lucidDocsLogo from '@/assets/luciddocs-logo-light-bg.png';
+import lucidDocsLogo from '@/assets/luciddocs-logo-cropped.png';
 import { checkPasswordSecurity } from '@/lib/password-security';
 import { useAuthRateLimit } from '@/hooks/use-auth-rate-limit';
 
@@ -553,9 +553,9 @@ const AuthPage = () => {
   // Show MFA challenge if needed
   if (showMfaChallenge && mfaFactorId) {
     return <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/10 flex items-center justify-center p-4 animate-in fade-in duration-500">
-        <div className="w-full max-w-md animate-in slide-in-from-bottom-4 duration-700">
+        <div className="w-full max-w-xl animate-in slide-in-from-bottom-4 duration-700">
           <div className="text-center mb-6">
-            <img src={lucidDocsLogo} alt="LucidDocs AI" className="w-72 sm:w-96 h-auto mx-auto mb-4 animate-in zoom-in duration-500" />
+            <img src={lucidDocsLogo} alt="LucidDocs AI" className="w-full max-w-[520px] sm:max-w-[620px] h-auto mx-auto mb-4 animate-in zoom-in duration-500" />
           </div>
           <MFAChallenge factorId={mfaFactorId} onSuccess={async () => {
           const startingPage = await getUserStartingPage();
@@ -569,10 +569,10 @@ const AuthPage = () => {
       </div>;
   }
   return <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/10 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-500">
-      <Card className="w-full max-w-md p-4 sm:p-8 bg-card backdrop-blur-xl shadow-2xl animate-in slide-in-from-bottom-4 duration-700 hover:shadow-[0_20px_50px_rgba(0,200,255,0.1)] transition-shadow border border-primary/20">
+      <Card className="w-full max-w-xl p-4 sm:p-8 bg-card backdrop-blur-xl shadow-2xl animate-in slide-in-from-bottom-4 duration-700 hover:shadow-[0_20px_50px_rgba(0,200,255,0.1)] transition-shadow border border-primary/20">
         <div className="text-center mb-6 sm:mb-8 animate-in zoom-in duration-500 demo-logo">
-          <div className="relative inline-block mb-4 sm:mb-5">
-            <img src={lucidDocsLogo} alt="LucidDocs AI" className="w-72 sm:w-96 h-auto mx-auto transition-transform hover:scale-105 duration-300" />
+          <div className="relative w-full mb-4 sm:mb-5">
+            <img src={lucidDocsLogo} alt="LucidDocs AI" className="w-full max-w-[520px] sm:max-w-[620px] h-auto mx-auto transition-transform hover:scale-105 duration-300" />
           </div>
           <p className="text-muted-foreground text-sm">
             {isUpdatingPassword
