@@ -14,7 +14,7 @@ import { BatchSelector } from '@/components/BatchSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useContextualToast } from '@/lib/toast-helper';
 import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText, FolderOpen, Cloud, Database, HelpCircle, User, Package, AlertCircle, Shield } from 'lucide-react';
-import wisdmLogo from '@/assets/wisdm-logo.png';
+import lucidDocsLogo from '@/assets/luciddocs-logo.png';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LicenseWarning } from '@/components/LicenseWarning';
 import noProjectsImg from '@/assets/empty-states/no-projects.png';
@@ -1946,8 +1946,8 @@ const [isExporting, setIsExporting] = useState(false);
           <div className="flex items-center justify-between h-14 sm:h-16">
             <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0 demo-logo">
               <img 
-                src={wisdmLogo} 
-                alt="WISDM Logo" 
+                src={lucidDocsLogo} 
+                alt="LucidDocs AI" 
                 className="h-8 sm:h-10 w-auto transition-transform duration-300 hover:scale-105 flex-shrink-0 dark:bg-white dark:p-2 dark:rounded-md" 
               />
               <div className="h-8 w-px bg-border hidden sm:block" />

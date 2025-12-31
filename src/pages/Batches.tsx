@@ -18,7 +18,7 @@ import { useUserPreferences } from '@/hooks/use-user-preferences';
 import { BulkActionsToolbar } from '@/components/BulkActionsToolbar';
 import { BatchHoverPreview } from '@/components/BatchHoverPreview';
 import { safeInvokeEdgeFunction } from '@/lib/edge-function-helper';
-import wisdmLogo from '@/assets/wisdm-logo.png';
+import lucidDocsLogo from '@/assets/luciddocs-logo.png';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   AlertDialog,
@@ -406,7 +406,7 @@ const Batches = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={wisdmLogo} alt="WISDM Logo" className="h-10 w-auto" />
+              <img src={lucidDocsLogo} alt="LucidDocs AI" className="h-10 w-auto" />
               <div className="border-l border-border/50 pl-3">
                 <h1 className="text-xl font-bold">Batch Queue</h1>
                 <p className="text-xs text-muted-foreground">View all document batches</p>
