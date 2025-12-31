@@ -60,9 +60,10 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
+      // Return 200 so clients receive a JSON body (supabase.functions.invoke treats non-2xx as a transport error)
       return new Response(
-        JSON.stringify({ error: 'Authentication required' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Authentication required' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -77,8 +78,8 @@ serve(async (req) => {
 
     if (!batchId) {
       return new Response(
-        JSON.stringify({ error: 'Batch ID is required' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Batch ID is required' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -106,8 +107,8 @@ serve(async (req) => {
 
     if (!batch) {
       return new Response(
-        JSON.stringify({ error: 'Batch not found', success: false }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Batch not found' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -118,8 +119,8 @@ serve(async (req) => {
 
     if (!fileboundConfig?.enabled || !fileboundConfig?.url || !fileboundConfig?.username || !fileboundConfig?.password) {
       return new Response(
-        JSON.stringify({ error: 'Filebound is not configured for this project' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Filebound is not configured for this project' }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -128,8 +129,8 @@ serve(async (req) => {
       validateExternalUrl(fileboundConfig.url);
     } catch (error: any) {
       return new Response(
-        JSON.stringify({ error: `Invalid Filebound URL: ${error.message}` }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: `Invalid Filebound URL: ${error.message}` }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -167,30 +168,45 @@ serve(async (req) => {
     console.log(`Exporting ${documents.length} documents to Filebound at ${fileboundUrl}`);
 
     // Helper: resolve projectId (config may store name or id)
-    const baseUrl = fileboundUrl.replace(/\/$/, '');
+    let baseUrl = fileboundUrl.replace(/\/$/, '');
     const authString = btoa(`${username}:${password}`);
 
-    // Try projects endpoint across versions
-    const projectUrls = [
-      `${baseUrl}/api/projects`,
-      `${baseUrl}/api/v1/projects`,
-      `${baseUrl}/api/v2/projects`,
-    ];
+    // Some FileBound deployments are hosted under /FileBoundWebApi
+    const baseCandidates = Array.from(
+      new Set([
+        baseUrl,
+        `${baseUrl}/FileBoundWebApi`,
+        `${baseUrl}/fileboundwebapi`,
+      ].map((b) => b.replace(/\/$/, '')))
+    );
+
+    // Try projects endpoint across versions and base paths
+    const projectPaths = ['/api/projects', '/api/v1/projects', '/api/v2/projects'];
+
     let projectsResp: Response | null = null;
     let projectsArr: any[] = [];
-    for (const url of projectUrls) {
-      const r = await fetch(url, {
-        method: 'GET',
-        headers: { 'Authorization': `Basic ${authString}`, 'Accept': 'application/json' },
-      });
-      if (r.ok) { projectsResp = r; break; }
-      const errText = await r.text();
-      console.warn('Filebound list projects error:', { url, status: r.status, body: (errText || '').slice(0, 300) });
+
+    outer: for (const b of baseCandidates) {
+      for (const p of projectPaths) {
+        const url = `${b}${p}`;
+        const r = await fetch(url, {
+          method: 'GET',
+          headers: { 'Authorization': `Basic ${authString}`, 'Accept': 'application/json' },
+        });
+        if (r.ok) {
+          projectsResp = r;
+          baseUrl = b; // lock in the working API base for all subsequent calls
+          break outer;
+        }
+        const errText = await r.text();
+        console.warn('Filebound list projects error:', { url, status: r.status, body: (errText || '').slice(0, 300) });
+      }
     }
+
     if (!projectsResp) {
       return new Response(
-        JSON.stringify({ success: false, error: 'Failed to list FileBound projects (no endpoint matched)' }),
-        { status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ success: false, error: 'Failed to list FileBound projects (no endpoint matched)', baseCandidates, tried: projectPaths }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
     projectsArr = await projectsResp.json();
@@ -204,7 +220,7 @@ serve(async (req) => {
     if (!projectId) {
       return new Response(
         JSON.stringify({ success: false, error: 'Configured FileBound project not found', configured: project, available: projectsArr?.length ?? 0 }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
@@ -1306,15 +1322,15 @@ serve(async (req) => {
     );
   } catch (error: any) {
     console.error('Error exporting to Filebound:', error);
-    
+
     return new Response(
-      JSON.stringify({ 
-        error: 'Failed to export to Filebound. Please try again.',
-        success: false 
+      JSON.stringify({
+        success: false,
+        error: error?.message || 'Failed to export to FileBound. Please try again.',
       }),
-      { 
+      {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
+        status: 200,
       }
     );
   }
