@@ -14,7 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { projectSchema } from '@/lib/validation-schemas';
 import { safeErrorMessage } from '@/lib/error-handler';
-import lucidDocsLogo from '@/assets/luciddocs-logo.png';
+import wisdmLogo from '@/assets/wisdm-logo.png';
 import { ECMExportConfig } from '@/components/admin/ECMExportConfig';
 import { DocumentSeparationConfig, SeparationConfig } from '@/components/admin/DocumentSeparationConfig';
 import { FolderPicker } from '@/components/admin/FolderPicker';
@@ -218,7 +218,7 @@ const NewProject = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={lucidDocsLogo} alt="LucidDocs AI" className="h-10 w-auto" />
+              <img src={wisdmLogo} alt="WISDM Logo" className="h-10 w-auto" />
               <div className="border-l border-border/50 pl-3">
                 <h1 className="text-xl font-bold">New Project</h1>
               </div>

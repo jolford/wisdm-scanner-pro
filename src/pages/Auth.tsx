@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Check, X, Sparkles, AlertTriangle, Clock, ShieldAlert } from 'lucide-react';
 import { MFAChallenge } from '@/components/auth/MFAChallenge';
-import { BrandLogo } from '@/components/BrandLogo';
+import wisdmLogo from '@/assets/wisdm-logo.png';
 import { checkPasswordSecurity } from '@/lib/password-security';
 import { useAuthRateLimit } from '@/hooks/use-auth-rate-limit';
 
@@ -552,10 +552,10 @@ const AuthPage = () => {
 
   // Show MFA challenge if needed
   if (showMfaChallenge && mfaFactorId) {
-    return <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/10 flex items-center justify-center p-4 animate-in fade-in duration-500">
+    return <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 flex items-center justify-center p-4 animate-in fade-in duration-500">
         <div className="w-full max-w-md animate-in slide-in-from-bottom-4 duration-700">
           <div className="text-center mb-6">
-            <BrandLogo alt="LucidDocs AI" className="h-24 sm:h-28 w-auto mx-auto mb-4 animate-in zoom-in duration-500" />
+            <img src={wisdmLogo} alt="WISDM Logo" className="h-14 w-auto mx-auto mb-4 animate-in zoom-in duration-500" />
           </div>
           <MFAChallenge factorId={mfaFactorId} onSuccess={async () => {
           const startingPage = await getUserStartingPage();
@@ -568,12 +568,18 @@ const AuthPage = () => {
         </div>
       </div>;
   }
-  return <div className="min-h-screen bg-gradient-to-br from-background via-background to-accent/10 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-500">
-      <Card className="w-full max-w-md p-4 sm:p-8 bg-card backdrop-blur-xl shadow-2xl animate-in slide-in-from-bottom-4 duration-700 hover:shadow-[0_20px_50px_rgba(0,200,255,0.1)] transition-shadow border border-primary/20">
+  return <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-500">
+      <Card className="w-full max-w-md p-4 sm:p-8 bg-card/95 backdrop-blur-xl shadow-2xl animate-in slide-in-from-bottom-4 duration-700 hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-shadow border-2">
         <div className="text-center mb-6 sm:mb-8 animate-in zoom-in duration-500 demo-logo">
-          <div className="relative mb-4 sm:mb-5">
-            <BrandLogo alt="LucidDocs AI" className="h-24 sm:h-28 w-auto mx-auto transition-transform hover:scale-105 duration-300" />
+          <div className="relative inline-block mb-3 sm:mb-4">
+            <img src={wisdmLogo} alt="WISDM Logo" className="h-12 sm:h-14 w-auto mx-auto transition-transform hover:scale-110 duration-300" />
+            <div className="absolute -top-1 -right-1 animate-pulse">
+              <Sparkles className="h-4 w-4 text-primary" />
+            </div>
           </div>
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2 bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+            WISDM Capture Pro
+          </h1>
           <p className="text-muted-foreground text-sm">
             {isUpdatingPassword
               ? 'Enter your new password to finish resetting your account.'

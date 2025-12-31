@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Download, Smartphone, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import lucidDocsLogo from '@/assets/luciddocs-logo.png';
+import wisdmLogo from '@/assets/wisdm-logo.png';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -90,9 +90,9 @@ export default function Install() {
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <img src={lucidDocsLogo} alt="LucidDocs AI" className="h-20 w-auto" />
+            <img src={wisdmLogo} alt="WISDM Logo" className="h-20 w-auto" />
           </div>
-          <CardTitle className="text-2xl md:text-3xl">Install LucidDocs AI</CardTitle>
+          <CardTitle className="text-2xl md:text-3xl">Install WISDM Capture Pro</CardTitle>
           <CardDescription className="text-base">
             Get the best experience with our mobile app
           </CardDescription>

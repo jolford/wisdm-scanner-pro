@@ -38,7 +38,7 @@ import {
   Bot,
   GraduationCap
 } from 'lucide-react';
-import lucidDocsLogo from '@/assets/luciddocs-logo.png';
+import wisdmLogo from '@/assets/wisdm-logo.png';
 import { AIAssistant } from '@/components/AIAssistant';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
