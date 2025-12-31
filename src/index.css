@@ -77,13 +77,14 @@ All colors MUST be HSL.
     --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-slow: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 
-    --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 30% 92%;
-    --sidebar-primary: 187 100% 48%;
+    /* Light sidebar for light mode */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    --sidebar-primary: 187 100% 42%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 265 60% 25%;
-    --sidebar-accent-foreground: 265 85% 85%;
-    --sidebar-border: 220 35% 18%;
+    --sidebar-accent: 220 20% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 220 15% 88%;
     --sidebar-ring: 187 100% 42%;
   }
 
