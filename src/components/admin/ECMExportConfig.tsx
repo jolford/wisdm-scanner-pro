@@ -25,6 +25,7 @@ interface ExportConfig {
   fieldMappings?: Record<string, string>;
   exportSeparators?: boolean; // For FileBound - export separators between different document types
   exportDividers?: boolean; // For FileBound - export dividers at start/end of batch
+  autoDeleteAfterExport?: boolean; // For FileBound - delete batch after successful export
 }
 
 interface ECMProject {
@@ -536,6 +537,23 @@ export function ECMExportConfig({
             </div>
             <p className="text-xs text-muted-foreground ml-6">
               Inserts divider documents at the beginning and end of each batch export
+            </p>
+            
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id={`auto-delete-${type}`}
+                checked={config.autoDeleteAfterExport || false}
+                onCheckedChange={(checked) => 
+                  onConfigChange({ ...config, autoDeleteAfterExport: checked === true })
+                }
+                disabled={disabled}
+              />
+              <Label htmlFor={`auto-delete-${type}`} className="text-sm cursor-pointer">
+                Auto-delete batch after successful export
+              </Label>
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">
+              Automatically deletes the batch and its documents from WISDM after a successful FileBound export
             </p>
           </div>
         </Card>
