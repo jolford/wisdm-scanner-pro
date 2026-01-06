@@ -2392,6 +2392,30 @@ Review the image and provide corrected text with any OCR errors fixed.`;
 
         // Log what we're about to save
         console.log(`Saving OCR results - line_items count: ${lineItems?.length || 0}`);
+
+        // Ensure documentType matches the database enum (avoid failing the entire save)
+        const safeDocumentType = (() => {
+          const dt = typeof documentType === 'string' ? documentType.trim() : '';
+          const allowed = new Set([
+            'check',
+            'invoice',
+            'purchase_order',
+            'receipt',
+            'contract',
+            'legal_document',
+            'form',
+            'letter',
+            'other',
+            'petition',
+          ]);
+
+          if (allowed.has(dt)) return dt;
+
+          if (dt) {
+            console.warn(`Unknown documentType "${dt}"; saving as "other" to satisfy enum.`);
+          }
+          return 'other';
+        })();
         
         // IMPORTANT: Penalize confidence if no fields were extracted
         // This prevents "100% confident" with empty fields
@@ -2408,7 +2432,7 @@ Review the image and provide corrected text with any OCR errors fixed.`;
         const { error: updateError } = await supabaseAdmin
           .from('documents')
           .update({
-            document_type: documentType,
+            document_type: safeDocumentType,
             confidence_score: finalConfidence,
             classification_confidence: finalConfidence,
             extracted_metadata: sanitizedMetadata,
