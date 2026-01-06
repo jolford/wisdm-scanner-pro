@@ -3,7 +3,7 @@ import { Upload, Scan, FileText, Loader2, Camera } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { isTiffFile, convertTiffToPngDataUrl } from '@/lib/image-utils';
-import { compressImage, processPdfPageForOcr, preprocessFileForUpload, dataUrlToFile } from '@/lib/document-preprocessor';
+import { compressImage, processPdfPageForOcr, preprocessFileForUploadMany, dataUrlToFile } from '@/lib/document-preprocessor';
 import { MobileCapture } from '@/components/MobileCapture';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
@@ -107,13 +107,13 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
       return;
     }
 
-    // MULTI-FILE OPTIMIZATION: preprocess PDFs to images + compress images
+    // MULTI-FILE OPTIMIZATION: expand PDFs to per-page images + compress images
     setIsPreprocessing(true);
     try {
       const processed: File[] = [];
       for (const f of files) {
         console.log(`[ScanUploader] Processing file: ${f.name}, type: ${f.type}`);
-        
+
         // Preserve TIFF support
         if (isTiffFile(f)) {
           console.log(`[ScanUploader] Converting TIFF: ${f.name}`);
@@ -123,9 +123,12 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
           continue;
         }
 
-        const { file: outFile, kind } = await preprocessFileForUpload(f);
-        console.log(`[ScanUploader] Preprocessed ${f.name} -> ${outFile.name} (kind: ${kind}, type: ${outFile.type})`);
-        processed.push(outFile);
+        const { files: outFiles, kind } = await preprocessFileForUploadMany(f);
+        console.log(
+          `[ScanUploader] Preprocessed ${f.name} -> ${outFiles.length} file(s) (kind: ${kind}):`,
+          outFiles.map(x => `${x.name} (${x.type})`)
+        );
+        processed.push(...outFiles);
       }
       console.log(`[ScanUploader] Uploading ${processed.length} preprocessed files:`, processed.map(f => `${f.name} (${f.type})`));
       onMultipleFilesUpload(processed);
@@ -163,13 +166,13 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
       return;
     }
 
-    // MULTI-FILE OPTIMIZATION: preprocess PDFs to images + compress images
+    // MULTI-FILE OPTIMIZATION: expand PDFs to per-page images + compress images
     setIsPreprocessing(true);
     try {
       const processed: File[] = [];
       for (const f of files) {
         console.log(`[ScanUploader] Processing file: ${f.name}, type: ${f.type}`);
-        
+
         if (isTiffFile(f)) {
           console.log(`[ScanUploader] Converting TIFF: ${f.name}`);
           const pngDataUrl = await convertTiffToPngDataUrl(f);
@@ -178,9 +181,12 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
           continue;
         }
 
-        const { file: outFile, kind } = await preprocessFileForUpload(f);
-        console.log(`[ScanUploader] Preprocessed ${f.name} -> ${outFile.name} (kind: ${kind}, type: ${outFile.type})`);
-        processed.push(outFile);
+        const { files: outFiles, kind } = await preprocessFileForUploadMany(f);
+        console.log(
+          `[ScanUploader] Preprocessed ${f.name} -> ${outFiles.length} file(s) (kind: ${kind}):`,
+          outFiles.map(x => `${x.name} (${x.type})`)
+        );
+        processed.push(...outFiles);
       }
       console.log(`[ScanUploader] Uploading ${processed.length} preprocessed files:`, processed.map(f => `${f.name} (${f.type})`));
       onMultipleFilesUpload(processed);
