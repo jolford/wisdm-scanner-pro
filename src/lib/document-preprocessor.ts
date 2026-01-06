@@ -110,7 +110,7 @@ export async function preprocessFileForUpload(
 ): Promise<{ file: File; kind: 'pdf_as_image' | 'image' | 'other' }>
 {
   console.log(`[preprocessFileForUpload] Processing: ${file.name}, type: ${file.type}, size: ${(file.size/1024).toFixed(1)}KB`);
-  
+
   if (file.type === 'application/pdf') {
     try {
       console.log(`[preprocessFileForUpload] Rendering PDF first page to image...`);
@@ -134,6 +134,53 @@ export async function preprocessFileForUpload(
 
   console.log(`[preprocessFileForUpload] Unsupported type, returning as-is: ${file.name}`);
   return { file, kind: 'other' };
+}
+
+/**
+ * Preprocess a file into one-or-many uploadable files.
+ *
+ * IMPORTANT: Cashout / voucher PDFs often contain the real values on later pages.
+ * If we only rasterize page 1, OCR/extraction will look "empty".
+ */
+export async function preprocessFileForUploadMany(
+  file: File,
+  opts?: { maxPdfPages?: number }
+): Promise<{ files: File[]; kind: 'pdf_as_images' | 'image' | 'other' }>
+{
+  const maxPdfPages = opts?.maxPdfPages ?? 25;
+
+  if (file.type === 'application/pdf') {
+    try {
+      console.log(`[preprocessFileForUploadMany] Rendering PDF pages to images (max ${maxPdfPages})...`);
+      const { pages, totalPages } = await renderPdfToImages(file, maxPdfPages);
+
+      if (totalPages > maxPdfPages) {
+        console.warn(`[preprocessFileForUploadMany] PDF has ${totalPages} pages; only rendering first ${maxPdfPages}.`);
+      }
+
+      const out: File[] = [];
+      for (const p of pages) {
+        const pageFileName = file.name.replace(/\.pdf$/i, '') + `-page-${p.pageNum}.jpg`;
+        const pageFile = await dataUrlToFile(p.dataUrl, pageFileName, 'image/jpeg');
+        // Extra compression to keep uploads snappy and OCR friendly
+        const { file: compressed } = await compressImage(pageFile, 'standard');
+        out.push(compressed);
+      }
+
+      console.log(`[preprocessFileForUploadMany] PDF converted to ${out.length} image(s)`);
+      return { files: out, kind: 'pdf_as_images' };
+    } catch (e) {
+      console.error(`[preprocessFileForUploadMany] PDF conversion failed for ${file.name}:`, e);
+      return { files: [file], kind: 'other' };
+    }
+  }
+
+  if (file.type.startsWith('image/')) {
+    const { file: compressed } = await compressImage(file, 'standard');
+    return { files: [compressed], kind: 'image' };
+  }
+
+  return { files: [file], kind: 'other' };
 }
 /**
  * Render a PDF page to a canvas and return as data URL
