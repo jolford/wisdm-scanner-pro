@@ -12,10 +12,18 @@ interface ScanUploaderProps {
   onScanComplete: (text: string, imageUrl: string, fileName: string) => void;
   onPdfUpload: (file: File, preRenderedImageUrl?: string) => void;
   onMultipleFilesUpload: (files: File[]) => void;
+  /**
+   * Optional per-project PDF separation config.
+   * When set to page_count + pagesPerDocument=1, single multi-page PDFs will be expanded to one image per page.
+   */
+  pdfSeparation?: {
+    method: 'none' | 'barcode' | 'blank_page' | 'page_count';
+    pagesPerDocument?: number;
+  };
   isProcessing: boolean;
 }
 
-export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUpload, isProcessing }: ScanUploaderProps) => {
+export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUpload, pdfSeparation, isProcessing }: ScanUploaderProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [showMobileCapture, setShowMobileCapture] = useState(false);
   const [isPreprocessing, setIsPreprocessing] = useState(false);
@@ -24,22 +32,36 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
   const isMobile = useIsMobile();
 
   const handleFile = async (file: File) => {
-    // Handle PDFs with client-side pre-rendering
+    // Handle PDFs
     if (file.type === 'application/pdf') {
       setIsPreprocessing(true);
       try {
+        const sepMethod = pdfSeparation?.method;
+        const pagesPerDoc = pdfSeparation?.pagesPerDocument ?? 1;
+
+        // If this project is configured for 1-page-per-document separation, expand the PDF into per-page images.
+        if (sepMethod === 'page_count' && pagesPerDoc === 1) {
+          console.log(`[ScanUploader] Splitting PDF into per-page images (page_count=1): ${file.name}`);
+          const { files: outFiles, kind } = await preprocessFileForUploadMany(file, { maxPdfPages: 50 });
+          if (kind === 'pdf_as_images' && outFiles.length > 1) {
+            console.log(`[ScanUploader] Split complete: ${outFiles.length} pages -> uploading as multiple files`);
+            onMultipleFilesUpload(outFiles);
+            return;
+          }
+        }
+
+        // Default optimized path: pre-render first page for faster OCR preview
         console.log(`Pre-rendering PDF: ${file.name} (${(file.size / 1024).toFixed(1)}KB)`);
         const { dataUrl } = await processPdfPageForOcr(file);
         console.log('PDF pre-rendered to image successfully');
         onPdfUpload(file, dataUrl);
       } catch (error) {
-        console.error('PDF pre-rendering failed:', error);
+        console.error('PDF pre-processing failed:', error);
         toast({
           title: 'PDF Processing',
           description: 'Using server-side processing for this PDF.',
           variant: 'default',
         });
-        // Fallback to server-side processing
         onPdfUpload(file);
       } finally {
         setIsPreprocessing(false);
