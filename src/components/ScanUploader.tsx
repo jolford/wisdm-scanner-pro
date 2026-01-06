@@ -39,11 +39,14 @@ export const ScanUploader = ({ onScanComplete, onPdfUpload, onMultipleFilesUploa
         const sepMethod = pdfSeparation?.method;
         const pagesPerDoc = pdfSeparation?.pagesPerDocument ?? 1;
 
+        console.log(`[ScanUploader] PDF separation config:`, { sepMethod, pagesPerDoc, pdfSeparation });
+
         // If this project is configured for 1-page-per-document separation, expand the PDF into per-page images.
         if (sepMethod === 'page_count' && pagesPerDoc === 1) {
           console.log(`[ScanUploader] Splitting PDF into per-page images (page_count=1): ${file.name}`);
           const { files: outFiles, kind } = await preprocessFileForUploadMany(file, { maxPdfPages: 50 });
-          if (kind === 'pdf_as_images' && outFiles.length > 1) {
+          console.log(`[ScanUploader] Split result: ${outFiles.length} files, kind: ${kind}`);
+          if (kind === 'pdf_as_images' && outFiles.length >= 1) {
             console.log(`[ScanUploader] Split complete: ${outFiles.length} pages -> uploading as multiple files`);
             onMultipleFilesUpload(outFiles);
             return;
