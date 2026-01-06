@@ -1123,6 +1123,7 @@ const Index = () => {
                     onScanComplete={handleScanComplete} 
                     onPdfUpload={processPdf}
                     onMultipleFilesUpload={handleMultipleFiles}
+                    pdfSeparation={selectedProject?.metadata?.separation_config}
                     isProcessing={isProcessing} 
                   />
                 </TabsContent>
