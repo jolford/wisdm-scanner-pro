@@ -442,6 +442,60 @@ const Index = () => {
     // Trigger parallel OCR processing for the batch
     if (successCount > 0 && selectedBatchId) {
       console.log(`Triggering parallel OCR for batch ${selectedBatchId} with ${successCount} documents`);
+      
+      // Subscribe to realtime updates to detect when OCR completes
+      const batchIdForSub = selectedBatchId;
+      const expectedDocs = successCount;
+      
+      const channel = supabase
+        .channel(`ocr-completion-${batchIdForSub}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'documents',
+            filter: `batch_id=eq.${batchIdForSub}`,
+          },
+          async (payload) => {
+            console.log('[OCR Monitor] Document updated:', payload.new.id);
+            
+            // Check if all documents in batch have been processed
+            const { data: batchDocs } = await supabase
+              .from('documents')
+              .select('id, extracted_text, extracted_metadata')
+              .eq('batch_id', batchIdForSub);
+            
+            if (batchDocs) {
+              const processedCount = batchDocs.filter(d => d.extracted_text || d.extracted_metadata).length;
+              console.log(`[OCR Monitor] ${processedCount}/${batchDocs.length} documents processed`);
+              
+              if (processedCount >= batchDocs.length && batchDocs.length >= expectedDocs) {
+                // All documents processed - unsubscribe and notify
+                supabase.removeChannel(channel);
+                console.log('[OCR Monitor] All documents processed! Triggering refresh...');
+                
+                toast({
+                  title: 'OCR Complete',
+                  description: `All ${processedCount} documents have been processed. View the Validation tab.`,
+                });
+                
+                // Auto-switch to validation tab if available
+                const validationTab = document.querySelector('[data-state="inactive"][value="validation"]') as HTMLElement;
+                if (validationTab) {
+                  validationTab.click();
+                }
+              }
+            }
+          }
+        )
+        .subscribe();
+      
+      // Auto-unsubscribe after 5 minutes to prevent memory leaks
+      setTimeout(() => {
+        supabase.removeChannel(channel);
+      }, 5 * 60 * 1000);
+      
       try {
         const { error: parallelError } = await supabase.functions.invoke('parallel-ocr-batch', {
           body: { 
