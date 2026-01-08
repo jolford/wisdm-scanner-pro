@@ -13,7 +13,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { safeErrorMessage, logError } from '@/lib/error-handler';
 import { licenseSchema } from '@/lib/validation-schemas';
-import wisdmLogo from '@/assets/wisdm-logo.png';
+import axiomiqLogo from '@/assets/axiomiq-logo.png';
 
 const NewLicense = () => {
   const { loading } = useRequireAuth(true);
@@ -155,7 +155,7 @@ const NewLicense = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={wisdmLogo} alt="WISDM Logo" className="h-10 w-auto" />
+              <img src={axiomiqLogo} alt="AxiomIQ Logo" className="h-10 w-auto" />
               <div className="border-l border-border/50 pl-3">
                 <h1 className="text-xl font-bold">Create New License</h1>
               </div>
