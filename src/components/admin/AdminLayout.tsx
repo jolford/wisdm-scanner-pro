@@ -29,7 +29,7 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
                   <SidebarTrigger aria-label="Toggle navigation menu">
                     <Menu className="h-5 w-5" />
                   </SidebarTrigger>
-                  <img src={axiomiqLogo} alt="AxiomIQ Document Capture and OCR Platform" className="h-16 w-auto dark:brightness-0 dark:invert" />
+                  <img src={axiomiqLogo} alt="AxiomIQ Document Capture and OCR Platform" className="h-12 w-auto dark:brightness-0 dark:invert" />
                   <div>
                     <h1 className="text-xl font-bold">{title}</h1>
                     {description && (
