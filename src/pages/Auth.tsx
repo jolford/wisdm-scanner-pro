@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Check, X, Sparkles, AlertTriangle, Clock, ShieldAlert } from 'lucide-react';
 import { MFAChallenge } from '@/components/auth/MFAChallenge';
-import axiomiqLogo from '@/assets/axiomiq-logo.png';
+import axiomiqLogo from '@/assets/axiomiq-logo-cropped.png';
 import { checkPasswordSecurity } from '@/lib/password-security';
 import { useAuthRateLimit } from '@/hooks/use-auth-rate-limit';
 
