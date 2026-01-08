@@ -273,7 +273,7 @@ export function PricingPDFGenerator() {
         <div className="p-4 bg-muted/50 rounded-lg">
           <h4 className="font-medium mb-2">Document Includes:</h4>
           <ul className="text-sm text-muted-foreground space-y-1">
-            <li>• WISDM Capture Pro branding and logo</li>
+            <li>• AxiomIQ Capture Pro branding and logo</li>
             <li>• 4 pricing tiers (Starter, Professional, Business, Enterprise)</li>
             <li>• Add-ons and annual contract incentives</li>
             <li>• Key competitive advantages</li>
