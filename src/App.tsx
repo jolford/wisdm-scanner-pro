@@ -98,6 +98,7 @@ const BusinessContinuity = lazy(() => import("./pages/BusinessContinuity"));
 const ComplianceHub = lazy(() => import("./pages/ComplianceHub"));
 const SecurityCompliance = lazy(() => import("./pages/SecurityCompliance"));
 const EnterpriseInfo = lazy(() => import("./pages/EnterpriseInfo"));
+const About = lazy(() => import("./pages/About"));
 
 import { Footer } from "./components/Footer";
 import { ThemeProvider } from "./components/ThemeProvider";
@@ -293,6 +294,7 @@ const App = () => {
             <Route path="/compliance" element={<ComplianceHub />} />
             <Route path="/security-compliance" element={<SecurityCompliance />} />
             <Route path="/enterprise" element={<EnterpriseInfo />} />
+            <Route path="/about" element={<About />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
