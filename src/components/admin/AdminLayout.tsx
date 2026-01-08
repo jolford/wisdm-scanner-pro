@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Menu } from 'lucide-react';
-import axiomiqLogo from '@/assets/axiomiq-logo.png';
+import axiomiqLogo from '@/assets/axiomiq-logo-cropped.png';
 import {
   SidebarProvider,
   SidebarTrigger,
