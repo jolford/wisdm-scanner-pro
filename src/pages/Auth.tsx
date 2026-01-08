@@ -571,12 +571,13 @@ const AuthPage = () => {
   return <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-500">
       <Card className="w-full max-w-md p-4 sm:p-8 bg-card/95 backdrop-blur-xl shadow-2xl animate-in slide-in-from-bottom-4 duration-700 hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-shadow border-2">
         <div className="text-center mb-6 sm:mb-8 animate-in zoom-in duration-500 demo-logo">
-          <div className="flex justify-center">
+          <div className="relative flex justify-center">
             <img
               src={axiomiqLogo}
               alt="ModusIQ Logo"
               className="h-24 sm:h-28 w-auto"
             />
+            <Sparkles className="absolute -top-1 -right-2 h-4 w-4 text-[#01B2F8] animate-pulse" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold mt-2 mb-2 text-[#168BCF]">
             Capture Pro
