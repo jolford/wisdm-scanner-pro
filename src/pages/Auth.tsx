@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Check, X, Sparkles, AlertTriangle, Clock, ShieldAlert } from 'lucide-react';
 import { MFAChallenge } from '@/components/auth/MFAChallenge';
-import wisdmLogo from '@/assets/wisdm-logo.png';
+import axiomiqLogo from '@/assets/axiomiq-logo.png';
 import { checkPasswordSecurity } from '@/lib/password-security';
 import { useAuthRateLimit } from '@/hooks/use-auth-rate-limit';
 
@@ -555,7 +555,7 @@ const AuthPage = () => {
     return <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 flex items-center justify-center p-4 animate-in fade-in duration-500">
         <div className="w-full max-w-md animate-in slide-in-from-bottom-4 duration-700">
           <div className="text-center mb-6">
-            <img src={wisdmLogo} alt="WISDM Logo" className="h-14 w-auto mx-auto mb-4 animate-in zoom-in duration-500" />
+            <img src={axiomiqLogo} alt="AxiomIQ Logo" className="h-14 w-auto mx-auto mb-4 animate-in zoom-in duration-500" />
           </div>
           <MFAChallenge factorId={mfaFactorId} onSuccess={async () => {
           const startingPage = await getUserStartingPage();
@@ -572,7 +572,7 @@ const AuthPage = () => {
       <Card className="w-full max-w-md p-4 sm:p-8 bg-card/95 backdrop-blur-xl shadow-2xl animate-in slide-in-from-bottom-4 duration-700 hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-shadow border-2">
         <div className="text-center mb-6 sm:mb-8 animate-in zoom-in duration-500 demo-logo">
           <div className="relative inline-block mb-3 sm:mb-4">
-            <img src={wisdmLogo} alt="WISDM Logo" className="h-12 sm:h-14 w-auto mx-auto transition-transform hover:scale-110 duration-300" />
+            <img src={axiomiqLogo} alt="AxiomIQ Logo" className="h-12 sm:h-14 w-auto mx-auto transition-transform hover:scale-110 duration-300" />
             <div className="absolute -top-1 -right-1 animate-pulse">
               <Sparkles className="h-4 w-4 text-primary" />
             </div>

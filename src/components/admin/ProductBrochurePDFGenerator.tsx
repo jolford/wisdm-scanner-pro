@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Download, FileText, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import jsPDF from 'jspdf';
-import wisdmLogo from '@/assets/wisdm-logo.png';
+import axiomiqLogo from '@/assets/axiomiq-logo.png';
 
 // Helper to load image as base64
 const loadImageAsBase64 = (src: string): Promise<string> => {
@@ -77,7 +77,7 @@ export const ProductBrochurePDFGenerator = () => {
       // Load logo
       let logoBase64: string | null = null;
       try {
-        logoBase64 = await loadImageAsBase64(wisdmLogo);
+        logoBase64 = await loadImageAsBase64(axiomiqLogo);
       } catch (e) {
         console.warn('Could not load logo:', e);
       }

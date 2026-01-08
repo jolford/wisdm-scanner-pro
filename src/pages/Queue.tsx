@@ -14,7 +14,7 @@ import { BatchSelector } from '@/components/BatchSelector';
 import { supabase } from '@/integrations/supabase/client';
 import { useContextualToast } from '@/lib/toast-helper';
 import { LogOut, Settings, Upload, ScanLine, CheckCircle, Download, Trash2, Eye, FileText, FolderOpen, Cloud, Database, HelpCircle, User, Package, AlertCircle, Shield } from 'lucide-react';
-import wisdmLogo from '@/assets/wisdm-logo.png';
+import axiomiqLogo from '@/assets/axiomiq-logo.png';
 import { EmptyState } from '@/components/ui/empty-state';
 import { LicenseWarning } from '@/components/LicenseWarning';
 import noProjectsImg from '@/assets/empty-states/no-projects.png';
@@ -1946,9 +1946,9 @@ const [isExporting, setIsExporting] = useState(false);
           <div className="flex items-center justify-between h-14 sm:h-16">
             <div className="flex items-center gap-2 sm:gap-4 flex-1 min-w-0 demo-logo">
               <img 
-                src={wisdmLogo} 
-                alt="WISDM Logo" 
-                className="h-8 sm:h-10 w-auto transition-transform duration-300 hover:scale-105 flex-shrink-0 dark:bg-white dark:p-2 dark:rounded-md" 
+                src={axiomiqLogo} 
+                alt="AxiomIQ Logo" 
+                className="h-8 sm:h-10 w-auto transition-transform duration-300 hover:scale-105 flex-shrink-0 dark:bg-white dark:p-2 dark:rounded-md"
               />
               <div className="h-8 w-px bg-border hidden sm:block" />
               <div className="min-w-0 flex-1">

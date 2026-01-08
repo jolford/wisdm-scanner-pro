@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { FileDown, DollarSign } from 'lucide-react';
 import { jsPDF } from 'jspdf';
-import wisdmLogo from '@/assets/wisdm-logo.png';
+import axiomiqLogo from '@/assets/axiomiq-logo.png';
 
 export function PricingPDFGenerator() {
   const generatePDF = async () => {
@@ -11,7 +11,7 @@ export function PricingPDFGenerator() {
     
     // Load and add logo
     const img = new Image();
-    img.src = wisdmLogo;
+    img.src = axiomiqLogo;
     await new Promise((resolve) => {
       img.onload = resolve;
     });

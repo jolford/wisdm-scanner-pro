@@ -17,7 +17,7 @@ import { LicenseWarning } from '@/components/LicenseWarning';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { InstallPrompt } from '@/components/InstallPrompt';
 import { useLicense } from '@/hooks/use-license';
-import wisdmLogo from '@/assets/wisdm-logo.png';
+import axiomiqLogo from '@/assets/axiomiq-logo.png';
 import { useQuery } from '@tanstack/react-query';
 import { applyDocumentNamingPattern } from '@/lib/document-naming';
 import imageCompression from 'browser-image-compression';
@@ -1041,7 +1041,7 @@ const Index = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <img src={wisdmLogo} alt="WISDM Logo" className="h-10 w-auto" />
+              <img src={axiomiqLogo} alt="AxiomIQ Logo" className="h-10 w-auto" />
               <div className="border-l border-border/50 pl-3">
                 <h1 className="text-xl font-bold">Scanner Pro</h1>
                 <p className="text-xs text-muted-foreground">Advanced OCR & ICR Technology</p>
