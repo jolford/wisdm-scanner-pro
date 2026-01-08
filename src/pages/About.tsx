@@ -87,13 +87,13 @@ const About = () => {
             Today, that includes:
           </p>
           <div className="grid md:grid-cols-2 gap-4 mt-6">
-            <Card>
+            <Card className="transition-all duration-200 hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5">
               <CardContent className="p-6">
                 <h3 className="font-semibold text-foreground mb-2">Capture Pro</h3>
                 <p className="text-muted-foreground">Intelligent document ingestion, OCR, and validation</p>
               </CardContent>
             </Card>
-            <Card>
+            <Card className="transition-all duration-200 hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5">
               <CardContent className="p-6">
                 <h3 className="font-semibold text-foreground mb-2">Admin & Configuration</h3>
                 <p className="text-muted-foreground">Centralized control, security, and governance</p>
@@ -155,22 +155,22 @@ const About = () => {
             We believe:
           </p>
           <div className="space-y-4">
-            <Card className="border-l-4 border-l-primary">
+            <Card className="border-l-4 border-l-primary transition-all duration-200 hover:shadow-md hover:bg-primary/5">
               <CardContent className="p-4">
                 <p className="text-foreground">Automation should start at intake, not downstream</p>
               </CardContent>
             </Card>
-            <Card className="border-l-4 border-l-primary">
+            <Card className="border-l-4 border-l-primary transition-all duration-200 hover:shadow-md hover:bg-primary/5">
               <CardContent className="p-4">
                 <p className="text-foreground">Intelligence should be explainable and dependable</p>
               </CardContent>
             </Card>
-            <Card className="border-l-4 border-l-primary">
+            <Card className="border-l-4 border-l-primary transition-all duration-200 hover:shadow-md hover:bg-primary/5">
               <CardContent className="p-4">
                 <p className="text-foreground">Platforms should feel simple, even when doing complex work</p>
               </CardContent>
             </Card>
-            <Card className="border-l-4 border-l-primary">
+            <Card className="border-l-4 border-l-primary transition-all duration-200 hover:shadow-md hover:bg-primary/5">
               <CardContent className="p-4">
                 <p className="text-foreground">Technology should reduce friction — not introduce new layers of it</p>
               </CardContent>
