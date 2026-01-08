@@ -579,7 +579,7 @@ const AuthPage = () => {
             />
             <Sparkles className="absolute top-1 right-[18%] h-4 w-4 text-[#2585C1] animate-pulse" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold -mt-10 mb-2 text-[#2585C1]">
+          <h1 className="text-2xl sm:text-3xl font-bold -mt-16 mb-2 text-[#2585C1]">
             Capture Pro
           </h1>
           <p className="text-muted-foreground text-sm">
