@@ -59,7 +59,7 @@ export const Breadcrumbs = () => {
 
   return (
     <nav aria-label="Breadcrumb" className="mb-4">
-      <ol className="flex items-center space-x-2 text-sm text-muted-foreground">
+      <ol className="flex items-center space-x-2 text-xs text-muted-foreground/80">
         {breadcrumbs.map((crumb, index) => (
           <li key={index} className="flex items-center">
             {index > 0 && <ChevronRight className="h-4 w-4 mx-2" />}
