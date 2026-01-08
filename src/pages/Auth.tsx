@@ -573,11 +573,11 @@ const AuthPage = () => {
         <div className="text-center mb-6 sm:mb-8 animate-in zoom-in duration-500 demo-logo">
           <div className="relative inline-block mb-0">
             <img src={axiomiqLogo} alt="AxiomIQ Logo" className="h-36 sm:h-40 w-auto mx-auto transition-transform hover:scale-110 duration-300" />
-            <div className="absolute top-0 right-[38%] animate-pulse">
-              <Sparkles className="h-4 w-4 text-[#00b4d8]" />
+            <div className="absolute top-2 right-[22%] animate-pulse">
+              <Sparkles className="h-4 w-4 text-[#33c3f0]" />
             </div>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold -mt-4 mb-2 text-[#00b4d8]">
+          <h1 className="text-2xl sm:text-3xl font-bold -mt-4 mb-2 text-[#33c3f0]">
             Capture Pro
           </h1>
           <p className="text-muted-foreground text-sm">
