@@ -61,7 +61,7 @@ export default function SecurityCompliance() {
         heightLeft -= pageHeight;
       }
 
-      pdf.save("WISDM-Security-Compliance-Standards.pdf");
+      pdf.save("AxiomIQ-Security-Compliance-Standards.pdf");
 
       toast({
         title: "PDF Generated",
@@ -79,7 +79,7 @@ export default function SecurityCompliance() {
 
   const handlePrint = () => {
     const originalTitle = document.title;
-    document.title = "WISDM-Security-Compliance-Standards";
+    document.title = "AxiomIQ-Security-Compliance-Standards";
     window.print();
     setTimeout(() => {
       document.title = originalTitle;
@@ -98,7 +98,7 @@ export default function SecurityCompliance() {
             <div className="flex items-center gap-4">
               <img src={axiomiqLogo} alt="AxiomIQ Logo" className="h-12 w-auto" />
               <div>
-                <h1 className="text-4xl font-bold">WISDM Capture PRO</h1>
+                <h1 className="text-4xl font-bold">AxiomIQ Capture PRO</h1>
                 <p className="text-lg text-muted-foreground">Security Compliance & Standards</p>
               </div>
             </div>

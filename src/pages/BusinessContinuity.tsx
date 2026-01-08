@@ -21,7 +21,7 @@ export default function BusinessContinuity() {
           <div>
             <h2 className="text-2xl font-semibold mb-3">1. Purpose and Scope</h2>
             <p className="mb-4">
-              This Business Continuity and Disaster Recovery Plan ensures WISDM Capture Pro can maintain or rapidly
+              This Business Continuity and Disaster Recovery Plan ensures AxiomIQ Capture Pro can maintain or rapidly
               resume critical business operations following a disruption, including natural disasters, cyberattacks,
               equipment failures, or other incidents.
             </p>

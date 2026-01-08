@@ -48,7 +48,7 @@ const Downloads = () => {
           <div className="flex items-start gap-4">
             <Package className="h-8 w-8 text-primary mt-1" />
             <div className="flex-1">
-              <h2 className="text-xl font-semibold mb-2">WISDM Scanner Desktop App</h2>
+              <h2 className="text-xl font-semibold mb-2">AxiomIQ Scanner Desktop App</h2>
               <p className="text-muted-foreground mb-4">
                 Desktop application for scanning documents with Ricoh/Fujitsu scanners. Includes native Ricoh SDK integration for optimal performance.
               </p>
@@ -97,7 +97,7 @@ const Downloads = () => {
             <div className="flex-1">
               <h2 className="text-xl font-semibold mb-2">n8n Integration Datasheet</h2>
               <p className="text-muted-foreground mb-4">
-                Technical documentation for integrating n8n workflow automation with WISDMCapture. 
+                Technical documentation for integrating n8n workflow automation with AxiomIQ Capture. 
                 Includes architecture diagrams, API reference, implementation checklist, and security considerations.
               </p>
               
@@ -121,7 +121,7 @@ const Downloads = () => {
             <div className="flex-1">
               <h2 className="text-xl font-semibold mb-2">Product Brochure</h2>
               <p className="text-muted-foreground mb-4">
-                Professional 4-page product brochure for WISDM Capture Pro. Includes architecture diagrams, data capture capabilities, workflow automation, and feature highlights.
+                Professional 4-page product brochure for AxiomIQ Capture Pro. Includes architecture diagrams, data capture capabilities, workflow automation, and feature highlights.
               </p>
               <ProductBrochurePDFGenerator />
             </div>
@@ -134,7 +134,7 @@ const Downloads = () => {
             <div className="flex-1">
               <h2 className="text-xl font-semibold mb-2">Marketing Materials</h2>
               <p className="text-muted-foreground mb-4">
-                Professional marketing brochure for WISDM Capture Pro. Includes features, pricing, security info, and ROI highlights.
+                Professional marketing brochure for AxiomIQ Capture Pro. Includes features, pricing, security info, and ROI highlights.
               </p>
               <MarketingPDFGenerator />
             </div>

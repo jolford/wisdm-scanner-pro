@@ -361,7 +361,7 @@ const DataProcessingAgreement = () => {
               <p className="text-muted-foreground mb-3">Data Protection Officer:</p>
               <div className="p-4 bg-muted/50 rounded-lg">
                 <p className="font-semibold">Western Integrated Systems</p>
-                <p className="text-muted-foreground">DPO Email: dpo@wisdm.com</p>
+                <p className="text-muted-foreground">DPO Email: dpo@axiomiq.com</p>
                 <p className="text-muted-foreground">Privacy Email: support@westint.com</p>
                 <p className="text-muted-foreground">Address: [Your Business Address]</p>
               </div>

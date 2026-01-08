@@ -105,7 +105,7 @@ export const ProductBrochurePDFGenerator = () => {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(28);
       doc.setFont('helvetica', 'bold');
-      doc.text('WISDM Capture Pro', margin + 52, 22);
+      doc.text('AxiomIQ Capture Pro', margin + 52, 22);
       
       // Subtitle
       doc.setTextColor(147, 197, 253); // Light blue
@@ -125,7 +125,7 @@ export const ProductBrochurePDFGenerator = () => {
       doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
-      const introParagraph = "You're already overwhelmed by documents and information. WISDM Capture Pro is the multi-tool we all need. It's the on-ramp that allows you to use tools and programs you already have to make your workflow smooth and efficient. WISDM Capture Pro ingests your paperwork in any form, physical or digital, extracts the information accurately, and moves it to whatever type of electronic filing system you use.";
+      const introParagraph = "You're already overwhelmed by documents and information. AxiomIQ Capture Pro is the multi-tool we all need. It's the on-ramp that allows you to use tools and programs you already have to make your workflow smooth and efficient. AxiomIQ Capture Pro ingests your paperwork in any form, physical or digital, extracts the information accurately, and moves it to whatever type of electronic filing system you use.";
       const introLines = doc.splitTextToSize(introParagraph, contentWidth);
       doc.text(introLines, margin, y);
       
@@ -135,7 +135,7 @@ export const ProductBrochurePDFGenerator = () => {
       doc.setTextColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
-      doc.text('Architecture of a WISDM Capture Pro Solution', margin, y);
+      doc.text('Architecture of an AxiomIQ Capture Pro Solution', margin, y);
       
       // Accent underline
       doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
@@ -164,7 +164,7 @@ export const ProductBrochurePDFGenerator = () => {
       doc.text('MFP or Networked Scanner', margin + 5, y + 24);
       doc.text('Emailed Documents', margin + 5, y + 32);
 
-      // Center processing box (WISDM Capture Pro)
+      // Center processing box (AxiomIQ Capture Pro)
       const centerX = pageWidth / 2 - boxW / 2;
       doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
       roundedRect(doc, centerX, y, boxW, boxH, 3, 'F');
@@ -172,7 +172,7 @@ export const ProductBrochurePDFGenerator = () => {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
-      doc.text('WISDM', centerX + boxW / 2, y + 15, { align: 'center' });
+      doc.text('AxiomIQ', centerX + boxW / 2, y + 15, { align: 'center' });
       doc.text('Capture Pro', centerX + boxW / 2, y + 22, { align: 'center' });
       
       doc.setFontSize(7);
@@ -229,7 +229,7 @@ export const ProductBrochurePDFGenerator = () => {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(18);
       doc.setFont('helvetica', 'normal');
-      doc.text('Work the way you want with WISDM Capture Pro', margin, 20);
+      doc.text('Work the way you want with AxiomIQ Capture Pro', margin, 20);
 
       // Subtitle
       doc.setTextColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
@@ -243,7 +243,7 @@ export const ProductBrochurePDFGenerator = () => {
       doc.setTextColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
-      doc.text('The Capture in WISDM Capture Pro', margin, y);
+      doc.text('The Capture in AxiomIQ Capture Pro', margin, y);
       doc.setFillColor(primaryBlue[0], primaryBlue[1], primaryBlue[2]);
       doc.rect(margin, y + 3, 65, 2, 'F');
 
@@ -271,7 +271,7 @@ export const ProductBrochurePDFGenerator = () => {
       doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      const dataText = "If we are honest with ourselves, it is really all about data. It is the new currency of the world. Once we have captured the source of the data, we can pull any information you want from it and check it against a database for verification. Our processors can read and extract information from handwriting, electronic type, metadata, or even those tests and surveys with bubbles you have to fill in.\n\nWISDM Capture Pro's Accelerated Classification Engine (ACE) is a cutting-edge automatic document identification feature that allows users to build Classification rules in the middle of a workflow without breaking stride.";
+      const dataText = "If we are honest with ourselves, it is really all about data. It is the new currency of the world. Once we have captured the source of the data, we can pull any information you want from it and check it against a database for verification. Our processors can read and extract information from handwriting, electronic type, metadata, or even those tests and surveys with bubbles you have to fill in.\n\nAxiomIQ Capture Pro's Accelerated Classification Engine (ACE) is a cutting-edge automatic document identification feature that allows users to build Classification rules in the middle of a workflow without breaking stride.";
       const dataLines = doc.splitTextToSize(dataText, contentWidth * 0.58);
       doc.text(dataLines, margin, y);
 
@@ -287,7 +287,7 @@ export const ProductBrochurePDFGenerator = () => {
       doc.text('Unrecognized Document', margin + 5, y + 8);
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
-      doc.text('WISDM Capture ACE Workflow', margin + 5, y + 14);
+      doc.text('AxiomIQ Capture ACE Workflow', margin + 5, y + 14);
 
       // Recognized document box
       doc.setFillColor(lightSlate[0], lightSlate[1], lightSlate[2]);
@@ -299,7 +299,7 @@ export const ProductBrochurePDFGenerator = () => {
       doc.text('Recognized Document', margin + 5, y + 30);
       doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
-      doc.text('WISDM Capture Automated Workflow', margin + 5, y + 36);
+      doc.text('AxiomIQ Capture Automated Workflow', margin + 5, y + 36);
 
       y += 50;
 
@@ -353,7 +353,7 @@ export const ProductBrochurePDFGenerator = () => {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(18);
       doc.setFont('helvetica', 'normal');
-      doc.text('Work the way you want with WISDM Capture Pro', margin, 20);
+      doc.text('Work the way you want with AxiomIQ Capture Pro', margin, 20);
 
       y = 45;
 
@@ -393,7 +393,7 @@ export const ProductBrochurePDFGenerator = () => {
       doc.setFontSize(8);
       doc.setFont('helvetica', 'normal');
       doc.text('Your documents are actionable business intelligence.', margin + 10, y + 28);
-      doc.text('Harness it with WISDM Capture Pro.', margin + 10, y + 33);
+      doc.text('Harness it with AxiomIQ Capture Pro.', margin + 10, y + 33);
 
       y += 45;
 
@@ -494,14 +494,14 @@ export const ProductBrochurePDFGenerator = () => {
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(18);
       doc.setFont('helvetica', 'normal');
-      doc.text('WISDM Capture Pro Selected Features', margin, 20);
+      doc.text('AxiomIQ Capture Pro Selected Features', margin, 20);
 
       y = 42;
 
       doc.setTextColor(slateGray[0], slateGray[1], slateGray[2]);
       doc.setFontSize(9);
       doc.setFont('helvetica', 'normal');
-      doc.text('To companies needing more complex workflows, WISDM Capture Pro offers a number of features to enhance and', margin, y);
+      doc.text('To companies needing more complex workflows, AxiomIQ Capture Pro offers a number of features to enhance and', margin, y);
       doc.text('accelerate important business data processing. These powerhouse features include:', margin, y + 5);
 
       y += 18;
@@ -516,7 +516,7 @@ export const ProductBrochurePDFGenerator = () => {
         {
           title: 'Classification',
           color: [139, 92, 246],
-          desc: 'Never again separate your documents before scanning them if you want. Most of the time, WISDM Capture Pro can be trained to automatically identify and separate documents, negating the need for pre-scan separation - a HUGE time waster!'
+          desc: 'Never again separate your documents before scanning them if you want. Most of the time, AxiomIQ Capture Pro can be trained to automatically identify and separate documents, negating the need for pre-scan separation - a HUGE time waster!'
         },
         {
           title: 'eMail Capture',
@@ -526,10 +526,10 @@ export const ProductBrochurePDFGenerator = () => {
         {
           title: 'Table Extraction',
           color: [168, 85, 247],
-          desc: 'Want your software to automatically identify rows and columns in documents? We can teach WISDM Capture Pro to extract each row as an individual record and post it to any number of places, including a database or an accounting system.'
+          desc: 'Want your software to automatically identify rows and columns in documents? We can teach AxiomIQ Capture Pro to extract each row as an individual record and post it to any number of places, including a database or an accounting system.'
         },
         {
-          title: 'WISDM Capture Fusion',
+          title: 'AxiomIQ Capture Fusion',
           color: successGreen,
           desc: 'Our HTML5-friendly, team-driven Indexing and Quality Assurance solution. For really large teams of people needing to work together, or far-flung teams with assets on the go, this is a great way to assure documents get processed quickly.'
         }

@@ -71,7 +71,7 @@ export function InstallPrompt() {
         </div>
         
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-sm mb-1">Install WISDM Capture Pro</h3>
+          <h3 className="font-semibold text-sm mb-1">Install AxiomIQ Capture Pro</h3>
           <p className="text-xs text-muted-foreground mb-3">
             Get faster access and work offline. Install our app on your device.
           </p>
