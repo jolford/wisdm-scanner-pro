@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { Menu } from 'lucide-react';
 import axiomiqLogo from '@/assets/axiomiq-logo-cropped.png';
+import axiomiqIcon from '@/assets/axiomiq-icon.png';
 import {
   SidebarProvider,
   SidebarTrigger,
@@ -29,7 +30,8 @@ export function AdminLayout({ children, title, description }: AdminLayoutProps) 
                   <SidebarTrigger aria-label="Toggle navigation menu">
                     <Menu className="h-5 w-5" />
                   </SidebarTrigger>
-                  <img src={axiomiqLogo} alt="AxiomIQ Document Capture and OCR Platform" className="h-8 w-auto dark:brightness-0 dark:invert" />
+                  <img src={axiomiqIcon} alt="AxiomIQ" className="h-8 w-8 md:hidden dark:brightness-0 dark:invert" />
+                  <img src={axiomiqLogo} alt="AxiomIQ Document Capture and OCR Platform" className="hidden md:block h-8 w-auto dark:brightness-0 dark:invert" />
                   <div>
                     <h1 className="text-xl font-bold">{title}</h1>
                     {description && (
