@@ -210,7 +210,7 @@ export default function MetricsBenchmark() {
     if (!metrics) return;
     
     const report = `
-WISDM Capture Pro - Benchmark Report
+AxiomIQ Capture Pro - Benchmark Report
 Generated: ${new Date().toLocaleDateString()}
 Period: Last ${metrics.periodDays} days
 

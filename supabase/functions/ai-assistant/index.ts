@@ -20,13 +20,13 @@ serve(async (req) => {
 
     // Define system prompts based on use case
     const systemPrompts: Record<string, string> = {
-      general: "You are a helpful AI assistant for WISDM Capture Pro, a document scanning and validation system.",
+      general: "You are a helpful AI assistant for AxiomIQ Capture Pro, a document scanning and validation system.",
       
       documentAnalysis: "You are an expert document analyst. Help users understand their scanned documents, identify document types, extract key information, and provide insights about document quality and completeness.",
       
       validation: "You are a validation expert. Help users verify document accuracy, identify potential errors or inconsistencies in extracted data, and suggest improvements to validation workflows.",
       
-      troubleshooting: "You are a technical support specialist for WISDM Capture Pro. Help users troubleshoot scanning issues, OCR problems, export errors, and system configuration questions. Be clear, patient, and provide step-by-step guidance.",
+      troubleshooting: "You are a technical support specialist for AxiomIQ Capture Pro. Help users troubleshoot scanning issues, OCR problems, export errors, and system configuration questions. Be clear, patient, and provide step-by-step guidance.",
       
       dataExtraction: "You are a data extraction specialist. Help users optimize their extraction templates, understand field mapping, and improve OCR accuracy for different document types including checks, invoices, and forms."
     };

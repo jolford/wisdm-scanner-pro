@@ -22,7 +22,7 @@ export default function IncidentResponse() {
             <h2 className="text-2xl font-semibold mb-3">1. Purpose and Scope</h2>
             <p className="mb-4">
               This Incident Response Plan establishes procedures for identifying, responding to, and recovering from
-              security incidents that may affect WISDM Capture Pro systems, data, or services.
+              security incidents that may affect AxiomIQ Capture Pro systems, data, or services.
             </p>
             <p>
               <strong>Scope:</strong> This plan covers all security incidents including data breaches, unauthorized

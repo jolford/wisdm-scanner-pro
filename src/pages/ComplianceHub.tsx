@@ -111,7 +111,7 @@ export default function ComplianceHub() {
             <div>
               <h3 className="text-lg font-semibold mb-2">Our Compliance Status</h3>
               <p className="text-muted-foreground mb-4">
-                WISDM Capture Pro has implemented comprehensive security controls aligned with SOC 2 requirements. While
+                AxiomIQ Capture Pro has implemented comprehensive security controls aligned with SOC 2 requirements. While
                 formal certification requires an independent audit, our platform includes:
               </p>
               <ul className="list-disc pl-6 space-y-2 text-muted-foreground">
@@ -132,7 +132,7 @@ export default function ComplianceHub() {
                 To achieve formal SOC 2 certification, organizations typically:
               </p>
               <ol className="list-decimal pl-6 space-y-2 text-muted-foreground">
-                <li>Implement required security controls (completed for WISDM)</li>
+                <li>Implement required security controls (completed for AxiomIQ)</li>
                 <li>Document policies and procedures (available in this hub)</li>
                 <li>Operate controls for 3-12 months (observation period)</li>
                 <li>Engage an independent auditor to assess controls</li>

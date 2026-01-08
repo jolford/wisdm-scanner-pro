@@ -51,7 +51,7 @@ export default function ReleaseNotes() {
     const margin = 20;
 
     doc.setFontSize(20);
-    doc.text("WISDM Capture Pro - Release Notes", margin, yPos);
+    doc.text("AxiomIQ Capture Pro - Release Notes", margin, yPos);
     yPos += 15;
 
     releases.forEach((release: any) => {
@@ -101,7 +101,7 @@ export default function ReleaseNotes() {
       yPos += 10;
     });
 
-    doc.save(`WISDM-Release-Notes-${format(new Date(), "yyyy-MM-dd")}.pdf`);
+    doc.save(`AxiomIQ-Release-Notes-${format(new Date(), "yyyy-MM-dd")}.pdf`);
   };
 
   return (

@@ -151,7 +151,7 @@ export default function AdvancedReports() {
   const exportReport = () => {
     // Generate CSV export
     const csv = [
-      ['Advanced WISDM Analytics Report'],
+      ['Advanced AxiomIQ Analytics Report'],
       [`Generated: ${format(new Date(), 'yyyy-MM-dd HH:mm:ss')}`],
       [`Date Range: Last ${dateRange}`],
       [],
@@ -170,7 +170,7 @@ export default function AdvancedReports() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `wisdm_report_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    a.download = `axiomiq_report_${format(new Date(), 'yyyy-MM-dd')}.csv`;
     a.click();
   };
 

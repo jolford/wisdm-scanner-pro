@@ -20,23 +20,23 @@ interface WhiteLabelConfig {
   supportEmail: string;
   supportPhone: string;
   customDomain: string;
-  hideWisdmBranding: boolean;
+  hideAxiomIQBranding: boolean;
   customFooterText: string;
 }
 
 export default function WhiteLabel() {
   const { toast } = useToast();
   const [config, setConfig] = useState<WhiteLabelConfig>({
-    companyName: 'WISDM Capture Pro',
-    companyLogo: '/wisdm-logo.png',
+    companyName: 'AxiomIQ Capture Pro',
+    companyLogo: '/axiomiq-logo.png',
     primaryColor: '#1a56db',
     secondaryColor: '#7c3aed',
     accentColor: '#f59e0b',
     favicon: '/favicon.png',
-    supportEmail: 'support@wisdm.com',
-    supportPhone: '+1-800-WISDM',
+    supportEmail: 'support@axiomiq.com',
+    supportPhone: '+1-800-AXIOMIQ',
     customDomain: '',
-    hideWisdmBranding: false,
+    hideAxiomIQBranding: false,
     customFooterText: '',
   });
   const [saving, setSaving] = useState(false);
@@ -224,9 +224,9 @@ export default function WhiteLabel() {
                     </div>
                   )}
                   
-                  {config.hideWisdmBranding && (
+                  {config.hideAxiomIQBranding && (
                     <div className="text-xs text-muted-foreground text-center mt-2">
-                      (WISDM branding hidden)
+                      (AxiomIQ branding hidden)
                     </div>
                   )}
                 </div>
@@ -286,11 +286,11 @@ export default function WhiteLabel() {
               </div>
 
               <div className="flex items-center justify-between pt-2">
-                <Label htmlFor="hideBranding">Hide WISDM Branding</Label>
+                <Label htmlFor="hideBranding">Hide AxiomIQ Branding</Label>
                 <Switch
                   id="hideBranding"
-                  checked={config.hideWisdmBranding}
-                  onCheckedChange={(checked) => setConfig({ ...config, hideWisdmBranding: checked })}
+                  checked={config.hideAxiomIQBranding}
+                  onCheckedChange={(checked) => setConfig({ ...config, hideAxiomIQBranding: checked })}
                 />
               </div>
             </CardContent>

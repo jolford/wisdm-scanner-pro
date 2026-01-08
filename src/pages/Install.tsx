@@ -70,7 +70,7 @@ export default function Install() {
         setIsInstalled(true);
         toast({
           title: 'App Installed!',
-          description: 'WISDM Capture Pro has been added to your home screen.',
+          description: 'AxiomIQ Capture Pro has been added to your home screen.',
         });
       }
     } catch (error) {
@@ -92,7 +92,7 @@ export default function Install() {
           <div className="flex justify-center mb-4">
             <img src={axiomiqLogo} alt="AxiomIQ Logo" className="h-20 w-auto" />
           </div>
-          <CardTitle className="text-2xl md:text-3xl">Install WISDM Capture Pro</CardTitle>
+          <CardTitle className="text-2xl md:text-3xl">Install AxiomIQ Capture Pro</CardTitle>
           <CardDescription className="text-base">
             Get the best experience with our mobile app
           </CardDescription>
