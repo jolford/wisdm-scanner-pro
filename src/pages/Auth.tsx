@@ -10,7 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Check, X, Sparkles, AlertTriangle, Clock, ShieldAlert } from 'lucide-react';
 import { MFAChallenge } from '@/components/auth/MFAChallenge';
-import axiomiqLogo from '@/assets/modusiq-logo.png';
+import axiomiqLogo from '@/assets/axiomiq-logo-cropped.png';
 import { checkPasswordSecurity } from '@/lib/password-security';
 import { useAuthRateLimit } from '@/hooks/use-auth-rate-limit';
 
@@ -569,15 +569,15 @@ const AuthPage = () => {
       </div>;
   }
   return <div className="min-h-screen bg-gradient-to-br from-background via-primary/5 to-accent/10 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-500">
-      <Card className="w-full max-w-sm p-4 sm:p-6 bg-card/95 backdrop-blur-xl shadow-2xl animate-in slide-in-from-bottom-4 duration-700 hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-shadow border-2">
-        <div className="text-center mb-4 sm:mb-6 animate-in zoom-in duration-500 demo-logo">
-          <div className="relative flex justify-center">
+      <Card className="w-full max-w-md p-4 sm:p-8 bg-card/95 backdrop-blur-xl shadow-2xl animate-in slide-in-from-bottom-4 duration-700 hover:shadow-[0_20px_50px_rgba(0,0,0,0.15)] transition-shadow border-2">
+        <div className="text-center mb-6 sm:mb-8 animate-in zoom-in duration-500 demo-logo">
+          <div className="relative inline-block">
             <img
               src={axiomiqLogo}
-              alt="ModusIQ Logo"
-              className="h-16 sm:h-20 w-auto"
+              alt="AxiomIQ Logo"
+              className="h-16 sm:h-20 w-auto mx-auto"
             />
-            <Sparkles className="absolute -top-1 -right-2 h-4 w-4 text-[#01B2F8] animate-pulse" />
+            <Sparkles className="absolute top-2 right-0 h-4 w-4 text-[#01B2F8] animate-pulse" />
           </div>
           <h1 className="text-2xl sm:text-3xl font-bold mt-2 mb-2 text-[#168BCF]">
             Capture Pro
