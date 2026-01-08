@@ -1948,7 +1948,7 @@ const [isExporting, setIsExporting] = useState(false);
               <img 
                 src={axiomiqLogo} 
                 alt="AxiomIQ Logo" 
-                className="h-10 sm:h-12 w-auto transition-transform duration-300 hover:scale-105 flex-shrink-0 dark:bg-white dark:p-2 dark:rounded-md"
+                className="h-12 sm:h-14 w-auto transition-transform duration-300 hover:scale-105 flex-shrink-0 dark:bg-white dark:p-2 dark:rounded-md"
               />
               <div className="h-8 w-px bg-border hidden sm:block" />
               <div className="min-w-0 flex-1">
