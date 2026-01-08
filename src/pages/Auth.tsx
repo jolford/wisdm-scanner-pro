@@ -579,7 +579,7 @@ const AuthPage = () => {
             />
             <Sparkles className="absolute top-2 right-0 h-4 w-4 text-[#01B2F8] animate-pulse" />
           </div>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground/70 text-xs">
             {isUpdatingPassword
               ? 'Enter your new password to finish resetting your account.'
               : isResetPassword
