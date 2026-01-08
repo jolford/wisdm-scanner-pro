@@ -575,11 +575,11 @@ const AuthPage = () => {
             <img
               src={axiomiqLogo}
               alt="AxiomIQ Logo"
-              className="h-24 sm:h-28 w-auto mx-auto"
+              className="h-44 sm:h-52 w-auto mx-auto"
             />
-            <Sparkles className="absolute -top-2 right-2 h-4 w-4 text-info animate-pulse" />
+            <Sparkles className="absolute top-1 right-[18%] h-4 w-4 text-[#2585C1] animate-pulse" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold mt-2 mb-2 text-info">
+          <h1 className="text-2xl sm:text-3xl font-bold -mt-2 mb-2 text-[#2585C1]">
             Capture Pro
           </h1>
           <p className="text-muted-foreground text-sm">
